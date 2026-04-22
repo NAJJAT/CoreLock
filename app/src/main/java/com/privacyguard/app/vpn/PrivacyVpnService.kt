@@ -12,11 +12,14 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.privacyguard.app.MainActivity
 import com.privacyguard.app.R
+import com.privacyguard.app.core.app.AppResolver
+import com.privacyguard.app.core.blocklist.BlocklistManager
+import com.privacyguard.app.core.pcap.PcapWriter
+import com.privacyguard.app.core.stats.StatsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class PrivacyVpnService : VpnService() {
@@ -30,16 +33,25 @@ class PrivacyVpnService : VpnService() {
         @Volatile
         var isRunning = false
             private set
+
+        @Volatile
+        var isPcapEnabled = false
     }
 
     private var vpnInterface: ParcelFileDescriptor? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val packetProcessor = PacketProcessor()
     @Volatile
     private var isActive = false
+    private var lastBatteryTick = 0L
 
     override fun onCreate() {
         super.onCreate()
+        AppResolver.initialize(this)
+        KillSwitch.initialize(this)
         createNotificationChannel()
+        BlocklistManager.initialize(this)
+        StatsManager.setBlocklistSize(BlocklistManager.getSize())
         Log.d(TAG, "VPN Service created")
     }
 
@@ -54,6 +66,7 @@ class PrivacyVpnService : VpnService() {
     override fun onDestroy() {
         Log.d(TAG, "VPN Service destroying")
         stopVpn()
+        UidMapper.cleanup()
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -86,6 +99,7 @@ class PrivacyVpnService : VpnService() {
             isRunning = true
             startForeground(NOTIFICATION_ID, createNotification())
             startPacketCapture()
+            KillSwitch.startMonitoring(this)
 
             Log.d(TAG, "VPN started successfully")
         } catch (e: Exception) {
@@ -98,35 +112,58 @@ class PrivacyVpnService : VpnService() {
         serviceScope.launch {
             val fileDescriptor = vpnInterface?.fileDescriptor ?: return@launch
             val inputStream = java.io.FileInputStream(fileDescriptor)
-            val buffer = ByteArray(32767)
+            val buffer = BufferPool.acquire()
 
             try {
                 while (isActive) {
                     val length = inputStream.read(buffer)
                     if (length > 0) {
-                        Log.d(TAG, "Packet received: $length bytes")
+                        if (isPcapEnabled) {
+                            PcapWriter.startCapture(this@PrivacyVpnService)
+                            PcapWriter.writePacket(buffer.copyOf(length))
+                        }
+                        when (val decision = packetProcessor.process(buffer, length)) {
+                            is PacketDecision.Blocked -> Log.d(TAG, decision.reason)
+                            PacketDecision.Pass -> Unit
+                        }
+                        checkBatteryOptimization()
                     }
-                    delay(10)
                 }
             } catch (e: Exception) {
                 if (isActive) {
                     Log.e(TAG, "Packet capture failed", e)
                 }
             } finally {
+                if (PcapWriter.isCapturing()) {
+                    PcapWriter.stopCapture()
+                }
+                BufferPool.release(buffer)
                 inputStream.close()
             }
+        }
+    }
+
+    private fun checkBatteryOptimization() {
+        val now = System.currentTimeMillis()
+        if (now - lastBatteryTick >= 60_000L) {
+            lastBatteryTick = now
+            Log.d(TAG, "VPN active, packets=${StatsManager.snapshot.value.totalPackets}")
         }
     }
 
     private fun stopVpn() {
         isActive = false
         isRunning = false
+        KillSwitch.stopMonitoring()
         try {
             vpnInterface?.close()
         } catch (e: Exception) {
             Log.w(TAG, "Error closing TUN", e)
         }
         vpnInterface = null
+        if (PcapWriter.isCapturing()) {
+            PcapWriter.stopCapture()
+        }
         stopForeground(STOP_FOREGROUND_REMOVE)
         Log.d(TAG, "VPN stopped")
     }
@@ -159,5 +196,19 @@ class PrivacyVpnService : VpnService() {
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .build()
+    }
+
+    private object BufferPool {
+        private val pool = ArrayDeque<ByteArray>()
+
+        @Synchronized
+        fun acquire(): ByteArray = if (pool.isEmpty()) ByteArray(32_767) else pool.removeFirst()
+
+        @Synchronized
+        fun release(buffer: ByteArray) {
+            if (pool.size < 8) {
+                pool.addLast(buffer)
+            }
+        }
     }
 }

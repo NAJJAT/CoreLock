@@ -11,11 +11,13 @@ package com.privacyguard.app.ui.connections
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.delay
+import com.privacyguard.app.core.stats.StatsManager
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 
 data class Connection(
     val id: String,
@@ -38,59 +40,33 @@ data class ConnectionFilter(
 
 class ConnectionsViewModel : ViewModel() {
 
-    private val _connections = MutableStateFlow<List<Connection>>(emptyList())
-    val connections: StateFlow<List<Connection>> = _connections.asStateFlow()
+    val connections: StateFlow<List<Connection>> = StatsManager.snapshot
+        .map { snapshot ->
+            snapshot.activeConnections.map {
+                Connection(
+                    id = it.id,
+                    appName = it.appName,
+                    destination = it.destination,
+                    destinationIp = it.destinationIp,
+                    destinationPort = it.destinationPort,
+                    protocol = it.protocol,
+                    isBlocked = it.isBlocked,
+                    dataRate = formatRate(it.bytesTransferred),
+                    bytesSent = it.bytesTransferred,
+                    bytesReceived = 0
+                )
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _filter = MutableStateFlow(ConnectionFilter())
     val filter: StateFlow<ConnectionFilter> = _filter.asStateFlow()
 
-    private val _isLoading = MutableStateFlow(true)
+    private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     val dataRate: String
-        get() = "${(0..100).random()} KB/s"
-
-    init {
-        startLiveUpdate()
-    }
-
-    private fun startLiveUpdate() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            delay(500)
-            _isLoading.value = false
-
-            while (true) {
-                updateConnections()
-                delay(1000) // تحديث كل ثانية
-            }
-        }
-    }
-
-    private suspend fun updateConnections() {
-        _connections.value = generateMockConnections()
-    }
-
-    private fun generateMockConnections(): List<Connection> {
-        val domains = listOf("google.com", "facebook.com", "youtube.com", "cloudflare.com", "twitter.com", "whatsapp.net", "instagram.com")
-        val apps = listOf("Chrome", "Firefox", "WhatsApp", "Instagram", "System", "YouTube", "Facebook")
-        val ips = listOf("142.250.185.46", "157.240.22.35", "142.250.185.46", "104.16.123.96", "104.244.42.1", "31.13.93.35", "13.107.42.14")
-
-        return List(20) { i ->
-            Connection(
-                id = "conn_$i",
-                appName = apps.random(),
-                destination = domains.random(),
-                destinationIp = ips.random(),
-                destinationPort = listOf(80, 443, 8080, 53, 5222).random(),
-                protocol = listOf("TCP", "UDP").random(),
-                isBlocked = (0..10).random() > 7,
-                dataRate = "${(0..500).random()} KB/s",
-                bytesSent = (0..1000000).random().toLong(),
-                bytesReceived = (0..1000000).random().toLong()
-            )
-        }
-    }
+        get() = formatRate(connections.value.sumOf { it.bytesSent })
 
     fun setFilter(filter: ConnectionFilter) {
         _filter.value = filter
@@ -101,7 +77,7 @@ class ConnectionsViewModel : ViewModel() {
     }
 
     fun getFilteredConnections(): List<Connection> {
-        var result = _connections.value
+        var result = connections.value
 
         if (_filter.value.showBlockedOnly) {
             result = result.filter { it.isBlocked }
@@ -116,5 +92,10 @@ class ConnectionsViewModel : ViewModel() {
         }
 
         return result
+    }
+
+    private fun formatRate(bytes: Long): String {
+        if (bytes <= 0) return "0 KB/s"
+        return String.format("%.1f KB/s", bytes / 1024.0)
     }
 }

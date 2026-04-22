@@ -40,6 +40,10 @@
     <string name="auto_start_desc">Start VPN automatically when device boots</string>
     <string name="block_ads">Block ads &amp; trackers</string>
     <string name="block_ads_desc">Automatically block advertising and tracking domains</string>
+    <string name="kill_switch_title">Kill Switch</string>
+    <string name="kill_switch_desc">Watch for unexpected VPN stops and alert/restart to reduce leak risk</string>
+    <string name="kill_switch_triggered_desc">VPN stopped unexpectedly. PrivacyGuard is trying to restore protection.</string>
+    <string name="kill_switch_network_lost">Network changed while VPN was active. Check your protection status.</string>
     <string name="appearance">Appearance</string>
     <string name="theme">Theme</string>
     <string name="theme_desc">Light, Dark, or System default</string>
@@ -53,8 +57,14 @@
     <string name="advanced">Advanced</string>
     <string name="update_blocklist">Update Blocklist</string>
     <string name="update_blocklist_desc">Update ad and tracker blocklists</string>
+    <string name="pcap_capture">PCAP Capture</string>
+    <string name="pcap_capture_desc">Save captured VPN packets to a PCAP file for Wireshark</string>
     <string name="export_pcap">Export PCAP</string>
     <string name="export_pcap_desc">Export PCAP file for Wireshark analysis</string>
+    <string name="share_pcap">Share PCAP File</string>
+    <string name="pcap_ready_title">PCAP Captured</string>
+    <string name="pcap_ready_text">Tap to open or share the captured PCAP file</string>
+    <string name="pcap_not_available">No PCAP file available yet</string>
     <string name="backup_settings">Backup/Restore</string>
     <string name="backup_settings_desc">Export or import your settings</string>
     <string name="about">About</string>

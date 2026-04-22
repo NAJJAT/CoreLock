@@ -1,5 +1,12 @@
 package com.privacyguard.app.ui.settings
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,8 +31,10 @@ import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Update
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -54,8 +63,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.core.app.NotificationCompat
+import androidx.core.content.FileProvider
 import com.privacyguard.app.R
 import com.privacyguard.app.utils.LocaleHelper
+import com.privacyguard.app.core.pcap.PcapWriter
+import com.privacyguard.app.vpn.KillSwitch
+import com.privacyguard.app.vpn.PrivacyVpnService
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,6 +80,8 @@ fun SettingsScreen(
     val context = LocalContext.current
     var showLanguageDialog by remember { mutableStateOf(false) }
     val currentLanguage = remember { mutableStateOf(LocaleHelper.getSavedLanguage(context)) }
+    var isPcapEnabled by remember { mutableStateOf(PrivacyVpnService.isPcapEnabled) }
+    var isKillSwitchEnabled by remember { mutableStateOf(KillSwitch.isEnabled()) }
 
     Scaffold(
         topBar = {
@@ -102,6 +119,25 @@ fun SettingsScreen(
                     onCheckedChange = {}
                 )
             }
+            item {
+                SettingsSwitchItem(
+                    title = stringResource(R.string.kill_switch_title),
+                    description = stringResource(R.string.kill_switch_desc),
+                    icon = Icons.Default.Warning,
+                    checked = isKillSwitchEnabled,
+                    onCheckedChange = { enabled ->
+                        isKillSwitchEnabled = enabled
+                        if (enabled) {
+                            KillSwitch.enable()
+                            if (PrivacyVpnService.isRunning) {
+                                KillSwitch.startMonitoring(context)
+                            }
+                        } else {
+                            KillSwitch.disable()
+                        }
+                    }
+                )
+            }
 
             item { SectionHeader(stringResource(R.string.appearance)) }
             item {
@@ -137,11 +173,69 @@ fun SettingsScreen(
                 )
             }
             item {
+                SettingsSwitchItem(
+                    title = stringResource(R.string.pcap_capture),
+                    description = stringResource(R.string.pcap_capture_desc),
+                    icon = Icons.Default.Storage,
+                    checked = isPcapEnabled,
+                    onCheckedChange = { enabled ->
+                        isPcapEnabled = enabled
+                        PrivacyVpnService.isPcapEnabled = enabled
+                        if (enabled && PrivacyVpnService.isRunning) {
+                            PcapWriter.startCapture(context)
+                        } else if (!enabled) {
+                            val file = PcapWriter.stopCapture()
+                            if (file != null) {
+                                showPcapReadyNotification(context, file)
+                            }
+                        }
+                    }
+                )
+            }
+            item {
                 SettingsItem(
                     title = stringResource(R.string.export_pcap),
                     description = stringResource(R.string.export_pcap_desc),
+                    icon = Icons.Default.Share,
+                    onClick = {
+                        val file = if (PcapWriter.isCapturing()) {
+                            PcapWriter.stopCapture()
+                        } else {
+                            PcapWriter.getLastCompletedFile()
+                        }
+
+                        if (file != null) {
+                            sharePcapFile(context, file)
+                            if (PrivacyVpnService.isRunning && PrivacyVpnService.isPcapEnabled) {
+                                PcapWriter.startCapture(context)
+                            }
+                        } else {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.pcap_not_available),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                )
+            }
+            item {
+                SettingsItem(
+                    title = stringResource(R.string.share_pcap),
+                    description = PcapWriter.getCurrentFilePath() ?: stringResource(R.string.pcap_not_available),
                     icon = Icons.Default.Storage,
-                    onClick = {}
+                    onClick = {
+                        val file = PcapWriter.getLastCompletedFile()
+                        if (file != null) {
+                            showPcapReadyNotification(context, file)
+                        } else {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.pcap_not_available),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
                 )
             }
             item {
@@ -193,6 +287,48 @@ fun SettingsScreen(
             onDismiss = { showLanguageDialog = false }
         )
     }
+}
+
+private fun showPcapReadyNotification(context: Context, file: File) {
+    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val channelId = "pcap_channel"
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val channel = NotificationChannel(channelId, "PCAP Export", NotificationManager.IMPORTANCE_DEFAULT)
+        notificationManager.createNotificationChannel(channel)
+    }
+
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(uri, "application/vnd.tcpdump.pcap")
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    val pendingIntent = PendingIntent.getActivity(
+        context,
+        1002,
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+
+    val notification = NotificationCompat.Builder(context, channelId)
+        .setContentTitle(context.getString(R.string.pcap_ready_title))
+        .setContentText(context.getString(R.string.pcap_ready_text))
+        .setSmallIcon(android.R.drawable.ic_menu_save)
+        .setContentIntent(pendingIntent)
+        .setAutoCancel(true)
+        .build()
+
+    notificationManager.notify(1002, notification)
+}
+
+private fun sharePcapFile(context: Context, file: File) {
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+        type = "application/vnd.tcpdump.pcap"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share_pcap)))
 }
 
 @Composable

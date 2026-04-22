@@ -1,6 +1,7 @@
 package com.privacyguard.app
 
 import android.app.Application
+import com.privacyguard.app.core.app.AppResolver
 import com.privacyguard.app.utils.LocaleHelper
 
 class PrivacyGuardApplication : Application() {
@@ -8,5 +9,6 @@ class PrivacyGuardApplication : Application() {
         super.onCreate()
         val languageCode = LocaleHelper.getSavedLanguage(this)
         LocaleHelper.setAppLocale(this, languageCode)
+        AppResolver.initialize(this)
     }
 }

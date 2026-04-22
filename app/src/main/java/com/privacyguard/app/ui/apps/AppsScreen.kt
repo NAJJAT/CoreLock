@@ -1,5 +1,6 @@
 package com.privacyguard.app.ui.apps
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,6 +20,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.privacyguard.app.R
+import com.privacyguard.app.core.app.AppResolver
+import com.privacyguard.app.core.stats.StatsManager
 
 data class AppItem(
     val name: String,
@@ -29,28 +32,29 @@ data class AppItem(
     val dataUsed: String
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AppsScreen() {
     var searchQuery by remember { mutableStateOf("") }
     var showSystemApps by remember { mutableStateOf(true) }
-
-    val allApps = remember {
-        listOf(
-            AppItem("Chrome", "com.android.chrome", false, false, 12, "245 MB"),
-            AppItem("Firefox", "org.mozilla.firefox", false, false, 8, "89 MB"),
-            AppItem("WhatsApp", "com.whatsapp", false, false, 4, "1.2 GB"),
-            AppItem("Instagram", "com.instagram.android", false, true, 23, "567 MB"),
-            AppItem("Facebook", "com.facebook.katana", false, true, 31, "892 MB"),
-            AppItem("YouTube", "com.google.android.youtube", false, false, 7, "3.4 GB"),
-            AppItem("Gmail", "com.google.android.gm", false, false, 5, "123 MB"),
-            AppItem("Maps", "com.google.android.apps.maps", false, false, 9, "78 MB"),
-            AppItem("System UI", "android", true, false, 0, "0 MB"),
-            AppItem("Google Play", "com.android.vending", true, false, 3, "45 MB")
+    val stats by StatsManager.snapshot.collectAsState()
+    val installedApps by remember(stats.appStats) {
+        mutableStateOf(
+            AppResolver.getInstalledApps().map { app ->
+                val appStat = stats.appStats.firstOrNull { it.packageName == app.packageName || it.uid == app.uid }
+                AppItem(
+                    name = app.appName,
+                    packageName = app.packageName,
+                    isSystem = app.isSystemApp,
+                    isBlocked = (appStat?.blockedCount ?: 0) > 0,
+                    trackers = appStat?.blockedCount?.toInt() ?: 0,
+                    dataUsed = formatBytes(appStat?.bytesTransferred ?: 0L)
+                )
+            }
         )
     }
 
-    val filteredApps = allApps.filter {
+    val filteredApps = installedApps.filter {
         (it.name.contains(searchQuery, ignoreCase = true) ||
                 it.packageName.contains(searchQuery, ignoreCase = true)) &&
                 (showSystemApps || !it.isSystem)
@@ -125,6 +129,15 @@ fun AppsScreen() {
                 }
             }
         }
+    }
+}
+
+private fun formatBytes(bytes: Long): String {
+    return when {
+        bytes >= 1024L * 1024L * 1024L -> String.format("%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0))
+        bytes >= 1024L * 1024L -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
+        bytes >= 1024L -> String.format("%.1f KB", bytes / 1024.0)
+        else -> "$bytes B"
     }
 }
 
