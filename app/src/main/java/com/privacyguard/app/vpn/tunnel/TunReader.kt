@@ -36,9 +36,8 @@
 package com.privacyguard.app.vpn.tunnel
 
 import android.system.Os
-import android.system.OsConstants
-import com.privacyguard.app.core.utils.BufferPool
 import com.privacyguard.app.core.utils.isValidIpv4Packet
+import java.io.FileDescriptor
 import java.io.FileInputStream
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -85,7 +84,7 @@ interface PacketReadCallback {
  * @param callback Callback to receive packets
  */
 class TunReader(
-    private val tunFileDescriptor: Int,
+    private val tunFileDescriptor: FileDescriptor,
     private val callback: PacketReadCallback
 ) {
     
@@ -142,7 +141,7 @@ class TunReader(
      */
     private fun acquireBuffer(): ByteBuffer {
         synchronized(bufferLock) {
-            val buffer = bufferPool.poll()
+            val buffer = bufferPool.removeFirstOrNull()
             if (buffer != null) {
                 buffer.clear()
                 return buffer
@@ -158,7 +157,7 @@ class TunReader(
         synchronized(bufferLock) {
             if (bufferPool.size < BUFFER_POOL_SIZE) {
                 buffer.clear()
-                bufferPool.add(buffer)
+                bufferPool.addLast(buffer)
             }
         }
     }
@@ -327,8 +326,12 @@ class TunReader(
         // This is a blocking read - will wait for next packet
         return try {
             // Using Os.read for direct file descriptor access (faster)
-            val bytesRead = Os.read(tunFileDescriptor, buffer)
-            if (bytesRead < 0) -1 else bytesRead
+            val byteArray = ByteArray(MAX_PACKET_SIZE)
+            val bytesRead = Os.read(tunFileDescriptor, byteArray, 0, byteArray.size)
+            if (bytesRead > 0) {
+                buffer.put(byteArray, 0, bytesRead)
+            }
+            bytesRead
         } catch (e: Exception) {
             // Fallback to InputStream (slower but more portable)
             val byteArray = ByteArray(MAX_PACKET_SIZE)

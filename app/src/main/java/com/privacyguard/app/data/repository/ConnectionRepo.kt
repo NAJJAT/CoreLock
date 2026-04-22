@@ -15,7 +15,7 @@ import com.privacyguard.app.data.db.DailyStats
 import com.privacyguard.app.data.db.HourlyStats
 import com.privacyguard.app.data.db.TopBlockedDomain
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flow
 
 class ConnectionRepository(
     private val connectionDao: ConnectionDao

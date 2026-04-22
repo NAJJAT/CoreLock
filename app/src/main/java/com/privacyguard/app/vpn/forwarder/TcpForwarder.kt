@@ -491,6 +491,38 @@ class TcpForwarder(
             connection.close()
         }
     }
+
+    private fun handleRead(key: SelectionKey) {
+        val socketChannel = key.channel() as? SocketChannel ?: return
+        val connection = findConnectionBySocket(socketChannel) ?: return
+        val buffer = ByteBuffer.allocate(4096)
+
+        try {
+            val bytesRead = socketChannel.read(buffer)
+            when {
+                bytesRead > 0 -> {
+                    buffer.flip()
+                    val data = ByteArray(bytesRead)
+                    buffer.get(data)
+                    forwardToClient(connection, data)
+                }
+                bytesRead < 0 -> {
+                    handleServerFin(connection)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to read from TCP socket", e)
+            handleServerRst(connection)
+        }
+    }
+
+    private fun handleWrite(key: SelectionKey) {
+        val socketChannel = key.channel() as? SocketChannel ?: return
+        if (socketChannel.isConnectionPending) {
+            return
+        }
+        key.interestOps(SelectionKey.OP_READ)
+    }
     
     /**
      * Completes the TCP handshake (client ACK received)

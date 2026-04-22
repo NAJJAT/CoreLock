@@ -15,7 +15,7 @@ import com.privacyguard.app.core.filter.RuleType
 import com.privacyguard.app.data.db.RuleEntity
 import com.privacyguard.app.data.db.RulesDao
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flow
 
 class RulesRepository(
     private val rulesDao: RulesDao
@@ -67,8 +67,8 @@ class RulesRepository(
      * Gets all rules as Flow
      */
     fun getAllRulesFlow(): Flow<List<FilterRule>> {
-        return rulesDao.getAllRules().map { entities ->
-            entities.map { it.toFilterRule() }
+        return flow {
+            emit(rulesDao.getAllRules().map { it.toFilterRule() })
         }
     }
     

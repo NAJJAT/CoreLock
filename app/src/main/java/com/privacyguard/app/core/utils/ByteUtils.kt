@@ -34,7 +34,6 @@
 package com.privacyguard.app.core.utils
 
 import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 // ============================================================
 // Constants
@@ -524,7 +523,7 @@ object BufferPool {
      */
     fun acquire(): ByteBuffer {
         synchronized(lock) {
-            val buffer = pool.poll()
+            val buffer = pool.removeFirstOrNull()
             if (buffer != null) {
                 buffer.clear()
                 return buffer
@@ -542,7 +541,7 @@ object BufferPool {
         synchronized(lock) {
             if (pool.size < POOL_SIZE) {
                 buffer.clear()
-                pool.add(buffer)
+                pool.addLast(buffer)
             }
         }
     }
@@ -575,7 +574,7 @@ fun bytesToHex(bytes: ByteArray, limit: Int = bytes.size): String {
     val sb = StringBuilder()
     for (i in 0 until minOf(limit, bytes.size)) {
         if (i > 0) sb.append(' ')
-        sb.append(String.format("%02X", bytes[i] and 0xFF))
+        sb.append(String.format("%02X", bytes[i].toInt() and 0xFF))
     }
     if (limit < bytes.size) {
         sb.append(" ... (${bytes.size - limit} more)")
@@ -589,7 +588,7 @@ fun bytesToHex(bytes: ByteArray, limit: Int = bytes.size): String {
 fun bytesToHexCompact(bytes: ByteArray): String {
     val sb = StringBuilder()
     for (b in bytes) {
-        sb.append(String.format("%02X", b and 0xFF))
+        sb.append(String.format("%02X", b.toInt() and 0xFF))
     }
     return sb.toString()
 }
@@ -668,19 +667,6 @@ fun isValidUdpPacket(data: ByteArray, offset: Int, length: Int): Boolean {
 // ============================================================
 // ByteArray Extensions (Convenience)
 // ============================================================
-
-/**
- * Extension functions for ByteArray to make reading/writing cleaner
- */
-fun ByteArray.readUint8(offset: Int): Int = readByte(this, offset)
-fun ByteArray.readUint16(offset: Int): Int = readUint16(this, offset)
-fun ByteArray.readUint32(offset: Int): Long = readUint32(this, offset)
-fun ByteArray.readInt32(offset: Int): Int = readInt32(this, offset)
-
-fun ByteArray.writeUint8(offset: Int, value: Int) = writeByte(this, offset, value)
-fun ByteArray.writeUint16(offset: Int, value: Int) = writeUint16(this, offset, value)
-fun ByteArray.writeUint32(offset: Int, value: Long) = writeUint32(this, offset, value)
-fun ByteArray.writeInt32(offset: Int, value: Int) = writeInt32(this, offset, value)
 
 /**
  * Returns a hex string representation of this byte array

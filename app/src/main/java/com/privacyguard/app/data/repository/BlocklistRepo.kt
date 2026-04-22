@@ -10,6 +10,7 @@
 package com.privacyguard.app.data.repository
 
 import com.privacyguard.app.core.filter.BlocklistEntry
+import com.privacyguard.app.core.filter.BlocklistCategory
 import com.privacyguard.app.core.filter.BlocklistSource
 import com.privacyguard.app.data.db.BlocklistDao
 import com.privacyguard.app.data.db.BlocklistEntity

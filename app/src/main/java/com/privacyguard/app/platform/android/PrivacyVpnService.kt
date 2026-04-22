@@ -57,10 +57,10 @@ import com.privacyguard.app.vpn.firewall.DomainFilter
 import com.privacyguard.app.vpn.firewall.IpFilter
 import com.privacyguard.app.vpn.forwarder.TcpForwarder
 import com.privacyguard.app.vpn.forwarder.UdpForwarder
+import com.privacyguard.app.vpn.tunnel.PacketReadCallback
 import com.privacyguard.app.vpn.tunnel.TunReader
 import com.privacyguard.app.vpn.tunnel.TunWriter
 import kotlinx.coroutines.*
-import java.io.FileDescriptor
 import java.net.InetSocketAddress
 
 /**
@@ -152,7 +152,7 @@ class PrivacyVpnService : VpnService() {
         connectionRepository = ConnectionRepository(database.connectionDao())
         
         // Initialize forwarders
-        tunWriter = TunWriter(0) // Will set FD after TUN creation
+        tunWriter = TunWriter()
         tcpForwarder = TcpForwarder(sessionTable, tunWriter)
         udpForwarder = UdpForwarder(sessionTable, tunWriter)
         
@@ -231,8 +231,7 @@ class PrivacyVpnService : VpnService() {
             
             val tunFd = tunInterface!!.fileDescriptor
             
-            // Recreate TunWriter with correct FD
-            tunWriter = TunWriter(tunFd)
+            tunWriter.setFileDescriptor(tunFd)
             
             // Start components
             startForwarders()
@@ -259,9 +258,9 @@ class PrivacyVpnService : VpnService() {
         Log.d(TAG, "Forwarders started")
     }
     
-    private fun startPacketCapture(tunFd: Int) {
+    private fun startPacketCapture(tunFd: java.io.FileDescriptor) {
         // Create packet callback
-        val callback = object : TunReader.PacketReadCallback {
+        val callback = object : PacketReadCallback {
             override fun onPacketRead(buffer: java.nio.ByteBuffer, size: Int) {
                 processPacket(buffer, size)
             }

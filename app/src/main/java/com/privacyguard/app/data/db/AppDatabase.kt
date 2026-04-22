@@ -26,11 +26,17 @@ package com.privacyguard.app.data.db
 
 import android.content.Context
 import androidx.room.Database
+import androidx.room.Entity
+import androidx.room.Index
+import androidx.room.PrimaryKey
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.privacyguard.app.core.filter.BlocklistSource
+import com.privacyguard.app.core.filter.RuleAction
+import com.privacyguard.app.core.filter.RuleType
 
 // ============================================================
 // Database Version History
@@ -52,7 +58,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         AppStatsEntity::class
     ],
     version = 1,
-    exportSchema = true
+    exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -111,13 +117,7 @@ abstract class AppDatabase : RoomDatabase() {
  * Converts between database types and Kotlin types
  */
 class Converters {
-    
-    @androidx.room.TypeConverter
-    fun fromTimestamp(value: Long?): Long? = value
-    
-    @androidx.room.TypeConverter
-    fun dateToTimestamp(date: Long?): Long? = date
-    
+
     @androidx.room.TypeConverter
     fun fromStringList(value: String): List<String> {
         return if (value.isEmpty()) emptyList() else value.split(",")
@@ -174,8 +174,8 @@ class Converters {
     tableName = "connections",
     indices = [
         Index(value = ["timestamp"]),
-        Index(value = ["app_uid"]),
-        Index(value = ["destination_ip"])
+        Index(value = ["appUid"]),
+        Index(value = ["destinationIp"])
     ]
 )
 data class ConnectionEntity(
