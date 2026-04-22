@@ -57,7 +57,7 @@ import com.privacyguard.app.core.filter.RuleType
         BlocklistEntity::class,
         AppStatsEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -85,6 +85,7 @@ abstract class AppDatabase : RoomDatabase() {
                     DATABASE_NAME
                 )
                 .addCallback(DatabaseCallback())
+                .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance
                 instance
@@ -224,12 +225,12 @@ data class RuleEntity(
     indices = [Index(value = ["domain"], unique = true)]
 )
 data class BlocklistEntity(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
+    @PrimaryKey
     val domain: String,
     val source: String,      // "STEVENBLACK", "EASYLIST", etc.
     val category: String,    // "ADVERTISING", "ANALYTICS", etc.
-    val lastUpdated: Long = System.currentTimeMillis()
+    val lastUpdated: Long = System.currentTimeMillis(),
+    val isEnabled: Boolean = true
 )
 
 /**

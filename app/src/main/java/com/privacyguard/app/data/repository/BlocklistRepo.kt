@@ -9,15 +9,20 @@
 
 package com.privacyguard.app.data.repository
 
-import com.privacyguard.app.core.filter.BlocklistEntry
-import com.privacyguard.app.core.filter.BlocklistCategory
-import com.privacyguard.app.core.filter.BlocklistSource
+import com.privacyguard.app.core.blocklist.BlocklistCategory
+import com.privacyguard.app.core.blocklist.BlocklistEntry
+import com.privacyguard.app.core.blocklist.BlocklistSource
 import com.privacyguard.app.data.db.BlocklistDao
 import com.privacyguard.app.data.db.BlocklistEntity
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class BlocklistRepository(
     private val blocklistDao: BlocklistDao
 ) {
+    fun getAllEntriesFlow(): Flow<List<BlocklistEntry>> {
+        return blocklistDao.getAllEntriesFlow().map { list -> list.map { it.toBlocklistEntry() } }
+    }
     
     /**
      * Updates the entire blocklist
@@ -43,7 +48,8 @@ class BlocklistRepository(
             domain = entry.domain,
             source = entry.source.name,
             category = entry.category.name,
-            lastUpdated = entry.lastUpdated
+            lastUpdated = entry.lastUpdated,
+            isEnabled = entry.isEnabled
         )
         blocklistDao.insert(entity)
     }
@@ -54,13 +60,15 @@ class BlocklistRepository(
     suspend fun getAllEntries(): List<BlocklistEntry> {
         return blocklistDao.getAllEntries().map { it.toBlocklistEntry() }
     }
+
+    suspend fun getEntriesBySource(source: BlocklistSource): List<BlocklistEntry> {
+        return blocklistDao.getEntriesBySource(source.name).map { it.toBlocklistEntry() }
+    }
     
     /**
      * Checks if a domain is blocked
      */
-    suspend fun isBlocked(domain: String): Boolean {
-        return blocklistDao.isBlocked(domain)
-    }
+    suspend fun isBlocked(domain: String): Boolean = blocklistDao.isBlocked(domain)
     
     /**
      * Gets blocklist entry for a domain
@@ -74,6 +82,10 @@ class BlocklistRepository(
      */
     suspend fun deleteEntry(domain: String) {
         blocklistDao.deleteEntry(domain)
+    }
+
+    suspend fun setEnabled(domain: String, enabled: Boolean) {
+        blocklistDao.setEnabled(domain, enabled)
     }
     
     /**
@@ -104,6 +116,12 @@ class BlocklistRepository(
         val stats = blocklistDao.getStatsBySource()
         return stats.associate { 
             BlocklistSource.valueOf(it.source) to it.count 
+        }
+    }
+
+    suspend fun getStatsByCategory(): Map<BlocklistCategory, Int> {
+        return blocklistDao.getStatsByCategory().associate {
+            runCatching { BlocklistCategory.valueOf(it.category) }.getOrDefault(BlocklistCategory.OTHER) to it.count
         }
     }
     
@@ -140,8 +158,9 @@ class BlocklistRepository(
 fun BlocklistEntity.toBlocklistEntry(): BlocklistEntry {
     return BlocklistEntry(
         domain = domain,
-        source = BlocklistSource.valueOf(source),
-        category = BlocklistCategory.valueOf(category),
-        lastUpdated = lastUpdated
+        source = runCatching { BlocklistSource.valueOf(source) }.getOrDefault(BlocklistSource.CUSTOM),
+        category = runCatching { BlocklistCategory.valueOf(category) }.getOrDefault(BlocklistCategory.OTHER),
+        lastUpdated = lastUpdated,
+        isEnabled = isEnabled
     )
 }

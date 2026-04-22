@@ -16,6 +16,7 @@ import com.privacyguard.app.core.app.AppResolver
 import com.privacyguard.app.core.blocklist.BlocklistManager
 import com.privacyguard.app.core.pcap.PcapWriter
 import com.privacyguard.app.core.stats.StatsManager
+import com.privacyguard.app.service.notification.NotificationService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -41,17 +42,20 @@ class PrivacyVpnService : VpnService() {
     private var vpnInterface: ParcelFileDescriptor? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val packetProcessor = PacketProcessor()
+    private lateinit var notificationService: NotificationService
     @Volatile
     private var isActive = false
     private var lastBatteryTick = 0L
 
     override fun onCreate() {
         super.onCreate()
+        notificationService = NotificationService(this)
         AppResolver.initialize(this)
         KillSwitch.initialize(this)
         createNotificationChannel()
         BlocklistManager.initialize(this)
         StatsManager.setBlocklistSize(BlocklistManager.getSize())
+        packetProcessor.attachNotificationService(notificationService)
         Log.d(TAG, "VPN Service created")
     }
 
@@ -100,6 +104,7 @@ class PrivacyVpnService : VpnService() {
             startForeground(NOTIFICATION_ID, createNotification())
             startPacketCapture()
             KillSwitch.startMonitoring(this)
+            notificationService.vpnStarted()
 
             Log.d(TAG, "VPN started successfully")
         } catch (e: Exception) {
@@ -152,6 +157,7 @@ class PrivacyVpnService : VpnService() {
     }
 
     private fun stopVpn() {
+        val wasRunning = isRunning
         isActive = false
         isRunning = false
         KillSwitch.stopMonitoring()
@@ -165,6 +171,9 @@ class PrivacyVpnService : VpnService() {
             PcapWriter.stopCapture()
         }
         stopForeground(STOP_FOREGROUND_REMOVE)
+        if (wasRunning) {
+            notificationService.vpnStopped()
+        }
         Log.d(TAG, "VPN stopped")
     }
 

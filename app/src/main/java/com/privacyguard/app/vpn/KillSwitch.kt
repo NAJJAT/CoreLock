@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import com.privacyguard.app.MainActivity
 import com.privacyguard.app.R
 import com.privacyguard.app.core.monitor.NetworkMonitor
+import com.privacyguard.app.service.notification.NotificationService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,6 +29,7 @@ object KillSwitch {
 
     private lateinit var prefs: SharedPreferences
     private lateinit var appContext: Context
+    private lateinit var notificationService: NotificationService
 
     @Volatile
     private var enabled = false
@@ -46,6 +48,7 @@ object KillSwitch {
         appContext = context.applicationContext
         prefs = appContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
         enabled = prefs.getBoolean(KEY_ENABLED, false)
+        notificationService = NotificationService(appContext)
         createNotificationChannel()
     }
 
@@ -107,6 +110,7 @@ object KillSwitch {
     }
 
     private fun handleUnexpectedVpnStop() {
+        notificationService.killSwitchActivated()
         showKillSwitchNotification(appContext, appContext.getString(R.string.kill_switch_triggered_desc))
         monitorScope?.launch {
             delay(2500)

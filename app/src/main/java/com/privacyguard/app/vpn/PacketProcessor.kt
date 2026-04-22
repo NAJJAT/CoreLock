@@ -7,6 +7,7 @@ import com.privacyguard.app.core.packet.IpPacket
 import com.privacyguard.app.core.packet.TcpPacket
 import com.privacyguard.app.core.packet.UdpPacket
 import com.privacyguard.app.core.stats.StatsManager
+import com.privacyguard.app.service.notification.NotificationService
 
 sealed class PacketDecision {
     data object Pass : PacketDecision()
@@ -14,6 +15,13 @@ sealed class PacketDecision {
 }
 
 class PacketProcessor {
+
+    @Volatile
+    private var notificationService: NotificationService? = null
+
+    fun attachNotificationService(service: NotificationService) {
+        notificationService = service
+    }
 
     fun process(data: ByteArray, length: Int): PacketDecision {
         val ipPacket = IpPacket.parse(data, length) ?: return PacketDecision.Pass
@@ -95,6 +103,8 @@ class PacketProcessor {
                         packageName = appInfo.packageName,
                         category = match.category.name
                     )
+                    notificationService?.connectionBlocked(appInfo.appName, domain)
+                    notificationService?.trackerBlocked(domain, appInfo.appName)
                     return PacketDecision.Blocked("DNS blocked for $domain")
                 }
 

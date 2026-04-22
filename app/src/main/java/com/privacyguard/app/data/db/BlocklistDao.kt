@@ -10,6 +10,7 @@
 package com.privacyguard.app.data.db
 
 import androidx.room.*
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BlocklistDao {
@@ -29,25 +30,28 @@ interface BlocklistDao {
     /**
      * Gets all blocklist entries
      */
-    @Query("SELECT * FROM blocklist ORDER BY domain")
+    @Query("SELECT * FROM blocklist WHERE isEnabled = 1 ORDER BY domain")
     suspend fun getAllEntries(): List<BlocklistEntity>
+
+    @Query("SELECT * FROM blocklist WHERE isEnabled = 1 ORDER BY domain")
+    fun getAllEntriesFlow(): Flow<List<BlocklistEntity>>
     
     /**
      * Gets blocklist entries by source
      */
-    @Query("SELECT * FROM blocklist WHERE source = :source ORDER BY domain")
+    @Query("SELECT * FROM blocklist WHERE source = :source AND isEnabled = 1 ORDER BY domain")
     suspend fun getEntriesBySource(source: String): List<BlocklistEntity>
     
     /**
      * Gets blocklist entries by category
      */
-    @Query("SELECT * FROM blocklist WHERE category = :category ORDER BY domain")
+    @Query("SELECT * FROM blocklist WHERE category = :category AND isEnabled = 1 ORDER BY domain")
     suspend fun getEntriesByCategory(category: String): List<BlocklistEntity>
     
     /**
      * Checks if a domain is in the blocklist
      */
-    @Query("SELECT EXISTS(SELECT 1 FROM blocklist WHERE domain = :domain)")
+    @Query("SELECT EXISTS(SELECT 1 FROM blocklist WHERE domain = :domain AND isEnabled = 1)")
     suspend fun isBlocked(domain: String): Boolean
     
     /**
@@ -59,6 +63,9 @@ interface BlocklistDao {
     /**
      * Deletes a blocklist entry
      */
+    @Query("UPDATE blocklist SET isEnabled = :enabled WHERE domain = :domain")
+    suspend fun setEnabled(domain: String, enabled: Boolean)
+
     @Query("DELETE FROM blocklist WHERE domain = :domain")
     suspend fun deleteEntry(domain: String)
     
@@ -83,7 +90,7 @@ interface BlocklistDao {
     /**
      * Gets blocklist size
      */
-    @Query("SELECT COUNT(*) FROM blocklist")
+    @Query("SELECT COUNT(*) FROM blocklist WHERE isEnabled = 1")
     suspend fun getSize(): Int
     
     /**
@@ -92,13 +99,28 @@ interface BlocklistDao {
     @Query("""
         SELECT source, COUNT(*) as count 
         FROM blocklist 
+        WHERE isEnabled = 1
         GROUP BY source 
         ORDER BY count DESC
     """)
     suspend fun getStatsBySource(): List<SourceStats>
+
+    @Query("""
+        SELECT category, COUNT(*) as count
+        FROM blocklist
+        WHERE isEnabled = 1
+        GROUP BY category
+        ORDER BY count DESC
+    """)
+    suspend fun getStatsByCategory(): List<CategoryStats>
 }
 
 data class SourceStats(
     val source: String,
+    val count: Int
+)
+
+data class CategoryStats(
+    val category: String,
     val count: Int
 )

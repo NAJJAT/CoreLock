@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.widget.Toast
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -30,14 +31,18 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Update
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -49,6 +54,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,11 +72,17 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
 import com.privacyguard.app.R
+import com.privacyguard.app.data.local.preferences.SettingsPreferences
+import com.privacyguard.app.core.blocklist.BlocklistManager
 import com.privacyguard.app.utils.LocaleHelper
 import com.privacyguard.app.core.pcap.PcapWriter
 import com.privacyguard.app.vpn.KillSwitch
 import com.privacyguard.app.vpn.PrivacyVpnService
+import com.privacyguard.app.workers.BlocklistUpdateWorker
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,6 +94,16 @@ fun SettingsScreen(
     val currentLanguage = remember { mutableStateOf(LocaleHelper.getSavedLanguage(context)) }
     var isPcapEnabled by remember { mutableStateOf(PrivacyVpnService.isPcapEnabled) }
     var isKillSwitchEnabled by remember { mutableStateOf(KillSwitch.isEnabled()) }
+    val settingsPreferences = remember(context) { SettingsPreferences.getInstance(context) }
+    val notificationsEnabled by settingsPreferences.notificationsEnabled.collectAsState()
+    val blockNotifications by settingsPreferences.blockNotifications.collectAsState()
+    val trackerNotifications by settingsPreferences.trackerNotifications.collectAsState()
+    val vpnNotifications by settingsPreferences.vpnNotifications.collectAsState()
+    val weeklyReport by settingsPreferences.weeklyReport.collectAsState()
+    val killSwitchNotifications by settingsPreferences.killSwitchNotifications.collectAsState()
+    val blocklistSize by BlocklistManager.size.collectAsState()
+    val lastBlocklistUpdate by BlocklistManager.lastUpdate.collectAsState()
+    val isUpdatingBlocklist by BlocklistManager.isUpdating.collectAsState()
 
     Scaffold(
         topBar = {
@@ -165,11 +187,49 @@ fun SettingsScreen(
 
             item { SectionHeader(stringResource(R.string.advanced)) }
             item {
+                NotificationSettingsSection(
+                    notificationsEnabled = notificationsEnabled,
+                    blockNotifications = blockNotifications,
+                    trackerNotifications = trackerNotifications,
+                    vpnNotifications = vpnNotifications,
+                    weeklyReport = weeklyReport,
+                    killSwitchNotifications = killSwitchNotifications,
+                    onNotificationsEnabled = settingsPreferences::setNotificationsEnabled,
+                    onBlockNotifications = settingsPreferences::setBlockNotifications,
+                    onTrackerNotifications = settingsPreferences::setTrackerNotifications,
+                    onVpnNotifications = settingsPreferences::setVpnNotifications,
+                    onWeeklyReport = settingsPreferences::setWeeklyReport,
+                    onKillSwitchNotifications = settingsPreferences::setKillSwitchNotifications
+                )
+            }
+            item {
+                BlocklistSettingsSection(
+                    blocklistSize = blocklistSize,
+                    lastUpdate = lastBlocklistUpdate,
+                    isUpdating = isUpdatingBlocklist,
+                    onUpdate = {
+                        BlocklistUpdateWorker.updateNow(context)
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.blocklist_update_started),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                )
+            }
+            item {
                 SettingsItem(
                     title = stringResource(R.string.update_blocklist),
                     description = stringResource(R.string.update_blocklist_desc),
                     icon = Icons.Default.Update,
-                    onClick = {}
+                    onClick = {
+                        BlocklistUpdateWorker.updateNow(context)
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.blocklist_update_started),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 )
             }
             item {
@@ -547,4 +607,163 @@ fun LanguageOption(
             }
         }
     }
+}
+
+@Composable
+fun NotificationSettingsSection(
+    notificationsEnabled: Boolean,
+    blockNotifications: Boolean,
+    trackerNotifications: Boolean,
+    vpnNotifications: Boolean,
+    weeklyReport: Boolean,
+    killSwitchNotifications: Boolean,
+    onNotificationsEnabled: (Boolean) -> Unit,
+    onBlockNotifications: (Boolean) -> Unit,
+    onTrackerNotifications: (Boolean) -> Unit,
+    onVpnNotifications: (Boolean) -> Unit,
+    onWeeklyReport: (Boolean) -> Unit,
+    onKillSwitchNotifications: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.notifications_title),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            SettingsSwitchItem(
+                title = stringResource(R.string.enable_notifications),
+                description = stringResource(R.string.enable_notifications_desc),
+                icon = Icons.Default.Notifications,
+                checked = notificationsEnabled,
+                onCheckedChange = onNotificationsEnabled
+            )
+
+            if (notificationsEnabled) {
+                Spacer(modifier = Modifier.height(8.dp))
+                SettingsSwitchItem(
+                    title = stringResource(R.string.block_notifications),
+                    description = stringResource(R.string.block_notifications_desc),
+                    icon = Icons.Default.Block,
+                    checked = blockNotifications,
+                    onCheckedChange = onBlockNotifications
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                SettingsSwitchItem(
+                    title = stringResource(R.string.tracker_notifications),
+                    description = stringResource(R.string.tracker_notifications_desc),
+                    icon = Icons.Default.Visibility,
+                    checked = trackerNotifications,
+                    onCheckedChange = onTrackerNotifications
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                SettingsSwitchItem(
+                    title = stringResource(R.string.vpn_notifications),
+                    description = stringResource(R.string.vpn_notifications_desc),
+                    icon = Icons.Default.Lock,
+                    checked = vpnNotifications,
+                    onCheckedChange = onVpnNotifications
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                SettingsSwitchItem(
+                    title = stringResource(R.string.weekly_report),
+                    description = stringResource(R.string.weekly_report_desc),
+                    icon = Icons.Default.Info,
+                    checked = weeklyReport,
+                    onCheckedChange = onWeeklyReport
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                SettingsSwitchItem(
+                    title = stringResource(R.string.kill_switch_alerts),
+                    description = stringResource(R.string.kill_switch_alerts_desc),
+                    icon = Icons.Default.Warning,
+                    checked = killSwitchNotifications,
+                    onCheckedChange = onKillSwitchNotifications
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun BlocklistSettingsSection(
+    blocklistSize: Int,
+    lastUpdate: Long,
+    isUpdating: Boolean,
+    onUpdate: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.blocklist_title),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = stringResource(R.string.blocklist_total_entries), fontSize = 14.sp)
+                Text(
+                    text = stringResource(R.string.blocklist_domains_count, blocklistSize),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = stringResource(R.string.blocklist_last_update), fontSize = 14.sp)
+                Text(text = formatDate(lastUpdate), fontSize = 14.sp)
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(
+                onClick = onUpdate,
+                enabled = !isUpdating,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (isUpdating) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(R.string.blocklist_updating))
+                } else {
+                    Text(text = stringResource(R.string.blocklist_update_now))
+                }
+            }
+        }
+    }
+}
+
+private fun formatDate(timestamp: Long): String {
+    if (timestamp == 0L) return "Never"
+    return SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(timestamp))
 }
