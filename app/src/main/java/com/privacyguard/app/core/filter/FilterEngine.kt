@@ -1,356 +1,194 @@
-/**
- * FilterEngine.kt
- * 
- * Decision engine for PrivacyGuard
- * 
- * @author PrivacyGuard Engineering Team
- * @since 1.0.0
- */
+package com.privacyguard.core.filter
 
-package com.privacyguard.app.core.filter
-
-import java.util.concurrent.ConcurrentHashMap
+import com.privacyguard.core.metadata.EncryptionStatus
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.atomic.AtomicReference
-import java.util.concurrent.locks.ReentrantReadWriteLock
-import kotlin.concurrent.read
-import kotlin.concurrent.write
 
-// ============================================================
-// Blocking Mode
-// ============================================================
+/**
+ * The core decision engine.
+ *
+ * Updated to receive [EncryptionStatus] on every evaluation so that
+ * encryption-enforcement rules (e.g. [FilterRule.blockCleartext]) can fire
+ * without any payload inspection — the port number and optional TLS ClientHello
+ * byte inspection is sufficient to classify the session.
+ *
+ * Rule evaluation order: ascending [FilterRule.priority] → first match wins.
+ * Default action when no rule matches: [defaultAction] (ALLOW = blacklist mode).
+ */
+class FilterEngine(
+    private val defaultAction: FilterRule.Action = FilterRule.Action.ALLOW,
+    @Volatile var blockLevel: BlockLevel = BlockLevel.STANDARD,
+) {
+    enum class BlockLevel { MINIMAL, STANDARD, STRICT }
 
-enum class BlockingMode {
-    MINIMAL, STANDARD, STRICT, CUSTOM
-}
-
-// ============================================================
-// FilterStats
-// ============================================================
-
-data class FilterStats(
-    val totalEvaluations: Long,
-    val totalBlocks: Long,
-    val totalAllows: Long,
-    val totalBypass: Long,
-    val blockRate: Double,
-    val activeRules: Int,
-    val bypassedApps: Int,
-    val blocklistSize: Int
-)
-
-// ============================================================
-// FilterEngine
-// ============================================================
-
-class FilterEngine {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Rule Storage
+    // ─────────────────────────────────────────────────────────────────────────
 
     private val rules = CopyOnWriteArrayList<FilterRule>()
-    private val appRules = ConcurrentHashMap<String, FilterRule>()
-    private val exactDomainRules = ConcurrentHashMap<String, FilterRule>()
-    private val wildcardDomainRules = CopyOnWriteArrayList<FilterRule>()
-    private val exactIpRules = ConcurrentHashMap<String, FilterRule>()
-    private val cidrIpRules = CopyOnWriteArrayList<FilterRule>()
-    private val bypassApps = ConcurrentHashMap.newKeySet<String>()
-    private val emergencyRules = CopyOnWriteArrayList<FilterRule>()
 
-    private val blocklistRef = AtomicReference<Set<String>>(emptySet())
-    private val blocklistEntriesRef = AtomicReference<Map<String, BlocklistEntry>>(emptyMap())
-    private var blocklistLastUpdate: Long = 0
-    private var blocklistSize: Int = 0
-    private val blocklistLock = ReentrantReadWriteLock()
+    val allRules: List<FilterRule> get() = rules.toList()
+    val ruleCount: Int             get() = rules.size
 
-    @Volatile var defaultAction: RuleAction = RuleAction.ALLOW
-    @Volatile var blockingMode: BlockingMode = BlockingMode.STANDARD
-    @Volatile var logBlocked: Boolean = true
-    @Volatile var logAllowed: Boolean = false
+    fun addRule(rule: FilterRule) { rules.add(rule); sortRules() }
 
-    private val totalEvaluations = AtomicLong(0)
-    private val totalBlocks = AtomicLong(0)
-    private val totalAllows = AtomicLong(0)
-    private val totalBypass = AtomicLong(0)
+    fun setRules(newRules: List<FilterRule>) {
+        rules.clear()
+        rules.addAll(newRules.sortedBy { it.priority })
+    }
 
-    // ============================================================
-    // Rule Management
-    // ============================================================
+    fun removeRule(id: String): Boolean = rules.removeIf { it.id == id }
 
-    fun addRule(rule: FilterRule): Boolean {
-        if (findRule(rule.id) != null) return false
-        rules.add(rule)
-        when (rule.type) {
-            RuleType.APP -> appRules[rule.value] = rule
-            RuleType.DOMAIN -> {
-                if (rule.value.startsWith("*.")) wildcardDomainRules.add(rule)
-                else exactDomainRules[rule.value] = rule
-            }
-            RuleType.IP -> {
-                if (rule.value.contains('/')) cidrIpRules.add(rule)
-                else exactIpRules[rule.value] = rule
-            }
-        }
+    fun setEnabled(id: String, enabled: Boolean): Boolean {
+        val idx = rules.indexOfFirst { it.id == id }.takeIf { it >= 0 } ?: return false
+        rules[idx] = rules[idx].copy(isEnabled = enabled)
         return true
     }
 
-    fun addEmergencyRule(rule: FilterRule): Boolean {
-        emergencyRules.add(rule)
-        return true
+    fun clearRules() = rules.clear()
+
+    private fun sortRules() {
+        val sorted = rules.sortedBy { it.priority }
+        rules.clear()
+        rules.addAll(sorted)
     }
 
-    fun findRule(ruleId: String): FilterRule? = rules.find { it.id == ruleId }
+    // ─────────────────────────────────────────────────────────────────────────
+    // Decision
+    // ─────────────────────────────────────────────────────────────────────────
 
-    fun getAllRules(): List<FilterRule> = rules.toList()
-
-    fun removeRule(ruleId: String): Boolean {
-        val rule = findRule(ruleId) ?: return false
-        rules.remove(rule)
-        when (rule.type) {
-            RuleType.APP -> appRules.remove(rule.value)
-            RuleType.DOMAIN -> {
-                if (rule.value.startsWith("*.")) wildcardDomainRules.remove(rule)
-                else exactDomainRules.remove(rule.value)
-            }
-            RuleType.IP -> {
-                if (rule.value.contains('/')) cidrIpRules.remove(rule)
-                else exactIpRules.remove(rule.value)
-            }
-        }
-        return true
-    }
-
-    fun addBypassApp(packageName: String) { bypassApps.add(packageName) }
-
-    fun removeBypassApp(packageName: String) { bypassApps.remove(packageName) }
-
-    fun isAppBypassed(packageName: String): Boolean = bypassApps.contains(packageName)
-
-    fun getBypassApps(): Set<String> = bypassApps.toSet()
-
-    // ============================================================
-    // Blocklist Management
-    // ============================================================
-
-    fun updateBlocklist(entries: List<BlocklistEntry>) {
-        blocklistLock.write {
-            val domains = mutableSetOf<String>()
-            val entriesMap = mutableMapOf<String, BlocklistEntry>()
-            for (entry in entries) {
-                val normalized = entry.normalizedDomain()
-                domains.add(normalized)
-                entriesMap[normalized] = entry
-            }
-            blocklistRef.set(domains)
-            blocklistEntriesRef.set(entriesMap)
-            blocklistSize = domains.size
-            blocklistLastUpdate = System.currentTimeMillis()
-        }
-    }
-
-    fun isDomainBlocklisted(domain: String): Boolean {
-        return blocklistRef.get().contains(domain.lowercase().trimEnd('.'))
-    }
-
-    fun getBlocklistEntry(domain: String): BlocklistEntry? {
-        return blocklistEntriesRef.get()[domain.lowercase().trimEnd('.')]
-    }
-
-    fun getBlocklistStats(): BlocklistStats {
-        blocklistLock.read {
-            val sources = blocklistEntriesRef.get().values
-                .groupBy { it.source }
-                .mapValues { it.value.size }
-            return BlocklistStats(
-                size = blocklistSize,
-                lastUpdate = blocklistLastUpdate,
-                ageHours = if (blocklistLastUpdate > 0) {
-                    (System.currentTimeMillis() - blocklistLastUpdate) / (1000 * 60 * 60)
-                } else 0,
-                sources = sources
-            )
-        }
-    }
-
-    // ============================================================
-    // Decision Making
-    // ============================================================
-
-    fun evaluate(packageName: String?, domain: String?, ip: String?): FilterDecision {
+    /**
+     * Evaluates all rules against the given connection parameters.
+     *
+     * @param uid        Android UID (-1 if unknown)
+     * @param pkg        package name (null if unknown)
+     * @param domain     hostname from SNI or DNS (null if unavailable)
+     * @param ip         destination IP address
+     * @param port       destination port
+     * @param protocol   IP protocol (6=TCP, 17=UDP)
+     * @param encStatus  encryption classification — defaults to UNKNOWN so that
+     *                   callers without classification info still work correctly.
+     */
+    fun evaluate(
+        uid:       Int,
+        pkg:       String?,
+        domain:    String?,
+        ip:        String,
+        port:      Int,
+        protocol:  Int,
+        encStatus: EncryptionStatus = EncryptionStatus.UNKNOWN,
+    ): Decision {
         totalEvaluations.incrementAndGet()
 
-        // Emergency rules
-        for (rule in emergencyRules) {
-            if (rule.enabled && evaluateRuleMatch(rule, packageName, domain, ip)) {
-                totalBypass.incrementAndGet()
-                return FilterDecision.blockByRule(rule)
-            }
-        }
+        for (rule in rules) {
+            if (!rule.isEnabled)              continue
+            if (!isActiveForLevel(rule))       continue
+            if (!rule.matches(uid, pkg, domain, ip, port, protocol, encStatus)) continue
 
-        // Bypass apps
-        if (packageName != null && bypassApps.contains(packageName)) {
-            totalBypass.incrementAndGet()
-            totalAllows.incrementAndGet()
-            return FilterDecision.allow("Bypassed app: $packageName")
-        }
-
-        // User ALLOW rules
-        for (rule in rules.filter { it.enabled && it.action == RuleAction.ALLOW }.sortedByDescending { it.priority }) {
-            if (evaluateRuleMatch(rule, packageName, domain, ip)) {
-                totalAllows.incrementAndGet()
-                return FilterDecision.allow("Allowed by rule: ${rule.value}")
-            }
-        }
-
-        // User BLOCK rules
-        for (rule in rules.filter { it.enabled && it.action == RuleAction.BLOCK }.sortedByDescending { it.priority }) {
-            if (evaluateRuleMatch(rule, packageName, domain, ip)) {
-                totalBlocks.incrementAndGet()
-                return FilterDecision.block("Blocked by rule: ${rule.value}")
-            }
-        }
-
-        // IP block rules
-        if (ip != null) {
-            exactIpRules[ip]?.let {
-                totalBlocks.incrementAndGet()
-                return FilterDecision.blockByRule(it)
-            }
-            for (rule in cidrIpRules) {
-                if (rule.enabled && rule.matchesIp(ip)) {
-                    totalBlocks.incrementAndGet()
-                    return FilterDecision.blockByRule(rule)
+            return when (rule.action) {
+                FilterRule.Action.DENY  -> {
+                    blockedCount.incrementAndGet()
+                    Decision(FilterRule.Action.DENY, rule)
                 }
+                FilterRule.Action.ALLOW -> Decision(FilterRule.Action.ALLOW, rule)
             }
         }
 
-        // Domain block rules
-        if (domain != null) {
-            exactDomainRules[domain]?.let {
-                totalBlocks.incrementAndGet()
-                return FilterDecision.blockByRule(it)
-            }
-            for (rule in wildcardDomainRules) {
-                if (rule.enabled && rule.matchesDomain(domain)) {
-                    totalBlocks.incrementAndGet()
-                    return FilterDecision.blockByRule(rule)
-                }
-            }
-        }
-
-        // App block rules
-        if (packageName != null) {
-            appRules[packageName]?.let {
-                totalBlocks.incrementAndGet()
-                return FilterDecision.blockByRule(it)
-            }
-        }
-
-        // Blocklist
-        if (domain != null && blockingMode != BlockingMode.MINIMAL) {
-            getBlocklistEntry(domain)?.let { entry ->
-                val shouldBlock = when (blockingMode) {
-                    BlockingMode.STRICT -> true
-                    BlockingMode.STANDARD -> entry.category in setOf(BlocklistCategory.ADVERTISING, BlocklistCategory.ANALYTICS)
-                    else -> false
-                }
-                if (shouldBlock) {
-                    totalBlocks.incrementAndGet()
-                    return FilterDecision.blockByBlocklist(entry)
-                }
-            }
-        }
-
-        // Default action
-        return if (defaultAction == RuleAction.ALLOW) {
-            totalAllows.incrementAndGet()
-            FilterDecision.allow("Default allow")
-        } else {
-            totalBlocks.incrementAndGet()
-            FilterDecision.block("Default block")
-        }
+        return Decision(defaultAction, null)
     }
 
-    private fun evaluateRuleMatch(rule: FilterRule, packageName: String?, domain: String?, ip: String?): Boolean {
-        return when (rule.type) {
-            RuleType.APP -> packageName != null && rule.matchesApp(packageName)
-            RuleType.DOMAIN -> domain != null && rule.matchesDomain(domain)
-            RuleType.IP -> ip != null && rule.matchesIp(ip)
+    /** Convenience overload accepting a [ConnectionContext]. */
+    fun evaluate(ctx: ConnectionContext): Decision =
+        evaluate(ctx.uid, ctx.pkg, ctx.domain, ctx.ip, ctx.port, ctx.protocol, ctx.encStatus)
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Quick checks (used by DNS intercept and connection guard)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fun isDomainBlocked(domain: String): Boolean {
+        for (rule in rules) {
+            if (!rule.isEnabled || !isActiveForLevel(rule)) continue
+            if (rule.matchDomain == null) continue
+            if (rule.matches(-1, null, domain, "0.0.0.0", 0, 0)) {
+                return rule.action == FilterRule.Action.DENY
+            }
         }
+        return defaultAction == FilterRule.Action.DENY
     }
 
-    fun evaluateByDomain(domain: String): FilterDecision = evaluate(null, domain, null)
+    fun isIpBlocked(ip: String): Boolean {
+        for (rule in rules) {
+            if (!rule.isEnabled || !isActiveForLevel(rule)) continue
+            if (rule.matchIp == null) continue
+            if (rule.matches(-1, null, null, ip, 0, 0)) {
+                return rule.action == FilterRule.Action.DENY
+            }
+        }
+        return defaultAction == FilterRule.Action.DENY
+    }
 
-    fun evaluateByIp(ip: String): FilterDecision = evaluate(null, null, ip)
+    /**
+     * Returns true if cleartext enforcement is active (any enabled DENY rule
+     * with [matchEncryption] = CLEARTEXT).
+     */
+    fun isCleartextBlocked(): Boolean =
+        rules.any { it.isEnabled && it.action == FilterRule.Action.DENY &&
+                    it.matchEncryption == EncryptionStatus.CLEARTEXT }
 
-    fun evaluateByApp(packageName: String): FilterDecision = evaluate(packageName, null, null)
+    // ─────────────────────────────────────────────────────────────────────────
+    // Block Level
+    // ─────────────────────────────────────────────────────────────────────────
 
-    // ============================================================
+    private fun isActiveForLevel(rule: FilterRule): Boolean = when (rule.source) {
+        FilterRule.Source.SYSTEM,
+        FilterRule.Source.USER      -> true
+        FilterRule.Source.BLOCKLIST -> blockLevel >= BlockLevel.STANDARD
+        FilterRule.Source.COMMUNITY -> blockLevel >= BlockLevel.STRICT
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Statistics
-    // ============================================================
+    // ─────────────────────────────────────────────────────────────────────────
 
-    fun getStats(): FilterStats {
-        val evaluations = totalEvaluations.get()
-        val blocks = totalBlocks.get()
-        return FilterStats(
-            totalEvaluations = evaluations,
-            totalBlocks = blocks,
-            totalAllows = totalAllows.get(),
-            totalBypass = totalBypass.get(),
-            blockRate = if (evaluations > 0) blocks.toDouble() / evaluations else 0.0,
-            activeRules = rules.count { it.enabled },
-            bypassedApps = bypassApps.size,
-            blocklistSize = blocklistSize
-        )
+    private val totalEvaluations = AtomicLong(0)
+    private val blockedCount     = AtomicLong(0)
+
+    data class Stats(
+        val totalEvaluations: Long,
+        val blockedCount:     Long,
+        val allowedCount:     Long,
+        val loadedRules:      Int,
+    )
+
+    fun stats() = Stats(
+        totalEvaluations = totalEvaluations.get(),
+        blockedCount     = blockedCount.get(),
+        allowedCount     = totalEvaluations.get() - blockedCount.get(),
+        loadedRules      = rules.size,
+    )
+
+    fun resetStats() { totalEvaluations.set(0); blockedCount.set(0) }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Data Classes
+    // ─────────────────────────────────────────────────────────────────────────
+
+    data class Decision(
+        val action:      FilterRule.Action,
+        val matchedRule: FilterRule?,
+    ) {
+        val isBlocked: Boolean get() = action == FilterRule.Action.DENY
+        val isAllowed: Boolean get() = action == FilterRule.Action.ALLOW
+        val isDefault: Boolean get() = matchedRule == null
     }
 
-    fun resetStats() {
-        totalEvaluations.set(0)
-        totalBlocks.set(0)
-        totalAllows.set(0)
-        totalBypass.set(0)
-    }
-
-    fun clearRules() {
-        rules.clear()
-        appRules.clear()
-        exactDomainRules.clear()
-        wildcardDomainRules.clear()
-        exactIpRules.clear()
-        cidrIpRules.clear()
-        bypassApps.clear()
-    }
-
-    fun exportRules(): String {
-        val rulesJson = rules.joinToString(",\n  ") { rule ->
-            """
-            {
-              "id": "${rule.id}",
-              "type": "${rule.type.name}",
-              "value": "${rule.value}",
-              "action": "${rule.action.name}",
-              "enabled": ${rule.enabled},
-              "priority": ${rule.priority},
-              "description": "${rule.description.replace("\"", "\\\"")}"
-            }
-            """.trimIndent()
-        }
-        return """
-        {
-          "version": 1,
-          "rules": [
-            $rulesJson
-          ]
-        }
-        """.trimIndent()
-    }
+    data class ConnectionContext(
+        val uid:       Int,
+        val pkg:       String?,
+        val domain:    String?,
+        val ip:        String,
+        val port:      Int,
+        val protocol:  Int,
+        val encStatus: EncryptionStatus = EncryptionStatus.UNKNOWN,
+    )
 }
-
-// ============================================================
-// BlocklistStats
-// ============================================================
-
-data class BlocklistStats(
-    val size: Int,
-    val lastUpdate: Long,
-    val ageHours: Long,
-    val sources: Map<BlocklistSource, Int>
-)

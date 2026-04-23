@@ -1,21 +1,6 @@
-/**
- * NotificationHelper.kt
- * 
- * Manages notifications for PrivacyGuard
- * 
- * What it does:
- * =============
- * - Shows VPN active notification
- * - Shows block notifications (when an app is blocked)
- * - Shows weekly report notifications
- * - Manages notification channels
- * 
- * @author PrivacyGuard Engineering Team
- * @since 1.0.0
- */
+package com.privacyguard.platform.android
 
-package com.privacyguard.app.platform.android
-
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -23,164 +8,236 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import com.privacyguard.app.MainActivity
+import androidx.core.app.NotificationManagerCompat
 
 /**
- * Manages all notifications for PrivacyGuard
+ * Centralized helper for creating and posting all notifications used by PrivacyGuard.
+ *
+ * Channels:
+ *  - [CHANNEL_VPN_STATUS]   — persistent foreground notification showing VPN state.
+ *  - [CHANNEL_ALERTS]       — high-priority alerts for suspicious connections.
+ *  - [CHANNEL_WEEKLY_REPORT]— low-priority weekly privacy summary.
+ *
+ * All channel creation is idempotent; safe to call multiple times.
  */
 class NotificationHelper(private val context: Context) {
-    
-    companion object {
-        private const val CHANNEL_VPN = "privacyguard_vpn"
-        private const val CHANNEL_BLOCK = "privacyguard_block"
-        private const val CHANNEL_REPORT = "privacyguard_report"
-        
-        private const val NOTIFICATION_VPN = 1
-        private const val NOTIFICATION_BLOCK_BASE = 1000
-    }
-    
+
+    private val manager = context.getSystemService(Context.NOTIFICATION_SERVICE)
+            as NotificationManager
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Channel Registration
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * Creates all notification channels (call once on app start)
+     * Creates all notification channels. Must be called before posting any
+     * notification. Safe to call on every app start — Android ignores duplicate
+     * channel creation.
      */
     fun createChannels() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val manager = context.getSystemService(NotificationManager::class.java)
-            
-            // VPN channel (low importance, ongoing)
-            val vpnChannel = NotificationChannel(
-                CHANNEL_VPN,
-                "PrivacyGuard VPN",
-                NotificationManager.IMPORTANCE_LOW
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+
+        val channels = listOf(
+            NotificationChannel(
+                CHANNEL_VPN_STATUS,
+                "VPN Status",
+                NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = "Shows when VPN is active"
+                description = "Shows whether PrivacyGuard VPN is active"
                 setShowBadge(false)
-            }
-            manager.createNotificationChannel(vpnChannel)
-            
-            // Block notifications channel (medium importance)
-            val blockChannel = NotificationChannel(
-                CHANNEL_BLOCK,
-                "Block Notifications",
-                NotificationManager.IMPORTANCE_DEFAULT
+            },
+            NotificationChannel(
+                CHANNEL_ALERTS,
+                "Privacy Alerts",
+                NotificationManager.IMPORTANCE_HIGH,
             ).apply {
-                description = "Shows when connections are blocked"
-                setShowBadge(true)
-            }
-            manager.createNotificationChannel(blockChannel)
-            
-            // Weekly report channel (low importance)
-            val reportChannel = NotificationChannel(
-                CHANNEL_REPORT,
-                "Weekly Reports",
-                NotificationManager.IMPORTANCE_LOW
+                description = "Alerts for suspicious or blocked connections"
+            },
+            NotificationChannel(
+                CHANNEL_WEEKLY_REPORT,
+                "Weekly Report",
+                NotificationManager.IMPORTANCE_MIN,
             ).apply {
-                description = "Weekly privacy reports"
+                description = "Weekly privacy summary"
                 setShowBadge(false)
-            }
-            manager.createNotificationChannel(reportChannel)
-        }
-    }
-    
-    /**
-     * Shows VPN active notification (ongoing)
-     */
-    fun showVpnActiveNotification() {
-        val intent = Intent(context, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            context, 0, intent,
-            PendingIntent.FLAG_IMMUTABLE
+            },
         )
-        
-        val notification = NotificationCompat.Builder(context, CHANNEL_VPN)
-            .setContentTitle("PrivacyGuard VPN")
-            .setContentText("VPN is active - Your traffic is protected")
-            .setSmallIcon(android.R.drawable.ic_lock_lock)
-            .setContentIntent(pendingIntent)
+
+        channels.forEach { manager.createNotificationChannel(it) }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // VPN Foreground Notification
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Builds the required foreground service notification shown while the VPN is active.
+     *
+     * @param blockedCount  number of trackers blocked in this session.
+     * @param mainActivityClass class of the main activity (for tap-to-open).
+     * @return a [Notification] ready to pass to [android.app.Service.startForeground].
+     */
+    fun buildVpnActiveNotification(
+        blockedCount: Long,
+        mainActivityClass: Class<*>,
+    ): Notification {
+        val tapIntent    = Intent(context, mainActivityClass)
+        val pendingTap   = PendingIntent.getActivity(
+            context, 0, tapIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
+        val stopIntent   = Intent(ACTION_STOP_VPN).setPackage(context.packageName)
+        val pendingStop  = PendingIntent.getBroadcast(
+            context, 0, stopIntent,
+            PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val body = when {
+            blockedCount == 0L -> "Monitoring your connections…"
+            blockedCount == 1L -> "1 tracker blocked"
+            else               -> "$blockedCount trackers blocked"
+        }
+
+        return NotificationCompat.Builder(context, CHANNEL_VPN_STATUS)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
+            .setContentTitle("PrivacyGuard Active")
+            .setContentText(body)
+            .setContentIntent(pendingTap)
             .setOngoing(true)
+            .setShowWhen(false)
+            .addAction(
+                android.R.drawable.ic_delete,
+                "Stop",
+                pendingStop,
+            )
             .build()
-        
-        val manager = context.getSystemService(NotificationManager::class.java)
-        manager.notify(NOTIFICATION_VPN, notification)
     }
-    
+
     /**
-     * Shows VPN inactive notification
+     * Updates the content of the foreground notification without flickering.
+     * Requires notification id [NOTIFICATION_ID_VPN].
      */
-    fun showVpnInactiveNotification() {
-        val manager = context.getSystemService(NotificationManager::class.java)
-        manager.cancel(NOTIFICATION_VPN)
+    fun updateVpnNotification(blockedCount: Long, mainActivityClass: Class<*>) {
+        val notification = buildVpnActiveNotification(blockedCount, mainActivityClass)
+        manager.notify(NOTIFICATION_ID_VPN, notification)
     }
-    
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Alert Notifications (suspicious connection detected)
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * Shows block notification when an app is blocked
+     * Posts a high-priority alert that [appName] attempted to reach [domain].
+     *
+     * @param mainActivityClass for tap-to-open.
      */
-    fun showBlockNotification(appName: String, domain: String, reason: String) {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            putExtra("open_tab", "connections")
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            context, 0, intent,
-            PendingIntent.FLAG_IMMUTABLE
+    fun postSuspiciousAlert(
+        appName: String,
+        domain: String,
+        mainActivityClass: Class<*>,
+    ) {
+        val tapIntent  = Intent(context, mainActivityClass)
+        val pendingTap = PendingIntent.getActivity(
+            context, NOTIFICATION_ID_ALERT, tapIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        
-        val notification = NotificationCompat.Builder(context, CHANNEL_BLOCK)
-            .setContentTitle("Connection Blocked")
-            .setContentText("$appName was blocked from connecting to $domain")
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentIntent(pendingIntent)
+            .setContentTitle("Suspicious connection blocked")
+            .setContentText("$appName → $domain")
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("$appName tried to connect to $domain, which was blocked by your privacy rules.")
+            )
+            .setContentIntent(pendingTap)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+
+        manager.notify(NOTIFICATION_ID_ALERT, notification)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Weekly Report Notification
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Posts the weekly privacy report summary.
+     *
+     * @param totalBlocked total blocked connections this week.
+     * @param topApp       package name of the most tracked app this week (may be null).
+     */
+    fun postWeeklyReport(
+        totalBlocked: Long,
+        topApp: String?,
+        mainActivityClass: Class<*>,
+    ) {
+        val tapIntent  = Intent(context, mainActivityClass)
+        val pendingTap = PendingIntent.getActivity(
+            context, NOTIFICATION_ID_REPORT, tapIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
+        val detail = if (topApp != null)
+            "Most tracked app this week: $topApp"
+        else
+            "Tap to see your privacy summary."
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_WEEKLY_REPORT)
+            .setSmallIcon(android.R.drawable.ic_menu_info_details)
+            .setContentTitle("Your Weekly Privacy Report")
+            .setContentText("$totalBlocked trackers blocked this week")
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("$totalBlocked trackers were blocked this week.\n$detail")
+            )
+            .setContentIntent(pendingTap)
             .setAutoCancel(true)
             .build()
-        
-        val manager = context.getSystemService(NotificationManager::class.java)
-        manager.notify(NOTIFICATION_BLOCK_BASE + System.currentTimeMillis().toInt(), notification)
+
+        manager.notify(NOTIFICATION_ID_REPORT, notification)
     }
-    
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Cancel
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * Shows weekly report notification
+     * Posts a weekly report notification. Convenience wrapper for [postWeeklyReport].
      */
     fun showWeeklyReportNotification(blockedCount: Int, topApps: List<String>) {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            putExtra("open_tab", "statistics")
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            context, 0, intent,
-            PendingIntent.FLAG_IMMUTABLE
+        postWeeklyReport(
+            totalBlocked      = blockedCount.toLong(),
+            topApp            = topApps.firstOrNull(),
+            mainActivityClass = try {
+                Class.forName("com.privacyguard.MainActivity")
+            } catch (_: ClassNotFoundException) {
+                NotificationHelper::class.java
+            },
         )
-        
-        val topAppsText = topApps.take(3).joinToString(", ")
-        val contentText = "Blocked $blockedCount trackers this week. Top apps: $topAppsText"
-        
-        val notification = NotificationCompat.Builder(context, CHANNEL_REPORT)
-            .setContentTitle("PrivacyGuard Weekly Report")
-            .setContentText(contentText)
-            .setSmallIcon(android.R.drawable.ic_menu_report_image)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .build()
-        
-        val manager = context.getSystemService(NotificationManager::class.java)
-        manager.notify(0, notification)
     }
-    
-    /**
-     * Shows error notification
-     */
-    fun showErrorNotification(error: String) {
-        val intent = Intent(context, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            context, 0, intent,
-            PendingIntent.FLAG_IMMUTABLE
-        )
-        
-        val notification = NotificationCompat.Builder(context, CHANNEL_VPN)
-            .setContentTitle("PrivacyGuard Error")
-            .setContentText(error)
-            .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .build()
-        
-        val manager = context.getSystemService(NotificationManager::class.java)
-        manager.notify(0, notification)
+
+    fun cancelVpnNotification()    = manager.cancel(NOTIFICATION_ID_VPN)
+    fun cancelAlertNotification()  = manager.cancel(NOTIFICATION_ID_ALERT)
+    fun cancelReportNotification() = manager.cancel(NOTIFICATION_ID_REPORT)
+    fun cancelAll()                = manager.cancelAll()
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Companion — IDs & Channel Names
+    // ─────────────────────────────────────────────────────────────────────────
+
+    companion object {
+        const val CHANNEL_VPN_STATUS    = "pg_vpn_status"
+        const val CHANNEL_ALERTS        = "pg_alerts"
+        const val CHANNEL_WEEKLY_REPORT = "pg_weekly_report"
+
+        const val NOTIFICATION_ID_VPN    = 1
+        const val NOTIFICATION_ID_ALERT  = 2
+        const val NOTIFICATION_ID_REPORT = 3
+
+        /** Broadcast action to stop the VPN from the notification's Stop button. */
+        const val ACTION_STOP_VPN = "com.privacyguard.action.STOP_VPN"
     }
 }

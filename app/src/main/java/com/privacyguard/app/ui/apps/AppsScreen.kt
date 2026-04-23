@@ -20,7 +20,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.privacyguard.app.R
-import com.privacyguard.app.core.app.AppResolver
 import com.privacyguard.app.core.stats.StatsManager
 
 data class AppItem(
@@ -40,24 +39,23 @@ fun AppsScreen() {
     val stats by StatsManager.snapshot.collectAsState()
     val installedApps by remember(stats.appStats) {
         mutableStateOf(
-            AppResolver.getInstalledApps().map { app ->
-                val appStat = stats.appStats.firstOrNull { it.packageName == app.packageName || it.uid == app.uid }
+            stats.appStats.map { appStat ->
                 AppItem(
-                    name = app.appName,
-                    packageName = app.packageName,
-                    isSystem = app.isSystemApp,
-                    isBlocked = (appStat?.blockedCount ?: 0) > 0,
-                    trackers = appStat?.blockedCount?.toInt() ?: 0,
-                    dataUsed = formatBytes(appStat?.bytesTransferred ?: 0L)
+                    name = appStat.appName,
+                    packageName = appStat.packageName,
+                    isSystem = false,
+                    isBlocked = appStat.blockedCount > 0,
+                    trackers = appStat.blockedCount.toInt(),
+                    dataUsed = formatBytes(appStat.bytesTransferred)
                 )
             }
         )
     }
 
-    val filteredApps = installedApps.filter {
-        (it.name.contains(searchQuery, ignoreCase = true) ||
-                it.packageName.contains(searchQuery, ignoreCase = true)) &&
-                (showSystemApps || !it.isSystem)
+    val filteredApps = installedApps.filter { app ->
+        (app.name.contains(searchQuery, ignoreCase = true) ||
+                app.packageName.contains(searchQuery, ignoreCase = true)) &&
+                (showSystemApps || !app.isSystem)
     }
 
     Scaffold(
@@ -83,7 +81,7 @@ fun AppsScreen() {
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // شريط البحث
+            // Search bar
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -96,7 +94,7 @@ fun AppsScreen() {
                 singleLine = true
             )
 
-            // إحصائيات سريعة
+            // Quick stats
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -118,7 +116,7 @@ fun AppsScreen() {
                 }
             }
 
-            // قائمة التطبيقات
+            // App list
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(8.dp),
@@ -167,7 +165,7 @@ fun AppCard(app: AppItem) {
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // أيقونة التطبيق
+            // App icon
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -185,7 +183,7 @@ fun AppCard(app: AppItem) {
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // معلومات التطبيق
+            // App info
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = app.name, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                 Text(text = app.packageName, fontSize = 11.sp, color = Color.Gray)
@@ -196,7 +194,7 @@ fun AppCard(app: AppItem) {
                 }
             }
 
-            // زر الحظر
+            // Block button
             IconButton(onClick = { isBlocked = !isBlocked }) {
                 Icon(
                     imageVector = if (isBlocked) Icons.Default.Block else Icons.Default.LockOpen,

@@ -135,66 +135,91 @@ private fun ConnectionItem(connection: Connection) {
             }
         )
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(12.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(
-                        color = when (connection.protocol) {
-                            "TCP" -> Color(0xFF2196F3).copy(alpha = 0.2f)
-                            "UDP" -> Color(0xFF4CAF50).copy(alpha = 0.2f)
-                            else -> Color.Gray.copy(alpha = 0.2f)
-                        },
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = connection.protocol,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = when (connection.protocol) {
-                        "TCP" -> Color(0xFF2196F3)
-                        "UDP" -> Color(0xFF4CAF50)
-                        else -> Color.Gray
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = connection.destination,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    fontFamily = FontFamily.Monospace
-                )
-                Text(
-                    text = "${connection.appName} • ${connection.destinationIp}:${connection.destinationPort}",
-                    fontSize = 11.sp,
-                    color = Color.Gray
-                )
-            }
-
-            Column(horizontalAlignment = Alignment.End) {
-                if (connection.isBlocked) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            color = when {
+                                connection.protocol.contains("DNS", ignoreCase = true) -> Color(0xFF7B1FA2).copy(alpha = 0.2f)
+                                connection.protocol.contains("HTTPS", ignoreCase = true) || connection.securityInfo.contains("TLS", ignoreCase = true) -> Color(0xFF00897B).copy(alpha = 0.2f)
+                                connection.protocol.contains("TCP", ignoreCase = true) -> Color(0xFF2196F3).copy(alpha = 0.2f)
+                                connection.protocol.contains("UDP", ignoreCase = true) -> Color(0xFF4CAF50).copy(alpha = 0.2f)
+                                else -> Color.Gray.copy(alpha = 0.2f)
+                            },
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = stringResource(R.string.blocked),
+                        text = connection.protocol.take(4),
                         fontSize = 11.sp,
-                        color = Color(0xFFF44336),
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = when {
+                            connection.protocol.contains("DNS", ignoreCase = true) -> Color(0xFF7B1FA2)
+                            connection.protocol.contains("HTTPS", ignoreCase = true) || connection.securityInfo.contains("TLS", ignoreCase = true) -> Color(0xFF00897B)
+                            connection.protocol.contains("TCP", ignoreCase = true) -> Color(0xFF2196F3)
+                            connection.protocol.contains("UDP", ignoreCase = true) -> Color(0xFF4CAF50)
+                            else -> Color.Gray
+                        }
                     )
                 }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = connection.hostName ?: connection.destination,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    Text(
+                        text = "${connection.appName} • ${connection.destinationIp}:${connection.destinationPort}",
+                        fontSize = 11.sp,
+                        color = Color.Gray
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    if (connection.isBlocked) {
+                        Text(
+                            text = stringResource(R.string.blocked),
+                            fontSize = 11.sp,
+                            color = Color(0xFFF44336),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Text(
+                        text = connection.dataRate,
+                        fontSize = 11.sp,
+                        color = Color.Gray
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Security: ${connection.securityInfo} • ${connection.encryptionInfo}",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            connection.payloadPreview?.let { preview ->
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = connection.dataRate,
+                    text = "Payload: $preview",
                     fontSize = 11.sp,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

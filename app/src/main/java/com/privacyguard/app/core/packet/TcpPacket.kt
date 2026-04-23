@@ -1,490 +1,110 @@
-/**
- * TcpPacket.kt
- *
- * RFC 793 - Transmission Control Protocol Specification
- *
- * Parses TCP packets from IP payload.
- * This is the HEART of TCP connection management in PrivacyGuard.
- *
- * The TCP state machine depends on accurate extraction of:
- * - Sequence numbers (for ordering)
- * - Acknowledgment numbers (for reliability)
- * - Flags (SYN, ACK, FIN, RST for state transitions)
- * - Ports (for session identification)
- *
- * Performance requirements:
- * - Parse must complete in < 30 microseconds
- * - Called for every TCP packet (60%+ of traffic)
- *
- * Thread Safety: This class is immutable. All methods are thread-safe.
- *
- * @author PrivacyGuard Engineering Team
- * @since 1.0.0
- */
+package com.privacyguard.core.packet
 
-package com.privacyguard.app.core.packet
-
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
+import com.privacyguard.core.utils.ByteUtils
+import com.privacyguard.core.utils.Checksum
 
 /**
- * TCP Flags according to RFC 793 and RFC 3168.
+ * Represents a parsed TCP segment.
  *
- * Each flag is a bit in the 12-bit flags field (9 bits in standard TCP,
- * plus 3 bits for ECN in modern implementations).
- *
- * @property ns ECN-nonce concealment protection (RFC 3540) - bit 8
- * @property cwr Congestion Window Reduced (RFC 3168) - bit 7
- * @property ece ECN-Echo (RFC 3168) - bit 6
- * @property urg Urgent pointer field is valid - bit 5
- * @property ack Acknowledgment field is valid - bit 4
- * @property psh Push function (deliver data immediately) - bit 3
- * @property rst Reset the connection (abort) - bit 2
- * @property syn Synchronize sequence numbers (start connection) - bit 1
- * @property fin No more data from sender (close connection) - bit 0
+ * Layout (RFC 793):
+ * ```
+ *  0                   1                   2                   3
+ *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |          Source Port          |       Destination Port        |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                        Sequence Number                        |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                    Acknowledgment Number                      |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |  Data |     |N|C|E|U|A|P|R|S|F|                              |
+ * | Offset|Rsrvd|S|W|C|R|C|S|S|Y|I|            Window           |
+ * |       |     | |R|E| |K|H|T|N|N|                              |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |           Checksum            |         Urgent Pointer        |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                    Options (if data offset > 5)               |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * ```
  */
-data class TcpFlags(
-    val ns: Boolean = false,
-    val cwr: Boolean = false,
-    val ece: Boolean = false,
-    val urg: Boolean = false,
-    val ack: Boolean = false,
-    val psh: Boolean = false,
-    val rst: Boolean = false,
-    val syn: Boolean = false,
-    val fin: Boolean = false
-) {
-
-    /**
-     * Returns the 8-bit flags byte (lower 8 bits: CWR, ECE, URG, ACK, PSH, RST, SYN, FIN).
-     * NS flag is NOT in this byte (it's in the data offset byte).
-     */
-    fun toFlagsByte(): Byte {
-        var flags = 0
-        if (cwr) flags = flags or 0x80
-        if (ece) flags = flags or 0x40
-        if (urg) flags = flags or 0x20
-        if (ack) flags = flags or 0x10
-        if (psh) flags = flags or 0x08
-        if (rst) flags = flags or 0x04
-        if (syn) flags = flags or 0x02
-        if (fin) flags = flags or 0x01
-        return (flags and 0xFF).toByte()
-    }
-
-    /**
-     * Returns the NS flag bit for the data offset byte.
-     */
-    fun toNsBit(): Int = if (ns) 1 else 0
-
-    /**
-     * Returns true if this is a valid TCP flag combination.
-     * Some combinations are illegal (e.g., SYN + FIN).
-     */
-    fun isValid(): Boolean {
-        // SYN and FIN together is invalid
-        if (syn && fin) return false
-        // RST with any other flag except ACK is suspicious
-        if (rst && (syn || fin)) return false
-        return true
-    }
-
-    override fun toString(): String {
-        val sb = StringBuilder()
-        if (syn) sb.append("SYN ")
-        if (ack) sb.append("ACK ")
-        if (fin) sb.append("FIN ")
-        if (rst) sb.append("RST ")
-        if (psh) sb.append("PSH ")
-        if (urg) sb.append("URG ")
-        if (cwr) sb.append("CWR ")
-        if (ece) sb.append("ECE ")
-        if (ns) sb.append("NS ")
-        return sb.toString().trim()
-    }
-
-    companion object {
-        /**
-         * Parses TCP flags from the data offset byte and flags byte.
-         *
-         * @param dataOffsetByte Byte containing data offset (4 bits), reserved (3 bits), and NS (1 bit)
-         * @param flagsByte Byte containing CWR, ECE, URG, ACK, PSH, RST, SYN, FIN
-         * @return TcpFlags object
-         */
-        fun fromBytes(dataOffsetByte: Int, flagsByte: Int): TcpFlags {
-            val ns = (dataOffsetByte and 0x01) != 0
-            val cwr = (flagsByte and 0x80) != 0
-            val ece = (flagsByte and 0x40) != 0
-            val urg = (flagsByte and 0x20) != 0
-            val ack = (flagsByte and 0x10) != 0
-            val psh = (flagsByte and 0x08) != 0
-            val rst = (flagsByte and 0x04) != 0
-            val syn = (flagsByte and 0x02) != 0
-            val fin = (flagsByte and 0x01) != 0
-
-            return TcpFlags(ns, cwr, ece, urg, ack, psh, rst, syn, fin)
-        }
-
-        /**
-         * Creates flags for a SYN packet (connection initiation).
-         */
-        fun syn(): TcpFlags = TcpFlags(syn = true)
-
-        /**
-         * Creates flags for a SYN-ACK packet (handshake response).
-         */
-        fun synAck(): TcpFlags = TcpFlags(syn = true, ack = true)
-
-        /**
-         * Creates flags for an ACK packet (acknowledgment).
-         */
-        fun ack(): TcpFlags = TcpFlags(ack = true)
-
-        /**
-         * Creates flags for a FIN packet (graceful close).
-         */
-        fun fin(): TcpFlags = TcpFlags(fin = true)
-
-        /**
-         * Creates flags for a FIN-ACK packet (close acknowledgment).
-         */
-        fun finAck(): TcpFlags = TcpFlags(fin = true, ack = true)
-
-        /**
-         * Creates flags for an RST packet (abort connection).
-         */
-        fun rst(): TcpFlags = TcpFlags(rst = true)
-
-        /**
-         * Creates flags for a PSH-ACK packet (push data).
-         */
-        fun pshAck(): TcpFlags = TcpFlags(psh = true, ack = true)
-    }
-}
-
-/**
- * Represents a TCP packet with all header fields.
- *
- * This class is used by the TCP state machine to track
- * connection state and modify packets for forwarding.
- *
- * Note: This is a regular class (not data class) because:
- * 1. ByteArray fields need contentEquals for equality
- * 2. We control equality semantics explicitly
- * 3. Private constructor ensures validated instances only
- *
- * @property sourcePort Source port (1-65535)
- * @property destinationPort Destination port (1-65535)
- * @property sequenceNumber Sequence number for this segment (32-bit, wraps)
- * @property acknowledgmentNumber Acknowledgment number (if ACK flag set)
- * @property dataOffset TCP header length in bytes (usually 20, max 60)
- * @property reserved Reserved bits (must be 0)
- * @property flags Control flags (SYN, ACK, FIN, RST, etc.)
- * @property window Window size for flow control
- * @property checksum TCP checksum (includes pseudo-header)
- * @property urgentPointer Urgent pointer (if URG flag set)
- * @property options TCP options (MSS, Window Scale, SACK, Timestamps)
- * @property payload The actual data payload
- */
-class TcpPacket private constructor(
+data class TcpPacket(
+    /** Source port (0–65535). */
     val sourcePort: Int,
+    /** Destination port (0–65535). */
     val destinationPort: Int,
+    /** Sequence number (unsigned 32-bit). */
     val sequenceNumber: Long,
+    /** Acknowledgment number (unsigned 32-bit). */
     val acknowledgmentNumber: Long,
-    val dataOffset: Int,
-    val reserved: Int,
-    val flags: TcpFlags,
-    val window: Int,
+    /** Data offset: TCP header length in bytes (data offset × 4). */
+    val headerLength: Int,
+    // ── Control Flags ───────────────────────────────────────────────────────
+    val flagNs:  Boolean,  // ECN-nonce
+    val flagCwr: Boolean,  // Congestion Window Reduced
+    val flagEce: Boolean,  // ECN-Echo
+    val flagUrg: Boolean,  // Urgent
+    val flagAck: Boolean,  // Acknowledgment
+    val flagPsh: Boolean,  // Push
+    val flagRst: Boolean,  // Reset
+    val flagSyn: Boolean,  // Synchronize
+    val flagFin: Boolean,  // Finish
+    /** Receive window size. */
+    val windowSize: Int,
+    /** TCP checksum. */
     val checksum: Int,
+    /** Urgent pointer (valid only when URG is set). */
     val urgentPointer: Int,
+    /** Raw TCP options bytes (may be empty). */
     val options: ByteArray,
-    val payload: ByteArray
+    /** TCP payload (application data). */
+    val data: ByteArray,
 ) {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Derived Properties
+    // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Returns true if this is a SYN packet (connection initiation).
-     * SYN is the first packet in a TCP handshake.
-     */
-    fun isSyn(): Boolean = flags.syn
+    /** Compact flags string, e.g. "[SYN ACK]". */
+    val flagsString: String get() = buildString {
+        append('[')
+        if (flagSyn) append("SYN ")
+        if (flagAck) append("ACK ")
+        if (flagFin) append("FIN ")
+        if (flagRst) append("RST ")
+        if (flagPsh) append("PSH ")
+        if (flagUrg) append("URG ")
+        if (flagCwr) append("CWR ")
+        if (flagEce) append("ECE ")
+        if (flagNs)  append("NS ")
+        val result = toString()
+        if (result == "[") return "[]"
+        append(']')
+    }.trimEnd()
 
-    /**
-     * Returns true if this is an ACK packet (acknowledgment).
-     * ACK confirms receipt of data.
-     */
-    fun isAck(): Boolean = flags.ack
+    /** True if this is a SYN packet (connection initiation). */
+    val isSyn: Boolean get() = flagSyn && !flagAck
 
-    /**
-     * Returns true if this is a FIN packet (connection termination).
-     * FIN initiates graceful connection close.
-     */
-    fun isFin(): Boolean = flags.fin
+    /** True if this is a SYN-ACK packet (connection accepted). */
+    val isSynAck: Boolean get() = flagSyn && flagAck
 
-    /**
-     * Returns true if this is an RST packet (connection reset).
-     * RST aborts the connection immediately.
-     */
-    fun isRst(): Boolean = flags.rst
+    /** True if this is a FIN packet (connection teardown). */
+    val isFin: Boolean get() = flagFin
 
-    /**
-     * Returns true if this is a PSH packet (push data).
-     * PSH tells the receiver to deliver data immediately.
-     */
-    fun isPsh(): Boolean = flags.psh
+    /** True if this is a RST packet (connection reset). */
+    val isRst: Boolean get() = flagRst
 
-    /**
-     * Returns true if this is a URG packet (urgent data).
-     * URG indicates urgent pointer is valid.
-     */
-    fun isUrg(): Boolean = flags.urg
-
-    /**
-     * Returns true if this packet has any data payload.
-     */
-    fun hasData(): Boolean = payload.isNotEmpty()
-
-    /**
-     * Returns true if this packet has TCP options.
-     */
-    fun hasOptions(): Boolean = options.isNotEmpty()
-
-    /**
-     * Calculates the effective payload length for sequence number updates.
-     *
-     * IMPORTANT: SYN and FIN count as 1 byte even though they have no payload.
-     * This is required by RFC 793 for sequence number accounting.
-     *
-     * Example:
-     * - SYN packet with no data: effective length = 1
-     * - FIN packet with no data: effective length = 1
-     * - Data packet with 100 bytes: effective length = 100
-     * - SYN + data: effective length = 1 + data.size
-     *
-     * @return Effective length for sequence number advancement
-     */
-    fun getEffectivePayloadLength(): Int {
-        var length = payload.size
-        if (isSyn()) length++
-        if (isFin()) length++
-        return length
-    }
-
-    /**
-     * Converts the packet back to raw bytes.
-     * Used when forwarding or modifying packets.
-     *
-     * IMPORTANT: This recalculates the TCP checksum.
-     * The stored checksum field is ignored (always recomputed).
-     *
-     * @param srcIp Source IP address for pseudo-header checksum
-     * @param dstIp Destination IP address for pseudo-header checksum
-     * @return Raw byte array ready for IP payload
-     */
-    fun toRawBytes(srcIp: Int, dstIp: Int): ByteArray {
-        val tcpHeaderLength = dataOffset
-        val totalSize = tcpHeaderLength + payload.size
-        val buffer = ByteBuffer.allocate(totalSize)
-        buffer.order(ByteOrder.BIG_ENDIAN)
-
-        // Bytes 0-1: Source Port
-        buffer.putShort(sourcePort.toShort())
-
-        // Bytes 2-3: Destination Port
-        buffer.putShort(destinationPort.toShort())
-
-        // Bytes 4-7: Sequence Number (unsigned 32-bit)
-        buffer.putInt((sequenceNumber and 0xFFFFFFFFL).toInt())
-
-        // Bytes 8-11: Acknowledgment Number (unsigned 32-bit)
-        buffer.putInt((acknowledgmentNumber and 0xFFFFFFFFL).toInt())
-
-        // Byte 12: Data Offset (4 bits) + Reserved (3 bits) + NS (1 bit)
-        // RFC 793: Bits 0-3: Data Offset (in 32-bit words), Bits 4-6: Reserved, Bit 7: NS
-        val dataOffsetValue = dataOffset / 4  // Convert bytes to 32-bit words
-        val reservedBits = reserved and 0x07  // Only 3 bits valid
-        val nsBit = flags.toNsBit()
-
-        // Correct encoding per RFC 793
-        val dataOffsetByte = ((dataOffsetValue and 0x0F) shl 4) or (reservedBits shl 1) or nsBit
-        buffer.put(dataOffsetByte.toByte())
-
-        // Byte 13: Flags (lower 8 bits: CWR, ECE, URG, ACK, PSH, RST, SYN, FIN)
-        buffer.put(flags.toFlagsByte())
-
-        // Bytes 14-15: Window
-        buffer.putShort(window.toShort())
-
-        // Bytes 16-17: Checksum (placeholder, will calculate)
-        val checksumPos = buffer.position()
-        buffer.putShort(0)
-
-        // Bytes 18-19: Urgent Pointer
-        buffer.putShort(urgentPointer.toShort())
-
-        // Bytes 20+: Options (if any)
-        if (options.isNotEmpty()) {
-            buffer.put(options)
-        }
-
-        // Payload (FIXED: use existing payload, no unnecessary copy)
-        buffer.put(payload)
-
-        // Calculate and set checksum
-        val tcpSegment = buffer.array()
-        val tcpLength = tcpHeaderLength + payload.size
-        val pseudoHeader = buildPseudoHeader(srcIp, dstIp, tcpLength)
-
-        // Combine pseudo-header + TCP segment for checksum calculation
-        val checksumData = ByteArray(pseudoHeader.size + tcpLength)
-        System.arraycopy(pseudoHeader, 0, checksumData, 0, pseudoHeader.size)
-        System.arraycopy(tcpSegment, 0, checksumData, pseudoHeader.size, tcpLength)
-
-        // Zero out checksum field in the copy
-        val checksumFieldPos = pseudoHeader.size + checksumPos
-        checksumData[checksumFieldPos] = 0
-        checksumData[checksumFieldPos + 1] = 0
-
-        val calculatedChecksum = IpPacket.calculateChecksum(checksumData)
-
-        // Set checksum in the original buffer
-        buffer.position(checksumPos)
-        buffer.putShort(calculatedChecksum.toShort())
-
-        return buffer.array()
-    }
-
-    /**
-     * Builds the TCP pseudo-header for checksum calculation (RFC 793).
-     *
-     * The pseudo-header is not actually sent, only used for checksum calculation.
-     * Structure (12 bytes):
-     * - Source IP (4 bytes)
-     * - Destination IP (4 bytes)
-     * - Zero (1 byte)
-     * - Protocol (1 byte, always 6 for TCP)
-     * - TCP Length (2 bytes)
-     */
-    private fun buildPseudoHeader(srcIp: Int, dstIp: Int, tcpLength: Int): ByteArray {
-        val buffer = ByteBuffer.allocate(12)
-        buffer.order(ByteOrder.BIG_ENDIAN)
-
-        // Source IP
-        buffer.putInt(srcIp)
-
-        // Destination IP
-        buffer.putInt(dstIp)
-
-        // Zero
-        buffer.put(0)
-
-        // Protocol (6 = TCP)
-        buffer.put(6)
-
-        // TCP Length
-        buffer.putShort(tcpLength.toShort())
-
-        return buffer.array()
-    }
-
-    /**
-     * Creates a copy of this packet with modified sequence number.
-     * Used by TCP state machine for sequence number translation.
-     *
-     * FIXED: No unnecessary payload copying - shares immutable reference
-     *
-     * @param newSeq New sequence number
-     * @return New TcpPacket instance
-     */
-    fun withSequenceNumber(newSeq: Long): TcpPacket {
-        return TcpPacket(
-            sourcePort = sourcePort,
-            destinationPort = destinationPort,
-            sequenceNumber = newSeq,
-            acknowledgmentNumber = acknowledgmentNumber,
-            dataOffset = dataOffset,
-            reserved = reserved,
-            flags = flags,
-            window = window,
-            checksum = checksum,
-            urgentPointer = urgentPointer,
-            options = options,  // FIXED: No copy - immutable
-            payload = payload    // FIXED: No copy - immutable
-        )
-    }
-
-    /**
-     * Creates a copy of this packet with modified acknowledgment number.
-     * Used by TCP state machine for sequence number translation.
-     *
-     * FIXED: No unnecessary payload copying - shares immutable reference
-     *
-     * @param newAck New acknowledgment number
-     * @return New TcpPacket instance
-     */
-    fun withAcknowledgmentNumber(newAck: Long): TcpPacket {
-        return TcpPacket(
-            sourcePort = sourcePort,
-            destinationPort = destinationPort,
-            sequenceNumber = sequenceNumber,
-            acknowledgmentNumber = newAck,
-            dataOffset = dataOffset,
-            reserved = reserved,
-            flags = flags,
-            window = window,
-            checksum = checksum,
-            urgentPointer = urgentPointer,
-            options = options,  // FIXED: No copy - immutable
-            payload = payload    // FIXED: No copy - immutable
-        )
-    }
-
-    /**
-     * Creates a copy of this packet with modified source/destination ports.
-     * Used for NAT when forwarding.
-     *
-     * @param newSourcePort New source port
-     * @param newDestPort New destination port
-     * @return New TcpPacket instance
-     */
-    fun withPorts(newSourcePort: Int, newDestPort: Int): TcpPacket {
-        return TcpPacket(
-            sourcePort = newSourcePort,
-            destinationPort = newDestPort,
-            sequenceNumber = sequenceNumber,
-            acknowledgmentNumber = acknowledgmentNumber,
-            dataOffset = dataOffset,
-            reserved = reserved,
-            flags = flags,
-            window = window,
-            checksum = checksum,
-            urgentPointer = urgentPointer,
-            options = options,  // FIXED: No copy - immutable
-            payload = payload    // FIXED: No copy - immutable
-        )
-    }
-
-    override fun toString(): String {
-        return "TcpPacket($sourcePort→$destinationPort, seq=$sequenceNumber, ack=$acknowledgmentNumber, " +
-                "flags=$flags, data=${payload.size}B, opts=${options.size}B)"
-    }
+    /** True if this segment carries application data. */
+    val hasData: Boolean get() = data.isNotEmpty()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is TcpPacket) return false
-
-        if (sourcePort != other.sourcePort) return false
-        if (destinationPort != other.destinationPort) return false
-        if (sequenceNumber != other.sequenceNumber) return false
-        if (acknowledgmentNumber != other.acknowledgmentNumber) return false
-        if (dataOffset != other.dataOffset) return false
-        if (reserved != other.reserved) return false
-        if (flags != other.flags) return false
-        if (window != other.window) return false
-        if (checksum != other.checksum) return false
-        if (urgentPointer != other.urgentPointer) return false
-        if (!options.contentEquals(other.options)) return false
-        if (!payload.contentEquals(other.payload)) return false
-
-        return true
+        return sourcePort == other.sourcePort &&
+               destinationPort == other.destinationPort &&
+               sequenceNumber == other.sequenceNumber &&
+               acknowledgmentNumber == other.acknowledgmentNumber &&
+               flagSyn == other.flagSyn && flagAck == other.flagAck &&
+               flagFin == other.flagFin && flagRst == other.flagRst &&
+               data.contentEquals(other.data)
     }
 
     override fun hashCode(): Int {
@@ -492,203 +112,181 @@ class TcpPacket private constructor(
         result = 31 * result + destinationPort
         result = 31 * result + sequenceNumber.hashCode()
         result = 31 * result + acknowledgmentNumber.hashCode()
-        result = 31 * result + dataOffset
-        result = 31 * result + reserved
-        result = 31 * result + flags.hashCode()
-        result = 31 * result + window
-        result = 31 * result + checksum
-        result = 31 * result + urgentPointer
-        result = 31 * result + options.contentHashCode()
-        result = 31 * result + payload.contentHashCode()
+        result = 31 * result + data.contentHashCode()
         return result
     }
 
+    override fun toString(): String =
+        "TcpPacket($sourcePort→$destinationPort $flagsString seq=$sequenceNumber ack=$acknowledgmentNumber " +
+        "win=$windowSize dataLen=${data.size})"
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Serialization
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Serializes this TCP segment back to a raw byte array (TCP header + data).
+     * Does NOT include the IP header — use [IpPacket.build] to wrap it.
+     * Checksum field is set to 0; caller must invoke [Checksum.setTcpChecksum]
+     * on the full IP+TCP packet.
+     */
+    fun toBytes(): ByteArray {
+        val buf = ByteArray(headerLength + data.size)
+        ByteUtils.writeUInt16(buf, 0, sourcePort)
+        ByteUtils.writeUInt16(buf, 2, destinationPort)
+        ByteUtils.writeUInt32(buf, 4, sequenceNumber)
+        ByteUtils.writeUInt32(buf, 8, acknowledgmentNumber)
+
+        val dataOffset = (headerLength / 4) shl 4
+        val flags = dataOffset or
+                (if (flagNs)  0x0100 else 0) or
+                (if (flagCwr) 0x0080 else 0) or
+                (if (flagEce) 0x0040 else 0) or
+                (if (flagUrg) 0x0020 else 0) or
+                (if (flagAck) 0x0010 else 0) or
+                (if (flagPsh) 0x0008 else 0) or
+                (if (flagRst) 0x0004 else 0) or
+                (if (flagSyn) 0x0002 else 0) or
+                (if (flagFin) 0x0001 else 0)
+        ByteUtils.writeUInt16(buf, 12, flags)
+        ByteUtils.writeUInt16(buf, 14, windowSize)
+        // Checksum at [16] left as 0 — caller sets it
+        ByteUtils.writeUInt16(buf, 18, urgentPointer)
+
+        if (options.isNotEmpty()) options.copyInto(buf, 20)
+        if (data.isNotEmpty())    data.copyInto(buf, headerLength)
+        return buf
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Companion — Factory & Constants
+    // ─────────────────────────────────────────────────────────────────────────
+
     companion object {
+        private const val MIN_TCP_HEADER = 20
 
-        // FIXED: Checksum validation only in debug builds (performance)
-        private const val VALIDATE_CHECKSUM = false
+        // Well-known ports
+        const val PORT_HTTP  = 80
+        const val PORT_HTTPS = 443
+        const val PORT_DNS   = 53
+        const val PORT_FTP   = 21
+        const val PORT_SSH   = 22
 
         /**
-         * Parses TCP packet from IP payload.
+         * Parses a TCP segment from [raw] bytes starting at [offset].
+         * [payloadEnd] marks the last byte of the TCP segment (totalLength - ipHeaderLength).
          *
-         * Called after IpPacket parsing when protocol = 6.
-         *
-         * Thread Safety: This method is stateless and thread-safe.
-         *
-         * Security: Validates all bounds before reading to prevent buffer overruns.
-         *
-         * @param data Raw bytes (IP payload starting at TCP header)
-         * @param length Number of valid bytes
-         * @return TcpPacket object or null if parsing fails
+         * @return parsed [TcpPacket] or null if data is malformed.
          */
-        fun parse(data: ByteArray, length: Int): TcpPacket? {
-            // Check 1: Minimum TCP header is 20 bytes
-            if (length < 20) return null
+        fun parse(raw: ByteArray, offset: Int, payloadEnd: Int): TcpPacket? {
+            if (payloadEnd - offset < MIN_TCP_HEADER) return null
 
-            val buffer = ByteBuffer.wrap(data, 0, length)
-            buffer.order(ByteOrder.BIG_ENDIAN)
+            val srcPort  = ByteUtils.readUInt16(raw, offset)
+            val dstPort  = ByteUtils.readUInt16(raw, offset + 2)
+            val seqNum   = ByteUtils.readUInt32(raw, offset + 4)
+            val ackNum   = ByteUtils.readUInt32(raw, offset + 8)
 
-            // Bytes 0-1: Source Port
-            val sourcePort = buffer.getShort().toInt() and 0xFFFF
+            val dataOffsetByte = ByteUtils.readUInt16(raw, offset + 12)
+            val headerLen = ((dataOffsetByte ushr 12) and 0xF) * 4
 
-            // Bytes 2-3: Destination Port
-            val destinationPort = buffer.getShort().toInt() and 0xFFFF
+            if (headerLen < MIN_TCP_HEADER || offset + headerLen > payloadEnd) return null
 
-            // Bytes 4-7: Sequence Number (unsigned 32-bit)
-            val sequenceNumber = buffer.getInt().toLong() and 0xFFFFFFFFL
+            val flagsWord = dataOffsetByte and 0x01FF
+            val flagNs    = (flagsWord and 0x0100) != 0
+            val flagCwr   = (flagsWord and 0x0080) != 0
+            val flagEce   = (flagsWord and 0x0040) != 0
+            val flagUrg   = (flagsWord and 0x0020) != 0
+            val flagAck   = (flagsWord and 0x0010) != 0
+            val flagPsh   = (flagsWord and 0x0008) != 0
+            val flagRst   = (flagsWord and 0x0004) != 0
+            val flagSyn   = (flagsWord and 0x0002) != 0
+            val flagFin   = (flagsWord and 0x0001) != 0
 
-            // Bytes 8-11: Acknowledgment Number (unsigned 32-bit)
-            val acknowledgmentNumber = buffer.getInt().toLong() and 0xFFFFFFFFL
+            val window        = ByteUtils.readUInt16(raw, offset + 14)
+            val checksum      = ByteUtils.readUInt16(raw, offset + 16)
+            val urgentPointer = ByteUtils.readUInt16(raw, offset + 18)
 
-            // Byte 12: Data Offset (4 bits) + Reserved (3 bits) + NS (1 bit)
-            val dataOffsetByte = buffer.get().toInt() and 0xFF
+            val options = if (headerLen > MIN_TCP_HEADER)
+                ByteUtils.readBytes(raw, offset + MIN_TCP_HEADER, headerLen - MIN_TCP_HEADER)
+            else
+                ByteArray(0)
 
-            // Extract components
-            val dataOffsetValue = (dataOffsetByte shr 4) and 0x0F
-            val dataOffset = dataOffsetValue * 4
-
-            // Check 2: Validate dataOffset bounds (RFC 793: 20 to 60 bytes)
-            if (dataOffset < 20 || dataOffset > 60) {
-                return null
-            }
-
-            // Check 3: Ensure we have enough data for the claimed header length
-            if (dataOffset > length) {
-                return null
-            }
-
-            val reserved = (dataOffsetByte shr 1) and 0x07
-
-            // Byte 13: Flags (lower 8 bits)
-            val flagsByte = buffer.get().toInt() and 0xFF
-            val flags = TcpFlags.fromBytes(dataOffsetByte, flagsByte)
-
-            // Check 4: Validate flag combination
-            if (!flags.isValid()) {
-                return null
-            }
-
-            // Bytes 14-15: Window
-            val window = buffer.getShort().toInt() and 0xFFFF
-
-            // Bytes 16-17: Checksum
-            val checksum = buffer.getShort().toInt() and 0xFFFF
-
-            // Bytes 18-19: Urgent Pointer
-            val urgentPointer = buffer.getShort().toInt() and 0xFFFF
-
-            // Options (if dataOffset > 20)
-            val optionsLength = dataOffset - 20
-            val options = ByteArray(optionsLength)
-            if (optionsLength > 0) {
-                buffer.get(options)
-            }
-
-            // Payload (the rest of the packet)
-            val payloadLength = length - dataOffset
-            val payload = ByteArray(payloadLength)
-            if (payloadLength > 0) {
-                buffer.get(payload)
-            }
-
-            // FIXED: Checksum validation only in debug builds (performance)
-            if (VALIDATE_CHECKSUM) {
-                // TCP checksum requires IP addresses which we don't have here
-                // Validation will be done by the OS stack anyway
-                // Skipping for performance
-            }
+            val dataStart  = offset + headerLen
+            val dataLength = payloadEnd - dataStart
+            val data = if (dataLength > 0)
+                ByteUtils.readBytes(raw, dataStart, dataLength)
+            else
+                ByteArray(0)
 
             return TcpPacket(
-                sourcePort = sourcePort,
-                destinationPort = destinationPort,
-                sequenceNumber = sequenceNumber,
-                acknowledgmentNumber = acknowledgmentNumber,
-                dataOffset = dataOffset,
-                reserved = reserved,
-                flags = flags,
-                window = window,
-                checksum = checksum,
-                urgentPointer = urgentPointer,
-                options = options,
-                payload = payload
+                sourcePort            = srcPort,
+                destinationPort       = dstPort,
+                sequenceNumber        = seqNum,
+                acknowledgmentNumber  = ackNum,
+                headerLength          = headerLen,
+                flagNs                = flagNs,
+                flagCwr               = flagCwr,
+                flagEce               = flagEce,
+                flagUrg               = flagUrg,
+                flagAck               = flagAck,
+                flagPsh               = flagPsh,
+                flagRst               = flagRst,
+                flagSyn               = flagSyn,
+                flagFin               = flagFin,
+                windowSize            = window,
+                checksum              = checksum,
+                urgentPointer         = urgentPointer,
+                options               = options,
+                data                  = data,
             )
         }
 
         /**
-         * Creates a minimal SYN packet for testing.
-         *
-         * @param sourcePort Source port
-         * @param destPort Destination port
-         * @param seq Initial sequence number
-         * @return TcpPacket configured as SYN
+         * Parses a TCP segment directly from the payload portion of an [IpPacket].
          */
-        fun createSynPacket(sourcePort: Int, destPort: Int, seq: Long): TcpPacket {
-            return TcpPacket(
-                sourcePort = sourcePort,
-                destinationPort = destPort,
-                sequenceNumber = seq,
-                acknowledgmentNumber = 0,
-                dataOffset = 20,
-                reserved = 0,
-                flags = TcpFlags.syn(),
-                window = 65535,
-                checksum = 0,
-                urgentPointer = 0,
-                options = ByteArray(0),
-                payload = ByteArray(0)
-            )
+        fun parse(ip: IpPacket): TcpPacket? {
+            if (ip.protocol != IpPacket.PROTO_TCP) return null
+            return parse(ip.rawPacket, ip.payloadOffset, ip.payloadOffset + ip.payloadLength)
         }
 
         /**
-         * Creates a minimal ACK packet for testing.
-         *
-         * @param sourcePort Source port
-         * @param destPort Destination port
-         * @param seq Sequence number
-         * @param ack Acknowledgment number
-         * @return TcpPacket configured as ACK
+         * Builds a minimal TCP SYN segment.
          */
-        fun createAckPacket(sourcePort: Int, destPort: Int, seq: Long, ack: Long): TcpPacket {
-            return TcpPacket(
-                sourcePort = sourcePort,
-                destinationPort = destPort,
-                sequenceNumber = seq,
-                acknowledgmentNumber = ack,
-                dataOffset = 20,
-                reserved = 0,
-                flags = TcpFlags.ack(),
-                window = 65535,
-                checksum = 0,
-                urgentPointer = 0,
-                options = ByteArray(0),
-                payload = ByteArray(0)
+        fun buildSyn(srcPort: Int, dstPort: Int, seqNum: Long, windowSize: Int = 65535): TcpPacket =
+            TcpPacket(
+                sourcePort            = srcPort,
+                destinationPort       = dstPort,
+                sequenceNumber        = seqNum,
+                acknowledgmentNumber  = 0L,
+                headerLength          = MIN_TCP_HEADER,
+                flagNs = false, flagCwr = false, flagEce = false, flagUrg = false,
+                flagAck = false, flagPsh = false, flagRst = false,
+                flagSyn = true, flagFin = false,
+                windowSize            = windowSize,
+                checksum              = 0,
+                urgentPointer         = 0,
+                options               = ByteArray(0),
+                data                  = ByteArray(0),
             )
-        }
 
         /**
-         * Creates a minimal FIN packet for testing.
-         *
-         * @param sourcePort Source port
-         * @param destPort Destination port
-         * @param seq Sequence number
-         * @param ack Acknowledgment number
-         * @return TcpPacket configured as FIN-ACK
+         * Builds a TCP RST segment for rejecting a connection.
          */
-        fun createFinPacket(sourcePort: Int, destPort: Int, seq: Long, ack: Long): TcpPacket {
-            return TcpPacket(
-                sourcePort = sourcePort,
-                destinationPort = destPort,
-                sequenceNumber = seq,
-                acknowledgmentNumber = ack,
-                dataOffset = 20,
-                reserved = 0,
-                flags = TcpFlags.finAck(),
-                window = 65535,
-                checksum = 0,
-                urgentPointer = 0,
-                options = ByteArray(0),
-                payload = ByteArray(0)
+        fun buildRst(srcPort: Int, dstPort: Int, seqNum: Long): TcpPacket =
+            TcpPacket(
+                sourcePort            = srcPort,
+                destinationPort       = dstPort,
+                sequenceNumber        = seqNum,
+                acknowledgmentNumber  = 0L,
+                headerLength          = MIN_TCP_HEADER,
+                flagNs = false, flagCwr = false, flagEce = false, flagUrg = false,
+                flagAck = false, flagPsh = false, flagRst = true,
+                flagSyn = false, flagFin = false,
+                windowSize            = 0,
+                checksum              = 0,
+                urgentPointer         = 0,
+                options               = ByteArray(0),
+                data                  = ByteArray(0),
             )
-        }
     }
 }

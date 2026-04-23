@@ -1,100 +1,94 @@
-package com.privacyguard.app.core.app
+package com.privacyguard.core.app
 
-import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import com.privacyguard.domain.model.AppInfo
 import java.util.concurrent.ConcurrentHashMap
 
-data class AppInfo(
-    val uid: Int,
-    val packageName: String,
-    val appName: String,
-    val isSystemApp: Boolean = false
-)
+/**
+ * Resolves Android UIDs → [AppInfo] with in-memory caching.
+ *
+ * Called on every packet in the VPN pipeline — caching is mandatory for performance.
+ * Cache is invalidated via [onPackageChanged] (called from a BroadcastReceiver).
+ */
+class AppResolver(
+    private val pm: PackageManager,
+) {
+    private val uidCache   = ConcurrentHashMap<Int, AppInfo>(64)
+    private val pkgCache   = ConcurrentHashMap<String, AppInfo>(64)
 
-object AppResolver {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Lookup
+    // ─────────────────────────────────────────────────────────────────────────
 
-    private val cache = ConcurrentHashMap<Int, AppInfo>()
-    private lateinit var appContext: Context
-
-    fun initialize(context: Context) {
-        appContext = context.applicationContext
-        refresh()
+    fun resolveUid(uid: Int): AppInfo {
+        if (uid <= 0) return AppInfo.unknown(uid)
+        if (isSystemUid(uid)) return AppInfo.system()
+        return uidCache.getOrPut(uid) { loadFromUid(uid) }
     }
 
-    fun refresh() {
-        if (!::appContext.isInitialized) return
-        cache.clear()
-        AppDatabase.clear()
+    fun resolvePackage(packageName: String): AppInfo =
+        pkgCache.getOrPut(packageName) { loadFromPackage(packageName) }
 
-        val packageManager = appContext.packageManager
-        val installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-        for (app in installedApps) {
-            val resolved = AppInfo(
-                uid = app.uid,
-                packageName = app.packageName,
-                appName = packageManager.getApplicationLabel(app).toString(),
-                isSystemApp = (app.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+    private fun loadFromUid(uid: Int): AppInfo {
+        val pkg = pm.getNameForUid(uid) ?: return AppInfo.unknown(uid)
+        val info = loadFromPackage(pkg)
+        uidCache[uid] = info
+        return info
+    }
+
+    private fun loadFromPackage(packageName: String): AppInfo {
+        return try {
+            val info  = pm.getApplicationInfo(packageName, PackageManager.GET_META_DATA)
+            val label = pm.getApplicationLabel(info).toString()
+            val isSystem = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+            AppInfo(
+                uid         = info.uid,
+                packageName = packageName,
+                label       = label,
+                isSystem    = isSystem,
             )
-            cache[resolved.uid] = resolved
-            AppDatabase.put(resolved)
+        } catch (_: PackageManager.NameNotFoundException) {
+            AppInfo.unknown(-1, packageName)
         }
     }
 
-    fun getAppByUid(uid: Int): AppInfo {
-        cache[uid]?.let { return it }
-        AppDatabase.get(uid)?.let {
-            cache[uid] = it
-            return it
-        }
+    // ─────────────────────────────────────────────────────────────────────────
+    // Bulk loading (call at VPN startup)
+    // ─────────────────────────────────────────────────────────────────────────
 
-        specialApp(uid)?.let {
-            cache[uid] = it
-            AppDatabase.put(it)
-            return it
+    fun preload() {
+        pm.getInstalledApplications(PackageManager.GET_META_DATA).forEach { info ->
+            val label = pm.getApplicationLabel(info).toString()
+            val app   = AppInfo(
+                uid         = info.uid,
+                packageName = info.packageName,
+                label       = label,
+                isSystem    = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
+            )
+            uidCache[info.uid]          = app
+            pkgCache[info.packageName]  = app
         }
-
-        if (::appContext.isInitialized) {
-            try {
-                val packageManager = appContext.packageManager
-                val packages = packageManager.getPackagesForUid(uid)
-                val packageName = packages?.firstOrNull()
-                if (packageName != null) {
-                    val appInfo = packageManager.getApplicationInfo(packageName, 0)
-                    val resolved = AppInfo(
-                        uid = uid,
-                        packageName = packageName,
-                        appName = packageManager.getApplicationLabel(appInfo).toString(),
-                        isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                    )
-                    cache[uid] = resolved
-                    AppDatabase.put(resolved)
-                    return resolved
-                }
-            } catch (_: Exception) {
-            }
-        }
-
-        return AppInfo(uid, "unknown:$uid", "Unknown ($uid)")
     }
 
-    fun getAppName(uid: Int): String = getAppByUid(uid).appName
+    /** Returns all user-installed apps sorted by label. */
+    fun installedUserApps(): List<AppInfo> =
+        pkgCache.values
+            .filter { !it.isSystem && it.uid > 0 }
+            .sortedBy { it.label.lowercase() }
 
-    fun getInstalledApps(): List<AppInfo> {
-        if (cache.isEmpty() && ::appContext.isInitialized) {
-            refresh()
-        }
-        return cache.values.sortedBy { it.appName.lowercase() }
+    // ─────────────────────────────────────────────────────────────────────────
+    // Cache invalidation
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fun onPackageChanged(packageName: String) {
+        val app = pkgCache.remove(packageName) ?: return
+        uidCache.remove(app.uid)
     }
 
-    fun getUserApps(): List<AppInfo> = getInstalledApps().filter { !it.isSystemApp }
+    fun invalidateAll() { uidCache.clear(); pkgCache.clear() }
 
-    private fun specialApp(uid: Int): AppInfo? = when (uid) {
-        0 -> AppInfo(uid, "android:root", "Root", true)
-        1000 -> AppInfo(uid, "android:system", "Android System", true)
-        1001 -> AppInfo(uid, "android:radio", "Radio", true)
-        1002 -> AppInfo(uid, "android:bluetooth", "Bluetooth", true)
-        1013 -> AppInfo(uid, "android:media", "Media", true)
-        else -> null
-    }
+    private fun isSystemUid(uid: Int) = uid in 0..999 || uid == 1000
+
+    companion object { val cacheSize: Int get() = 0 }
 }

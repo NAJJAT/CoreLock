@@ -1,24 +1,22 @@
+package com.privacyguard.core.session
+
 /**
- * TcpState.kt
+ * TCP connection state machine.
  *
- * TCP states according to RFC 793
- *
- * @author PrivacyGuard Engineering Team
- * @since 1.0.0
+ * Transitions:
+ * SYN_RECEIVED → SYN_ACK_SENT → ESTABLISHED → FIN_WAIT → CLOSE_WAIT → CLOSED
  */
-
-package com.privacyguard.app.core.session
-
 enum class TcpState {
-    CLOSED,          // No connection (initial state)
-    LISTEN,          // Server waiting for connection
-    SYN_SENT,        // Client sent SYN, waiting for SYN-ACK
-    SYN_RECEIVED,    // Received SYN-ACK, waiting for client ACK
-    ESTABLISHED,     // Handshake complete - data can flow
-    FIN_WAIT_1,      // Sent FIN, waiting for ACK
-    FIN_WAIT_2,      // Received ACK for FIN, waiting for peer FIN
-    CLOSE_WAIT,      // Received FIN from peer, sent ACK
-    LAST_ACK,        // Sent FIN after CLOSE_WAIT, waiting for ACK
-    TIME_WAIT,       // Waiting before final close (2 * MSL)
-    RESET            // Connection aborted (RST received or sent)
+    /** SYN seen from device — connecting to remote server. */
+    SYN_RECEIVED,
+    /** SYN-ACK sent back to device — awaiting device ACK. */
+    SYN_ACK_SENT,
+    /** Three-way handshake complete — data flows freely. */
+    ESTABLISHED,
+    /** FIN received from device — waiting for server FIN. */
+    FIN_WAIT,
+    /** FIN received from server — sending FIN-ACK to device. */
+    CLOSE_WAIT,
+    /** Both sides closed — session eligible for cleanup. */
+    CLOSED,
 }

@@ -8,7 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import com.privacyguard.app.MainActivity
+import com.privacyguard.MainActivity
 import com.privacyguard.app.domain.model.Notification
 import com.privacyguard.app.domain.model.NotificationAction
 import com.privacyguard.app.domain.model.NotificationPriority

@@ -1,65 +1,33 @@
-/**
- * BlocklistTypes.kt
- * 
- * Blocklist-related data classes for PrivacyGuard
- * 
- * @author PrivacyGuard Engineering Team
- * @since 1.0.0
- */
+package com.privacyguard.core.filter
 
-package com.privacyguard.app.core.filter
-
-// ============================================================
-// Blocklist Enums (NO RuleAction here)
-// ============================================================
-
-enum class BlocklistSource {
-    STEVENBLACK, EASYLIST, EASYPRIVACY, DISCONNECT, PETER_LOWE, CUSTOM, COMMUNITY
+/** Category of blocked content. */
+enum class BlocklistCategory(val displayName: String, val emoji: String) {
+    ADS("Advertisements", "📢"),
+    TRACKERS("Trackers", "🕵️"),
+    MALWARE("Malware & Phishing", "☠️"),
+    TELEMETRY("Telemetry", "📡"),
+    SOCIAL("Social Widgets", "👥"),
+    CRYPTO("Cryptomining", "⛏️"),
+    ADULT("Adult Content", "🔞"),
+    CUSTOM("Custom Rules", "⚙️"),
 }
 
-enum class BlocklistCategory {
-    ADVERTISING, ANALYTICS, MALWARE, PHISHING, CRYPTO_MINING, SOCIAL, OTHER
-}
+/** Known blocklist source identifiers. */
+object BlocklistSource {
+    const val STEVEN_BLACK = "StevenBlack"
+    const val OISD_BASIC   = "OISD-Basic"
+    const val OISD_FULL    = "OISD-Full"
+    const val EASYLIST     = "EasyList"
+    const val HAGEZI_LIGHT = "HaGeZi-Light"
+    const val HAGEZI_PRO   = "HaGeZi-Pro"
+    const val USER_CUSTOM  = "User"
 
-// ============================================================
-// BlocklistEntry
-// ============================================================
-
-data class BlocklistEntry(
-    val domain: String,
-    val source: BlocklistSource,
-    val category: BlocklistCategory,
-    val lastUpdated: Long = System.currentTimeMillis()
-) {
-    fun normalizedDomain(): String {
-        var result = domain.lowercase()
-        if (result.endsWith('.')) result = result.dropLast(1)
-        return result
-    }
-}
-
-// ============================================================
-// FilterDecision (references RuleAction from FilterRule.kt)
-// ============================================================
-
-data class FilterDecision(
-    val action: RuleAction,
-    val reason: String,
-    val matchedRule: FilterRule? = null,
-    val matchedBlocklist: BlocklistEntry? = null
-) {
-    companion object {
-        fun allow(reason: String = "Default allow"): FilterDecision {
-            return FilterDecision(RuleAction.ALLOW, reason)
-        }
-        fun block(reason: String, rule: FilterRule? = null, blocklist: BlocklistEntry? = null): FilterDecision {
-            return FilterDecision(RuleAction.BLOCK, reason, rule, blocklist)
-        }
-        fun blockByRule(rule: FilterRule): FilterDecision {
-            return FilterDecision(RuleAction.BLOCK, "Blocked by rule: ${rule.description.ifEmpty { rule.value }}", rule)
-        }
-        fun blockByBlocklist(entry: BlocklistEntry): FilterDecision {
-            return FilterDecision(RuleAction.BLOCK, "Blocked by ${entry.source}: ${entry.domain}", null, entry)
-        }
-    }
+    /** Download URLs keyed by source identifier. */
+    val urls: Map<String, String> = mapOf(
+        STEVEN_BLACK to "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
+        OISD_BASIC   to "https://basic.oisd.nl/domains",
+        OISD_FULL    to "https://full.oisd.nl/domains",
+        HAGEZI_LIGHT to "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/light.txt",
+        HAGEZI_PRO   to "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/pro.txt",
+    )
 }

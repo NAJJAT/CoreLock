@@ -1,713 +1,337 @@
-/**
- * TcpForwarder.kt
- * 
- * 🔴 CRITICAL: This is the TCP FORWARDING ENGINE of PrivacyGuard
- * 
- * What it does:
- * =============
- * Takes TCP packets from the TUN interface and forwards them to the real internet,
- * and takes responses from the internet and forwards them back to the device.
- * 
- * This is the most complex part of the VPN because TCP is stateful.
- * 
- * Key Challenges:
- * ===============
- * 1. Sequence Number Translation: The client and server have different sequence spaces
- * 2. Handshake Management: SYN → SYN-ACK → ACK before data can flow
- * 3. Buffering: Data may arrive before handshake completes
- * 4. Retransmission: Handle duplicate packets
- * 5. Connection Close: FIN/ACK handshake
- * 
- * Architecture:
- * =============
- * - TcpForwarder receives packets from TcpPacketProcessor
- * - Uses SessionTable to find/create sessions
- * - Uses SocketChannel for non-blocking I/O
- * - Each connection has its own dedicated thread
- * 
- * Thread Safety:
- * ==============
- * - Each TCP connection has its own thread (via socket channel)
- * - SessionTable is thread-safe (ConcurrentHashMap)
- * - No shared mutable state between connections
- * 
- * Performance:
- * ============
- * - Non-blocking I/O with selectors
- * - Direct buffers for zero-copy
- * - Buffer pooling to reduce allocations
- * 
- * @author PrivacyGuard Engineering Team
- * @since 1.0.0
- */
+package com.privacyguard.vpn.forwarder
 
-package com.privacyguard.app.vpn.forwarder
-
-import android.util.Log
-import com.privacyguard.app.core.packet.TcpFlags
-import com.privacyguard.app.core.packet.TcpPacket
-import com.privacyguard.app.core.session.Session
-import com.privacyguard.app.core.session.SessionKey
-import com.privacyguard.app.core.session.SessionTable
-import com.privacyguard.app.core.utils.BufferPool
-import com.privacyguard.app.core.utils.ipToString
-import com.privacyguard.app.core.utils.readInt32
-import com.privacyguard.app.core.utils.writeInt32
-import com.privacyguard.app.vpn.tunnel.TunWriter
-import java.io.IOException
+import com.privacyguard.core.metadata.EncryptionStatus
+import com.privacyguard.core.packet.IpPacket
+import com.privacyguard.core.packet.TcpPacket
+import com.privacyguard.core.session.Session
+import com.privacyguard.core.session.SessionKey
+import com.privacyguard.core.session.SessionTable
+import com.privacyguard.core.utils.Checksum
+import com.privacyguard.vpn.inspector.EncryptionEnforcer
+import com.privacyguard.vpn.tunnel.TunWriter
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.SelectionKey
 import java.nio.channels.Selector
 import java.nio.channels.SocketChannel
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.concurrent.thread
-
-// ============================================================
-// TCP Connection State
-// ============================================================
 
 /**
- * Represents the state of a TCP connection
- */
-enum class TcpConnectionState {
-    CONNECTING,     // SYN sent, waiting for connection
-    ESTABLISHED,    // Connected, data can flow
-    CLOSING,        // FIN sent, waiting for response
-    CLOSED          // Connection closed
-}
-
-/**
- * Manages a single TCP connection
- */
-private class TcpConnection(
-    val sessionKey: SessionKey,
-    val clientIp: Int,
-    val clientPort: Int,
-    val serverIp: Int,
-    val serverPort: Int,
-    private val tunWriter: TunWriter,
-    private val sessionTable: SessionTable
-) {
-    
-    // Socket channel to the real server
-    var socketChannel: SocketChannel? = null
-    var state: TcpConnectionState = TcpConnectionState.CONNECTING
-    
-    // Sequence number translation
-    var clientSeq: Long = 0
-    var clientAck: Long = 0
-    var serverSeq: Long = 0
-    var serverAck: Long = 0
-    
-    // Buffers for pending data
-    private val pendingClientData = ByteArrayOutputStream()
-    private val pendingServerData = ByteArrayOutputStream()
-    
-    // Statistics
-    var bytesSent: Long = 0
-    var bytesReceived: Long = 0
-    var packetsSent: Long = 0
-    var packetsReceived: Long = 0
-    
-    fun bufferClientData(data: ByteArray) {
-        synchronized(pendingClientData) {
-            pendingClientData.write(data)
-        }
-    }
-    
-    fun flushClientData(): ByteArray {
-        synchronized(pendingClientData) {
-            val data = pendingClientData.toByteArray()
-            pendingClientData.reset()
-            return data
-        }
-    }
-    
-    fun bufferServerData(data: ByteArray) {
-        synchronized(pendingServerData) {
-            pendingServerData.write(data)
-        }
-    }
-    
-    fun flushServerData(): ByteArray {
-        synchronized(pendingServerData) {
-            val data = pendingServerData.toByteArray()
-            pendingServerData.reset()
-            return data
-        }
-    }
-    
-    fun close() {
-        try {
-            socketChannel?.close()
-        } catch (e: Exception) {
-            // Ignore
-        }
-        state = TcpConnectionState.CLOSED
-    }
-    
-    private class ByteArrayOutputStream {
-        private var buffer = ByteArray(8192)
-        private var size = 0
-        
-        fun write(data: ByteArray) {
-            ensureCapacity(size + data.size)
-            System.arraycopy(data, 0, buffer, size, data.size)
-            size += data.size
-        }
-        
-        fun toByteArray(): ByteArray {
-            val result = ByteArray(size)
-            System.arraycopy(buffer, 0, result, 0, size)
-            return result
-        }
-        
-        fun reset() {
-            size = 0
-        }
-        
-        private fun ensureCapacity(needed: Int) {
-            if (needed <= buffer.size) return
-            val newSize = maxOf(buffer.size * 2, needed)
-            val newBuffer = ByteArray(newSize)
-            System.arraycopy(buffer, 0, newBuffer, 0, size)
-            buffer = newBuffer
-        }
-    }
-}
-
-// ============================================================
-// TcpForwarder - Main Implementation
-// ============================================================
-
-/**
- * TCP Forwarder - Handles TCP packet forwarding between device and internet
- * 
- * @param sessionTable Session table for connection tracking
- * @param tunWriter Writer for injecting packets back to TUN
+ * Manages proxied TCP connections.
+ *
+ * Updated: integrates [EncryptionEnforcer] to classify each connection's
+ * encryption status on the **first data packet** (the TLS ClientHello) — 
+ * without decrypting anything. Results are stored on [Session] and later
+ * consumed by [com.privacyguard.core.metadata.MetadataEngine].
+ *
+ * Additionally: if [filterEngine] has a cleartext-block rule active,
+ * any session that receives a cleartext first packet is immediately RST'd.
  */
 class TcpForwarder(
-    private val sessionTable: SessionTable,
-    private val tunWriter: TunWriter
-) {
-    
-    companion object {
-        private const val TAG = "TcpForwarder"
-        private const val CONNECT_TIMEOUT_MS = 10000L  // 10 seconds
-        private const val SO_RCVBUF = 65536  // 64KB receive buffer
-        private const val SO_SNDBUF = 65536  // 64KB send buffer
-        private const val TCP_NODELAY = true  // Disable Nagle's algorithm
+    private val sessionTable:      SessionTable,
+    private val tunWriter:         TunWriter,
+    private val encEnforcer:       EncryptionEnforcer,
+    private val filterEngine:      com.privacyguard.core.filter.FilterEngine,
+    private val protectSocket:     (java.net.Socket) -> Boolean,
+) : Runnable {
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Selector
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private val selector = Selector.open()
+    private val running  = AtomicBoolean(false)
+    @Volatile private var thread: Thread? = null
+
+    fun start() {
+        if (running.getAndSet(true)) return
+        thread = Thread(this, "tcp-selector").also { it.isDaemon = true; it.start() }
     }
-    
-    // Active TCP connections
-    private val connections = ConcurrentHashMap<SessionKey, TcpConnection>()
-    
-    // Selector for non-blocking I/O
-    private var selector: Selector? = null
-    private var isRunning = AtomicBoolean(false)
-    private var selectorThread: Thread? = null
-    
-    // Statistics
-    private val totalConnectionsAttempted = AtomicLong(0)
-    private val totalConnectionsEstablished = AtomicLong(0)
-    private val totalConnectionsFailed = AtomicLong(0)
-    private val totalConnectionsClosed = AtomicLong(0)
-    private val totalBytesForwarded = AtomicLong(0)
-    private val totalPacketsForwarded = AtomicLong(0)
-    
-    /**
-     * Starts the TCP forwarder
-     */
-    fun start(): Boolean {
-        if (isRunning.get()) return false
-        
-        try {
-            selector = Selector.open()
-            isRunning.set(true)
-            
-            selectorThread = thread(name = "PrivacyGuard-TcpForwarder", isDaemon = true) {
-                selectorLoop()
-            }
-            
-            Log.d(TAG, "TCP forwarder started")
-            return true
-        } catch (e: IOException) {
-            Log.e(TAG, "Failed to start TCP forwarder", e)
-            return false
-        }
-    }
-    
-    /**
-     * Stops the TCP forwarder and closes all connections
-     */
+
     fun stop() {
-        isRunning.set(false)
-        
-        // Close all connections
-        connections.values.forEach { it.close() }
-        connections.clear()
-        
-        // Wake up selector and close it
-        selector?.wakeup()
-        try {
-            selector?.close()
-        } catch (e: IOException) {
-            // Ignore
-        }
-        selector = null
-        
-        selectorThread?.interrupt()
-        selectorThread = null
-        
-        Log.d(TAG, "TCP forwarder stopped")
-    }
-    
-    // ============================================================
-    // Main Selector Loop
-    // ============================================================
-    
-    /**
-     * Main selector loop for non-blocking I/O
-     */
-    private fun selectorLoop() {
-        while (isRunning.get()) {
-            try {
-                val selector = selector ?: break
-                
-                // Wait for events with timeout
-                val readyCount = selector.select(1000)
-                
-                if (readyCount > 0) {
-                    val selectedKeys = selector.selectedKeys()
-                    val iterator = selectedKeys.iterator()
-                    
-                    while (iterator.hasNext()) {
-                        val key = iterator.next()
-                        iterator.remove()
-                        
-                        if (key.isConnectable) {
-                            handleConnect(key)
-                        }
-                        if (key.isReadable) {
-                            handleRead(key)
-                        }
-                        if (key.isWritable) {
-                            handleWrite(key)
-                        }
-                    }
-                }
-                
-                // Check for timed-out connections
-                checkTimeouts()
-                
-            } catch (e: InterruptedException) {
-                break
-            } catch (e: Exception) {
-                Log.e(TAG, "Error in selector loop", e)
-            }
-        }
-    }
-    
-    // ============================================================
-    // Packet Processing (called from TcpPacketProcessor)
-    // ============================================================
-    
-    /**
-     * Processes a TCP packet from the device (client → server)
-     * 
-     * @param session The session for this connection
-     * @param packet The TCP packet
-     * @param payload The packet payload
-     */
-    fun processClientPacket(session: Session, packet: TcpPacket, payload: ByteArray) {
-        val key = session.key
-        var connection = connections[key]
-        
-        if (packet.isSyn() && !packet.isAck()) {
-            // New connection - SYN packet
-            handleSyn(session, packet)
-        } else if (connection != null) {
-            // Existing connection
-            when (connection.state) {
-                TcpConnectionState.CONNECTING -> {
-                    // SYN-ACK received from server (via handleConnect)
-                    // Client ACK received
-                    if (packet.isAck() && !packet.isSyn()) {
-                        completeHandshake(connection, packet)
-                    }
-                    // Buffer data until handshake completes
-                    if (payload.isNotEmpty()) {
-                        connection.bufferClientData(payload)
-                    }
-                }
-                TcpConnectionState.ESTABLISHED -> {
-                    // Forward data to server
-                    if (payload.isNotEmpty()) {
-                        forwardToServer(connection, payload)
-                    }
-                    // Handle FIN from client
-                    if (packet.isFin()) {
-                        handleClientFin(connection)
-                    }
-                    // Handle RST from client
-                    if (packet.isRst()) {
-                        handleClientRst(connection)
-                    }
-                }
-                else -> {
-                    // Ignore packets for closed connections
-                }
-            }
-        }
-    }
-    
-    /**
-     * Processes a TCP packet from the server (server → client)
-     * 
-     * @param session The session for this connection
-     * @param packet The TCP packet
-     * @param payload The packet payload
-     */
-    fun processServerPacket(session: Session, packet: TcpPacket, payload: ByteArray) {
-        val key = session.key
-        val connection = connections[key] ?: return
-        
-        when (connection.state) {
-            TcpConnectionState.CONNECTING -> {
-                // SYN-ACK from server
-                if (packet.isSyn() && packet.isAck()) {
-                    connection.serverSeq = packet.sequenceNumber
-                    connection.serverAck = packet.acknowledgmentNumber
-                    connection.state = TcpConnectionState.ESTABLISHED
-                    
-                    // Send SYN-ACK to client
-                    sendSynAckToClient(connection)
-                    
-                    // Send any buffered client data
-                    val bufferedData = connection.flushClientData()
-                    if (bufferedData.isNotEmpty()) {
-                        forwardToServer(connection, bufferedData)
-                    }
-                }
-            }
-            TcpConnectionState.ESTABLISHED -> {
-                // Forward data to client
-                if (payload.isNotEmpty()) {
-                    forwardToClient(connection, payload)
-                }
-                // Handle FIN from server
-                if (packet.isFin()) {
-                    handleServerFin(connection)
-                }
-                // Handle RST from server
-                if (packet.isRst()) {
-                    handleServerRst(connection)
-                }
-            }
-            else -> {
-                // Ignore
-            }
-        }
-    }
-    
-    // ============================================================
-    // Connection Management
-    // ============================================================
-    
-    /**
-     * Handles a new SYN packet (client wants to connect)
-     */
-    private fun handleSyn(session: Session, packet: TcpPacket) {
-        val key = session.key
-        totalConnectionsAttempted.incrementAndGet()
-        
-        try {
-            // Create socket channel
-            val socketChannel = SocketChannel.open()
-            socketChannel.configureBlocking(false)
-            socketChannel.setOption(java.net.StandardSocketOptions.TCP_NODELAY, TCP_NODELAY)
-            socketChannel.setOption(java.net.StandardSocketOptions.SO_RCVBUF, SO_RCVBUF)
-            socketChannel.setOption(java.net.StandardSocketOptions.SO_SNDBUF, SO_SNDBUF)
-            
-            // Connect to server
-            val serverAddress = InetSocketAddress(ipToString(key.dstIp), key.dstPort)
-            socketChannel.connect(serverAddress)
-            
-            // Register with selector
-            val selector = selector ?: return
-            socketChannel.register(selector, SelectionKey.OP_CONNECT or SelectionKey.OP_READ)
-            
-            // Create connection object
-            val connection = TcpConnection(
-                sessionKey = key,
-                clientIp = key.srcIp,
-                clientPort = key.srcPort,
-                serverIp = key.dstIp,
-                serverPort = key.dstPort,
-                tunWriter = tunWriter,
-                sessionTable = sessionTable
-            )
-            connection.socketChannel = socketChannel
-            connection.clientSeq = packet.sequenceNumber
-            connection.clientAck = packet.acknowledgmentNumber
-            
-            connections[key] = connection
-            
-            Log.d(TAG, "TCP connection initiated: ${ipToString(key.srcIp)}:$key.srcPort → ${ipToString(key.dstIp)}:$key.dstPort")
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to establish TCP connection", e)
-            totalConnectionsFailed.incrementAndGet()
-            sendRstToClient(key)
-        }
-    }
-    
-    /**
-     * Handles successful connection (selector event)
-     */
-    private fun handleConnect(key: SelectionKey) {
-        val socketChannel = key.channel() as SocketChannel
-        val connection = findConnectionBySocket(socketChannel) ?: return
-        
-        try {
-            if (socketChannel.finishConnect()) {
-                connection.state = TcpConnectionState.ESTABLISHED
-                totalConnectionsEstablished.incrementAndGet()
-                
-                // Send SYN-ACK to client (will be done when we receive SYN-ACK from server)
-                Log.d(TAG, "TCP connection established: ${ipToString(connection.sessionKey.srcIp)}:$connection.clientPort → ${ipToString(connection.sessionKey.dstIp)}:$connection.serverPort")
-            } else {
-                // Still connecting
-                key.interestOps(SelectionKey.OP_CONNECT)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to complete TCP connection", e)
-            totalConnectionsFailed.incrementAndGet()
-            sendRstToClient(connection.sessionKey)
-            connections.remove(connection.sessionKey)
-            connection.close()
-        }
+        running.set(false)
+        selector.wakeup()
+        thread?.join(2_000)
+        selector.close()
     }
 
-    private fun handleRead(key: SelectionKey) {
-        val socketChannel = key.channel() as? SocketChannel ?: return
-        val connection = findConnectionBySocket(socketChannel) ?: return
-        val buffer = ByteBuffer.allocate(4096)
+    // ─────────────────────────────────────────────────────────────────────────
+    // Entry Point (called from TunReader thread)
+    // ─────────────────────────────────────────────────────────────────────────
 
-        try {
-            val bytesRead = socketChannel.read(buffer)
-            when {
-                bytesRead > 0 -> {
-                    buffer.flip()
-                    val data = ByteArray(bytesRead)
-                    buffer.get(data)
-                    forwardToClient(connection, data)
-                }
-                bytesRead < 0 -> {
-                    handleServerFin(connection)
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to read from TCP socket", e)
-            handleServerRst(connection)
-        }
-    }
-
-    private fun handleWrite(key: SelectionKey) {
-        val socketChannel = key.channel() as? SocketChannel ?: return
-        if (socketChannel.isConnectionPending) {
-            return
-        }
-        key.interestOps(SelectionKey.OP_READ)
-    }
-    
-    /**
-     * Completes the TCP handshake (client ACK received)
-     */
-    private fun completeHandshake(connection: TcpConnection, packet: TcpPacket) {
-        connection.clientAck = packet.acknowledgmentNumber
-        connection.state = TcpConnectionState.ESTABLISHED
-        
-        // Send any buffered data
-        val bufferedData = connection.flushClientData()
-        if (bufferedData.isNotEmpty()) {
-            forwardToServer(connection, bufferedData)
-        }
-        
-        Log.d(TAG, "TCP handshake complete for ${ipToString(connection.sessionKey.srcIp)}:$connection.clientPort")
-    }
-    
-    // ============================================================
-    // Data Forwarding
-    // ============================================================
-    
-    /**
-     * Forwards data from client to server
-     */
-    private fun forwardToServer(connection: TcpConnection, data: ByteArray) {
-        val socketChannel = connection.socketChannel ?: return
-        
-        try {
-            val buffer = ByteBuffer.wrap(data)
-            var written = 0
-            while (buffer.hasRemaining()) {
-                written += socketChannel.write(buffer)
-            }
-            
-            connection.bytesSent += written
-            totalBytesForwarded.addAndGet(written.toLong())
-            connection.packetsSent++
-            totalPacketsForwarded.incrementAndGet()
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to forward data to server", e)
-            sendRstToClient(connection.sessionKey)
-        }
-    }
-    
-    /**
-     * Forwards data from server to client
-     */
-    private fun forwardToClient(connection: TcpConnection, data: ByteArray) {
-        // Build TCP packet for client
-        val packet = buildDataPacket(connection, data)
-        tunWriter.write(packet)
-        
-        connection.bytesReceived += data.size
-        connection.packetsReceived++
-        
-        // Update sequence numbers
-        connection.serverSeq += data.size
-    }
-    
-    // ============================================================
-    // Packet Building
-    // ============================================================
-    
-    /**
-     * Builds a SYN-ACK packet to send to client
-     */
-    private fun sendSynAckToClient(connection: TcpConnection) {
-        val packet = buildSynAckPacket(connection)
-        tunWriter.write(packet)
-    }
-    
-    /**
-     * Builds a SYN-ACK packet
-     */
-    private fun buildSynAckPacket(connection: TcpConnection): ByteArray {
-        // Simplified: build TCP SYN-ACK packet
-        // In production, use TcpPacket.toRawBytes()
-        return ByteArray(40) // Placeholder
-    }
-    
-    /**
-     * Builds a data packet to send to client
-     */
-    private fun buildDataPacket(connection: TcpConnection, data: ByteArray): ByteArray {
-        // Simplified: build TCP data packet
-        // In production, use TcpPacket.toRawBytes()
-        return data // Placeholder
-    }
-    
-    /**
-     * Sends RST packet to client
-     */
-    private fun sendRstToClient(key: SessionKey) {
-        // Simplified: build and send RST packet
-        Log.d(TAG, "Sending RST to client for ${ipToString(key.srcIp)}:$key.srcPort")
-    }
-    
-    // ============================================================
-    // Connection Close Handling
-    // ============================================================
-    
-    private fun handleClientFin(connection: TcpConnection) {
-        Log.d(TAG, "Client FIN received, closing connection")
-        connection.state = TcpConnectionState.CLOSING
-        sendFinAckToClient(connection)
-        connection.close()
-        connections.remove(connection.sessionKey)
-        totalConnectionsClosed.incrementAndGet()
-    }
-    
-    private fun handleClientRst(connection: TcpConnection) {
-        Log.d(TAG, "Client RST received, aborting connection")
-        connection.close()
-        connections.remove(connection.sessionKey)
-        totalConnectionsClosed.incrementAndGet()
-    }
-    
-    private fun handleServerFin(connection: TcpConnection) {
-        Log.d(TAG, "Server FIN received, closing connection")
-        connection.state = TcpConnectionState.CLOSING
-        sendFinAckToClient(connection)
-        connection.close()
-        connections.remove(connection.sessionKey)
-        totalConnectionsClosed.incrementAndGet()
-    }
-    
-    private fun handleServerRst(connection: TcpConnection) {
-        Log.d(TAG, "Server RST received, aborting connection")
-        sendRstToClient(connection.sessionKey)
-        connection.close()
-        connections.remove(connection.sessionKey)
-        totalConnectionsClosed.incrementAndGet()
-    }
-    
-    private fun sendFinAckToClient(connection: TcpConnection) {
-        // Simplified: build and send FIN-ACK packet
-        Log.d(TAG, "Sending FIN-ACK to client")
-    }
-    
-    // ============================================================
-    // Utilities
-    // ============================================================
-    
-    private fun findConnectionBySocket(socketChannel: SocketChannel): TcpConnection? {
-        return connections.values.find { it.socketChannel == socketChannel }
-    }
-    
-    private fun checkTimeouts() {
-        val now = System.currentTimeMillis()
-        // Simplified: check for timed-out connections
-    }
-    
-    // ============================================================
-    // Statistics
-    // ============================================================
-    
-    fun getStats(): TcpForwarderStats {
-        return TcpForwarderStats(
-            activeConnections = connections.size,
-            totalConnectionsAttempted = totalConnectionsAttempted.get(),
-            totalConnectionsEstablished = totalConnectionsEstablished.get(),
-            totalConnectionsFailed = totalConnectionsFailed.get(),
-            totalConnectionsClosed = totalConnectionsClosed.get(),
-            totalBytesForwarded = totalBytesForwarded.get(),
-            totalPacketsForwarded = totalPacketsForwarded.get()
+    fun handle(ip: IpPacket, tcp: TcpPacket) {
+        val key = SessionKey.of(
+            ip.sourceIp, tcp.sourcePort,
+            ip.destinationIp, tcp.destinationPort,
+            IpPacket.PROTO_TCP,
         )
+        when {
+            tcp.isSyn && !tcp.flagAck -> handleSyn(ip, tcp, key)
+            tcp.isRst                  -> sessionTable.remove(key)
+            tcp.isFin                  -> handleFin(ip, tcp, key)
+            else                       -> handleData(ip, tcp, key)
+        }
     }
-    
-    fun resetStats() {
-        totalConnectionsAttempted.set(0)
-        totalConnectionsEstablished.set(0)
-        totalConnectionsFailed.set(0)
-        totalConnectionsClosed.set(0)
-        totalBytesForwarded.set(0)
-        totalPacketsForwarded.set(0)
-    }
-}
 
-data class TcpForwarderStats(
-    val activeConnections: Int,
-    val totalConnectionsAttempted: Long,
-    val totalConnectionsEstablished: Long,
-    val totalConnectionsFailed: Long,
-    val totalConnectionsClosed: Long,
-    val totalBytesForwarded: Long,
-    val totalPacketsForwarded: Long
-)
+    // ─────────────────────────────────────────────────────────────────────────
+    // SYN
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun handleSyn(ip: IpPacket, tcp: TcpPacket, key: SessionKey) {
+        val session = sessionTable.getOrCreate(key)
+        try {
+            val channel = SocketChannel.open()
+            channel.configureBlocking(false)
+            protectSocket(channel.socket())
+            channel.connect(InetSocketAddress(ip.destinationIp, tcp.destinationPort))
+
+            session.tcpChannel    = channel
+            session.lastDeviceSeq = tcp.sequenceNumber
+            session.tcpState.set(Session.TcpState.SYN_RECEIVED)
+
+            selector.wakeup()
+            val selKey = channel.register(selector, SelectionKey.OP_CONNECT)
+            selKey.attach(session)
+            session.selectionKey = selKey
+
+            connectingCount.incrementAndGet()
+        } catch (e: Exception) {
+            System.err.println("[TcpForwarder] SYN error $key: ${e.message}")
+            sessionTable.remove(key)
+            sendRstToDevice(ip, tcp)
+            errorCount.incrementAndGet()
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ★ Data — Encryption classification on first packet
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun handleData(ip: IpPacket, tcp: TcpPacket, key: SessionKey) {
+        val session = sessionTable.get(key) ?: return
+        if (session.tcpState.get() != Session.TcpState.ESTABLISHED) return
+        if (!tcp.hasData) return
+
+        // ── ★ Classify encryption on the first data packet ──────────────────
+        if (!session.encryptionClassified) {
+            val result = encEnforcer.inspect(ip, tcp)
+            session.encryptionStatus      = result.encryptionStatus
+            session.tlsVersion            = result.tlsVersion
+            session.encryptionClassified  = true
+
+            // Update SNI if extracted (overrides DNS-resolved hostname)
+            if (result.sniHostname != null) {
+                session.tlsSni = result.sniHostname
+                // Propagate SNI to session table for other sessions to the same IP
+                sessionTable.allSessions()
+                    .filter { it.key.destinationIp == key.destinationIp && it.tlsSni == null }
+                    .forEach { it.tlsSni = result.sniHostname }
+            }
+
+            // ── Enforce encryption rules ────────────────────────────────────
+            if (result.encryptionStatus == EncryptionStatus.CLEARTEXT ||
+                result.encryptionStatus == EncryptionStatus.WEAK_TLS) {
+
+                val decision = filterEngine.evaluate(
+                    uid       = session.ownerUid,
+                    pkg       = session.ownerPackage,
+                    domain    = session.hostname,
+                    ip        = key.destinationIp,
+                    port      = key.destinationPort,
+                    protocol  = IpPacket.PROTO_TCP,
+                    encStatus = result.encryptionStatus,
+                )
+                if (decision.isBlocked) {
+                    encryptionBlocked.incrementAndGet()
+                    sendRstToDevice(ip, tcp)
+                    sessionTable.remove(key)
+                    return
+                }
+            }
+        }
+
+        // ── Forward to remote server ─────────────────────────────────────────
+        val channel = session.tcpChannel ?: return
+        if (!channel.isConnected) return
+        try {
+            val buf = ByteBuffer.wrap(tcp.data)
+            var written = 0
+            while (buf.hasRemaining()) {
+                val n = channel.write(buf)
+                if (n == 0) break
+                written += n
+            }
+            session.recordOutbound(written)
+            forwardedBytesOut.addAndGet(written.toLong())
+            sendAckToDevice(ip, tcp, session)
+        } catch (e: Exception) {
+            System.err.println("[TcpForwarder] data error $key: ${e.message}")
+            sessionTable.remove(key)
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // FIN
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun handleFin(ip: IpPacket, tcp: TcpPacket, key: SessionKey) {
+        val session = sessionTable.get(key) ?: return
+        session.tcpState.set(Session.TcpState.FIN_WAIT)
+        runCatching { session.tcpChannel?.shutdownOutput() }
+        sendFinAckToDevice(ip, tcp, session)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Selector Loop
+    // ─────────────────────────────────────────────────────────────────────────
+
+    override fun run() {
+        val buffer = ByteBuffer.allocate(BUFFER_SIZE)
+        while (running.get()) {
+            try {
+                if (selector.select(100L) == 0) continue
+                val keys = selector.selectedKeys().iterator()
+                while (keys.hasNext()) {
+                    val selKey = keys.next(); keys.remove()
+                    val session = selKey.attachment() as? Session ?: continue
+                    try {
+                        when {
+                            selKey.isConnectable -> finishConnect(selKey, session)
+                            selKey.isReadable    -> readFromRemote(selKey, session, buffer)
+                        }
+                    } catch (e: Exception) {
+                        System.err.println("[TcpForwarder] selector error: ${e.message}")
+                        sessionTable.remove(session.key)
+                    }
+                }
+            } catch (_: Exception) { if (!running.get()) break }
+        }
+    }
+
+    private fun finishConnect(selKey: SelectionKey, session: Session) {
+        val channel = selKey.channel() as SocketChannel
+        if (channel.finishConnect()) {
+            connectingCount.decrementAndGet()
+            session.tcpState.set(Session.TcpState.ESTABLISHED)
+            selKey.interestOps(SelectionKey.OP_READ)
+            sendSynAckToDevice(session)
+        }
+    }
+
+    private fun readFromRemote(selKey: SelectionKey, session: Session, buffer: ByteBuffer) {
+        val channel = selKey.channel() as SocketChannel
+        buffer.clear()
+        val n = channel.read(buffer)
+        if (n < 0) { sessionTable.remove(session.key); return }
+        if (n == 0) return
+        buffer.flip()
+        val data = ByteArray(n).also { buffer.get(it) }
+        session.recordInbound(n)
+        forwardedBytesIn.addAndGet(n.toLong())
+        injectDataToDevice(session, data)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Synthetic TCP packet builders
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun sendSynAckToDevice(session: Session) {
+        val pkt = buildTcp(
+            srcIp   = session.key.destinationIp, srcPort = session.key.destinationPort,
+            dstIp   = session.key.sourceIp,      dstPort = session.key.sourcePort,
+            seqNum  = session.sendSeq, ackNum = session.lastDeviceSeq + 1,
+            syn = true, ack = true,
+        )
+        session.sendSeq++
+        session.lastAckToDevice = session.lastDeviceSeq + 1
+        tunWriter.enqueueWithChecksums(pkt)
+    }
+
+    private fun sendAckToDevice(ip: IpPacket, tcp: TcpPacket, session: Session) {
+        val expected = tcp.sequenceNumber + tcp.data.size
+        if (expected <= session.lastAckToDevice) return
+        session.lastAckToDevice = expected
+        tunWriter.enqueueWithChecksums(buildTcp(
+            srcIp = ip.destinationIp, srcPort = tcp.destinationPort,
+            dstIp = ip.sourceIp,     dstPort = tcp.sourcePort,
+            seqNum = session.sendSeq, ackNum = expected, ack = true,
+        ))
+    }
+
+    private fun injectDataToDevice(session: Session, data: ByteArray) {
+        tunWriter.enqueueWithChecksums(buildTcp(
+            srcIp   = session.key.destinationIp, srcPort = session.key.destinationPort,
+            dstIp   = session.key.sourceIp,      dstPort = session.key.sourcePort,
+            seqNum  = session.sendSeq, ackNum = session.lastAckToDevice,
+            ack = true, psh = true, data = data,
+        ))
+        session.sendSeq += data.size
+    }
+
+    private fun sendFinAckToDevice(ip: IpPacket, tcp: TcpPacket, session: Session) {
+        tunWriter.enqueueWithChecksums(buildTcp(
+            srcIp   = ip.destinationIp, srcPort = tcp.destinationPort,
+            dstIp   = ip.sourceIp,     dstPort = tcp.sourcePort,
+            seqNum  = session.sendSeq, ackNum = tcp.sequenceNumber + 1,
+            ack = true, fin = true,
+        ))
+        session.sendSeq++
+        sessionTable.remove(session.key)
+    }
+
+    private fun sendRstToDevice(ip: IpPacket, tcp: TcpPacket) {
+        tunWriter.enqueueWithChecksums(buildTcp(
+            srcIp   = ip.destinationIp, srcPort = tcp.destinationPort,
+            dstIp   = ip.sourceIp,     dstPort = tcp.sourcePort,
+            seqNum  = tcp.acknowledgmentNumber, ackNum = 0L, rst = true,
+        ))
+    }
+
+    @Suppress("LongParameterList")
+    private fun buildTcp(
+        srcIp: String, srcPort: Int, dstIp: String, dstPort: Int,
+        seqNum: Long, ackNum: Long,
+        syn: Boolean = false, ack: Boolean = false, psh: Boolean = false,
+        fin: Boolean = false, rst: Boolean = false,
+        data: ByteArray = ByteArray(0),
+    ): ByteArray {
+        val totalLen = 40 + data.size
+        val pkt      = ByteArray(totalLen)
+        // IPv4
+        pkt[0] = 0x45.toByte()
+        pkt[2] = (totalLen ushr 8).toByte(); pkt[3] = (totalLen and 0xFF).toByte()
+        pkt[8] = 64; pkt[9] = 6
+        srcIp.split('.').forEachIndexed { i, s -> pkt[12 + i] = s.toInt().toByte() }
+        dstIp.split('.').forEachIndexed { i, s -> pkt[16 + i] = s.toInt().toByte() }
+        // TCP
+        pkt[20] = (srcPort ushr 8).toByte(); pkt[21] = (srcPort and 0xFF).toByte()
+        pkt[22] = (dstPort ushr 8).toByte(); pkt[23] = (dstPort and 0xFF).toByte()
+        fun writeLong(off: Int, v: Long) {
+            pkt[off]   = ((v ushr 24) and 0xFF).toByte(); pkt[off+1] = ((v ushr 16) and 0xFF).toByte()
+            pkt[off+2] = ((v ushr 8)  and 0xFF).toByte(); pkt[off+3] = (v and 0xFF).toByte()
+        }
+        writeLong(24, seqNum); writeLong(28, ackNum)
+        pkt[32] = 0x50.toByte()
+        pkt[33] = ((if (syn) 0x02 else 0) or (if (ack) 0x10 else 0) or
+                   (if (psh) 0x08 else 0) or (if (fin) 0x01 else 0) or
+                   (if (rst) 0x04 else 0)).toByte()
+        pkt[34] = 0xFF.toByte(); pkt[35] = 0xFF.toByte()
+        if (data.isNotEmpty()) data.copyInto(pkt, 40)
+        Checksum.setIpv4HeaderChecksum(pkt, 0)
+        Checksum.setTcpChecksum(pkt, 0)
+        return pkt
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Statistics
+    // ─────────────────────────────────────────────────────────────────────────
+
+    val forwardedBytesIn   = AtomicLong(0)
+    val forwardedBytesOut  = AtomicLong(0)
+    val connectingCount    = AtomicLong(0)
+    val errorCount         = AtomicLong(0)
+    val encryptionBlocked  = AtomicLong(0)
+
+    companion object { private const val BUFFER_SIZE = 32_767 }
+}

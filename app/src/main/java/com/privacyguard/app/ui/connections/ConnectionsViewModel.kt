@@ -1,19 +1,10 @@
-/**
- * ConnectionsViewModel.kt
- * 
- * ViewModel لشاشة الاتصالات الحية
- *
- * @author PrivacyGuard Engineering Team
- * @since 1.0.0
- */
-
 package com.privacyguard.app.ui.connections
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.privacyguard.app.core.stats.StatsManager
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
@@ -29,7 +20,11 @@ data class Connection(
     val isBlocked: Boolean,
     val dataRate: String,
     val bytesSent: Long,
-    val bytesReceived: Long
+    val bytesReceived: Long,
+    val hostName: String? = null,
+    val securityInfo: String = "Unknown",
+    val encryptionInfo: String = "Unknown",
+    val payloadPreview: String? = null
 )
 
 data class ConnectionFilter(
@@ -53,7 +48,11 @@ class ConnectionsViewModel : ViewModel() {
                     isBlocked = it.isBlocked,
                     dataRate = formatRate(it.bytesTransferred),
                     bytesSent = it.bytesTransferred,
-                    bytesReceived = 0
+                    bytesReceived = 0,
+                    hostName = it.hostName,
+                    securityInfo = it.securityInfo,
+                    encryptionInfo = it.encryptionInfo,
+                    payloadPreview = it.payloadPreview
                 )
             }
         }

@@ -1,33 +1,104 @@
+package com.privacyguard.core.session
+
 /**
- * SessionKey.kt
+ * Immutable key that uniquely identifies a network connection (session).
  *
- * Uniquely identifies a network connection using the standard 5-tuple
+ * A session is identified by the 4-tuple:
+ *   (sourceIp, sourcePort, destinationIp, destinationPort, protocol)
  *
- * @author PrivacyGuard Engineering Team
- * @since 1.0.0
+ * This is used as the key in [SessionTable] to map virtual TUN connections
+ * to their corresponding real sockets opened on behalf of the device.
+ *
+ * Equality and hashCode are based on all five fields, enabling safe use
+ * as HashMap keys without collision between TCP and UDP sessions on the
+ * same port pair.
  */
-
-package com.privacyguard.app.core.session
-
 data class SessionKey(
-    val srcIp: Int,
-    val srcPort: Int,
-    val dstIp: Int,
-    val dstPort: Int,
-    val protocol: Int
+    /** Source IP address (device-side) in dotted-decimal notation. */
+    val sourceIp: String,
+    /** Source port number (device-side). */
+    val sourcePort: Int,
+    /** Destination IP address (remote server). */
+    val destinationIp: String,
+    /** Destination port number (remote server). */
+    val destinationPort: Int,
+    /**
+     * IP protocol number.
+     * @see com.privacyguard.core.packet.IpPacket.PROTO_TCP
+     * @see com.privacyguard.core.packet.IpPacket.PROTO_UDP
+     */
+    val protocol: Int,
 ) {
-    fun isTcp(): Boolean = protocol == 6
-    fun isUdp(): Boolean = protocol == 17
+    // ─────────────────────────────────────────────────────────────────────────
+    // Derived Properties
+    // ─────────────────────────────────────────────────────────────────────────
 
-    fun reverse(): SessionKey {
-        return SessionKey(dstIp, dstPort, srcIp, srcPort, protocol)
+    /** Human-readable protocol name. */
+    val protocolName: String get() = when (protocol) {
+        PROTO_TCP  -> "TCP"
+        PROTO_UDP  -> "UDP"
+        PROTO_ICMP -> "ICMP"
+        else       -> "PROTO($protocol)"
     }
 
-    override fun toString(): String {
-        return "${ipToString(srcIp)}:$srcPort → ${ipToString(dstIp)}:$dstPort (${if (isTcp()) "TCP" else "UDP"})"
-    }
+    /**
+     * Returns the reverse (response) key — swaps source and destination.
+     * Used to look up the session when a packet arrives from the remote server
+     * and needs to be forwarded back to the device.
+     */
+    fun reversed(): SessionKey = copy(
+        sourceIp        = destinationIp,
+        sourcePort      = destinationPort,
+        destinationIp   = sourceIp,
+        destinationPort = sourcePort,
+    )
 
-    private fun ipToString(ip: Int): String {
-        return "${(ip ushr 24) and 0xFF}.${(ip ushr 16) and 0xFF}.${(ip ushr 8) and 0xFF}.${ip and 0xFF}"
+    /**
+     * Returns true if the destination is a well-known cleartext port.
+     */
+    val isHttpCleartext: Boolean get() =
+        destinationPort == 80 || destinationPort == 8080 || destinationPort == 8000
+
+    /**
+     * Returns true if the destination is a standard TLS port.
+     */
+    val isTls: Boolean get() =
+        destinationPort == 443 || destinationPort == 8443
+
+    /**
+     * Returns true if this is a DNS query session.
+     */
+    val isDns: Boolean get() =
+        destinationPort == 53 && protocol == PROTO_UDP
+
+    override fun toString(): String =
+        "$protocolName $sourceIp:$sourcePort → $destinationIp:$destinationPort"
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Companion
+    // ─────────────────────────────────────────────────────────────────────────
+
+    companion object {
+        const val PROTO_ICMP = 1
+        const val PROTO_TCP  = 6
+        const val PROTO_UDP  = 17
+
+        /**
+         * Convenience factory that creates a [SessionKey] from an [IpPacket]
+         * and a parsed transport-layer port pair.
+         */
+        fun of(
+            srcIp: String,
+            srcPort: Int,
+            dstIp: String,
+            dstPort: Int,
+            proto: Int,
+        ) = SessionKey(
+            sourceIp        = srcIp,
+            sourcePort      = srcPort,
+            destinationIp   = dstIp,
+            destinationPort = dstPort,
+            protocol        = proto,
+        )
     }
 }

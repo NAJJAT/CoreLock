@@ -1,526 +1,279 @@
-/**
- * IpPacket.kt
- *
- * RFC 791 - Internet Protocol Specification
- *
- * Parses IPv4 packets from the TUN interface.
- * This is the FIRST layer of packet processing in PrivacyGuard.
- *
- * Every packet that enters the VPN tunnel passes through this parser.
- *
- * Performance requirements:
- * - Parse must complete in < 50 microseconds
- * - Called 1000+ times per second
- * - Zero object allocations in hot path (uses existing buffers where possible)
- *
- * Security requirements:
- * - Validate all header fields before reading
- * - Reject malformed packets (attack surface)
- * - Handle fragmented packets gracefully (reject until reassembly implemented)
- *
- * Thread Safety: This class is immutable. All methods are thread-safe.
- *
- * @author PrivacyGuard Engineering Team
- * @since 1.0.0
- */
+package com.privacyguard.core.packet
 
-package com.privacyguard.app.core.packet
-
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
+import com.privacyguard.core.utils.ByteUtils
+import com.privacyguard.core.utils.Checksum
 
 /**
- * Represents an IPv4 packet with all headers and payload.
+ * Represents a parsed IPv4 packet.
  *
- * This class is immutable - once created, it cannot be modified.
- * For packet modification, create a new instance with modified fields.
- *
- * Private constructor ensures all instances come from validated parse().
- *
- * @property version IP version (must be 4 for IPv4)
- * @property headerLength IP header length in bytes (usually 20, max 60)
- * @property typeOfService Type of Service / Differentiated Services Code Point
- * @property totalLength Total packet length (header + payload) in bytes
- * @property identification Unique identifier for fragmentation
- * @property flags 3-bit flags: Reserved (0), Don't Fragment (DF), More Fragments (MF)
- * @property fragmentOffset Fragment offset for reassembly (13 bits, units of 8 bytes)
- * @property timeToLive Time To Live (hop limit, decremented by each router)
- * @property protocol Transport protocol (6=TCP, 17=UDP, 1=ICMP, etc.)
- * @property headerChecksum Checksum of the IP header only (not payload)
- * @property sourceAddress 32-bit source IP address (network byte order)
- * @property destinationAddress 32-bit destination IP address (network byte order)
- * @property options Optional IP options (rarely used, max 40 bytes)
- * @property payload The actual data (TCP/UDP/ICMP packet)
+ * Layout (RFC 791):
+ * ```
+ *  0                   1                   2                   3
+ *  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |Version|  IHL  |Type of Service|          Total Length         |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |         Identification        |Flags|      Fragment Offset    |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |  Time to Live |    Protocol   |         Header Checksum       |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                       Source Address                          |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                    Destination Address                        |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * |                    Options (if IHL > 5)                       |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ * ```
  */
-class IpPacket private constructor(
+data class IpPacket(
+    /** IP version — always 4 for IPv4. */
     val version: Int,
+    /** Internet Header Length in bytes (IHL field × 4). */
     val headerLength: Int,
-    val typeOfService: Int,
+    /** Differentiated Services / Type of Service byte. */
+    val dscp: Int,
+    /** Total packet length including header and data. */
     val totalLength: Int,
+    /** Identification field for fragmentation reassembly. */
     val identification: Int,
-    val flags: Int,
+    /** Don't Fragment (DF) flag. */
+    val flagDf: Boolean,
+    /** More Fragments (MF) flag. */
+    val flagMf: Boolean,
+    /** Fragment offset in 8-byte units. */
     val fragmentOffset: Int,
-    val timeToLive: Int,
+    /** Time to Live. */
+    val ttl: Int,
+    /** Layer-4 protocol number (6=TCP, 17=UDP, 1=ICMP, …). */
     val protocol: Int,
+    /** Header checksum. */
     val headerChecksum: Int,
-    val sourceAddress: Int,
-    val destinationAddress: Int,
+    /** Source IP address in dotted-decimal notation. */
+    val sourceIp: String,
+    /** Destination IP address in dotted-decimal notation. */
+    val destinationIp: String,
+    /** Raw options bytes (empty if IHL == 5). */
     val options: ByteArray,
-    val payload: ByteArray
+    /** The full original raw packet bytes (header + payload). */
+    val rawPacket: ByteArray,
 ) {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Derived Properties
+    // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Returns true if this is a TCP packet.
-     * Protocol number 6 = TCP (assigned by IANA)
-     */
-    fun isTcp(): Boolean = protocol == 6
+    /** True if this packet is not fragmented (DF set and fragment offset == 0). */
+    val isUnfragmented: Boolean get() = !flagMf && fragmentOffset == 0
 
-    /**
-     * Returns true if this is a UDP packet.
-     * Protocol number 17 = UDP (assigned by IANA)
-     */
-    fun isUdp(): Boolean = protocol == 17
+    /** Byte offset within [rawPacket] where the transport-layer payload starts. */
+    val payloadOffset: Int get() = headerLength
 
-    /**
-     * Returns true if this is an ICMP packet.
-     * Protocol number 1 = ICMP (assigned by IANA)
-     */
-    fun isIcmp(): Boolean = protocol == 1
+    /** Length of the transport-layer payload in bytes. */
+    val payloadLength: Int get() = totalLength - headerLength
 
-    /**
-     * Returns true if this packet is fragmented (needs reassembly).
-     * Fragmentation is rare in modern networks but must be handled.
-     *
-     * Fragment offset > 0 OR More Fragments flag is set
-     *
-     * IMPORTANT: For MVP, fragmented packets are rejected (return null in parse)
-     * Full reassembly will be implemented in v1.5 if needed.
-     */
-    fun isFragmented(): Boolean = (flags and 0x01) != 0 || fragmentOffset != 0
+    /** Returns a copy of the payload (transport-layer header + data). */
+    val payload: ByteArray get() = rawPacket.copyOfRange(payloadOffset, payloadOffset + payloadLength)
 
-    /**
-     * Returns true if the Don't Fragment flag is set.
-     * Modern networks prefer DF to avoid fragmentation overhead.
-     */
-    fun isDontFragment(): Boolean = (flags and 0x02) != 0
-
-    /**
-     * Converts the packet back to raw bytes for writing to TUN.
-     *
-     * This is the inverse of the parse() function.
-     * Used when we need to forward or modify packets.
-     *
-     * Performance note: This allocates a new ByteArray each time.
-     * For forwarding unchanged packets, consider using the original buffer.
-     *
-     * FIXED: totalLength is now derived from actual header + payload (not stored value)
-     * FIXED: No unnecessary payload copying (uses reference to existing payload)
-     *
-     * @return Raw byte array ready for TUN injection
-     */
-    fun toRawBytes(): ByteArray {
-        // FIXED: Derive total length from actual data, not stored value
-        val actualTotalLength = headerLength + payload.size
-        val buffer = ByteBuffer.allocate(actualTotalLength)
-        buffer.order(ByteOrder.BIG_ENDIAN)
-
-        // Byte 0: Version (4 bits) + Header Length (4 bits, in 32-bit words)
-        val firstByte = ((version shl 4) or (headerLength / 4)).toByte()
-        buffer.put(firstByte)
-
-        // Byte 1: Type of Service
-        buffer.put(typeOfService.toByte())
-
-        // Bytes 2-3: Total Length (FIXED: use actual, not stored)
-        buffer.putShort(actualTotalLength.toShort())
-
-        // Bytes 4-5: Identification
-        buffer.putShort(identification.toShort())
-
-        // Bytes 6-7: Flags (3 bits) + Fragment Offset (13 bits)
-        val flagsAndOffset = ((flags and 0x07) shl 13) or (fragmentOffset and 0x1FFF)
-        buffer.putShort(flagsAndOffset.toShort())
-
-        // Byte 8: Time To Live
-        buffer.put(timeToLive.toByte())
-
-        // Byte 9: Protocol
-        buffer.put(protocol.toByte())
-
-        // Bytes 10-11: Header Checksum (calculate fresh)
-        val checksumPos = buffer.position()
-        buffer.putShort(0) // Placeholder
-
-        // Bytes 12-15: Source Address
-        buffer.putInt(sourceAddress)
-
-        // Bytes 16-19: Destination Address
-        buffer.putInt(destinationAddress)
-
-        // Bytes 20+: Options (if any)
-        if (options.isNotEmpty()) {
-            buffer.put(options)
-        }
-
-        // Calculate and set checksum
-        val headerBytes = ByteArray(headerLength)
-        buffer.rewind()
-        buffer.get(headerBytes, 0, headerLength)
-
-        // Zero out checksum field in copy before calculation
-        headerBytes[10] = 0
-        headerBytes[11] = 0
-
-        val calculatedChecksum = calculateChecksum(headerBytes)
-        buffer.position(checksumPos)
-        buffer.putShort(calculatedChecksum.toShort())
-
-        // Move position to end of header
-        buffer.position(headerLength)
-
-        // Payload (FIXED: use existing payload, no copy)
-        buffer.put(payload)
-
-        return buffer.array()
+    /** Human-readable protocol name. */
+    val protocolName: String get() = when (protocol) {
+        PROTO_ICMP -> "ICMP"
+        PROTO_TCP  -> "TCP"
+        PROTO_UDP  -> "UDP"
+        else       -> "PROTO($protocol)"
     }
 
-    /**
-     * Returns a copy of this packet with modified destination IP.
-     * Used for NAT when forwarding to external servers.
-     *
-     * FIXED: No unnecessary payload copying - payload reference is shared
-     *
-     * @param newDestIp New destination IP address (network byte order)
-     * @return New IpPacket instance with updated destination IP
-     */
-    fun withDestinationIp(newDestIp: Int): IpPacket {
-        return IpPacket(
-            version = version,
-            headerLength = headerLength,
-            typeOfService = typeOfService,
-            totalLength = totalLength,
-            identification = identification,
-            flags = flags,
-            fragmentOffset = fragmentOffset,
-            timeToLive = timeToLive,
-            protocol = protocol,
-            headerChecksum = headerChecksum,
-            sourceAddress = sourceAddress,
-            destinationAddress = newDestIp,
-            options = options,  // FIXED: No copy - immutable reference
-            payload = payload    // FIXED: No copy - immutable reference
-        )
-    }
-
-    /**
-     * Returns a copy of this packet with modified source IP.
-     * Used for NAT when forwarding to external servers.
-     *
-     * FIXED: No unnecessary payload copying - payload reference is shared
-     *
-     * @param newSrcIp New source IP address (network byte order)
-     * @return New IpPacket instance with updated source IP
-     */
-    fun withSourceIp(newSrcIp: Int): IpPacket {
-        return IpPacket(
-            version = version,
-            headerLength = headerLength,
-            typeOfService = typeOfService,
-            totalLength = totalLength,
-            identification = identification,
-            flags = flags,
-            fragmentOffset = fragmentOffset,
-            timeToLive = timeToLive,
-            protocol = protocol,
-            headerChecksum = headerChecksum,
-            sourceAddress = newSrcIp,
-            destinationAddress = destinationAddress,
-            options = options,  // FIXED: No copy - immutable reference
-            payload = payload    // FIXED: No copy - immutable reference
-        )
-    }
-
-    override fun toString(): String {
-        return "IpPacket(src=${ipToString(sourceAddress)}, dst=${ipToString(destinationAddress)}, " +
-                "proto=${protocolName()}, len=$totalLength, id=$identification)"
-    }
-
-    private fun protocolName(): String = when (protocol) {
-        6 -> "TCP"
-        17 -> "UDP"
-        1 -> "ICMP"
-        else -> "Unknown($protocol)"
-    }
+    // ─────────────────────────────────────────────────────────────────────────
+    // Equality / HashCode (exclude mutable byte arrays from auto-gen)
+    // ─────────────────────────────────────────────────────────────────────────
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is IpPacket) return false
-
-        if (version != other.version) return false
-        if (headerLength != other.headerLength) return false
-        if (typeOfService != other.typeOfService) return false
-        if (totalLength != other.totalLength) return false
-        if (identification != other.identification) return false
-        if (flags != other.flags) return false
-        if (fragmentOffset != other.fragmentOffset) return false
-        if (timeToLive != other.timeToLive) return false
-        if (protocol != other.protocol) return false
-        if (headerChecksum != other.headerChecksum) return false
-        if (sourceAddress != other.sourceAddress) return false
-        if (destinationAddress != other.destinationAddress) return false
-        if (!options.contentEquals(other.options)) return false
-        if (!payload.contentEquals(other.payload)) return false
-
-        return true
+        return version == other.version &&
+               headerLength == other.headerLength &&
+               totalLength == other.totalLength &&
+               identification == other.identification &&
+               protocol == other.protocol &&
+               sourceIp == other.sourceIp &&
+               destinationIp == other.destinationIp &&
+               rawPacket.contentEquals(other.rawPacket)
     }
 
     override fun hashCode(): Int {
         var result = version
         result = 31 * result + headerLength
-        result = 31 * result + typeOfService
         result = 31 * result + totalLength
         result = 31 * result + identification
-        result = 31 * result + flags
-        result = 31 * result + fragmentOffset
-        result = 31 * result + timeToLive
         result = 31 * result + protocol
-        result = 31 * result + headerChecksum
-        result = 31 * result + sourceAddress
-        result = 31 * result + destinationAddress
-        result = 31 * result + options.contentHashCode()
-        result = 31 * result + payload.contentHashCode()
+        result = 31 * result + sourceIp.hashCode()
+        result = 31 * result + destinationIp.hashCode()
+        result = 31 * result + rawPacket.contentHashCode()
         return result
     }
 
-    companion object {
+    override fun toString(): String =
+        "IpPacket(v$version $protocolName $sourceIp→$destinationIp " +
+        "len=$totalLength ttl=$ttl id=0x${identification.toString(16).uppercase()})"
 
-        // FIXED: Checksum validation only in debug builds (performance)
-        // Set to BuildConfig.DEBUG in actual project
-        private const val VALIDATE_CHECKSUM = false
+    // ─────────────────────────────────────────────────────────────────────────
+    // Mutation helpers (returns new packet bytes)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Returns a new raw byte array with [ttl] decremented by 1
+     * and the header checksum recalculated.
+     * Useful when forwarding packets (acting as a router).
+     */
+    fun withDecrementedTtl(): ByteArray {
+        val out = rawPacket.copyOf()
+        out[8] = (ttl - 1).coerceAtLeast(0).toByte()
+        Checksum.setIpv4HeaderChecksum(out, 0)
+        return out
+    }
+
+    /**
+     * Returns a new raw byte array with source IP replaced by [newSrcIp]
+     * and both IP header and transport-layer checksums recalculated.
+     */
+    fun withSourceIp(newSrcIp: String): ByteArray {
+        val out = rawPacket.copyOf()
+        ByteUtils.writeIpv4Address(out, 12, newSrcIp)
+        Checksum.setIpv4HeaderChecksum(out, 0)
+        when (protocol) {
+            PROTO_TCP -> Checksum.setTcpChecksum(out, 0)
+            PROTO_UDP -> Checksum.setUdpChecksum(out, 0)
+        }
+        return out
+    }
+
+    /**
+     * Returns a new raw byte array with destination IP replaced by [newDstIp]
+     * and checksums recalculated.
+     */
+    fun withDestinationIp(newDstIp: String): ByteArray {
+        val out = rawPacket.copyOf()
+        ByteUtils.writeIpv4Address(out, 16, newDstIp)
+        Checksum.setIpv4HeaderChecksum(out, 0)
+        when (protocol) {
+            PROTO_TCP -> Checksum.setTcpChecksum(out, 0)
+            PROTO_UDP -> Checksum.setUdpChecksum(out, 0)
+        }
+        return out
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Companion — Factory & Constants
+    // ─────────────────────────────────────────────────────────────────────────
+
+    companion object {
+        const val PROTO_ICMP = 1
+        const val PROTO_TCP  = 6
+        const val PROTO_UDP  = 17
+
+        private const val MIN_IP_HEADER = 20   // 5 × 4 bytes
+        private const val MIN_PACKET    = 20
 
         /**
-         * Parses raw bytes from TUN into an IpPacket.
+         * Parses a raw byte array into an [IpPacket].
          *
-         * This is the ENTRY POINT for all packet processing.
-         * Called for EVERY packet that enters PrivacyGuard.
-         *
-         * Thread Safety: This method is stateless and thread-safe.
-         *
-         * Performance Requirements:
-         * - Must complete in < 50 microseconds
-         * - Called 1000+ times per second
-         * - Validates all bounds before reading (security)
-         *
-         * Security: Rejects fragmented packets (reassembly not implemented in MVP)
-         *
-         * @param data Raw bytes from TUN file descriptor
-         * @param length Number of valid bytes in data array
-         * @return IpPacket object or null if parsing fails (malformed packet)
+         * @param raw    the raw bytes starting at the IPv4 header (offset 0).
+         * @param offset byte offset where the IP header begins (default 0).
+         * @return       a parsed [IpPacket], or null if the data is malformed.
          */
-        fun parse(data: ByteArray, length: Int): IpPacket? {
-            // Check 1: Minimum IPv4 header is 20 bytes
-            if (length < 20) {
-                return null
-            }
+        fun parse(raw: ByteArray, offset: Int = 0): IpPacket? {
+            if (raw.size - offset < MIN_PACKET) return null
 
-            val buffer = ByteBuffer.wrap(data, 0, length)
-            buffer.order(ByteOrder.BIG_ENDIAN)
+            val firstByte  = ByteUtils.readUInt8(raw, offset)
+            val version    = firstByte ushr 4
+            val ihl        = (firstByte and 0x0F) * 4
 
-            // Byte 0: Version (high 4 bits) + Header Length (low 4 bits, in 32-bit words)
-            val firstByte = buffer.get().toInt() and 0xFF
-            val version = (firstByte shr 4) and 0x0F
-            val headerLength = (firstByte and 0x0F) * 4
+            if (version != 4) return null
+            if (ihl < MIN_IP_HEADER) return null
+            if (raw.size - offset < ihl) return null
 
-            // Check 2: Validate IPv4 (we don't support IPv6 in MVP)
-            if (version != 4) {
-                return null
-            }
+            val dscp        = ByteUtils.readUInt8(raw, offset + 1)
+            val totalLength = ByteUtils.readUInt16(raw, offset + 2)
+            if (raw.size - offset < totalLength) return null
 
-            // Check 3: Validate header length bounds (RFC 791: 20 to 60 bytes)
-            if (headerLength < 20 || headerLength > 60) {
-                return null
-            }
+            val identification = ByteUtils.readUInt16(raw, offset + 4)
 
-            // Check 4: Ensure we have enough data for the claimed header length
-            if (headerLength > length) {
-                return null
-            }
+            val flagsFragment  = ByteUtils.readUInt16(raw, offset + 6)
+            val flagDf         = (flagsFragment and 0x4000) != 0
+            val flagMf         = (flagsFragment and 0x2000) != 0
+            val fragmentOffset = (flagsFragment and 0x1FFF) * 8
 
-            // Byte 1: Type of Service
-            val typeOfService = buffer.get().toInt() and 0xFF
+            val ttl            = ByteUtils.readUInt8(raw, offset + 8)
+            val protocol       = ByteUtils.readUInt8(raw, offset + 9)
+            val headerChecksum = ByteUtils.readUInt16(raw, offset + 10)
+            val sourceIp       = ByteUtils.readIpv4Address(raw, offset + 12)
+            val destinationIp  = ByteUtils.readIpv4Address(raw, offset + 16)
 
-            // Bytes 2-3: Total Length
-            val totalLength = buffer.getShort().toInt() and 0xFFFF
+            val options = if (ihl > MIN_IP_HEADER)
+                ByteUtils.readBytes(raw, offset + MIN_IP_HEADER, ihl - MIN_IP_HEADER)
+            else
+                ByteArray(0)
 
-            // Check 5: Validate total length against actual data
-            if (totalLength < headerLength || totalLength > length) {
-                return null
-            }
-
-            // Bytes 4-5: Identification
-            val identification = buffer.getShort().toInt() and 0xFFFF
-
-            // Bytes 6-7: Flags (3 bits) + Fragment Offset (13 bits)
-            val flagsAndOffset = buffer.getShort().toInt() and 0xFFFF
-            val flags = (flagsAndOffset shr 13) and 0x07
-            val fragmentOffset = flagsAndOffset and 0x1FFF
-
-            // Check 6: FIXED - Reject fragmented packets (reassembly not implemented)
-            // Full reassembly will be added in v1.5 if needed
-            val isFragmented = (flags and 0x01) != 0 || fragmentOffset != 0
-            if (isFragmented) {
-                // Fragmented packet - reject for MVP
-                return null
-            }
-
-            // Byte 8: Time To Live
-            val timeToLive = buffer.get().toInt() and 0xFF
-
-            // Byte 9: Protocol
-            val protocol = buffer.get().toInt() and 0xFF
-
-            // Bytes 10-11: Header Checksum
-            val headerChecksum = buffer.getShort().toInt() and 0xFFFF
-
-            // Bytes 12-15: Source Address
-            val sourceAddress = buffer.getInt()
-
-            // Bytes 16-19: Destination Address
-            val destinationAddress = buffer.getInt()
-
-            // Options (if header length > 20)
-            val optionsLength = headerLength - 20
-            val options = ByteArray(optionsLength)
-            if (optionsLength > 0) {
-                buffer.get(options)
-            }
-
-            // Payload (the rest of the packet)
-            val payloadLength = totalLength - headerLength
-            val payload = ByteArray(payloadLength)
-            if (payloadLength > 0) {
-                buffer.get(payload)
-            }
-
-            // FIXED: Checksum validation only in debug builds (performance)
-            if (VALIDATE_CHECKSUM) {
-                val headerBytes = ByteArray(headerLength)
-                System.arraycopy(data, 0, headerBytes, 0, headerLength)
-                headerBytes[10] = 0
-                headerBytes[11] = 0
-                val calculatedChecksum = calculateChecksum(headerBytes)
-
-                if (calculatedChecksum != headerChecksum) {
-                    // Checksum mismatch - packet may be corrupted or modified by router
-                    // Still process for MVP (routers legitimately modify TTL which changes checksum)
-                    // Log in debug only
-                }
-            }
+            // Take only [totalLength] bytes from [offset] as the canonical packet
+            val rawPacket = raw.copyOfRange(offset, offset + totalLength)
 
             return IpPacket(
-                version = version,
-                headerLength = headerLength,
-                typeOfService = typeOfService,
-                totalLength = totalLength,
+                version        = version,
+                headerLength   = ihl,
+                dscp           = dscp,
+                totalLength    = totalLength,
                 identification = identification,
-                flags = flags,
+                flagDf         = flagDf,
+                flagMf         = flagMf,
                 fragmentOffset = fragmentOffset,
-                timeToLive = timeToLive,
-                protocol = protocol,
+                ttl            = ttl,
+                protocol       = protocol,
                 headerChecksum = headerChecksum,
-                sourceAddress = sourceAddress,
-                destinationAddress = destinationAddress,
-                options = options,
-                payload = payload
+                sourceIp       = sourceIp,
+                destinationIp  = destinationIp,
+                options        = options,
+                rawPacket      = rawPacket,
             )
         }
 
         /**
-         * Calculates the Internet Checksum (RFC 1071).
+         * Builds a minimal IPv4 header byte array.
          *
-         * Algorithm:
-         * 1. Sum all 16-bit words in the header
-         * 2. Fold 32-bit sum to 16 bits (add carry bits)
-         * 3. Take one's complement
-         *
-         * This is used for both IP header checksum and TCP/UDP checksums.
-         *
-         * Performance Note: This is called for every packet in debug builds only.
-         * In production, checksum validation is disabled.
-         *
-         * FIXED: Uses Long throughout, no silent truncation
-         *
-         * Complexity: O(n) where n is header length (20-60 bytes)
-         *
-         * @param data Byte array to calculate checksum for
-         * @return 16-bit checksum (one's complement) as Int (0-65535)
+         * @param protocol    layer-4 protocol number.
+         * @param srcIp       source IP (dotted-decimal).
+         * @param dstIp       destination IP (dotted-decimal).
+         * @param payload     layer-4 header + data.
+         * @param ttl         Time to Live (default 64).
+         * @param ident       identification field (default 0).
+         * @param df          Don't Fragment flag (default false).
+         * @return raw packet bytes with correct checksum.
          */
-        fun calculateChecksum(data: ByteArray): Int {
-            var sum = 0L
-            var i = 0
+        fun build(
+            protocol: Int,
+            srcIp: String,
+            dstIp: String,
+            payload: ByteArray,
+            ttl: Int = 64,
+            ident: Int = 0,
+            df: Boolean = false,
+        ): ByteArray {
+            val ihl      = MIN_IP_HEADER
+            val totalLen = ihl + payload.size
+            val packet   = ByteArray(totalLen)
 
-            // Sum 16-bit words
-            while (i < data.size - 1) {
-                val word = ((data[i].toInt() and 0xFF) shl 8) or (data[i + 1].toInt() and 0xFF)
-                sum += word
-                i += 2
-            }
+            packet[0] = ((4 shl 4) or (ihl / 4)).toByte()           // Version + IHL
+            packet[1] = 0                                             // DSCP/ECN
+            ByteUtils.writeUInt16(packet, 2, totalLen)                // Total Length
+            ByteUtils.writeUInt16(packet, 4, ident)                   // Identification
+            val flags = if (df) 0x4000 else 0
+            ByteUtils.writeUInt16(packet, 6, flags)                   // Flags + Frag Offset
+            packet[8] = ttl.toByte()                                  // TTL
+            packet[9] = protocol.toByte()                             // Protocol
+            // Checksum filled after header complete
+            ByteUtils.writeIpv4Address(packet, 12, srcIp)             // Source IP
+            ByteUtils.writeIpv4Address(packet, 16, dstIp)             // Destination IP
+            payload.copyInto(packet, ihl)                             // Payload
 
-            // Add last byte if odd length (padding with zero)
-            if (i < data.size) {
-                sum += (data[i].toInt() and 0xFF) shl 8
-            }
-
-            // FIXED: Fold 32-bit sum to 16 bits (add carries)
-            while (sum shr 16 > 0) {
-                sum = (sum and 0xFFFF) + (sum shr 16)
-            }
-
-            // FIXED: One's complement, safe conversion (sum is 0-65535)
-            return ((sum.inv() and 0xFFFFL)).toInt()
-        }
-
-        /**
-         * Converts an integer IP address to dotted decimal string.
-         * Example: 3232235521 -> "192.168.1.1"
-         *
-         * Used for logging and UI display.
-         * NOT used for packet processing (too slow - use Int for performance).
-         *
-         * FIXED: Uses ushr (unsigned right shift) for correct handling of negative IPs
-         *
-         * @param ip IP address as 32-bit integer (network byte order)
-         * @return Human-readable IP address string
-         */
-        fun ipToString(ip: Int): String {
-            // FIXED: ushr for unsigned shift (handles negative values correctly)
-            return "${(ip ushr 24) and 0xFF}.${(ip ushr 16) and 0xFF}.${(ip ushr 8) and 0xFF}.${ip and 0xFF}"
-        }
-
-        /**
-         * Converts dotted decimal string to integer IP address.
-         * Example: "192.168.1.1" -> 3232235521
-         *
-         * Used for configuration and UI input.
-         *
-         * @param ipString Human-readable IP address
-         * @return IP address as 32-bit integer, or null if invalid
-         */
-        fun stringToIp(ipString: String): Int? {
-            val parts = ipString.split('.')
-            if (parts.size != 4) return null
-
-            try {
-                var result = 0L
-                for (i in 0..3) {
-                    val part = parts[i].toInt()
-                    if (part !in 0..255) return null
-                    result = (result shl 8) or part.toLong()
-                }
-                return result.toInt()
-            } catch (e: NumberFormatException) {
-                return null
-            }
+            Checksum.setIpv4HeaderChecksum(packet, 0)
+            return packet
         }
     }
 }

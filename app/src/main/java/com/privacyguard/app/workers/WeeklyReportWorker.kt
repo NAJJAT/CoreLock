@@ -31,7 +31,7 @@ import androidx.core.app.NotificationCompat
 import androidx.work.*
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.repository.ConnectionRepository
-import com.privacyguard.app.platform.android.NotificationHelper
+import com.privacyguard.platform.android.NotificationHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat

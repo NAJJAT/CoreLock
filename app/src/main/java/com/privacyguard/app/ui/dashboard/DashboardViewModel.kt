@@ -13,7 +13,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.privacyguard.app.platform.android.PrivacyVpnService
+import com.privacyguard.app.vpn.PrivacyVpnService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
