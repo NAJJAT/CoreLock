@@ -11,15 +11,19 @@ import androidx.room.RoomDatabase
         RuleEntity::class,
         BlocklistEntity::class,
         AppStatsEntity::class,
+        ConnectionProfileEntity::class,
+        DnsAnomalyEntity::class,
     ],
-    version = 1,
+    version = 4,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
-    abstract fun connectionDao():  ConnectionDao
-    abstract fun rulesDao():       RulesDao
-    abstract fun blocklistDao():   BlocklistDao
-    abstract fun appStatsDao():    AppStatsDao
+    abstract fun connectionDao(): ConnectionDao
+    abstract fun rulesDao(): RulesDao
+    abstract fun blocklistDao(): BlocklistDao
+    abstract fun appStatsDao(): AppStatsDao
+    abstract fun connectionProfileDao(): ConnectionProfileDao
+    abstract fun dnsAnomalyDao(): DnsAnomalyDao
 
     companion object {
         const val DATABASE_NAME = "privacyguard_legacy.db"
@@ -32,7 +36,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     DATABASE_NAME,
-                ).fallbackToDestructiveMigration().build().also { INSTANCE = it }
+                ).fallbackToDestructiveMigration(dropAllTables = true).build().also { INSTANCE = it }
             }
         }
     }

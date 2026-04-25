@@ -10,8 +10,11 @@ import com.privacyguard.vpn.inspector.DnsAnomalyDetector
 import com.privacyguard.vpn.tunnel.TunWriter
 import java.net.DatagramPacket
 import java.net.DatagramSocket
+import java.net.HttpURLConnection
 import java.net.InetAddress
+import java.net.URL
 import java.util.concurrent.atomic.AtomicLong
+import android.util.Log
 
 /**
  * DNS Shield — intercepts all DNS traffic and applies two layers of protection:
@@ -34,6 +37,11 @@ class DnsHandler(
     private val upstreamDns:       String             = DEFAULT_UPSTREAM_DNS,
     private val upstreamPort:      Int                = DNS_PORT,
     private val upstreamTimeoutMs: Int                = 3_000,
+    @Volatile var dohEnabled:      Boolean            = false,
+    @Volatile var dohProvider:     String             = DOH_CLOUDFLARE,
+    // Must be VpnService.protect() — without this, forwarded DNS sockets get
+    // re-intercepted by the VPN and loop infinitely instead of reaching the upstream.
+    private val protectSocket:     ((DatagramSocket) -> Boolean)? = null,
 ) {
     // ─────────────────────────────────────────────────────────────────────────
     // Listeners
@@ -99,11 +107,16 @@ class DnsHandler(
             return true
         }
 
-        // ── Forward to upstream DNS ──────────────────────────────────────────
+        // ── Forward to upstream DNS (plain UDP or DoH) ───────────────────────
         forwardCount.incrementAndGet()
-        Thread(null, {
-            forwardBlocking(ipPacket, udpPacket, dns, ownerPackage)
-        }, "dns-fwd-${dns.id}").also { it.isDaemon = true; it.start() }
+        val label = "dns-fwd-${dns.id}"
+        if (dohEnabled) {
+            Thread(null, { forwardViaDoh(ipPacket, udpPacket, dns, ownerPackage) }, label)
+                .also { it.isDaemon = true; it.start() }
+        } else {
+            Thread(null, { forwardBlocking(ipPacket, udpPacket, dns, ownerPackage) }, label)
+                .also { it.isDaemon = true; it.start() }
+        }
         return true
     }
 
@@ -117,44 +130,112 @@ class DnsHandler(
         dnsQuery:     DnsPacket,
         ownerPackage: String?,
     ) {
-        try {
+        val serversToTry = buildList {
+            add(upstreamDns)
+            FALLBACK_DNS_SERVERS.forEach { if (it != upstreamDns) add(it) }
+        }
+        for (server in serversToTry) {
+            if (tryForwardToServer(server, ipPacket, udpPacket, dnsQuery, ownerPackage)) return
+        }
+        upstreamErrors.incrementAndGet()
+        Log.e(TAG, "All DNS servers failed for ${dnsQuery.queryName}")
+    }
+
+    private fun tryForwardToServer(
+        server:       String,
+        ipPacket:     IpPacket,
+        udpPacket:    UdpPacket,
+        dnsQuery:     DnsPacket,
+        ownerPackage: String?,
+    ): Boolean {
+        return try {
             DatagramSocket().use { socket ->
+                // Exclude this socket from VPN re-interception — without protect() the
+                // DNS query loops back into the handler instead of reaching the internet.
+                val protected = protectSocket?.invoke(socket) ?: true
+                if (!protected) {
+                    Log.e(TAG, "VpnService.protect() returned false for DNS socket to $server — socket is unprotected!")
+                    return@use false
+                }
                 socket.soTimeout = upstreamTimeoutMs
 
-                val upstream   = InetAddress.getByName(upstreamDns)
+                val upstream   = InetAddress.getByName(server)
                 val queryBytes = udpPacket.data
                 socket.send(DatagramPacket(queryBytes, queryBytes.size, upstream, upstreamPort))
 
+                // 4096-byte buffer: handles EDNS0 responses and avoids TC (truncation) flag
+                // that would cause the device's resolver to retry over TCP (unsupported here).
                 val responseBuf = ByteArray(MAX_DNS_PAYLOAD)
                 val recv        = DatagramPacket(responseBuf, responseBuf.size)
                 socket.receive(recv)
 
                 val responseData = responseBuf.copyOf(recv.length)
-
-                // ── Parse response: extract A-records for IP→hostname mapping ──
-                val dnsResponse = DnsPacket.parse(responseData)
-                if (dnsResponse != null) {
-                    val queryName = dnsQuery.queryName
-                    if (queryName != null) {
-                        for (ip in dnsResponse.aRecords) {
-                            resolvedListener?.onResolved(ip, queryName)
-                        }
-                    }
-                }
-
-                // ── Inject response back to device ─────────────────────────────
-                val injected = buildUdpResponse(
-                    srcIp   = ipPacket.destinationIp,
-                    dstIp   = ipPacket.sourceIp,
-                    srcPort = DNS_PORT,
-                    dstPort = udpPacket.sourcePort,
-                    data    = responseData,
-                )
-                tunWriter.enqueueWithChecksums(injected)
+                injectDnsResponse(ipPacket, udpPacket, dnsQuery, responseData, ownerPackage)
+                true
             }
         } catch (e: Exception) {
-            System.err.println("[DnsHandler] upstream error for ${dnsQuery.queryName}: ${e.message}")
+            Log.w(TAG, "DNS forward to $server failed for ${dnsQuery.queryName}: ${e.message}")
+            false
+        }
+    }
+
+    private fun injectDnsResponse(
+        ipPacket:     IpPacket,
+        udpPacket:    UdpPacket,
+        dnsQuery:     DnsPacket,
+        responseData: ByteArray,
+        @Suppress("UNUSED_PARAMETER") ownerPackage: String?,
+    ) {
+        val dnsResponse = DnsPacket.parse(responseData)
+        if (dnsResponse != null) {
+            val queryName = dnsQuery.queryName
+            if (queryName != null) {
+                for (ip in dnsResponse.aRecords)    resolvedListener?.onResolved(ip, queryName)
+                for (ip in dnsResponse.aaaaRecords) resolvedListener?.onResolved(ip, queryName)
+            }
+        }
+        tunWriter.enqueueWithChecksums(buildUdpResponse(
+            srcIp   = ipPacket.destinationIp,
+            dstIp   = ipPacket.sourceIp,
+            srcPort = DNS_PORT,
+            dstPort = udpPacket.sourcePort,
+            data    = responseData,
+        ))
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // DoH Forwarding (RFC 8484)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun forwardViaDoh(
+        ipPacket:     IpPacket,
+        udpPacket:    UdpPacket,
+        dnsQuery:     DnsPacket,
+        ownerPackage: String?,
+    ) {
+        try {
+            val queryBytes = udpPacket.data
+            val conn = URL(dohProvider).openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/dns-message")
+            conn.setRequestProperty("Accept", "application/dns-message")
+            conn.setRequestProperty("Content-Length", queryBytes.size.toString())
+            conn.connectTimeout = upstreamTimeoutMs
+            conn.readTimeout = upstreamTimeoutMs
+            conn.doOutput = true
+            conn.outputStream.use { it.write(queryBytes) }
+
+            if (conn.responseCode in 200..299) {
+                val responseData = conn.inputStream.use { it.readBytes() }
+                injectDnsResponse(ipPacket, udpPacket, dnsQuery, responseData, ownerPackage)
+            } else {
+                upstreamErrors.incrementAndGet()
+                forwardBlocking(ipPacket, udpPacket, dnsQuery, ownerPackage)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "DoH error for ${dnsQuery.queryName}: ${e.message}")
             upstreamErrors.incrementAndGet()
+            forwardBlocking(ipPacket, udpPacket, dnsQuery, ownerPackage)
         }
     }
 
@@ -229,8 +310,21 @@ class DnsHandler(
     )
 
     companion object {
+        private const val TAG = "DnsHandler"
+
         const val DNS_PORT             = 53
         const val DEFAULT_UPSTREAM_DNS = "1.1.1.1"
-        const val MAX_DNS_PAYLOAD      = 512
+
+        // 4096 bytes covers EDNS0 responses. Without this, responses larger than
+        // 512 bytes get truncated (TC=1), the device retries over DNS-over-TCP
+        // (which this handler doesn't support), and resolution fails entirely.
+        const val MAX_DNS_PAYLOAD = 4096
+
+        // Automatic fallback chain if the primary DNS is unreachable.
+        val FALLBACK_DNS_SERVERS = listOf("8.8.8.8", "9.9.9.9")
+
+        const val DOH_CLOUDFLARE = "https://cloudflare-dns.com/dns-query"
+        const val DOH_GOOGLE     = "https://dns.google/dns-query"
+        const val DOH_QUAD9      = "https://dns.quad9.net/dns-query"
     }
 }

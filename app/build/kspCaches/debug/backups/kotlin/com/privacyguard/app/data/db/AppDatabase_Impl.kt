@@ -43,17 +43,29 @@ public class AppDatabase_Impl : AppDatabase() {
     AppStatsDao_Impl(this)
   }
 
+  private val _connectionProfileDao: Lazy<ConnectionProfileDao> = lazy {
+    ConnectionProfileDao_Impl(this)
+  }
+
+  private val _dnsAnomalyDao: Lazy<DnsAnomalyDao> = lazy {
+    DnsAnomalyDao_Impl(this)
+  }
+
   protected override fun createOpenDelegate(): RoomOpenDelegate {
-    val _openDelegate: RoomOpenDelegate = object : RoomOpenDelegate(1, "03f23e1d3f38f6838589eb1f16f208ee", "0806e6582b7d978bcf61a969f7c4907d") {
+    val _openDelegate: RoomOpenDelegate = object : RoomOpenDelegate(4, "4e79483fdbe0acccffe223c81fbc4ebc", "e4ee88f231b730e804c25e91b776c511") {
       public override fun createAllTables(connection: SQLiteConnection) {
-        connection.execSQL("CREATE TABLE IF NOT EXISTS `connections` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `appUid` INTEGER NOT NULL, `appName` TEXT NOT NULL, `domain` TEXT, `destinationIp` TEXT NOT NULL, `destinationPort` INTEGER NOT NULL, `protocol` TEXT NOT NULL, `wasBlocked` INTEGER NOT NULL, `bytesSent` INTEGER NOT NULL, `bytesReceived` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `durationMs` INTEGER NOT NULL)")
-        connection.execSQL("CREATE TABLE IF NOT EXISTS `rules` (`id` TEXT NOT NULL, `type` TEXT NOT NULL, `value` TEXT NOT NULL, `action` TEXT NOT NULL, `enabled` INTEGER NOT NULL, `priority` INTEGER NOT NULL, `description` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `lastModified` INTEGER NOT NULL, `hitCount` INTEGER NOT NULL, `lastHit` INTEGER, PRIMARY KEY(`id`))")
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `connections` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `appUid` INTEGER NOT NULL, `appName` TEXT NOT NULL, `packageName` TEXT NOT NULL, `destinationIp` TEXT NOT NULL, `destinationPort` INTEGER NOT NULL, `destinationIpv6` TEXT, `isIPv6` INTEGER NOT NULL, `domain` TEXT, `sniHostname` TEXT, `protocol` TEXT NOT NULL, `bytesSent` INTEGER NOT NULL, `bytesReceived` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `durationMs` INTEGER NOT NULL, `wasBlocked` INTEGER NOT NULL, `encryptionStatus` TEXT NOT NULL, `tlsVersion` TEXT, `wasBackground` INTEGER NOT NULL)")
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `rules` (`id` TEXT NOT NULL, `type` TEXT NOT NULL, `value` TEXT NOT NULL, `matchUid` INTEGER, `matchPackage` TEXT, `matchDomain` TEXT, `matchIp` TEXT, `matchPort` INTEGER, `matchProtocol` TEXT, `matchEncryption` TEXT, `action` TEXT NOT NULL, `enabled` INTEGER NOT NULL, `priority` INTEGER NOT NULL, `description` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `lastModified` INTEGER NOT NULL, `hitCount` INTEGER NOT NULL, `lastHit` INTEGER, PRIMARY KEY(`id`))")
         connection.execSQL("CREATE TABLE IF NOT EXISTS `blocklist` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `domain` TEXT NOT NULL, `source` TEXT NOT NULL, `category` TEXT NOT NULL, `lastUpdated` INTEGER NOT NULL, `isEnabled` INTEGER NOT NULL)")
         connection.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_blocklist_domain` ON `blocklist` (`domain`)")
         connection.execSQL("CREATE TABLE IF NOT EXISTS `app_stats` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `appUid` INTEGER NOT NULL, `appName` TEXT NOT NULL, `date` TEXT NOT NULL, `bytesSent` INTEGER NOT NULL, `bytesReceived` INTEGER NOT NULL, `packetsSent` INTEGER NOT NULL, `packetsReceived` INTEGER NOT NULL, `blockedCount` INTEGER NOT NULL)")
         connection.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_app_stats_appUid_date` ON `app_stats` (`appUid`, `date`)")
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `connection_profiles` (`packageName` TEXT NOT NULL, `hostname` TEXT NOT NULL, `destinationIp` TEXT NOT NULL, `destinationPort` INTEGER NOT NULL, `connectionCount` INTEGER NOT NULL, `totalBytesOut` INTEGER NOT NULL, `totalBytesIn` INTEGER NOT NULL, `avgBytesPerConnection` INTEGER NOT NULL, `firstSeen` INTEGER NOT NULL, `lastSeen` INTEGER NOT NULL, `avgIntervalMs` INTEGER NOT NULL, `minIntervalMs` INTEGER NOT NULL, `backgroundRatio` REAL NOT NULL, `hourlyDistribution` TEXT NOT NULL, `encryptionStatus` TEXT NOT NULL, `tlsVersion` TEXT, `sniHostname` TEXT, `riskScore` INTEGER NOT NULL, `riskSignalCodes` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`packageName`, `hostname`))")
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `dns_anomalies` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `packageName` TEXT NOT NULL, `domain` TEXT NOT NULL, `anomalyType` TEXT NOT NULL, `description` TEXT NOT NULL, `severity` INTEGER NOT NULL)")
+        connection.execSQL("CREATE INDEX IF NOT EXISTS `index_dns_anomalies_timestamp` ON `dns_anomalies` (`timestamp`)")
+        connection.execSQL("CREATE INDEX IF NOT EXISTS `index_dns_anomalies_packageName` ON `dns_anomalies` (`packageName`)")
         connection.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)")
-        connection.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '03f23e1d3f38f6838589eb1f16f208ee')")
+        connection.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4e79483fdbe0acccffe223c81fbc4ebc')")
       }
 
       public override fun dropAllTables(connection: SQLiteConnection) {
@@ -61,6 +73,8 @@ public class AppDatabase_Impl : AppDatabase() {
         connection.execSQL("DROP TABLE IF EXISTS `rules`")
         connection.execSQL("DROP TABLE IF EXISTS `blocklist`")
         connection.execSQL("DROP TABLE IF EXISTS `app_stats`")
+        connection.execSQL("DROP TABLE IF EXISTS `connection_profiles`")
+        connection.execSQL("DROP TABLE IF EXISTS `dns_anomalies`")
       }
 
       public override fun onCreate(connection: SQLiteConnection) {
@@ -82,15 +96,22 @@ public class AppDatabase_Impl : AppDatabase() {
         _columnsConnections.put("id", TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY))
         _columnsConnections.put("appUid", TableInfo.Column("appUid", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
         _columnsConnections.put("appName", TableInfo.Column("appName", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
-        _columnsConnections.put("domain", TableInfo.Column("domain", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnections.put("packageName", TableInfo.Column("packageName", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
         _columnsConnections.put("destinationIp", TableInfo.Column("destinationIp", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
         _columnsConnections.put("destinationPort", TableInfo.Column("destinationPort", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnections.put("destinationIpv6", TableInfo.Column("destinationIpv6", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnections.put("isIPv6", TableInfo.Column("isIPv6", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnections.put("domain", TableInfo.Column("domain", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnections.put("sniHostname", TableInfo.Column("sniHostname", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY))
         _columnsConnections.put("protocol", TableInfo.Column("protocol", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
-        _columnsConnections.put("wasBlocked", TableInfo.Column("wasBlocked", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
         _columnsConnections.put("bytesSent", TableInfo.Column("bytesSent", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
         _columnsConnections.put("bytesReceived", TableInfo.Column("bytesReceived", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
         _columnsConnections.put("timestamp", TableInfo.Column("timestamp", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
         _columnsConnections.put("durationMs", TableInfo.Column("durationMs", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnections.put("wasBlocked", TableInfo.Column("wasBlocked", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnections.put("encryptionStatus", TableInfo.Column("encryptionStatus", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnections.put("tlsVersion", TableInfo.Column("tlsVersion", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnections.put("wasBackground", TableInfo.Column("wasBackground", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
         val _foreignKeysConnections: MutableSet<TableInfo.ForeignKey> = mutableSetOf()
         val _indicesConnections: MutableSet<TableInfo.Index> = mutableSetOf()
         val _infoConnections: TableInfo = TableInfo("connections", _columnsConnections, _foreignKeysConnections, _indicesConnections)
@@ -108,6 +129,13 @@ public class AppDatabase_Impl : AppDatabase() {
         _columnsRules.put("id", TableInfo.Column("id", "TEXT", true, 1, null, TableInfo.CREATED_FROM_ENTITY))
         _columnsRules.put("type", TableInfo.Column("type", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
         _columnsRules.put("value", TableInfo.Column("value", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsRules.put("matchUid", TableInfo.Column("matchUid", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsRules.put("matchPackage", TableInfo.Column("matchPackage", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsRules.put("matchDomain", TableInfo.Column("matchDomain", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsRules.put("matchIp", TableInfo.Column("matchIp", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsRules.put("matchPort", TableInfo.Column("matchPort", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsRules.put("matchProtocol", TableInfo.Column("matchProtocol", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsRules.put("matchEncryption", TableInfo.Column("matchEncryption", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY))
         _columnsRules.put("action", TableInfo.Column("action", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
         _columnsRules.put("enabled", TableInfo.Column("enabled", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
         _columnsRules.put("priority", TableInfo.Column("priority", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
@@ -174,6 +202,63 @@ public class AppDatabase_Impl : AppDatabase() {
               | Found:
               |""".trimMargin() + _existingAppStats)
         }
+        val _columnsConnectionProfiles: MutableMap<String, TableInfo.Column> = mutableMapOf()
+        _columnsConnectionProfiles.put("packageName", TableInfo.Column("packageName", "TEXT", true, 1, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("hostname", TableInfo.Column("hostname", "TEXT", true, 2, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("destinationIp", TableInfo.Column("destinationIp", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("destinationPort", TableInfo.Column("destinationPort", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("connectionCount", TableInfo.Column("connectionCount", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("totalBytesOut", TableInfo.Column("totalBytesOut", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("totalBytesIn", TableInfo.Column("totalBytesIn", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("avgBytesPerConnection", TableInfo.Column("avgBytesPerConnection", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("firstSeen", TableInfo.Column("firstSeen", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("lastSeen", TableInfo.Column("lastSeen", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("avgIntervalMs", TableInfo.Column("avgIntervalMs", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("minIntervalMs", TableInfo.Column("minIntervalMs", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("backgroundRatio", TableInfo.Column("backgroundRatio", "REAL", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("hourlyDistribution", TableInfo.Column("hourlyDistribution", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("encryptionStatus", TableInfo.Column("encryptionStatus", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("tlsVersion", TableInfo.Column("tlsVersion", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("sniHostname", TableInfo.Column("sniHostname", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("riskScore", TableInfo.Column("riskScore", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("riskSignalCodes", TableInfo.Column("riskSignalCodes", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsConnectionProfiles.put("updatedAt", TableInfo.Column("updatedAt", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        val _foreignKeysConnectionProfiles: MutableSet<TableInfo.ForeignKey> = mutableSetOf()
+        val _indicesConnectionProfiles: MutableSet<TableInfo.Index> = mutableSetOf()
+        val _infoConnectionProfiles: TableInfo = TableInfo("connection_profiles", _columnsConnectionProfiles, _foreignKeysConnectionProfiles, _indicesConnectionProfiles)
+        val _existingConnectionProfiles: TableInfo = read(connection, "connection_profiles")
+        if (!_infoConnectionProfiles.equals(_existingConnectionProfiles)) {
+          return RoomOpenDelegate.ValidationResult(false, """
+              |connection_profiles(com.privacyguard.app.data.db.ConnectionProfileEntity).
+              | Expected:
+              |""".trimMargin() + _infoConnectionProfiles + """
+              |
+              | Found:
+              |""".trimMargin() + _existingConnectionProfiles)
+        }
+        val _columnsDnsAnomalies: MutableMap<String, TableInfo.Column> = mutableMapOf()
+        _columnsDnsAnomalies.put("id", TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsDnsAnomalies.put("timestamp", TableInfo.Column("timestamp", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsDnsAnomalies.put("packageName", TableInfo.Column("packageName", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsDnsAnomalies.put("domain", TableInfo.Column("domain", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsDnsAnomalies.put("anomalyType", TableInfo.Column("anomalyType", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsDnsAnomalies.put("description", TableInfo.Column("description", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsDnsAnomalies.put("severity", TableInfo.Column("severity", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        val _foreignKeysDnsAnomalies: MutableSet<TableInfo.ForeignKey> = mutableSetOf()
+        val _indicesDnsAnomalies: MutableSet<TableInfo.Index> = mutableSetOf()
+        _indicesDnsAnomalies.add(TableInfo.Index("index_dns_anomalies_timestamp", false, listOf("timestamp"), listOf("ASC")))
+        _indicesDnsAnomalies.add(TableInfo.Index("index_dns_anomalies_packageName", false, listOf("packageName"), listOf("ASC")))
+        val _infoDnsAnomalies: TableInfo = TableInfo("dns_anomalies", _columnsDnsAnomalies, _foreignKeysDnsAnomalies, _indicesDnsAnomalies)
+        val _existingDnsAnomalies: TableInfo = read(connection, "dns_anomalies")
+        if (!_infoDnsAnomalies.equals(_existingDnsAnomalies)) {
+          return RoomOpenDelegate.ValidationResult(false, """
+              |dns_anomalies(com.privacyguard.app.data.db.DnsAnomalyEntity).
+              | Expected:
+              |""".trimMargin() + _infoDnsAnomalies + """
+              |
+              | Found:
+              |""".trimMargin() + _existingDnsAnomalies)
+        }
         return RoomOpenDelegate.ValidationResult(true, null)
       }
     }
@@ -183,11 +268,11 @@ public class AppDatabase_Impl : AppDatabase() {
   protected override fun createInvalidationTracker(): InvalidationTracker {
     val _shadowTablesMap: MutableMap<String, String> = mutableMapOf()
     val _viewTables: MutableMap<String, Set<String>> = mutableMapOf()
-    return InvalidationTracker(this, _shadowTablesMap, _viewTables, "connections", "rules", "blocklist", "app_stats")
+    return InvalidationTracker(this, _shadowTablesMap, _viewTables, "connections", "rules", "blocklist", "app_stats", "connection_profiles", "dns_anomalies")
   }
 
   public override fun clearAllTables() {
-    super.performClear(false, "connections", "rules", "blocklist", "app_stats")
+    super.performClear(false, "connections", "rules", "blocklist", "app_stats", "connection_profiles", "dns_anomalies")
   }
 
   protected override fun getRequiredTypeConverterClasses(): Map<KClass<*>, List<KClass<*>>> {
@@ -196,6 +281,8 @@ public class AppDatabase_Impl : AppDatabase() {
     _typeConvertersMap.put(RulesDao::class, RulesDao_Impl.getRequiredConverters())
     _typeConvertersMap.put(BlocklistDao::class, BlocklistDao_Impl.getRequiredConverters())
     _typeConvertersMap.put(AppStatsDao::class, AppStatsDao_Impl.getRequiredConverters())
+    _typeConvertersMap.put(ConnectionProfileDao::class, ConnectionProfileDao_Impl.getRequiredConverters())
+    _typeConvertersMap.put(DnsAnomalyDao::class, DnsAnomalyDao_Impl.getRequiredConverters())
     return _typeConvertersMap
   }
 
@@ -216,4 +303,8 @@ public class AppDatabase_Impl : AppDatabase() {
   public override fun blocklistDao(): BlocklistDao = _blocklistDao.value
 
   public override fun appStatsDao(): AppStatsDao = _appStatsDao.value
+
+  public override fun connectionProfileDao(): ConnectionProfileDao = _connectionProfileDao.value
+
+  public override fun dnsAnomalyDao(): DnsAnomalyDao = _dnsAnomalyDao.value
 }

@@ -31,6 +31,21 @@ interface ConnectionDao {
      */
     @Query("SELECT * FROM connections WHERE appUid = :uid ORDER BY timestamp DESC LIMIT :limit")
     suspend fun getConnectionsForApp(uid: Int, limit: Int = 100): List<ConnectionEntity>
+
+    /**
+     * Gets distinct domains (or IPs) contacted by a specific app, with stats
+     */
+    @Query("""
+        SELECT
+            COALESCE(domain, destinationIp) AS domain,
+            COUNT(*)                        AS count
+        FROM connections
+        WHERE packageName = :packageName
+        GROUP BY COALESCE(domain, destinationIp)
+        ORDER BY count DESC
+        LIMIT 100
+    """)
+    suspend fun getDomainsForPackage(packageName: String): List<TopBlockedDomain>
     
     /**
      * Gets blocked connections count for today
@@ -62,6 +77,18 @@ interface ConnectionDao {
      */
     @Query("DELETE FROM connections WHERE timestamp < :cutoff")
     suspend fun deleteOldConnections(cutoff: Long)
+    
+    /**
+     * Deletes all connections
+     */
+    @Query("DELETE FROM connections")
+    suspend fun deleteAll()
+    
+    /**
+     * Gets rule count
+     */
+    @Query("SELECT COUNT(*) FROM connections")
+    suspend fun getCount(): Int
     
     /**
      * Gets hourly statistics for charts

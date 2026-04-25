@@ -28,27 +28,51 @@ public class ConnectionDao_Impl(
   init {
     this.__db = __db
     this.__insertAdapterOfConnectionEntity = object : EntityInsertAdapter<ConnectionEntity>() {
-      protected override fun createQuery(): String = "INSERT OR IGNORE INTO `connections` (`id`,`appUid`,`appName`,`domain`,`destinationIp`,`destinationPort`,`protocol`,`wasBlocked`,`bytesSent`,`bytesReceived`,`timestamp`,`durationMs`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?,?)"
+      protected override fun createQuery(): String = "INSERT OR IGNORE INTO `connections` (`id`,`appUid`,`appName`,`packageName`,`destinationIp`,`destinationPort`,`destinationIpv6`,`isIPv6`,`domain`,`sniHostname`,`protocol`,`bytesSent`,`bytesReceived`,`timestamp`,`durationMs`,`wasBlocked`,`encryptionStatus`,`tlsVersion`,`wasBackground`) VALUES (nullif(?, 0),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
       protected override fun bind(statement: SQLiteStatement, entity: ConnectionEntity) {
         statement.bindLong(1, entity.id)
         statement.bindLong(2, entity.appUid.toLong())
         statement.bindText(3, entity.appName)
-        val _tmpDomain: String? = entity.domain
-        if (_tmpDomain == null) {
-          statement.bindNull(4)
-        } else {
-          statement.bindText(4, _tmpDomain)
-        }
+        statement.bindText(4, entity.packageName)
         statement.bindText(5, entity.destinationIp)
         statement.bindLong(6, entity.destinationPort.toLong())
-        statement.bindText(7, entity.protocol)
-        val _tmp: Int = if (entity.wasBlocked) 1 else 0
+        val _tmpDestinationIpv6: String? = entity.destinationIpv6
+        if (_tmpDestinationIpv6 == null) {
+          statement.bindNull(7)
+        } else {
+          statement.bindText(7, _tmpDestinationIpv6)
+        }
+        val _tmp: Int = if (entity.isIPv6) 1 else 0
         statement.bindLong(8, _tmp.toLong())
-        statement.bindLong(9, entity.bytesSent)
-        statement.bindLong(10, entity.bytesReceived)
-        statement.bindLong(11, entity.timestamp)
-        statement.bindLong(12, entity.durationMs)
+        val _tmpDomain: String? = entity.domain
+        if (_tmpDomain == null) {
+          statement.bindNull(9)
+        } else {
+          statement.bindText(9, _tmpDomain)
+        }
+        val _tmpSniHostname: String? = entity.sniHostname
+        if (_tmpSniHostname == null) {
+          statement.bindNull(10)
+        } else {
+          statement.bindText(10, _tmpSniHostname)
+        }
+        statement.bindText(11, entity.protocol)
+        statement.bindLong(12, entity.bytesSent)
+        statement.bindLong(13, entity.bytesReceived)
+        statement.bindLong(14, entity.timestamp)
+        statement.bindLong(15, entity.durationMs)
+        val _tmp_1: Int = if (entity.wasBlocked) 1 else 0
+        statement.bindLong(16, _tmp_1.toLong())
+        statement.bindText(17, entity.encryptionStatus)
+        val _tmpTlsVersion: String? = entity.tlsVersion
+        if (_tmpTlsVersion == null) {
+          statement.bindNull(18)
+        } else {
+          statement.bindText(18, _tmpTlsVersion)
+        }
+        val _tmp_2: Int = if (entity.wasBackground) 1 else 0
+        statement.bindLong(19, _tmp_2.toLong())
       }
     }
   }
@@ -69,15 +93,22 @@ public class ConnectionDao_Impl(
         val _columnIndexOfId: Int = getColumnIndexOrThrow(_stmt, "id")
         val _columnIndexOfAppUid: Int = getColumnIndexOrThrow(_stmt, "appUid")
         val _columnIndexOfAppName: Int = getColumnIndexOrThrow(_stmt, "appName")
-        val _columnIndexOfDomain: Int = getColumnIndexOrThrow(_stmt, "domain")
+        val _columnIndexOfPackageName: Int = getColumnIndexOrThrow(_stmt, "packageName")
         val _columnIndexOfDestinationIp: Int = getColumnIndexOrThrow(_stmt, "destinationIp")
         val _columnIndexOfDestinationPort: Int = getColumnIndexOrThrow(_stmt, "destinationPort")
+        val _columnIndexOfDestinationIpv6: Int = getColumnIndexOrThrow(_stmt, "destinationIpv6")
+        val _columnIndexOfIsIPv6: Int = getColumnIndexOrThrow(_stmt, "isIPv6")
+        val _columnIndexOfDomain: Int = getColumnIndexOrThrow(_stmt, "domain")
+        val _columnIndexOfSniHostname: Int = getColumnIndexOrThrow(_stmt, "sniHostname")
         val _columnIndexOfProtocol: Int = getColumnIndexOrThrow(_stmt, "protocol")
-        val _columnIndexOfWasBlocked: Int = getColumnIndexOrThrow(_stmt, "wasBlocked")
         val _columnIndexOfBytesSent: Int = getColumnIndexOrThrow(_stmt, "bytesSent")
         val _columnIndexOfBytesReceived: Int = getColumnIndexOrThrow(_stmt, "bytesReceived")
         val _columnIndexOfTimestamp: Int = getColumnIndexOrThrow(_stmt, "timestamp")
         val _columnIndexOfDurationMs: Int = getColumnIndexOrThrow(_stmt, "durationMs")
+        val _columnIndexOfWasBlocked: Int = getColumnIndexOrThrow(_stmt, "wasBlocked")
+        val _columnIndexOfEncryptionStatus: Int = getColumnIndexOrThrow(_stmt, "encryptionStatus")
+        val _columnIndexOfTlsVersion: Int = getColumnIndexOrThrow(_stmt, "tlsVersion")
+        val _columnIndexOfWasBackground: Int = getColumnIndexOrThrow(_stmt, "wasBackground")
         val _result: MutableList<ConnectionEntity> = mutableListOf()
         while (_stmt.step()) {
           val _item: ConnectionEntity
@@ -87,22 +118,36 @@ public class ConnectionDao_Impl(
           _tmpAppUid = _stmt.getLong(_columnIndexOfAppUid).toInt()
           val _tmpAppName: String
           _tmpAppName = _stmt.getText(_columnIndexOfAppName)
+          val _tmpPackageName: String
+          _tmpPackageName = _stmt.getText(_columnIndexOfPackageName)
+          val _tmpDestinationIp: String
+          _tmpDestinationIp = _stmt.getText(_columnIndexOfDestinationIp)
+          val _tmpDestinationPort: Int
+          _tmpDestinationPort = _stmt.getLong(_columnIndexOfDestinationPort).toInt()
+          val _tmpDestinationIpv6: String?
+          if (_stmt.isNull(_columnIndexOfDestinationIpv6)) {
+            _tmpDestinationIpv6 = null
+          } else {
+            _tmpDestinationIpv6 = _stmt.getText(_columnIndexOfDestinationIpv6)
+          }
+          val _tmpIsIPv6: Boolean
+          val _tmp: Int
+          _tmp = _stmt.getLong(_columnIndexOfIsIPv6).toInt()
+          _tmpIsIPv6 = _tmp != 0
           val _tmpDomain: String?
           if (_stmt.isNull(_columnIndexOfDomain)) {
             _tmpDomain = null
           } else {
             _tmpDomain = _stmt.getText(_columnIndexOfDomain)
           }
-          val _tmpDestinationIp: String
-          _tmpDestinationIp = _stmt.getText(_columnIndexOfDestinationIp)
-          val _tmpDestinationPort: Int
-          _tmpDestinationPort = _stmt.getLong(_columnIndexOfDestinationPort).toInt()
+          val _tmpSniHostname: String?
+          if (_stmt.isNull(_columnIndexOfSniHostname)) {
+            _tmpSniHostname = null
+          } else {
+            _tmpSniHostname = _stmt.getText(_columnIndexOfSniHostname)
+          }
           val _tmpProtocol: String
           _tmpProtocol = _stmt.getText(_columnIndexOfProtocol)
-          val _tmpWasBlocked: Boolean
-          val _tmp: Int
-          _tmp = _stmt.getLong(_columnIndexOfWasBlocked).toInt()
-          _tmpWasBlocked = _tmp != 0
           val _tmpBytesSent: Long
           _tmpBytesSent = _stmt.getLong(_columnIndexOfBytesSent)
           val _tmpBytesReceived: Long
@@ -111,7 +156,23 @@ public class ConnectionDao_Impl(
           _tmpTimestamp = _stmt.getLong(_columnIndexOfTimestamp)
           val _tmpDurationMs: Long
           _tmpDurationMs = _stmt.getLong(_columnIndexOfDurationMs)
-          _item = ConnectionEntity(_tmpId,_tmpAppUid,_tmpAppName,_tmpDomain,_tmpDestinationIp,_tmpDestinationPort,_tmpProtocol,_tmpWasBlocked,_tmpBytesSent,_tmpBytesReceived,_tmpTimestamp,_tmpDurationMs)
+          val _tmpWasBlocked: Boolean
+          val _tmp_1: Int
+          _tmp_1 = _stmt.getLong(_columnIndexOfWasBlocked).toInt()
+          _tmpWasBlocked = _tmp_1 != 0
+          val _tmpEncryptionStatus: String
+          _tmpEncryptionStatus = _stmt.getText(_columnIndexOfEncryptionStatus)
+          val _tmpTlsVersion: String?
+          if (_stmt.isNull(_columnIndexOfTlsVersion)) {
+            _tmpTlsVersion = null
+          } else {
+            _tmpTlsVersion = _stmt.getText(_columnIndexOfTlsVersion)
+          }
+          val _tmpWasBackground: Boolean
+          val _tmp_2: Int
+          _tmp_2 = _stmt.getLong(_columnIndexOfWasBackground).toInt()
+          _tmpWasBackground = _tmp_2 != 0
+          _item = ConnectionEntity(_tmpId,_tmpAppUid,_tmpAppName,_tmpPackageName,_tmpDestinationIp,_tmpDestinationPort,_tmpDestinationIpv6,_tmpIsIPv6,_tmpDomain,_tmpSniHostname,_tmpProtocol,_tmpBytesSent,_tmpBytesReceived,_tmpTimestamp,_tmpDurationMs,_tmpWasBlocked,_tmpEncryptionStatus,_tmpTlsVersion,_tmpWasBackground)
           _result.add(_item)
         }
         _result
@@ -133,15 +194,22 @@ public class ConnectionDao_Impl(
         val _columnIndexOfId: Int = getColumnIndexOrThrow(_stmt, "id")
         val _columnIndexOfAppUid: Int = getColumnIndexOrThrow(_stmt, "appUid")
         val _columnIndexOfAppName: Int = getColumnIndexOrThrow(_stmt, "appName")
-        val _columnIndexOfDomain: Int = getColumnIndexOrThrow(_stmt, "domain")
+        val _columnIndexOfPackageName: Int = getColumnIndexOrThrow(_stmt, "packageName")
         val _columnIndexOfDestinationIp: Int = getColumnIndexOrThrow(_stmt, "destinationIp")
         val _columnIndexOfDestinationPort: Int = getColumnIndexOrThrow(_stmt, "destinationPort")
+        val _columnIndexOfDestinationIpv6: Int = getColumnIndexOrThrow(_stmt, "destinationIpv6")
+        val _columnIndexOfIsIPv6: Int = getColumnIndexOrThrow(_stmt, "isIPv6")
+        val _columnIndexOfDomain: Int = getColumnIndexOrThrow(_stmt, "domain")
+        val _columnIndexOfSniHostname: Int = getColumnIndexOrThrow(_stmt, "sniHostname")
         val _columnIndexOfProtocol: Int = getColumnIndexOrThrow(_stmt, "protocol")
-        val _columnIndexOfWasBlocked: Int = getColumnIndexOrThrow(_stmt, "wasBlocked")
         val _columnIndexOfBytesSent: Int = getColumnIndexOrThrow(_stmt, "bytesSent")
         val _columnIndexOfBytesReceived: Int = getColumnIndexOrThrow(_stmt, "bytesReceived")
         val _columnIndexOfTimestamp: Int = getColumnIndexOrThrow(_stmt, "timestamp")
         val _columnIndexOfDurationMs: Int = getColumnIndexOrThrow(_stmt, "durationMs")
+        val _columnIndexOfWasBlocked: Int = getColumnIndexOrThrow(_stmt, "wasBlocked")
+        val _columnIndexOfEncryptionStatus: Int = getColumnIndexOrThrow(_stmt, "encryptionStatus")
+        val _columnIndexOfTlsVersion: Int = getColumnIndexOrThrow(_stmt, "tlsVersion")
+        val _columnIndexOfWasBackground: Int = getColumnIndexOrThrow(_stmt, "wasBackground")
         val _result: MutableList<ConnectionEntity> = mutableListOf()
         while (_stmt.step()) {
           val _item: ConnectionEntity
@@ -151,22 +219,36 @@ public class ConnectionDao_Impl(
           _tmpAppUid = _stmt.getLong(_columnIndexOfAppUid).toInt()
           val _tmpAppName: String
           _tmpAppName = _stmt.getText(_columnIndexOfAppName)
+          val _tmpPackageName: String
+          _tmpPackageName = _stmt.getText(_columnIndexOfPackageName)
+          val _tmpDestinationIp: String
+          _tmpDestinationIp = _stmt.getText(_columnIndexOfDestinationIp)
+          val _tmpDestinationPort: Int
+          _tmpDestinationPort = _stmt.getLong(_columnIndexOfDestinationPort).toInt()
+          val _tmpDestinationIpv6: String?
+          if (_stmt.isNull(_columnIndexOfDestinationIpv6)) {
+            _tmpDestinationIpv6 = null
+          } else {
+            _tmpDestinationIpv6 = _stmt.getText(_columnIndexOfDestinationIpv6)
+          }
+          val _tmpIsIPv6: Boolean
+          val _tmp: Int
+          _tmp = _stmt.getLong(_columnIndexOfIsIPv6).toInt()
+          _tmpIsIPv6 = _tmp != 0
           val _tmpDomain: String?
           if (_stmt.isNull(_columnIndexOfDomain)) {
             _tmpDomain = null
           } else {
             _tmpDomain = _stmt.getText(_columnIndexOfDomain)
           }
-          val _tmpDestinationIp: String
-          _tmpDestinationIp = _stmt.getText(_columnIndexOfDestinationIp)
-          val _tmpDestinationPort: Int
-          _tmpDestinationPort = _stmt.getLong(_columnIndexOfDestinationPort).toInt()
+          val _tmpSniHostname: String?
+          if (_stmt.isNull(_columnIndexOfSniHostname)) {
+            _tmpSniHostname = null
+          } else {
+            _tmpSniHostname = _stmt.getText(_columnIndexOfSniHostname)
+          }
           val _tmpProtocol: String
           _tmpProtocol = _stmt.getText(_columnIndexOfProtocol)
-          val _tmpWasBlocked: Boolean
-          val _tmp: Int
-          _tmp = _stmt.getLong(_columnIndexOfWasBlocked).toInt()
-          _tmpWasBlocked = _tmp != 0
           val _tmpBytesSent: Long
           _tmpBytesSent = _stmt.getLong(_columnIndexOfBytesSent)
           val _tmpBytesReceived: Long
@@ -175,7 +257,60 @@ public class ConnectionDao_Impl(
           _tmpTimestamp = _stmt.getLong(_columnIndexOfTimestamp)
           val _tmpDurationMs: Long
           _tmpDurationMs = _stmt.getLong(_columnIndexOfDurationMs)
-          _item = ConnectionEntity(_tmpId,_tmpAppUid,_tmpAppName,_tmpDomain,_tmpDestinationIp,_tmpDestinationPort,_tmpProtocol,_tmpWasBlocked,_tmpBytesSent,_tmpBytesReceived,_tmpTimestamp,_tmpDurationMs)
+          val _tmpWasBlocked: Boolean
+          val _tmp_1: Int
+          _tmp_1 = _stmt.getLong(_columnIndexOfWasBlocked).toInt()
+          _tmpWasBlocked = _tmp_1 != 0
+          val _tmpEncryptionStatus: String
+          _tmpEncryptionStatus = _stmt.getText(_columnIndexOfEncryptionStatus)
+          val _tmpTlsVersion: String?
+          if (_stmt.isNull(_columnIndexOfTlsVersion)) {
+            _tmpTlsVersion = null
+          } else {
+            _tmpTlsVersion = _stmt.getText(_columnIndexOfTlsVersion)
+          }
+          val _tmpWasBackground: Boolean
+          val _tmp_2: Int
+          _tmp_2 = _stmt.getLong(_columnIndexOfWasBackground).toInt()
+          _tmpWasBackground = _tmp_2 != 0
+          _item = ConnectionEntity(_tmpId,_tmpAppUid,_tmpAppName,_tmpPackageName,_tmpDestinationIp,_tmpDestinationPort,_tmpDestinationIpv6,_tmpIsIPv6,_tmpDomain,_tmpSniHostname,_tmpProtocol,_tmpBytesSent,_tmpBytesReceived,_tmpTimestamp,_tmpDurationMs,_tmpWasBlocked,_tmpEncryptionStatus,_tmpTlsVersion,_tmpWasBackground)
+          _result.add(_item)
+        }
+        _result
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
+  public override suspend fun getDomainsForPackage(packageName: String): List<TopBlockedDomain> {
+    val _sql: String = """
+        |
+        |        SELECT
+        |            COALESCE(domain, destinationIp) AS domain,
+        |            COUNT(*)                        AS count
+        |        FROM connections
+        |        WHERE packageName = ?
+        |        GROUP BY COALESCE(domain, destinationIp)
+        |        ORDER BY count DESC
+        |        LIMIT 100
+        |    
+        """.trimMargin()
+    return performSuspending(__db, true, false) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        var _argIndex: Int = 1
+        _stmt.bindText(_argIndex, packageName)
+        val _columnIndexOfDomain: Int = 0
+        val _columnIndexOfCount: Int = 1
+        val _result: MutableList<TopBlockedDomain> = mutableListOf()
+        while (_stmt.step()) {
+          val _item: TopBlockedDomain
+          val _tmpDomain: String
+          _tmpDomain = _stmt.getText(_columnIndexOfDomain)
+          val _tmpCount: Int
+          _tmpCount = _stmt.getLong(_columnIndexOfCount).toInt()
+          _item = TopBlockedDomain(_tmpDomain,_tmpCount)
           _result.add(_item)
         }
         _result
@@ -258,6 +393,26 @@ public class ConnectionDao_Impl(
           _tmpCount = _stmt.getLong(_columnIndexOfCount).toInt()
           _item = TopBlockedDomain(_tmpDomain,_tmpCount)
           _result.add(_item)
+        }
+        _result
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
+  public override suspend fun getCount(): Int {
+    val _sql: String = "SELECT COUNT(*) FROM connections"
+    return performSuspending(__db, true, false) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        val _result: Int
+        if (_stmt.step()) {
+          val _tmp: Int
+          _tmp = _stmt.getLong(0).toInt()
+          _result = _tmp
+        } else {
+          _result = 0
         }
         _result
       } finally {
@@ -361,6 +516,18 @@ public class ConnectionDao_Impl(
       try {
         var _argIndex: Int = 1
         _stmt.bindLong(_argIndex, cutoff)
+        _stmt.step()
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
+  public override suspend fun deleteAll() {
+    val _sql: String = "DELETE FROM connections"
+    return performSuspending(__db, false, true) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
         _stmt.step()
       } finally {
         _stmt.close()

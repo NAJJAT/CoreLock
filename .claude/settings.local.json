@@ -1,22 +1,18 @@
 {
-  "env": {
-    "ANTHROPIC_BASE_URL": "https://openrouter.ai/api",
-    "ANTHROPIC_AUTH_TOKEN": "Free key",
-    "ANTHROPIC_API_KEY": "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",
-    "ANTHROPIC_MODEL": "openrouter/free"
-  },
   "permissions": {
     "allow": [
-      "Bash(docker compose:*)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('version'\\)\\); print\\(list\\(d.get\\('exports',{}\\).keys\\(\\)\\)[:10]\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); exports=d.get\\('exports',{}\\); [print\\(k,'->',v if isinstance\\(v,str\\) else list\\(v.keys\\(\\)\\) if isinstance\\(v,dict\\) else v\\) for k,v in list\\(exports.items\\(\\)\\)[:5]]\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); exports=d.get\\('exports',{}\\); dot=exports.get\\('.'\\); print\\(dot\\)\")",
+      "Bash(grep -E \"\\\\.\\(md|txt|yml|yaml|json\\)$\")",
       "Bash(npm install:*)",
-      "Bash(python -c \"from app.main import app; print\\('Backend imports fine'\\)\")",
-      "Bash(find:*)",
-      "Bash(python:*)",
-      "Bash(pytest test_auth.py -v)",
-      "Bash(pytest tests/test_auth.py -v)",
-      "Bash(git config *)",
-      "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(timeout 10 npx vite build)",
+      "Bash(npx vite:*)",
+      "Bash(python -c \"from app.services.scanner import Scanner; print\\('Import OK'\\)\")",
+      "Bash(./gradlew assembleDebug)",
+      "mcp__ide__getDiagnostics",
+      "Bash(python3 *)",
+      "Bash(xargs grep *)"
     ]
   }
 }

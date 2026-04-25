@@ -33,25 +33,67 @@ public class RulesDao_Impl(
   init {
     this.__db = __db
     this.__insertAdapterOfRuleEntity = object : EntityInsertAdapter<RuleEntity>() {
-      protected override fun createQuery(): String = "INSERT OR REPLACE INTO `rules` (`id`,`type`,`value`,`action`,`enabled`,`priority`,`description`,`createdAt`,`lastModified`,`hitCount`,`lastHit`) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+      protected override fun createQuery(): String = "INSERT OR REPLACE INTO `rules` (`id`,`type`,`value`,`matchUid`,`matchPackage`,`matchDomain`,`matchIp`,`matchPort`,`matchProtocol`,`matchEncryption`,`action`,`enabled`,`priority`,`description`,`createdAt`,`lastModified`,`hitCount`,`lastHit`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
       protected override fun bind(statement: SQLiteStatement, entity: RuleEntity) {
         statement.bindText(1, entity.id)
         statement.bindText(2, entity.type)
         statement.bindText(3, entity.value)
-        statement.bindText(4, entity.action)
+        val _tmpMatchUid: Int? = entity.matchUid
+        if (_tmpMatchUid == null) {
+          statement.bindNull(4)
+        } else {
+          statement.bindLong(4, _tmpMatchUid.toLong())
+        }
+        val _tmpMatchPackage: String? = entity.matchPackage
+        if (_tmpMatchPackage == null) {
+          statement.bindNull(5)
+        } else {
+          statement.bindText(5, _tmpMatchPackage)
+        }
+        val _tmpMatchDomain: String? = entity.matchDomain
+        if (_tmpMatchDomain == null) {
+          statement.bindNull(6)
+        } else {
+          statement.bindText(6, _tmpMatchDomain)
+        }
+        val _tmpMatchIp: String? = entity.matchIp
+        if (_tmpMatchIp == null) {
+          statement.bindNull(7)
+        } else {
+          statement.bindText(7, _tmpMatchIp)
+        }
+        val _tmpMatchPort: Int? = entity.matchPort
+        if (_tmpMatchPort == null) {
+          statement.bindNull(8)
+        } else {
+          statement.bindLong(8, _tmpMatchPort.toLong())
+        }
+        val _tmpMatchProtocol: String? = entity.matchProtocol
+        if (_tmpMatchProtocol == null) {
+          statement.bindNull(9)
+        } else {
+          statement.bindText(9, _tmpMatchProtocol)
+        }
+        val _tmpMatchEncryption: String? = entity.matchEncryption
+        if (_tmpMatchEncryption == null) {
+          statement.bindNull(10)
+        } else {
+          statement.bindText(10, _tmpMatchEncryption)
+        }
+        statement.bindText(11, entity.action)
         val _tmp: Int = if (entity.enabled) 1 else 0
-        statement.bindLong(5, _tmp.toLong())
-        statement.bindLong(6, entity.priority.toLong())
-        statement.bindText(7, entity.description)
-        statement.bindLong(8, entity.createdAt)
-        statement.bindLong(9, entity.lastModified)
-        statement.bindLong(10, entity.hitCount.toLong())
+        statement.bindLong(12, _tmp.toLong())
+        statement.bindLong(13, entity.priority.toLong())
+        statement.bindText(14, entity.description)
+        statement.bindLong(15, entity.createdAt)
+        statement.bindLong(16, entity.lastModified)
+        statement.bindLong(17, entity.hitCount.toLong())
         val _tmpLastHit: Long? = entity.lastHit
         if (_tmpLastHit == null) {
-          statement.bindNull(11)
+          statement.bindNull(18)
         } else {
-          statement.bindLong(11, _tmpLastHit)
+          statement.bindLong(18, _tmpLastHit)
         }
       }
     }
@@ -63,27 +105,69 @@ public class RulesDao_Impl(
       }
     }
     this.__updateAdapterOfRuleEntity = object : EntityDeleteOrUpdateAdapter<RuleEntity>() {
-      protected override fun createQuery(): String = "UPDATE OR ABORT `rules` SET `id` = ?,`type` = ?,`value` = ?,`action` = ?,`enabled` = ?,`priority` = ?,`description` = ?,`createdAt` = ?,`lastModified` = ?,`hitCount` = ?,`lastHit` = ? WHERE `id` = ?"
+      protected override fun createQuery(): String = "UPDATE OR ABORT `rules` SET `id` = ?,`type` = ?,`value` = ?,`matchUid` = ?,`matchPackage` = ?,`matchDomain` = ?,`matchIp` = ?,`matchPort` = ?,`matchProtocol` = ?,`matchEncryption` = ?,`action` = ?,`enabled` = ?,`priority` = ?,`description` = ?,`createdAt` = ?,`lastModified` = ?,`hitCount` = ?,`lastHit` = ? WHERE `id` = ?"
 
       protected override fun bind(statement: SQLiteStatement, entity: RuleEntity) {
         statement.bindText(1, entity.id)
         statement.bindText(2, entity.type)
         statement.bindText(3, entity.value)
-        statement.bindText(4, entity.action)
+        val _tmpMatchUid: Int? = entity.matchUid
+        if (_tmpMatchUid == null) {
+          statement.bindNull(4)
+        } else {
+          statement.bindLong(4, _tmpMatchUid.toLong())
+        }
+        val _tmpMatchPackage: String? = entity.matchPackage
+        if (_tmpMatchPackage == null) {
+          statement.bindNull(5)
+        } else {
+          statement.bindText(5, _tmpMatchPackage)
+        }
+        val _tmpMatchDomain: String? = entity.matchDomain
+        if (_tmpMatchDomain == null) {
+          statement.bindNull(6)
+        } else {
+          statement.bindText(6, _tmpMatchDomain)
+        }
+        val _tmpMatchIp: String? = entity.matchIp
+        if (_tmpMatchIp == null) {
+          statement.bindNull(7)
+        } else {
+          statement.bindText(7, _tmpMatchIp)
+        }
+        val _tmpMatchPort: Int? = entity.matchPort
+        if (_tmpMatchPort == null) {
+          statement.bindNull(8)
+        } else {
+          statement.bindLong(8, _tmpMatchPort.toLong())
+        }
+        val _tmpMatchProtocol: String? = entity.matchProtocol
+        if (_tmpMatchProtocol == null) {
+          statement.bindNull(9)
+        } else {
+          statement.bindText(9, _tmpMatchProtocol)
+        }
+        val _tmpMatchEncryption: String? = entity.matchEncryption
+        if (_tmpMatchEncryption == null) {
+          statement.bindNull(10)
+        } else {
+          statement.bindText(10, _tmpMatchEncryption)
+        }
+        statement.bindText(11, entity.action)
         val _tmp: Int = if (entity.enabled) 1 else 0
-        statement.bindLong(5, _tmp.toLong())
-        statement.bindLong(6, entity.priority.toLong())
-        statement.bindText(7, entity.description)
-        statement.bindLong(8, entity.createdAt)
-        statement.bindLong(9, entity.lastModified)
-        statement.bindLong(10, entity.hitCount.toLong())
+        statement.bindLong(12, _tmp.toLong())
+        statement.bindLong(13, entity.priority.toLong())
+        statement.bindText(14, entity.description)
+        statement.bindLong(15, entity.createdAt)
+        statement.bindLong(16, entity.lastModified)
+        statement.bindLong(17, entity.hitCount.toLong())
         val _tmpLastHit: Long? = entity.lastHit
         if (_tmpLastHit == null) {
-          statement.bindNull(11)
+          statement.bindNull(18)
         } else {
-          statement.bindLong(11, _tmpLastHit)
+          statement.bindLong(18, _tmpLastHit)
         }
-        statement.bindText(12, entity.id)
+        statement.bindText(19, entity.id)
       }
     }
   }
@@ -112,6 +196,13 @@ public class RulesDao_Impl(
         val _columnIndexOfId: Int = getColumnIndexOrThrow(_stmt, "id")
         val _columnIndexOfType: Int = getColumnIndexOrThrow(_stmt, "type")
         val _columnIndexOfValue: Int = getColumnIndexOrThrow(_stmt, "value")
+        val _columnIndexOfMatchUid: Int = getColumnIndexOrThrow(_stmt, "matchUid")
+        val _columnIndexOfMatchPackage: Int = getColumnIndexOrThrow(_stmt, "matchPackage")
+        val _columnIndexOfMatchDomain: Int = getColumnIndexOrThrow(_stmt, "matchDomain")
+        val _columnIndexOfMatchIp: Int = getColumnIndexOrThrow(_stmt, "matchIp")
+        val _columnIndexOfMatchPort: Int = getColumnIndexOrThrow(_stmt, "matchPort")
+        val _columnIndexOfMatchProtocol: Int = getColumnIndexOrThrow(_stmt, "matchProtocol")
+        val _columnIndexOfMatchEncryption: Int = getColumnIndexOrThrow(_stmt, "matchEncryption")
         val _columnIndexOfAction: Int = getColumnIndexOrThrow(_stmt, "action")
         val _columnIndexOfEnabled: Int = getColumnIndexOrThrow(_stmt, "enabled")
         val _columnIndexOfPriority: Int = getColumnIndexOrThrow(_stmt, "priority")
@@ -129,6 +220,48 @@ public class RulesDao_Impl(
           _tmpType = _stmt.getText(_columnIndexOfType)
           val _tmpValue: String
           _tmpValue = _stmt.getText(_columnIndexOfValue)
+          val _tmpMatchUid: Int?
+          if (_stmt.isNull(_columnIndexOfMatchUid)) {
+            _tmpMatchUid = null
+          } else {
+            _tmpMatchUid = _stmt.getLong(_columnIndexOfMatchUid).toInt()
+          }
+          val _tmpMatchPackage: String?
+          if (_stmt.isNull(_columnIndexOfMatchPackage)) {
+            _tmpMatchPackage = null
+          } else {
+            _tmpMatchPackage = _stmt.getText(_columnIndexOfMatchPackage)
+          }
+          val _tmpMatchDomain: String?
+          if (_stmt.isNull(_columnIndexOfMatchDomain)) {
+            _tmpMatchDomain = null
+          } else {
+            _tmpMatchDomain = _stmt.getText(_columnIndexOfMatchDomain)
+          }
+          val _tmpMatchIp: String?
+          if (_stmt.isNull(_columnIndexOfMatchIp)) {
+            _tmpMatchIp = null
+          } else {
+            _tmpMatchIp = _stmt.getText(_columnIndexOfMatchIp)
+          }
+          val _tmpMatchPort: Int?
+          if (_stmt.isNull(_columnIndexOfMatchPort)) {
+            _tmpMatchPort = null
+          } else {
+            _tmpMatchPort = _stmt.getLong(_columnIndexOfMatchPort).toInt()
+          }
+          val _tmpMatchProtocol: String?
+          if (_stmt.isNull(_columnIndexOfMatchProtocol)) {
+            _tmpMatchProtocol = null
+          } else {
+            _tmpMatchProtocol = _stmt.getText(_columnIndexOfMatchProtocol)
+          }
+          val _tmpMatchEncryption: String?
+          if (_stmt.isNull(_columnIndexOfMatchEncryption)) {
+            _tmpMatchEncryption = null
+          } else {
+            _tmpMatchEncryption = _stmt.getText(_columnIndexOfMatchEncryption)
+          }
           val _tmpAction: String
           _tmpAction = _stmt.getText(_columnIndexOfAction)
           val _tmpEnabled: Boolean
@@ -151,7 +284,7 @@ public class RulesDao_Impl(
           } else {
             _tmpLastHit = _stmt.getLong(_columnIndexOfLastHit)
           }
-          _item = RuleEntity(_tmpId,_tmpType,_tmpValue,_tmpAction,_tmpEnabled,_tmpPriority,_tmpDescription,_tmpCreatedAt,_tmpLastModified,_tmpHitCount,_tmpLastHit)
+          _item = RuleEntity(_tmpId,_tmpType,_tmpValue,_tmpMatchUid,_tmpMatchPackage,_tmpMatchDomain,_tmpMatchIp,_tmpMatchPort,_tmpMatchProtocol,_tmpMatchEncryption,_tmpAction,_tmpEnabled,_tmpPriority,_tmpDescription,_tmpCreatedAt,_tmpLastModified,_tmpHitCount,_tmpLastHit)
           _result.add(_item)
         }
         _result
@@ -169,6 +302,13 @@ public class RulesDao_Impl(
         val _columnIndexOfId: Int = getColumnIndexOrThrow(_stmt, "id")
         val _columnIndexOfType: Int = getColumnIndexOrThrow(_stmt, "type")
         val _columnIndexOfValue: Int = getColumnIndexOrThrow(_stmt, "value")
+        val _columnIndexOfMatchUid: Int = getColumnIndexOrThrow(_stmt, "matchUid")
+        val _columnIndexOfMatchPackage: Int = getColumnIndexOrThrow(_stmt, "matchPackage")
+        val _columnIndexOfMatchDomain: Int = getColumnIndexOrThrow(_stmt, "matchDomain")
+        val _columnIndexOfMatchIp: Int = getColumnIndexOrThrow(_stmt, "matchIp")
+        val _columnIndexOfMatchPort: Int = getColumnIndexOrThrow(_stmt, "matchPort")
+        val _columnIndexOfMatchProtocol: Int = getColumnIndexOrThrow(_stmt, "matchProtocol")
+        val _columnIndexOfMatchEncryption: Int = getColumnIndexOrThrow(_stmt, "matchEncryption")
         val _columnIndexOfAction: Int = getColumnIndexOrThrow(_stmt, "action")
         val _columnIndexOfEnabled: Int = getColumnIndexOrThrow(_stmt, "enabled")
         val _columnIndexOfPriority: Int = getColumnIndexOrThrow(_stmt, "priority")
@@ -186,6 +326,48 @@ public class RulesDao_Impl(
           _tmpType = _stmt.getText(_columnIndexOfType)
           val _tmpValue: String
           _tmpValue = _stmt.getText(_columnIndexOfValue)
+          val _tmpMatchUid: Int?
+          if (_stmt.isNull(_columnIndexOfMatchUid)) {
+            _tmpMatchUid = null
+          } else {
+            _tmpMatchUid = _stmt.getLong(_columnIndexOfMatchUid).toInt()
+          }
+          val _tmpMatchPackage: String?
+          if (_stmt.isNull(_columnIndexOfMatchPackage)) {
+            _tmpMatchPackage = null
+          } else {
+            _tmpMatchPackage = _stmt.getText(_columnIndexOfMatchPackage)
+          }
+          val _tmpMatchDomain: String?
+          if (_stmt.isNull(_columnIndexOfMatchDomain)) {
+            _tmpMatchDomain = null
+          } else {
+            _tmpMatchDomain = _stmt.getText(_columnIndexOfMatchDomain)
+          }
+          val _tmpMatchIp: String?
+          if (_stmt.isNull(_columnIndexOfMatchIp)) {
+            _tmpMatchIp = null
+          } else {
+            _tmpMatchIp = _stmt.getText(_columnIndexOfMatchIp)
+          }
+          val _tmpMatchPort: Int?
+          if (_stmt.isNull(_columnIndexOfMatchPort)) {
+            _tmpMatchPort = null
+          } else {
+            _tmpMatchPort = _stmt.getLong(_columnIndexOfMatchPort).toInt()
+          }
+          val _tmpMatchProtocol: String?
+          if (_stmt.isNull(_columnIndexOfMatchProtocol)) {
+            _tmpMatchProtocol = null
+          } else {
+            _tmpMatchProtocol = _stmt.getText(_columnIndexOfMatchProtocol)
+          }
+          val _tmpMatchEncryption: String?
+          if (_stmt.isNull(_columnIndexOfMatchEncryption)) {
+            _tmpMatchEncryption = null
+          } else {
+            _tmpMatchEncryption = _stmt.getText(_columnIndexOfMatchEncryption)
+          }
           val _tmpAction: String
           _tmpAction = _stmt.getText(_columnIndexOfAction)
           val _tmpEnabled: Boolean
@@ -208,7 +390,7 @@ public class RulesDao_Impl(
           } else {
             _tmpLastHit = _stmt.getLong(_columnIndexOfLastHit)
           }
-          _item = RuleEntity(_tmpId,_tmpType,_tmpValue,_tmpAction,_tmpEnabled,_tmpPriority,_tmpDescription,_tmpCreatedAt,_tmpLastModified,_tmpHitCount,_tmpLastHit)
+          _item = RuleEntity(_tmpId,_tmpType,_tmpValue,_tmpMatchUid,_tmpMatchPackage,_tmpMatchDomain,_tmpMatchIp,_tmpMatchPort,_tmpMatchProtocol,_tmpMatchEncryption,_tmpAction,_tmpEnabled,_tmpPriority,_tmpDescription,_tmpCreatedAt,_tmpLastModified,_tmpHitCount,_tmpLastHit)
           _result.add(_item)
         }
         _result
@@ -228,6 +410,13 @@ public class RulesDao_Impl(
         val _columnIndexOfId: Int = getColumnIndexOrThrow(_stmt, "id")
         val _columnIndexOfType: Int = getColumnIndexOrThrow(_stmt, "type")
         val _columnIndexOfValue: Int = getColumnIndexOrThrow(_stmt, "value")
+        val _columnIndexOfMatchUid: Int = getColumnIndexOrThrow(_stmt, "matchUid")
+        val _columnIndexOfMatchPackage: Int = getColumnIndexOrThrow(_stmt, "matchPackage")
+        val _columnIndexOfMatchDomain: Int = getColumnIndexOrThrow(_stmt, "matchDomain")
+        val _columnIndexOfMatchIp: Int = getColumnIndexOrThrow(_stmt, "matchIp")
+        val _columnIndexOfMatchPort: Int = getColumnIndexOrThrow(_stmt, "matchPort")
+        val _columnIndexOfMatchProtocol: Int = getColumnIndexOrThrow(_stmt, "matchProtocol")
+        val _columnIndexOfMatchEncryption: Int = getColumnIndexOrThrow(_stmt, "matchEncryption")
         val _columnIndexOfAction: Int = getColumnIndexOrThrow(_stmt, "action")
         val _columnIndexOfEnabled: Int = getColumnIndexOrThrow(_stmt, "enabled")
         val _columnIndexOfPriority: Int = getColumnIndexOrThrow(_stmt, "priority")
@@ -245,6 +434,48 @@ public class RulesDao_Impl(
           _tmpType = _stmt.getText(_columnIndexOfType)
           val _tmpValue: String
           _tmpValue = _stmt.getText(_columnIndexOfValue)
+          val _tmpMatchUid: Int?
+          if (_stmt.isNull(_columnIndexOfMatchUid)) {
+            _tmpMatchUid = null
+          } else {
+            _tmpMatchUid = _stmt.getLong(_columnIndexOfMatchUid).toInt()
+          }
+          val _tmpMatchPackage: String?
+          if (_stmt.isNull(_columnIndexOfMatchPackage)) {
+            _tmpMatchPackage = null
+          } else {
+            _tmpMatchPackage = _stmt.getText(_columnIndexOfMatchPackage)
+          }
+          val _tmpMatchDomain: String?
+          if (_stmt.isNull(_columnIndexOfMatchDomain)) {
+            _tmpMatchDomain = null
+          } else {
+            _tmpMatchDomain = _stmt.getText(_columnIndexOfMatchDomain)
+          }
+          val _tmpMatchIp: String?
+          if (_stmt.isNull(_columnIndexOfMatchIp)) {
+            _tmpMatchIp = null
+          } else {
+            _tmpMatchIp = _stmt.getText(_columnIndexOfMatchIp)
+          }
+          val _tmpMatchPort: Int?
+          if (_stmt.isNull(_columnIndexOfMatchPort)) {
+            _tmpMatchPort = null
+          } else {
+            _tmpMatchPort = _stmt.getLong(_columnIndexOfMatchPort).toInt()
+          }
+          val _tmpMatchProtocol: String?
+          if (_stmt.isNull(_columnIndexOfMatchProtocol)) {
+            _tmpMatchProtocol = null
+          } else {
+            _tmpMatchProtocol = _stmt.getText(_columnIndexOfMatchProtocol)
+          }
+          val _tmpMatchEncryption: String?
+          if (_stmt.isNull(_columnIndexOfMatchEncryption)) {
+            _tmpMatchEncryption = null
+          } else {
+            _tmpMatchEncryption = _stmt.getText(_columnIndexOfMatchEncryption)
+          }
           val _tmpAction: String
           _tmpAction = _stmt.getText(_columnIndexOfAction)
           val _tmpEnabled: Boolean
@@ -267,7 +498,7 @@ public class RulesDao_Impl(
           } else {
             _tmpLastHit = _stmt.getLong(_columnIndexOfLastHit)
           }
-          _item = RuleEntity(_tmpId,_tmpType,_tmpValue,_tmpAction,_tmpEnabled,_tmpPriority,_tmpDescription,_tmpCreatedAt,_tmpLastModified,_tmpHitCount,_tmpLastHit)
+          _item = RuleEntity(_tmpId,_tmpType,_tmpValue,_tmpMatchUid,_tmpMatchPackage,_tmpMatchDomain,_tmpMatchIp,_tmpMatchPort,_tmpMatchProtocol,_tmpMatchEncryption,_tmpAction,_tmpEnabled,_tmpPriority,_tmpDescription,_tmpCreatedAt,_tmpLastModified,_tmpHitCount,_tmpLastHit)
           _result.add(_item)
         }
         _result
@@ -287,6 +518,13 @@ public class RulesDao_Impl(
         val _columnIndexOfId: Int = getColumnIndexOrThrow(_stmt, "id")
         val _columnIndexOfType: Int = getColumnIndexOrThrow(_stmt, "type")
         val _columnIndexOfValue: Int = getColumnIndexOrThrow(_stmt, "value")
+        val _columnIndexOfMatchUid: Int = getColumnIndexOrThrow(_stmt, "matchUid")
+        val _columnIndexOfMatchPackage: Int = getColumnIndexOrThrow(_stmt, "matchPackage")
+        val _columnIndexOfMatchDomain: Int = getColumnIndexOrThrow(_stmt, "matchDomain")
+        val _columnIndexOfMatchIp: Int = getColumnIndexOrThrow(_stmt, "matchIp")
+        val _columnIndexOfMatchPort: Int = getColumnIndexOrThrow(_stmt, "matchPort")
+        val _columnIndexOfMatchProtocol: Int = getColumnIndexOrThrow(_stmt, "matchProtocol")
+        val _columnIndexOfMatchEncryption: Int = getColumnIndexOrThrow(_stmt, "matchEncryption")
         val _columnIndexOfAction: Int = getColumnIndexOrThrow(_stmt, "action")
         val _columnIndexOfEnabled: Int = getColumnIndexOrThrow(_stmt, "enabled")
         val _columnIndexOfPriority: Int = getColumnIndexOrThrow(_stmt, "priority")
@@ -303,6 +541,48 @@ public class RulesDao_Impl(
           _tmpType = _stmt.getText(_columnIndexOfType)
           val _tmpValue: String
           _tmpValue = _stmt.getText(_columnIndexOfValue)
+          val _tmpMatchUid: Int?
+          if (_stmt.isNull(_columnIndexOfMatchUid)) {
+            _tmpMatchUid = null
+          } else {
+            _tmpMatchUid = _stmt.getLong(_columnIndexOfMatchUid).toInt()
+          }
+          val _tmpMatchPackage: String?
+          if (_stmt.isNull(_columnIndexOfMatchPackage)) {
+            _tmpMatchPackage = null
+          } else {
+            _tmpMatchPackage = _stmt.getText(_columnIndexOfMatchPackage)
+          }
+          val _tmpMatchDomain: String?
+          if (_stmt.isNull(_columnIndexOfMatchDomain)) {
+            _tmpMatchDomain = null
+          } else {
+            _tmpMatchDomain = _stmt.getText(_columnIndexOfMatchDomain)
+          }
+          val _tmpMatchIp: String?
+          if (_stmt.isNull(_columnIndexOfMatchIp)) {
+            _tmpMatchIp = null
+          } else {
+            _tmpMatchIp = _stmt.getText(_columnIndexOfMatchIp)
+          }
+          val _tmpMatchPort: Int?
+          if (_stmt.isNull(_columnIndexOfMatchPort)) {
+            _tmpMatchPort = null
+          } else {
+            _tmpMatchPort = _stmt.getLong(_columnIndexOfMatchPort).toInt()
+          }
+          val _tmpMatchProtocol: String?
+          if (_stmt.isNull(_columnIndexOfMatchProtocol)) {
+            _tmpMatchProtocol = null
+          } else {
+            _tmpMatchProtocol = _stmt.getText(_columnIndexOfMatchProtocol)
+          }
+          val _tmpMatchEncryption: String?
+          if (_stmt.isNull(_columnIndexOfMatchEncryption)) {
+            _tmpMatchEncryption = null
+          } else {
+            _tmpMatchEncryption = _stmt.getText(_columnIndexOfMatchEncryption)
+          }
           val _tmpAction: String
           _tmpAction = _stmt.getText(_columnIndexOfAction)
           val _tmpEnabled: Boolean
@@ -325,7 +605,7 @@ public class RulesDao_Impl(
           } else {
             _tmpLastHit = _stmt.getLong(_columnIndexOfLastHit)
           }
-          _result = RuleEntity(_tmpId,_tmpType,_tmpValue,_tmpAction,_tmpEnabled,_tmpPriority,_tmpDescription,_tmpCreatedAt,_tmpLastModified,_tmpHitCount,_tmpLastHit)
+          _result = RuleEntity(_tmpId,_tmpType,_tmpValue,_tmpMatchUid,_tmpMatchPackage,_tmpMatchDomain,_tmpMatchIp,_tmpMatchPort,_tmpMatchProtocol,_tmpMatchEncryption,_tmpAction,_tmpEnabled,_tmpPriority,_tmpDescription,_tmpCreatedAt,_tmpLastModified,_tmpHitCount,_tmpLastHit)
         } else {
           _result = null
         }

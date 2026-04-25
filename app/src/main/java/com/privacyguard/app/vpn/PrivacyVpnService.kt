@@ -1,30 +1,19 @@
 package com.privacyguard.app.vpn
 
-import android.content.Intent
-import android.net.VpnService
-
 /**
- * Old-package stub — delegates to the real implementation in
- * [com.privacyguard.platform.android.PrivacyVpnService].
+ * Compatibility shim so existing UI code can reference
+ * [com.privacyguard.app.vpn.PrivacyVpnService.isRunning] without changes.
  *
- * Kept here so existing UI code that imports this package still compiles.
+ * The real service is [com.privacyguard.platform.android.PrivacyVpnService],
+ * which is the only class registered in the manifest with the
+ * android.net.VpnService intent filter.
  */
-class PrivacyVpnService : VpnService() {
+object PrivacyVpnService {
+    val isRunning: Boolean
+        get() = com.privacyguard.platform.android.PrivacyVpnService.isRunning
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Forward to the real service
-        val real = Intent(this, com.privacyguard.platform.android.PrivacyVpnService::class.java)
-        real.action = intent?.action
-        startService(real)
-        return START_NOT_STICKY
-    }
+    const val ACTION_STOP: String =
+        com.privacyguard.platform.android.PrivacyVpnService.ACTION_STOP
 
-    companion object {
-        const val ACTION_STOP = com.privacyguard.platform.android.PrivacyVpnService.ACTION_STOP
-
-        val isRunning: Boolean
-            get() = com.privacyguard.platform.android.PrivacyVpnService.isRunning
-
-        @Volatile var isPcapEnabled: Boolean = false
-    }
+    @Volatile var isPcapEnabled: Boolean = false
 }

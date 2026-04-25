@@ -68,6 +68,20 @@ data class DnsPacket(
                        .map { "${it.rdata[0].toInt() and 0xFF}.${it.rdata[1].toInt() and 0xFF}." +
                               "${it.rdata[2].toInt() and 0xFF}.${it.rdata[3].toInt() and 0xFF}" }
 
+    /** Returns all AAAA-record IPv6 addresses from the answer section. */
+    val aaaaRecords: List<String>
+        get() = answers.filter { it.type == DnsRecord.TYPE_AAAA && it.rdata.size == 16 }
+                        .map { ipv6BytesToString(it.rdata) }
+
+    private fun ipv6BytesToString(bytes: ByteArray): String {
+        val groups = mutableListOf<String>()
+        for (i in 0 until 16 step 2) {
+            val value = ((bytes[i].toInt() and 0xFF) shl 8) or (bytes[i + 1].toInt() and 0xFF)
+            groups.add(Integer.toHexString(value))
+        }
+        return groups.joinToString(":")
+    }
+
     /** Returns all CNAME targets from the answer section. */
     val cnameRecords: List<String>
         get() = answers.filter { it.type == DnsRecord.TYPE_CNAME }.mapNotNull { it.rdataName }

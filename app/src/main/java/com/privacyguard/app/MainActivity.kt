@@ -1,31 +1,35 @@
-package com.privacyguard
+package com.privacyguard.app
 
-import android.content.Intent
 import android.net.VpnService
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import com.privacyguard.ui.theme.PrivacyGuardTheme
+import com.privacyguard.app.data.local.preferences.SettingsPreferences
+import com.privacyguard.app.ui.theme.PrivacyGuardTheme
+import com.privacyguard.app.vpn.KillSwitch
+import com.privacyguard.app.vpn.VpnManager
+import com.privacyguard.app.workers.WeeklyReportWorker
 import com.privacyguard.ui.AppNavHost
-import com.privacyguard.vpn.VpnManager
 
-class MainActivity : BaseActivity() {
-
-    private lateinit var vpnManager: VpnManager
+class MainActivity : com.privacyguard.BaseActivity() {
 
     private val vpnPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == RESULT_OK) vpnManager.start()
+        if (result.resultCode == RESULT_OK) VpnManager.startVpn(this)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        vpnManager = VpnManager(applicationContext)
+        val settings = SettingsPreferences.getInstance(this)
+        if (settings.killSwitchEnabled.value) {
+            KillSwitch.enable()
+        } else {
+            KillSwitch.disable()
+        }
+        if (settings.weeklyReport.value) {
+            WeeklyReportWorker.scheduleWeekly(this)
+        }
         setContent {
             PrivacyGuardTheme {
                 AppNavHost(
@@ -38,6 +42,6 @@ class MainActivity : BaseActivity() {
     private fun requestVpnPermission() {
         val intent = VpnService.prepare(this)
         if (intent != null) vpnPermissionLauncher.launch(intent)
-        else vpnManager.start()
+        else VpnManager.startVpn(this)
     }
 }

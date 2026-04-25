@@ -212,12 +212,43 @@ class NotificationHelper(private val context: Context) {
             totalBlocked      = blockedCount.toLong(),
             topApp            = topApps.firstOrNull(),
             mainActivityClass = try {
-                Class.forName("com.privacyguard.MainActivity")
+                Class.forName("com.privacyguard.app.MainActivity")
             } catch (_: ClassNotFoundException) {
                 NotificationHelper::class.java
             },
         )
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Kill Switch Alert
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fun postKillSwitchAlert() {
+        val mainActivityClass = try {
+            Class.forName("com.privacyguard.app.MainActivity")
+        } catch (_: ClassNotFoundException) {
+            NotificationHelper::class.java
+        }
+
+        val tapIntent  = Intent(context, mainActivityClass)
+        val pendingTap = PendingIntent.getActivity(
+            context, NOTIFICATION_ID_KILL_SWITCH, tapIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
+            .setContentTitle("VPN Disconnected — Kill Switch Active")
+            .setContentText("All connections are blocked until VPN reconnects.")
+            .setContentIntent(pendingTap)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+
+        manager.notify(NOTIFICATION_ID_KILL_SWITCH, notification)
+    }
+
+    fun cancelKillSwitchAlert() = manager.cancel(NOTIFICATION_ID_KILL_SWITCH)
 
     fun cancelVpnNotification()    = manager.cancel(NOTIFICATION_ID_VPN)
     fun cancelAlertNotification()  = manager.cancel(NOTIFICATION_ID_ALERT)
@@ -233,9 +264,10 @@ class NotificationHelper(private val context: Context) {
         const val CHANNEL_ALERTS        = "pg_alerts"
         const val CHANNEL_WEEKLY_REPORT = "pg_weekly_report"
 
-        const val NOTIFICATION_ID_VPN    = 1
-        const val NOTIFICATION_ID_ALERT  = 2
-        const val NOTIFICATION_ID_REPORT = 3
+        const val NOTIFICATION_ID_VPN          = 1
+        const val NOTIFICATION_ID_ALERT        = 2
+        const val NOTIFICATION_ID_REPORT       = 3
+        const val NOTIFICATION_ID_KILL_SWITCH  = 4
 
         /** Broadcast action to stop the VPN from the notification's Stop button. */
         const val ACTION_STOP_VPN = "com.privacyguard.action.STOP_VPN"

@@ -6,29 +6,41 @@ import com.privacyguard.app.data.db.HourlyStats
 import com.privacyguard.app.data.db.TopBlockedDomain
 
 class ConnectionRepository(private val connectionDao: ConnectionDao) {
+    private fun sinceForDays(days: Int): Long = System.currentTimeMillis() - days.toLong() * 86_400_000L
 
     suspend fun getBlockedCountToday(): Int {
-        val since = System.currentTimeMillis() - 86_400_000L
-        return connectionDao.getBlockedCountToday(since)
+        return getBlockedCount(days = 1)
+    }
+
+    suspend fun getBlockedCount(days: Int): Int {
+        return connectionDao.getBlockedCountToday(sinceForDays(days))
     }
 
     suspend fun getTotalDataToday(): Long {
-        val since = System.currentTimeMillis() - 86_400_000L
-        return connectionDao.getTotalDataToday(since)
+        return getTotalData(days = 1)
+    }
+
+    suspend fun getTotalData(days: Int): Long {
+        return connectionDao.getTotalDataToday(sinceForDays(days))
     }
 
     suspend fun getTopBlockedDomains(limit: Int = 10): List<TopBlockedDomain> {
-        val since = System.currentTimeMillis() - 86_400_000L
-        return connectionDao.getTopBlockedDomains(since, limit)
+        return getTopBlockedDomains(days = 1, limit = limit)
+    }
+
+    suspend fun getTopBlockedDomains(days: Int, limit: Int = 10): List<TopBlockedDomain> {
+        return connectionDao.getTopBlockedDomains(sinceForDays(days), limit)
     }
 
     suspend fun getHourlyStats(): List<HourlyStats> {
-        val since = System.currentTimeMillis() - 86_400_000L
-        return connectionDao.getHourlyStats(since)
+        return getHourlyStats(days = 1)
+    }
+
+    suspend fun getHourlyStats(days: Int): List<HourlyStats> {
+        return connectionDao.getHourlyStats(sinceForDays(days))
     }
 
     suspend fun getDailyStats(days: Int = 7): List<DailyStats> {
-        val since = System.currentTimeMillis() - days.toLong() * 86_400_000L
-        return connectionDao.getDailyStats(since)
+        return connectionDao.getDailyStats(sinceForDays(days))
     }
 }

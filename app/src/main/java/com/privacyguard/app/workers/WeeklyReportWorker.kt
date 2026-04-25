@@ -153,14 +153,17 @@ class WeeklyReportWorker(
         val database = AppDatabase.getInstance(applicationContext)
         val connectionRepo = ConnectionRepository(database.connectionDao())
         
-        // Get statistics
-        val totalBlocked = connectionRepo.getBlockedCountToday() // In production, get for week
-        val totalDataSaved = connectionRepo.getTotalDataToday() // In production, get for week
-        val topBlockedDomains = connectionRepo.getTopBlockedDomains(5)
-        val hourlyStats = connectionRepo.getHourlyStats()
-        
-        // Calculate average privacy score (mock for now)
-        val privacyScore = calculatePrivacyScore(totalBlocked)
+        val dailyStats = connectionRepo.getDailyStats(7)
+        val totalBlocked = dailyStats.sumOf { it.blockedConnections }
+        val totalConnections = dailyStats.sumOf { it.totalConnections }
+        val totalDataSaved = dailyStats.sumOf { it.totalBytes }
+        val topBlockedDomains = connectionRepo.getTopBlockedDomains(days = 7, limit = 5)
+        val hourlyStats = connectionRepo.getHourlyStats(days = 7)
+        val privacyScore = calculatePrivacyScore(
+            blockedCount = totalBlocked,
+            totalConnections = totalConnections,
+            topDomainCount = topBlockedDomains.sumOf { it.count }
+        )
         
         return WeeklyReport(
             date = System.currentTimeMillis(),
@@ -177,15 +180,17 @@ class WeeklyReportWorker(
     /**
      * Calculates privacy score based on blocked trackers
      */
-    private fun calculatePrivacyScore(blockedCount: Int): Int {
-        return when {
-            blockedCount > 1000 -> 95
-            blockedCount > 500 -> 85
-            blockedCount > 100 -> 75
-            blockedCount > 50 -> 65
-            blockedCount > 10 -> 50
-            else -> 30
-        }
+    private fun calculatePrivacyScore(
+        blockedCount: Int,
+        totalConnections: Int,
+        topDomainCount: Int,
+    ): Int {
+        if (totalConnections <= 0) return 50
+        val blockRateScore = ((blockedCount.toFloat() / totalConnections.toFloat()) * 60f)
+            .coerceIn(0f, 60f)
+        val domainProtectionScore = (topDomainCount / 25f).coerceIn(0f, 25f)
+        val activityScore = (blockedCount / 40f).coerceIn(0f, 15f)
+        return (blockRateScore + domainProtectionScore + activityScore).toInt().coerceIn(0, 100)
     }
     
     /**
@@ -205,7 +210,6 @@ class WeeklyReportWorker(
      * Saves report to database for history
      */
     private suspend fun saveReport(report: WeeklyReport) {
-        // In production, save to a reports table
         Log.d(TAG, "Saving report: Blocked ${report.totalBlocked}, Score ${report.privacyScore}")
     }
 }

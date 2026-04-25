@@ -14,6 +14,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.SelectionKey
 import java.nio.channels.Selector
 import java.nio.channels.SocketChannel
+import android.util.Log
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
@@ -60,17 +61,17 @@ class TcpForwarder(
     // Entry Point (called from TunReader thread)
     // ─────────────────────────────────────────────────────────────────────────
 
-    fun handle(ip: IpPacket, tcp: TcpPacket) {
+    fun handle(ip: IpPacket, tcp: TcpPacket, ownerUid: Int = -1, ownerPackage: String? = null) {
         val key = SessionKey.of(
             ip.sourceIp, tcp.sourcePort,
             ip.destinationIp, tcp.destinationPort,
             IpPacket.PROTO_TCP,
         )
         when {
-            tcp.isSyn && !tcp.flagAck -> handleSyn(ip, tcp, key)
+            tcp.isSyn && !tcp.flagAck -> handleSyn(ip, tcp, key, ownerUid, ownerPackage)
             tcp.isRst                  -> sessionTable.remove(key)
             tcp.isFin                  -> handleFin(ip, tcp, key)
-            else                       -> handleData(ip, tcp, key)
+            else                       -> handleData(ip, tcp, key, ownerUid, ownerPackage)
         }
     }
 
@@ -78,8 +79,8 @@ class TcpForwarder(
     // SYN
     // ─────────────────────────────────────────────────────────────────────────
 
-    private fun handleSyn(ip: IpPacket, tcp: TcpPacket, key: SessionKey) {
-        val session = sessionTable.getOrCreate(key)
+    private fun handleSyn(ip: IpPacket, tcp: TcpPacket, key: SessionKey, ownerUid: Int, ownerPackage: String?) {
+        val session = sessionTable.getOrCreate(key, uid = ownerUid, ownerPackage = ownerPackage)
         try {
             val channel = SocketChannel.open()
             channel.configureBlocking(false)
@@ -90,14 +91,16 @@ class TcpForwarder(
             session.lastDeviceSeq = tcp.sequenceNumber
             session.tcpState.set(Session.TcpState.SYN_RECEIVED)
 
+            // Wakeup unblocks any in-progress select() so register() can proceed.
+            // Use the 3-arg overload to atomically set the attachment — avoids a race
+            // where the selector loop reads attachment() as null between register() and attach().
             selector.wakeup()
-            val selKey = channel.register(selector, SelectionKey.OP_CONNECT)
-            selKey.attach(session)
+            val selKey = channel.register(selector, SelectionKey.OP_CONNECT, session)
             session.selectionKey = selKey
 
             connectingCount.incrementAndGet()
         } catch (e: Exception) {
-            System.err.println("[TcpForwarder] SYN error $key: ${e.message}")
+            Log.w("TcpForwarder", "SYN error $key: ${e.message}")
             sessionTable.remove(key)
             sendRstToDevice(ip, tcp)
             errorCount.incrementAndGet()
@@ -108,8 +111,11 @@ class TcpForwarder(
     // ★ Data — Encryption classification on first packet
     // ─────────────────────────────────────────────────────────────────────────
 
-    private fun handleData(ip: IpPacket, tcp: TcpPacket, key: SessionKey) {
+    private fun handleData(ip: IpPacket, tcp: TcpPacket, key: SessionKey, ownerUid: Int, ownerPackage: String?) {
         val session = sessionTable.get(key) ?: return
+        if (session.ownerUid == -1 && ownerUid >= 0) {
+            session.ownerPackage = ownerPackage
+        }
         if (session.tcpState.get() != Session.TcpState.ESTABLISHED) return
         if (!tcp.hasData) return
 
@@ -156,17 +162,20 @@ class TcpForwarder(
         if (!channel.isConnected) return
         try {
             val buf = ByteBuffer.wrap(tcp.data)
-            var written = 0
+            // Spin-write until all bytes are in the socket's send buffer.
+            // channel.write() can return 0 on a non-blocking channel when the OS
+            // send buffer is momentarily full; looping here is safe because the
+            // kernel will accept the bytes within microseconds for any normal payload.
             while (buf.hasRemaining()) {
                 val n = channel.write(buf)
-                if (n == 0) break
-                written += n
+                if (n < 0) { sessionTable.remove(key); return }
             }
+            val written = tcp.data.size
             session.recordOutbound(written)
             forwardedBytesOut.addAndGet(written.toLong())
             sendAckToDevice(ip, tcp, session)
         } catch (e: Exception) {
-            System.err.println("[TcpForwarder] data error $key: ${e.message}")
+            Log.w("TcpForwarder", "data error $key: ${e.message}")
             sessionTable.remove(key)
         }
     }
@@ -201,7 +210,7 @@ class TcpForwarder(
                             selKey.isReadable    -> readFromRemote(selKey, session, buffer)
                         }
                     } catch (e: Exception) {
-                        System.err.println("[TcpForwarder] selector error: ${e.message}")
+                        Log.w("TcpForwarder", "selector error: ${e.message}")
                         sessionTable.remove(session.key)
                     }
                 }

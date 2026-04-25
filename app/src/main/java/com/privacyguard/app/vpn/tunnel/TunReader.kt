@@ -1,5 +1,6 @@
 package com.privacyguard.vpn.tunnel
 
+import com.privacyguard.app.core.pcap.PcapWriter
 import com.privacyguard.core.packet.IpPacket
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
@@ -47,6 +48,16 @@ class TunReader(
 
     fun addHandler(handler: PacketHandler)    { handlers.add(handler) }
     fun removeHandler(handler: PacketHandler) { handlers.remove(handler) }
+
+    /** Callback invoked for raw IPv6 packet bytes (Phase 2: full proxying). */
+    fun interface Ipv6PacketHandler {
+        fun onIpv6Packet(raw: ByteArray)
+    }
+
+    private val ipv6Handlers = mutableListOf<Ipv6PacketHandler>()
+
+    fun addIpv6Handler(handler: Ipv6PacketHandler)    { ipv6Handlers.add(handler) }
+    fun removeIpv6Handler(handler: Ipv6PacketHandler) { ipv6Handlers.remove(handler) }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Lifecycle
@@ -109,21 +120,33 @@ class TunReader(
                 continue
             }
 
-            // Only handle IPv4 for now (version field = high nibble of byte 0)
+            if (PcapWriter.isCapturing()) PcapWriter.write(raw)
+
+            // Route IPv4 packets through the full pipeline.
+            // IPv6 packets (version 6) are counted and dispatched to IPv6 handlers.
             val version = (raw[0].toInt() ushr 4) and 0xF
-            if (version != 4) {
-                droppedUnsupported.incrementAndGet()
-                continue
+            when (version) {
+                4 -> {
+                    val packet = IpPacket.parse(raw)
+                    if (packet == null) {
+                        droppedMalformed.incrementAndGet()
+                        continue
+                    }
+                    totalPacketsRead.incrementAndGet()
+                    dispatch(packet)
+                }
+                6 -> {
+                    // IPv6 — route is configured (addRoute("::/0")), so packets arrive here.
+                    // Phase 1: DNS interception and hostname mapping (AAAA records) is handled
+                    // in DnsHandler via the IPv4 DNS proxy path for now.
+                    // Phase 2: Full IPv6 TCP/UDP session proxying (FR-VPN-16).
+                    totalPacketsRead.incrementAndGet()
+                    dispatchIpv6(raw)
+                }
+                else -> {
+                    droppedUnsupported.incrementAndGet()
+                }
             }
-
-            val packet = IpPacket.parse(raw)
-            if (packet == null) {
-                droppedMalformed.incrementAndGet()
-                continue
-            }
-
-            totalPacketsRead.incrementAndGet()
-            dispatch(packet)
         }
 
         running.set(false)
@@ -134,8 +157,19 @@ class TunReader(
             try {
                 handler.onPacket(packet)
             } catch (e: Exception) {
-                // A misbehaving handler must not crash the reader loop
                 System.err.println("[TunReader] handler exception: ${e.message}")
+                handlerExceptions.incrementAndGet()
+            }
+        }
+    }
+
+    private fun dispatchIpv6(raw: ByteArray) {
+        if (ipv6Handlers.isEmpty()) return
+        for (handler in ipv6Handlers) {
+            try {
+                handler.onIpv6Packet(raw)
+            } catch (e: Exception) {
+                System.err.println("[TunReader] ipv6 handler exception: ${e.message}")
                 handlerExceptions.incrementAndGet()
             }
         }

@@ -8,17 +8,32 @@
         android:minSdkVersion="24"
         android:targetSdkVersion="36" />
 
+    <!-- Network -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+
+    <!-- Foreground service — VPN requires specialUse on API 34+ -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- Wake lock for background processing -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- App usage stats for per-app attribution (protected; user grants in Settings) -->
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
+
+    <!-- Boot receiver — restart VPN after reboot (FR-VPN-10) -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- External storage for PCAP export (API ≤ 28 only) -->
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Post notifications (required API 33+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <permission
         android:name="com.privacyguard.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
@@ -52,16 +67,41 @@
             </intent-filter>
         </activity>
 
+        <!--
+            Primary VPN service — must carry android.net.VpnService intent-filter
+            so that VpnService.prepare() grants permission to this class.
+            foregroundServiceType="specialUse" is required for API 34+ VPN services.
+        -->
         <service
-            android:name="com.privacyguard.app.vpn.PrivacyVpnService"
+            android:name="com.privacyguard.platform.android.PrivacyVpnService"
             android:exported="false"
-            android:foregroundServiceType="dataSync"
+            android:foregroundServiceType="specialUse"
             android:permission="android.permission.BIND_VPN_SERVICE" >
             <intent-filter>
                 <action android:name="android.net.VpnService" />
             </intent-filter>
+            <!-- Required metadata for specialUse FGS on API 34+ -->
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="VPN" />
         </service>
 
+        <!-- Boot receiver — re-starts VPN if it was active before shutdown (FR-VPN-10) -->
+        <receiver
+            android:name="com.privacyguard.app.vpn.BootReceiver"
+            android:exported="true" >
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Notification dismiss receiver -->
+        <receiver
+            android:name="com.privacyguard.app.core.utils.NotificationDismissReceiver"
+            android:exported="false" />
+
+        <!-- FileProvider for PCAP export -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="com.privacyguard.app.fileprovider"
@@ -71,10 +111,6 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
-
-        <receiver
-            android:name="com.privacyguard.app.core.utils.NotificationDismissReceiver"
-            android:exported="false" />
 
         <activity
             android:name="androidx.compose.ui.tooling.PreviewActivity"

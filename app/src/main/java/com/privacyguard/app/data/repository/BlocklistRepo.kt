@@ -1,166 +1,52 @@
-/**
- * BlocklistRepo.kt
- * 
- * Repository for blocklist data
- * 
- * @author PrivacyGuard Engineering Team
- * @since 1.0.0
- */
-
 package com.privacyguard.app.data.repository
 
-import com.privacyguard.app.core.blocklist.BlocklistCategory
-import com.privacyguard.app.core.blocklist.BlocklistEntry
-import com.privacyguard.app.core.blocklist.BlocklistSource
 import com.privacyguard.app.data.db.BlocklistDao
 import com.privacyguard.app.data.db.BlocklistEntity
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-class BlocklistRepository(
-    private val blocklistDao: BlocklistDao
-) {
-    fun getAllEntriesFlow(): Flow<List<BlocklistEntry>> {
-        return blocklistDao.getAllEntriesFlow().map { list -> list.map { it.toBlocklistEntry() } }
-    }
-    
-    /**
-     * Updates the entire blocklist
-     */
-    suspend fun updateBlocklist(entries: List<BlocklistEntry>) {
-        blocklistDao.clearAll()
-        val entities = entries.map { entry ->
+class BlocklistRepo(private val blocklistDao: BlocklistDao) {
+
+    suspend fun replaceSource(source: String, category: String, domains: List<String>) = withContext(Dispatchers.IO) {
+        blocklistDao.deleteBySource(source)
+        val now = System.currentTimeMillis()
+        blocklistDao.insertAll(domains.map { domain ->
             BlocklistEntity(
-                domain = entry.domain,
-                source = entry.source.name,
-                category = entry.category.name,
-                lastUpdated = entry.lastUpdated
+                domain = domain.lowercase().trim(),
+                source = source,
+                category = category,
+                lastUpdated = now,
             )
-        }
-        blocklistDao.insertAll(entities)
-    }
-    
-    /**
-     * Adds a single blocklist entry
-     */
-    suspend fun addEntry(entry: BlocklistEntry) {
-        val entity = BlocklistEntity(
-            domain = entry.domain,
-            source = entry.source.name,
-            category = entry.category.name,
-            lastUpdated = entry.lastUpdated,
-            isEnabled = entry.isEnabled
-        )
-        blocklistDao.insert(entity)
-    }
-    
-    /**
-     * Gets all blocklist entries
-     */
-    suspend fun getAllEntries(): List<BlocklistEntry> {
-        return blocklistDao.getAllEntries().map { it.toBlocklistEntry() }
+        })
     }
 
-    suspend fun getEntriesBySource(source: BlocklistSource): List<BlocklistEntry> {
-        return blocklistDao.getEntriesBySource(source.name).map { it.toBlocklistEntry() }
-    }
-    
-    /**
-     * Checks if a domain is blocked
-     */
-    suspend fun isBlocked(domain: String): Boolean = blocklistDao.isBlocked(domain)
-    
-    /**
-     * Gets blocklist entry for a domain
-     */
-    suspend fun getEntry(domain: String): BlocklistEntry? {
-        return blocklistDao.getEntry(domain)?.toBlocklistEntry()
-    }
-    
-    /**
-     * Deletes an entry
-     */
-    suspend fun deleteEntry(domain: String) {
-        blocklistDao.deleteEntry(domain)
+    suspend fun allDomains(): List<String> = withContext(Dispatchers.IO) {
+        blocklistDao.getAllEntries().map { it.domain }
     }
 
-    suspend fun setEnabled(domain: String, enabled: Boolean) {
-        blocklistDao.setEnabled(domain, enabled)
+    suspend fun domainsForCategory(cat: String): List<String> = withContext(Dispatchers.IO) {
+        blocklistDao.getEntriesByCategory(cat).map { it.domain }
     }
-    
-    /**
-     * Deletes entries by source
-     */
-    suspend fun deleteBySource(source: BlocklistSource) {
-        blocklistDao.deleteBySource(source.name)
+
+    suspend fun totalCount(): Int = withContext(Dispatchers.IO) {
+        blocklistDao.getSize()
     }
-    
-    /**
-     * Clears entire blocklist
-     */
-    suspend fun clearAll() {
+
+    suspend fun deleteAll() = withContext(Dispatchers.IO) {
         blocklistDao.clearAll()
     }
-    
-    /**
-     * Gets blocklist size
-     */
-    suspend fun getSize(): Int {
-        return blocklistDao.getSize()
-    }
-    
-    /**
-     * Gets statistics by source
-     */
-    suspend fun getStatsBySource(): Map<BlocklistSource, Int> {
-        val stats = blocklistDao.getStatsBySource()
-        return stats.associate { 
-            BlocklistSource.valueOf(it.source) to it.count 
-        }
+
+    suspend fun deleteBySource(src: String) = withContext(Dispatchers.IO) {
+        blocklistDao.deleteBySource(src)
     }
 
-    suspend fun getStatsByCategory(): Map<BlocklistCategory, Int> {
-        return blocklistDao.getStatsByCategory().associate {
-            runCatching { BlocklistCategory.valueOf(it.category) }.getOrDefault(BlocklistCategory.OTHER) to it.count
-        }
+    companion object {
+        const val SOURCE_EASYLIST = "EasyList"
+        const val SOURCE_STEVEN_BLACK = "StevenBlack"
+        const val SOURCE_OISD = "OISD"
+        const val CAT_ADS = "ads"
+        const val CAT_TRACKERS = "trackers"
+        const val CAT_MALWARE = "malware"
+        const val CAT_TELEMETRY = "telemetry"
     }
-    
-    /**
-     * Loads default blocklist (for first run)
-     */
-    suspend fun loadDefaultBlocklist() {
-        val defaultEntries = listOf(
-            // Google trackers
-            BlocklistEntry("doubleclick.net", BlocklistSource.STEVENBLACK, BlocklistCategory.ADVERTISING),
-            BlocklistEntry("googleadservices.com", BlocklistSource.STEVENBLACK, BlocklistCategory.ADVERTISING),
-            BlocklistEntry("google-analytics.com", BlocklistSource.STEVENBLACK, BlocklistCategory.ANALYTICS),
-            BlocklistEntry("googletagmanager.com", BlocklistSource.STEVENBLACK, BlocklistCategory.ANALYTICS),
-            BlocklistEntry("googlesyndication.com", BlocklistSource.STEVENBLACK, BlocklistCategory.ADVERTISING),
-            
-            // Facebook trackers
-            BlocklistEntry("facebook.com/tr", BlocklistSource.STEVENBLACK, BlocklistCategory.ANALYTICS),
-            BlocklistEntry("facebook.net", BlocklistSource.STEVENBLACK, BlocklistCategory.ANALYTICS),
-            BlocklistEntry("fbcdn.net", BlocklistSource.STEVENBLACK, BlocklistCategory.ANALYTICS),
-            
-            // Other common trackers
-            BlocklistEntry("scorecardresearch.com", BlocklistSource.STEVENBLACK, BlocklistCategory.ANALYTICS),
-            BlocklistEntry("outbrain.com", BlocklistSource.STEVENBLACK, BlocklistCategory.ADVERTISING),
-            BlocklistEntry("taboola.com", BlocklistSource.STEVENBLACK, BlocklistCategory.ADVERTISING),
-            BlocklistEntry("amazon-adsystem.com", BlocklistSource.STEVENBLACK, BlocklistCategory.ADVERTISING)
-        )
-        updateBlocklist(defaultEntries)
-    }
-}
-
-/**
- * Converts database entity to BlocklistEntry
- */
-fun BlocklistEntity.toBlocklistEntry(): BlocklistEntry {
-    return BlocklistEntry(
-        domain = domain,
-        source = runCatching { BlocklistSource.valueOf(source) }.getOrDefault(BlocklistSource.CUSTOM),
-        category = runCatching { BlocklistCategory.valueOf(category) }.getOrDefault(BlocklistCategory.OTHER),
-        lastUpdated = lastUpdated,
-        isEnabled = isEnabled
-    )
 }

@@ -14,6 +14,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.DatagramChannel
 import java.nio.channels.SelectionKey
 import java.nio.channels.Selector
+import android.util.Log
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
@@ -35,7 +36,7 @@ import java.util.concurrent.atomic.AtomicLong
 class UdpForwarder(
     private val sessionTable: SessionTable,
     private val tunWriter:    TunWriter,
-    private val protectSocket: (java.net.Socket) -> Boolean,
+    private val protectSocket: (DatagramSocket) -> Boolean,
 ) : Runnable {
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -69,14 +70,17 @@ class UdpForwarder(
     // Entry Point — called from TunReader thread
     // ─────────────────────────────────────────────────────────────────────────
 
-    fun handle(ip: IpPacket, udp: UdpPacket) {
+    fun handle(ip: IpPacket, udp: UdpPacket, ownerUid: Int = -1, ownerPackage: String? = null) {
         val key = SessionKey.of(
             ip.sourceIp, udp.sourcePort,
             ip.destinationIp, udp.destinationPort,
             IpPacket.PROTO_UDP,
         )
 
-        val session = sessionTable.get(key) ?: createSession(ip, udp, key) ?: return
+        val session = sessionTable.get(key) ?: createSession(ip, udp, key, ownerUid, ownerPackage) ?: return
+        if (session.ownerUid == -1 && ownerUid >= 0) {
+            session.ownerPackage = ownerPackage
+        }
         session.recordOutbound(udp.data.size)
         forwardedBytesOut.addAndGet(udp.data.size.toLong())
 
@@ -85,7 +89,7 @@ class UdpForwarder(
             val buf = ByteBuffer.wrap(udp.data)
             channel.send(buf, InetSocketAddress(ip.destinationIp, udp.destinationPort))
         } catch (e: Exception) {
-            System.err.println("[UdpForwarder] send error for $key: ${e.message}")
+            Log.w("UdpForwarder", "send error for $key: ${e.message}")
             sessionTable.remove(key)
             errorCount.incrementAndGet()
         }
@@ -95,25 +99,26 @@ class UdpForwarder(
     // Session Creation
     // ─────────────────────────────────────────────────────────────────────────
 
-    private fun createSession(ip: IpPacket, udp: UdpPacket, key: SessionKey): Session? {
+    private fun createSession(ip: IpPacket, udp: UdpPacket, key: SessionKey, ownerUid: Int, ownerPackage: String?): Session? {
         return try {
             val channel = DatagramChannel.open()
             channel.configureBlocking(false)
-            channel.socket().also { protectSocket(it as java.net.Socket) }
+            channel.socket().also { protectSocket(it) }
             channel.bind(null)   // Let OS pick ephemeral port
 
-            val session = sessionTable.getOrCreate(key)
+            val session = sessionTable.getOrCreate(key, uid = ownerUid, ownerPackage = ownerPackage)
             session.udpChannel = channel
 
-            // Register with selector for readability
+            // Register with selector atomically — 3-arg overload avoids the race
+            // between register() and attach() that could let the selector loop
+            // see a null attachment and silently discard the UDP session.
             selector.wakeup()
-            val selKey = channel.register(selector, SelectionKey.OP_READ)
-            selKey.attach(session)
+            val selKey = channel.register(selector, SelectionKey.OP_READ, session)
             session.selectionKey = selKey
 
             session
         } catch (e: Exception) {
-            System.err.println("[UdpForwarder] create session error for $key: ${e.message}")
+            Log.w("UdpForwarder", "create session error for $key: ${e.message}")
             errorCount.incrementAndGet()
             null
         }
@@ -142,7 +147,7 @@ class UdpForwarder(
                     try {
                         readFromRemote(selKey, session, buffer)
                     } catch (e: Exception) {
-                        System.err.println("[UdpForwarder] read error: ${e.message}")
+                        Log.w("UdpForwarder", "read error: ${e.message}")
                         sessionTable.remove(session.key)
                         errorCount.incrementAndGet()
                     }

@@ -14,12 +14,22 @@ class SettingsPreferences private constructor(context: Context) {
         private var INSTANCE: SettingsPreferences? = null
 
         private const val PREFS_NAME = "privacyguard_settings"
-        private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
-        private const val KEY_BLOCK_NOTIFICATIONS = "block_notifications"
-        private const val KEY_TRACKER_NOTIFICATIONS = "tracker_notifications"
-        private const val KEY_VPN_NOTIFICATIONS = "vpn_notifications"
-        private const val KEY_WEEKLY_REPORT = "weekly_report"
-        private const val KEY_KILL_SWITCH_NOTIFICATIONS = "kill_switch_notifications"
+        private const val KEY_NOTIFICATIONS_ENABLED      = "notifications_enabled"
+        private const val KEY_BLOCK_NOTIFICATIONS        = "block_notifications"
+        private const val KEY_TRACKER_NOTIFICATIONS      = "tracker_notifications"
+        private const val KEY_VPN_NOTIFICATIONS          = "vpn_notifications"
+        private const val KEY_WEEKLY_REPORT              = "weekly_report"
+        private const val KEY_KILL_SWITCH_NOTIFICATIONS  = "kill_switch_notifications"
+        private const val KEY_KILL_SWITCH_ENABLED        = "kill_switch_enabled"
+        private const val KEY_DOH_ENABLED                = "doh_enabled"
+        private const val KEY_DOH_PROVIDER               = "doh_provider"
+        private const val KEY_RETENTION_DAYS             = "retention_days"
+        private const val KEY_UPSTREAM_DNS               = "upstream_dns"
+        private const val KEY_ONBOARDING_COMPLETED       = "onboarding_completed"
+
+        const val DOH_CLOUDFLARE = "https://cloudflare-dns.com/dns-query"
+        const val DOH_GOOGLE     = "https://dns.google/dns-query"
+        const val DOH_QUAD9      = "https://dns.quad9.net/dns-query"
 
         fun getInstance(context: Context): SettingsPreferences {
             return INSTANCE ?: synchronized(this) {
@@ -49,6 +59,24 @@ class SettingsPreferences private constructor(context: Context) {
     private val _killSwitchNotifications = MutableStateFlow(prefs.getBoolean(KEY_KILL_SWITCH_NOTIFICATIONS, true))
     val killSwitchNotifications: StateFlow<Boolean> = _killSwitchNotifications.asStateFlow()
 
+    private val _killSwitchEnabled = MutableStateFlow(prefs.getBoolean(KEY_KILL_SWITCH_ENABLED, false))
+    val killSwitchEnabled: StateFlow<Boolean> = _killSwitchEnabled.asStateFlow()
+
+    private val _dohEnabled = MutableStateFlow(prefs.getBoolean(KEY_DOH_ENABLED, false))
+    val dohEnabled: StateFlow<Boolean> = _dohEnabled.asStateFlow()
+
+    private val _dohProvider = MutableStateFlow(prefs.getString(KEY_DOH_PROVIDER, DOH_CLOUDFLARE) ?: DOH_CLOUDFLARE)
+    val dohProvider: StateFlow<String> = _dohProvider.asStateFlow()
+
+    private val _retentionDays = MutableStateFlow(prefs.getInt(KEY_RETENTION_DAYS, 30))
+    val retentionDays: StateFlow<Int> = _retentionDays.asStateFlow()
+
+    private val _upstreamDns = MutableStateFlow(prefs.getString(KEY_UPSTREAM_DNS, "1.1.1.1") ?: "1.1.1.1")
+    val upstreamDns: StateFlow<String> = _upstreamDns.asStateFlow()
+
+    private val _onboardingCompleted = MutableStateFlow(prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false))
+    val onboardingCompleted: StateFlow<Boolean> = _onboardingCompleted.asStateFlow()
+
     fun setNotificationsEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_NOTIFICATIONS_ENABLED, enabled).apply()
         _notificationsEnabled.value = enabled
@@ -77,6 +105,36 @@ class SettingsPreferences private constructor(context: Context) {
     fun setKillSwitchNotifications(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_KILL_SWITCH_NOTIFICATIONS, enabled).apply()
         _killSwitchNotifications.value = enabled
+    }
+
+    fun setKillSwitchEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_KILL_SWITCH_ENABLED, enabled).apply()
+        _killSwitchEnabled.value = enabled
+    }
+
+    fun setDohEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_DOH_ENABLED, enabled).apply()
+        _dohEnabled.value = enabled
+    }
+
+    fun setDohProvider(provider: String) {
+        prefs.edit().putString(KEY_DOH_PROVIDER, provider).apply()
+        _dohProvider.value = provider
+    }
+
+    fun setRetentionDays(days: Int) {
+        prefs.edit().putInt(KEY_RETENTION_DAYS, days).apply()
+        _retentionDays.value = days
+    }
+
+    fun setUpstreamDns(dns: String) {
+        prefs.edit().putString(KEY_UPSTREAM_DNS, dns).apply()
+        _upstreamDns.value = dns
+    }
+
+    fun setOnboardingCompleted(completed: Boolean) {
+        prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, completed).apply()
+        _onboardingCompleted.value = completed
     }
 
     fun shouldShowNotification(type: NotificationType): Boolean {

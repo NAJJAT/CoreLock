@@ -1,221 +1,207 @@
 package com.privacyguard.app.ui.apps
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Android
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.privacyguard.app.R
-import com.privacyguard.app.core.stats.StatsManager
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.privacyguard.app.ui.components.PanelCard
+import com.privacyguard.app.ui.components.ScreenScaffold
+import com.privacyguard.app.ui.components.StatusPill
+import com.privacyguard.app.ui.components.ToggleChip
+import com.privacyguard.app.ui.components.formatBytes
+import com.privacyguard.app.ui.theme.PgAccent
+import com.privacyguard.app.ui.theme.PgAccentDim
+import com.privacyguard.app.ui.theme.PgBackgroundAlt
+import com.privacyguard.app.ui.theme.PgDanger
+import com.privacyguard.app.ui.theme.PgDangerDim
+import com.privacyguard.app.ui.theme.PgInfo
+import com.privacyguard.app.ui.theme.PgPanelMuted
+import com.privacyguard.app.ui.theme.PgPanelRaised
+import com.privacyguard.app.ui.theme.PgText
+import com.privacyguard.app.ui.theme.PgTextFaint
+import com.privacyguard.app.ui.theme.PgTextMuted
+import com.privacyguard.app.ui.theme.PgWarning
+import com.privacyguard.app.ui.theme.PgWarningDim
 
-data class AppItem(
-    val name: String,
-    val packageName: String,
-    val isSystem: Boolean,
-    val isBlocked: Boolean,
-    val trackers: Int,
-    val dataUsed: String
-)
-
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun AppsScreen() {
-    var searchQuery by remember { mutableStateOf("") }
-    var showSystemApps by remember { mutableStateOf(true) }
-    val stats by StatsManager.snapshot.collectAsState()
-    val installedApps by remember(stats.appStats) {
-        mutableStateOf(
-            stats.appStats.map { appStat ->
-                AppItem(
-                    name = appStat.appName,
-                    packageName = appStat.packageName,
-                    isSystem = false,
-                    isBlocked = appStat.blockedCount > 0,
-                    trackers = appStat.blockedCount.toInt(),
-                    dataUsed = formatBytes(appStat.bytesTransferred)
+fun AppsScreen(
+    onAppClick: (packageName: String, appName: String) -> Unit = { _, _ -> },
+    viewModel: AppsViewModel = viewModel()
+) {
+    val apps by viewModel.apps.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val highRiskOnly by viewModel.highRiskOnly.collectAsState()
+    val blockedOnly by viewModel.blockedOnly.collectAsState()
+
+    val filteredApps = apps.filter { app ->
+        val matchesQuery = searchQuery.isBlank() ||
+            app.appName.contains(searchQuery, true) ||
+            app.packageName.contains(searchQuery, true)
+        val matchesRisk = !highRiskOnly || app.maxRiskScore >= 70
+        val matchesBlocked = !blockedOnly || app.isBlocked
+        matchesQuery && matchesRisk && matchesBlocked
+    }
+
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item {
+            ScreenScaffold(
+                title = "Apps",
+                subtitle = "Per-app privacy risk and traffic visibility",
+                badge = "${apps.count { it.maxRiskScore >= 70 }} HIGH RISK"
+            ) {
+                SearchShell(
+                    query = searchQuery,
+                    onValueChange = viewModel::setSearchQuery
                 )
-            }
-        )
-    }
-
-    val filteredApps = installedApps.filter { app ->
-        (app.name.contains(searchQuery, ignoreCase = true) ||
-                app.packageName.contains(searchQuery, ignoreCase = true)) &&
-                (showSystemApps || !app.isSystem)
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.apps), fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                ),
-                actions = {
-                    IconButton(onClick = { showSystemApps = !showSystemApps }) {
-                        Icon(
-                            if (showSystemApps) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = stringResource(R.string.system_apps)
-                        )
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip("All apps", !highRiskOnly && !blockedOnly) {
+                        viewModel.setHighRiskOnly(false)
+                        viewModel.setBlockedOnly(false)
+                    }
+                    FilterChip("High risk", highRiskOnly, PgDanger, PgDangerDim) {
+                        viewModel.setHighRiskOnly(!highRiskOnly)
+                    }
+                    FilterChip("Blocked", blockedOnly, PgWarning, PgWarningDim) {
+                        viewModel.setBlockedOnly(!blockedOnly)
                     }
                 }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Search bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                placeholder = { Text(stringResource(R.string.search_apps)) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                shape = RoundedCornerShape(24.dp),
-                singleLine = true
-            )
-
-            // Quick stats
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    StatValue(stringResource(R.string.apps_count), filteredApps.size.toString(), Color(0xFF2196F3))
-                    StatValue(stringResource(R.string.blocked_count), filteredApps.count { it.isBlocked }.toString(), Color(0xFFF44336))
-                    StatValue(stringResource(R.string.trackers_count), filteredApps.sumOf { it.trackers }.toString(), Color(0xFFFF9800))
-                }
-            }
-
-            // App list
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                items(filteredApps) { app ->
-                    AppCard(app = app)
-                }
             }
         }
-    }
-}
 
-private fun formatBytes(bytes: Long): String {
-    return when {
-        bytes >= 1024L * 1024L * 1024L -> String.format("%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0))
-        bytes >= 1024L * 1024L -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
-        bytes >= 1024L -> String.format("%.1f KB", bytes / 1024.0)
-        else -> "$bytes B"
+        items(filteredApps) { app ->
+            val (riskLabel, tint, bg) = when {
+                app.maxRiskScore >= 70 -> Triple("HIGH", PgDanger, PgDangerDim)
+                app.maxRiskScore >= 40 -> Triple("MED", PgWarning, PgWarningDim)
+                else -> Triple("LOW", PgAccent, PgAccentDim)
+            }
+            PanelCard(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .clickable { onAppClick(app.packageName, app.appName) }
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(PgPanelMuted, RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Android, contentDescription = null, tint = PgInfo, modifier = Modifier.size(22.dp))
+                    }
+                    Spacer(modifier = Modifier.size(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                app.appName,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = PgText,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            StatusPill(riskLabel, bg, tint)
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            app.packageName,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = PgTextFaint,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            "${app.totalDestinations} destinations · ${app.suspiciousCount} suspicious" +
+                                if (app.cleartextCount > 0) " · ${app.cleartextCount} cleartext" else "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = PgTextMuted
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp)
+                                .background(PgBackgroundAlt, RoundedCornerShape(999.dp))
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth((app.maxRiskScore / 100f).coerceAtLeast(0.08f))
+                                    .height(4.dp)
+                                    .background(tint, RoundedCornerShape(999.dp))
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.size(10.dp))
+                    Column(horizontalAlignment = Alignment.End) {
+                        Box(modifier = Modifier.clickable {
+                            viewModel.togglePackageBlocked(app.packageName, !app.isBlocked)
+                        }) {
+                            ToggleChip(checked = !app.isBlocked)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(formatBytes(app.totalBytesOut), style = MaterialTheme.typography.labelMedium, color = PgTextMuted)
+                    }
+                }
+            }
+        }
+        item { Spacer(modifier = Modifier.height(8.dp)) }
     }
 }
 
 @Composable
-fun StatValue(label: String, value: String, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = value, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = color)
-        Text(text = label, fontSize = 11.sp, color = Color.Gray)
-    }
-}
-
-@Composable
-fun AppCard(app: AppItem) {
-    var isBlocked by remember { mutableStateOf(app.isBlocked) }
-
-    Card(
+private fun SearchShell(query: String, onValueChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isBlocked) Color(0xFFF44336).copy(alpha = 0.1f)
-            else MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = RoundedCornerShape(10.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // App icon
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Apps,
-                    contentDescription = null,
-                    modifier = Modifier.size(28.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // App info
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = app.name, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                Text(text = app.packageName, fontSize = 11.sp, color = Color.Gray)
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    AppChip("${app.trackers} ${stringResource(R.string.trackers_count)}", Color(0xFFFF9800))
-                    AppChip(app.dataUsed, Color(0xFF2196F3))
-                }
-            }
-
-            // Block button
-            IconButton(onClick = { isBlocked = !isBlocked }) {
-                Icon(
-                    imageVector = if (isBlocked) Icons.Default.Block else Icons.Default.LockOpen,
-                    contentDescription = null,
-                    tint = if (isBlocked) Color(0xFFF44336) else Color(0xFF4CAF50)
-                )
-            }
-        }
-    }
+        placeholder = { Text("Search app or package...", color = PgTextFaint) },
+        leadingIcon = {
+            Icon(Icons.Default.Search, contentDescription = null, tint = PgTextFaint, modifier = Modifier.size(16.dp))
+        },
+        singleLine = true,
+        shape = RoundedCornerShape(16.dp)
+    )
 }
 
 @Composable
-fun AppChip(text: String, color: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(color)
+private fun FilterChip(label: String, active: Boolean, activeColor: Color = PgAccent, activeBackground: Color = PgAccentDim, onClick: () -> Unit) {
+    Box(modifier = Modifier.clickable(onClick = onClick)) {
+        StatusPill(
+            text = label,
+            background = if (active) activeBackground else PgBackgroundAlt,
+            content = if (active) activeColor else PgTextMuted
         )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(text = text, fontSize = 11.sp, color = Color.Gray)
     }
 }

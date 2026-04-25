@@ -75,7 +75,7 @@ interface BlocklistDao {
     @Query("DELETE FROM blocklist WHERE source = :source")
     suspend fun deleteBySource(source: String)
     
-    /**
+/**
      * Deletes old entries (older than specified days)
      */
     @Query("DELETE FROM blocklist WHERE lastUpdated < :cutoff")
@@ -92,6 +92,12 @@ interface BlocklistDao {
      */
     @Query("SELECT COUNT(*) FROM blocklist WHERE isEnabled = 1")
     suspend fun getSize(): Int
+    
+    /**
+     * Gets total count
+     */
+    @Query("SELECT COUNT(*) FROM blocklist")
+    suspend fun count(): Int
     
     /**
      * Gets statistics by source
