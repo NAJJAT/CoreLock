@@ -1,20 +1,20 @@
 -- Merging decision tree log ---
 provider#androidx.core.content.FileProvider
-INJECTED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:91:9-99:20
+INJECTED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:96:9-104:20
 	android:grantUriPermissions
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:95:13-47
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:100:13-47
 	android:authorities
 		INJECTED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:93:13-64
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:98:13-64
 	android:exported
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:94:13-37
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:99:13-37
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:92:13-62
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:97:13-62
 manifest
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:2:1-103:12
-INJECTED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:2:1-103:12
-INJECTED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:2:1-103:12
-INJECTED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:2:1-103:12
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:2:1-108:12
+INJECTED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:2:1-108:12
+INJECTED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:2:1-108:12
+INJECTED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:2:1-108:12
 MERGED from [androidx.navigation:navigation-runtime-android:2.9.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\f51d542d659e9c2965360326211a8c8d\transformed\navigation-runtime-release\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.navigation:navigation-common-android:2.9.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\d8c63b17f36ed3afcec88aae65567593\transformed\navigation-common-release\AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.navigation:navigation-compose-android:2.9.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\56771c832368f4416bc8a2ff33a3cf1f\transformed\navigation-compose-release\AndroidManifest.xml:2:1-7:12
@@ -112,55 +112,67 @@ MERGED from [androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.
 MERGED from [androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:24:5-79
 	android:name
 		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:7:22-76
+uses-permission#android.permission.ACCESS_WIFI_STATE
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:8:5-76
+	android:name
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:8:22-73
 uses-permission#android.permission.CHANGE_NETWORK_STATE
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:8:5-79
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:9:5-79
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:8:22-76
-uses-permission#android.permission.FOREGROUND_SERVICE
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:11:5-77
-MERGED from [androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:26:5-77
-MERGED from [androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:26:5-77
-	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:11:22-74
-uses-permission#android.permission.FOREGROUND_SERVICE_SPECIAL_USE
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:12:5-89
-	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:12:22-86
-uses-permission#android.permission.WAKE_LOCK
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:15:5-68
-MERGED from [androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:23:5-68
-MERGED from [androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:23:5-68
-	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:15:22-65
-uses-permission#android.permission.PACKAGE_USAGE_STATS
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:18:5-20:47
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:9:22-76
+uses-permission#android.permission.QUERY_ALL_PACKAGES
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:10:5-12:53
 	tools:ignore
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:20:9-44
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:12:9-50
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:19:9-62
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:11:9-61
+uses-permission#android.permission.FOREGROUND_SERVICE
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:15:5-77
+MERGED from [androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:26:5-77
+MERGED from [androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:26:5-77
+	android:name
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:15:22-74
+uses-permission#android.permission.FOREGROUND_SERVICE_SPECIAL_USE
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:16:5-89
+	android:name
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:16:22-86
+uses-permission#android.permission.WAKE_LOCK
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:19:5-68
+MERGED from [androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:23:5-68
+MERGED from [androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:23:5-68
+	android:name
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:19:22-65
+uses-permission#android.permission.PACKAGE_USAGE_STATS
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:22:5-24:47
+	tools:ignore
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:23:9-62
 uses-permission#android.permission.RECEIVE_BOOT_COMPLETED
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:23:5-81
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:27:5-81
 MERGED from [androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:25:5-81
 MERGED from [androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:25:5-81
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:23:22-78
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:27:22-78
 uses-permission#android.permission.WRITE_EXTERNAL_STORAGE
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:26:5-28:38
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:30:5-32:38
 	android:maxSdkVersion
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:28:9-35
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:32:9-35
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:27:9-65
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:31:9-65
 uses-permission#android.permission.READ_EXTERNAL_STORAGE
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:29:5-80
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:33:5-35:38
+	android:maxSdkVersion
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:35:9-35
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:29:22-77
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:34:9-64
 uses-permission#android.permission.POST_NOTIFICATIONS
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:32:5-77
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:38:5-77
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:32:22-74
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:38:22-74
 application
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:34:5-101:19
-INJECTED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:34:5-101:19
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:40:5-106:19
+INJECTED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:40:5-106:19
 MERGED from [androidx.compose.ui:ui-tooling-android:1.10.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c797993b464714f603fe934d8314b97d\transformed\ui-tooling\AndroidManifest.xml:22:5-26:19
 MERGED from [androidx.compose.ui:ui-tooling-android:1.10.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c797993b464714f603fe934d8314b97d\transformed\ui-tooling\AndroidManifest.xml:22:5-26:19
 MERGED from [androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:28:5-81:19
@@ -188,93 +200,91 @@ MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\oo
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.18.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\2813150418e210db91790f3952f818ce\transformed\core-1.18.0\AndroidManifest.xml:28:18-86
 	android:supportsRtl
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:42:9-35
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:48:9-35
 	android:label
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:40:9-41
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:46:9-41
 	android:fullBackupContent
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:38:9-54
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:44:9-54
 	android:roundIcon
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:41:9-54
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:47:9-54
 	android:icon
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:39:9-43
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:45:9-43
 	android:allowBackup
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:36:9-35
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:42:9-35
 	android:theme
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:43:9-50
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:49:9-50
 	android:dataExtractionRules
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:37:9-65
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:43:9-65
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:35:9-48
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:41:9-48
 activity#com.privacyguard.app.MainActivity
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:45:9-54:20
-	android:label
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:48:13-45
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:51:9-59:20
 	android:exported
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:47:13-36
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:53:13-36
 	android:theme
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:49:13-54
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:54:13-54
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:46:13-41
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:52:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:50:13-53:29
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:55:13-58:29
 action#android.intent.action.MAIN
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:51:17-69
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:56:17-69
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:51:25-66
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:56:25-66
 category#android.intent.category.LAUNCHER
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:52:17-77
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:57:17-77
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:52:27-74
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:57:27-74
 service#com.privacyguard.platform.android.PrivacyVpnService
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:61:9-73:19
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:66:9-78:19
 	android:exported
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:63:13-37
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:68:13-37
 	android:permission
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:65:13-69
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:70:13-69
 	android:foregroundServiceType
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:64:13-55
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:69:13-55
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:62:13-79
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:67:13-79
 intent-filter#action:name:android.net.VpnService
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:66:13-68:29
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:71:13-73:29
 action#android.net.VpnService
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:67:17-65
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:72:17-65
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:67:25-62
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:72:25-62
 property#android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:70:13-72:39
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:75:13-77:39
 	android:value
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:72:17-36
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:77:17-36
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:71:17-76
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:76:17-76
 receiver#com.privacyguard.app.vpn.BootReceiver
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:76:9-83:20
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:81:9-88:20
 	android:exported
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:78:13-36
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:83:13-36
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:77:13-45
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:82:13-45
 intent-filter#action:name:android.intent.action.BOOT_COMPLETED+action:name:android.intent.action.QUICKBOOT_POWERON
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:79:13-82:29
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:84:13-87:29
 action#android.intent.action.BOOT_COMPLETED
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:80:17-79
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:85:17-79
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:80:25-76
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:85:25-76
 action#android.intent.action.QUICKBOOT_POWERON
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:81:17-82
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:86:17-82
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:81:25-79
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:86:25-79
 receiver#com.privacyguard.app.core.utils.NotificationDismissReceiver
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:86:9-88:40
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:91:9-93:40
 	android:exported
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:88:13-37
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:93:13-37
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:87:13-67
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:92:13-67
 meta-data#android.support.FILE_PROVIDER_PATHS
-ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:96:13-98:54
+ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:101:13-103:54
 	android:resource
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:98:17-51
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:103:17-51
 	android:name
-		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:97:17-67
+		ADDED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:102:17-67
 uses-sdk
 INJECTED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml

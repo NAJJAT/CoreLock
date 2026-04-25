@@ -51,8 +51,12 @@ public class AppDatabase_Impl : AppDatabase() {
     DnsAnomalyDao_Impl(this)
   }
 
+  private val _networkTrustDao: Lazy<NetworkTrustDao> = lazy {
+    NetworkTrustDao_Impl(this)
+  }
+
   protected override fun createOpenDelegate(): RoomOpenDelegate {
-    val _openDelegate: RoomOpenDelegate = object : RoomOpenDelegate(4, "4e79483fdbe0acccffe223c81fbc4ebc", "e4ee88f231b730e804c25e91b776c511") {
+    val _openDelegate: RoomOpenDelegate = object : RoomOpenDelegate(5, "c77f59f99846496e924a77194d58a6e2", "47abbb0c938411a16495b5095393f5b8") {
       public override fun createAllTables(connection: SQLiteConnection) {
         connection.execSQL("CREATE TABLE IF NOT EXISTS `connections` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `appUid` INTEGER NOT NULL, `appName` TEXT NOT NULL, `packageName` TEXT NOT NULL, `destinationIp` TEXT NOT NULL, `destinationPort` INTEGER NOT NULL, `destinationIpv6` TEXT, `isIPv6` INTEGER NOT NULL, `domain` TEXT, `sniHostname` TEXT, `protocol` TEXT NOT NULL, `bytesSent` INTEGER NOT NULL, `bytesReceived` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `durationMs` INTEGER NOT NULL, `wasBlocked` INTEGER NOT NULL, `encryptionStatus` TEXT NOT NULL, `tlsVersion` TEXT, `wasBackground` INTEGER NOT NULL)")
         connection.execSQL("CREATE TABLE IF NOT EXISTS `rules` (`id` TEXT NOT NULL, `type` TEXT NOT NULL, `value` TEXT NOT NULL, `matchUid` INTEGER, `matchPackage` TEXT, `matchDomain` TEXT, `matchIp` TEXT, `matchPort` INTEGER, `matchProtocol` TEXT, `matchEncryption` TEXT, `action` TEXT NOT NULL, `enabled` INTEGER NOT NULL, `priority` INTEGER NOT NULL, `description` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `lastModified` INTEGER NOT NULL, `hitCount` INTEGER NOT NULL, `lastHit` INTEGER, PRIMARY KEY(`id`))")
@@ -64,8 +68,9 @@ public class AppDatabase_Impl : AppDatabase() {
         connection.execSQL("CREATE TABLE IF NOT EXISTS `dns_anomalies` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `timestamp` INTEGER NOT NULL, `packageName` TEXT NOT NULL, `domain` TEXT NOT NULL, `anomalyType` TEXT NOT NULL, `description` TEXT NOT NULL, `severity` INTEGER NOT NULL)")
         connection.execSQL("CREATE INDEX IF NOT EXISTS `index_dns_anomalies_timestamp` ON `dns_anomalies` (`timestamp`)")
         connection.execSQL("CREATE INDEX IF NOT EXISTS `index_dns_anomalies_packageName` ON `dns_anomalies` (`packageName`)")
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `network_trust` (`networkKey` TEXT NOT NULL, `networkLabel` TEXT NOT NULL, `trustScore` INTEGER NOT NULL, `trustLevel` TEXT NOT NULL, `cleartextCount` INTEGER NOT NULL, `dnsAnomalyCount` INTEGER NOT NULL, `weakTlsCount` INTEGER NOT NULL, `blockedCount` INTEGER NOT NULL, `lastSeen` INTEGER NOT NULL, PRIMARY KEY(`networkKey`))")
         connection.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)")
-        connection.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4e79483fdbe0acccffe223c81fbc4ebc')")
+        connection.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c77f59f99846496e924a77194d58a6e2')")
       }
 
       public override fun dropAllTables(connection: SQLiteConnection) {
@@ -75,6 +80,7 @@ public class AppDatabase_Impl : AppDatabase() {
         connection.execSQL("DROP TABLE IF EXISTS `app_stats`")
         connection.execSQL("DROP TABLE IF EXISTS `connection_profiles`")
         connection.execSQL("DROP TABLE IF EXISTS `dns_anomalies`")
+        connection.execSQL("DROP TABLE IF EXISTS `network_trust`")
       }
 
       public override fun onCreate(connection: SQLiteConnection) {
@@ -259,6 +265,29 @@ public class AppDatabase_Impl : AppDatabase() {
               | Found:
               |""".trimMargin() + _existingDnsAnomalies)
         }
+        val _columnsNetworkTrust: MutableMap<String, TableInfo.Column> = mutableMapOf()
+        _columnsNetworkTrust.put("networkKey", TableInfo.Column("networkKey", "TEXT", true, 1, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsNetworkTrust.put("networkLabel", TableInfo.Column("networkLabel", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsNetworkTrust.put("trustScore", TableInfo.Column("trustScore", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsNetworkTrust.put("trustLevel", TableInfo.Column("trustLevel", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsNetworkTrust.put("cleartextCount", TableInfo.Column("cleartextCount", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsNetworkTrust.put("dnsAnomalyCount", TableInfo.Column("dnsAnomalyCount", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsNetworkTrust.put("weakTlsCount", TableInfo.Column("weakTlsCount", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsNetworkTrust.put("blockedCount", TableInfo.Column("blockedCount", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsNetworkTrust.put("lastSeen", TableInfo.Column("lastSeen", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        val _foreignKeysNetworkTrust: MutableSet<TableInfo.ForeignKey> = mutableSetOf()
+        val _indicesNetworkTrust: MutableSet<TableInfo.Index> = mutableSetOf()
+        val _infoNetworkTrust: TableInfo = TableInfo("network_trust", _columnsNetworkTrust, _foreignKeysNetworkTrust, _indicesNetworkTrust)
+        val _existingNetworkTrust: TableInfo = read(connection, "network_trust")
+        if (!_infoNetworkTrust.equals(_existingNetworkTrust)) {
+          return RoomOpenDelegate.ValidationResult(false, """
+              |network_trust(com.privacyguard.app.data.db.NetworkTrustEntity).
+              | Expected:
+              |""".trimMargin() + _infoNetworkTrust + """
+              |
+              | Found:
+              |""".trimMargin() + _existingNetworkTrust)
+        }
         return RoomOpenDelegate.ValidationResult(true, null)
       }
     }
@@ -268,11 +297,11 @@ public class AppDatabase_Impl : AppDatabase() {
   protected override fun createInvalidationTracker(): InvalidationTracker {
     val _shadowTablesMap: MutableMap<String, String> = mutableMapOf()
     val _viewTables: MutableMap<String, Set<String>> = mutableMapOf()
-    return InvalidationTracker(this, _shadowTablesMap, _viewTables, "connections", "rules", "blocklist", "app_stats", "connection_profiles", "dns_anomalies")
+    return InvalidationTracker(this, _shadowTablesMap, _viewTables, "connections", "rules", "blocklist", "app_stats", "connection_profiles", "dns_anomalies", "network_trust")
   }
 
   public override fun clearAllTables() {
-    super.performClear(false, "connections", "rules", "blocklist", "app_stats", "connection_profiles", "dns_anomalies")
+    super.performClear(false, "connections", "rules", "blocklist", "app_stats", "connection_profiles", "dns_anomalies", "network_trust")
   }
 
   protected override fun getRequiredTypeConverterClasses(): Map<KClass<*>, List<KClass<*>>> {
@@ -283,6 +312,7 @@ public class AppDatabase_Impl : AppDatabase() {
     _typeConvertersMap.put(AppStatsDao::class, AppStatsDao_Impl.getRequiredConverters())
     _typeConvertersMap.put(ConnectionProfileDao::class, ConnectionProfileDao_Impl.getRequiredConverters())
     _typeConvertersMap.put(DnsAnomalyDao::class, DnsAnomalyDao_Impl.getRequiredConverters())
+    _typeConvertersMap.put(NetworkTrustDao::class, NetworkTrustDao_Impl.getRequiredConverters())
     return _typeConvertersMap
   }
 
@@ -307,4 +337,6 @@ public class AppDatabase_Impl : AppDatabase() {
   public override fun connectionProfileDao(): ConnectionProfileDao = _connectionProfileDao.value
 
   public override fun dnsAnomalyDao(): DnsAnomalyDao = _dnsAnomalyDao.value
+
+  public override fun networkTrustDao(): NetworkTrustDao = _networkTrustDao.value
 }

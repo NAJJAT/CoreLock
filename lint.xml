@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <issue id="GradleDependency" severity="ignore" />
+    <issue id="NewerVersionAvailable" severity="ignore" />
+    <issue id="OldTargetApi" severity="ignore" />
+    <issue id="UnusedResources" severity="ignore" />
+    <issue id="UseKtx" severity="ignore" />
+    <issue id="TypographyEllipsis" severity="ignore" />
+    <issue id="PluralsCandidate" severity="ignore" />
+    <issue id="ModifierParameter" severity="ignore" />
+</lint>

@@ -3,6 +3,7 @@ package com.privacyguard.app.data.local.preferences
 import android.content.Context
 import android.content.SharedPreferences
 import com.privacyguard.app.domain.model.NotificationType
+import com.privacyguard.core.filter.FilterEngine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,6 +27,7 @@ class SettingsPreferences private constructor(context: Context) {
         private const val KEY_RETENTION_DAYS             = "retention_days"
         private const val KEY_UPSTREAM_DNS               = "upstream_dns"
         private const val KEY_ONBOARDING_COMPLETED       = "onboarding_completed"
+        private const val KEY_PROTECTION_LEVEL           = "protection_level"
 
         const val DOH_CLOUDFLARE = "https://cloudflare-dns.com/dns-query"
         const val DOH_GOOGLE     = "https://dns.google/dns-query"
@@ -59,7 +61,7 @@ class SettingsPreferences private constructor(context: Context) {
     private val _killSwitchNotifications = MutableStateFlow(prefs.getBoolean(KEY_KILL_SWITCH_NOTIFICATIONS, true))
     val killSwitchNotifications: StateFlow<Boolean> = _killSwitchNotifications.asStateFlow()
 
-    private val _killSwitchEnabled = MutableStateFlow(prefs.getBoolean(KEY_KILL_SWITCH_ENABLED, false))
+    private val _killSwitchEnabled = MutableStateFlow(prefs.getBoolean(KEY_KILL_SWITCH_ENABLED, true))
     val killSwitchEnabled: StateFlow<Boolean> = _killSwitchEnabled.asStateFlow()
 
     private val _dohEnabled = MutableStateFlow(prefs.getBoolean(KEY_DOH_ENABLED, false))
@@ -76,6 +78,12 @@ class SettingsPreferences private constructor(context: Context) {
 
     private val _onboardingCompleted = MutableStateFlow(prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false))
     val onboardingCompleted: StateFlow<Boolean> = _onboardingCompleted.asStateFlow()
+
+    private val _protectionLevel = MutableStateFlow(
+        prefs.getString(KEY_PROTECTION_LEVEL, FilterEngine.BlockLevel.STANDARD.name)
+            ?: FilterEngine.BlockLevel.STANDARD.name
+    )
+    val protectionLevel: StateFlow<String> = _protectionLevel.asStateFlow()
 
     fun setNotificationsEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_NOTIFICATIONS_ENABLED, enabled).apply()
@@ -135,6 +143,11 @@ class SettingsPreferences private constructor(context: Context) {
     fun setOnboardingCompleted(completed: Boolean) {
         prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, completed).apply()
         _onboardingCompleted.value = completed
+    }
+
+    fun setProtectionLevel(level: String) {
+        prefs.edit().putString(KEY_PROTECTION_LEVEL, level).apply()
+        _protectionLevel.value = level
     }
 
     fun shouldShowNotification(type: NotificationType): Boolean {

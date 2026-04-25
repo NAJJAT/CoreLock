@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.asStateFlow
 data class ActiveConnectionInfo(
     val id:              String,
     val appName:         String,
+    val packageName:     String = "",
     val destination:     String,
     val destinationIp:   String,
     val destinationPort: Int,
@@ -43,6 +44,8 @@ data class StatsSnapshot(
     val blockedToday:        Long                    = 0L,
     val dataSavedBytes:      Long                    = 0L,
     val totalPackets:        Long                    = 0L,
+    val ipv6PacketsBlocked:  Long                    = 0L,
+    val ipv6BytesBlocked:    Long                    = 0L,
     val totalTrackersBlocked: Int                   = 0,
     val activeConnections:   List<ActiveConnectionInfo> = emptyList(),
     val recentActivity:      List<ActivityInfo>     = emptyList(),
@@ -72,6 +75,14 @@ object StatsManager {
         _snapshot.value = _snapshot.value.copy(
             totalPackets = _snapshot.value.totalPackets + 1,
             dataSavedBytes = _snapshot.value.dataSavedBytes + bytes,
+        )
+    }
+
+    fun recordIpv6Blocked(bytes: Long) {
+        _snapshot.value = _snapshot.value.copy(
+            totalPackets = _snapshot.value.totalPackets + 1,
+            ipv6PacketsBlocked = _snapshot.value.ipv6PacketsBlocked + 1,
+            ipv6BytesBlocked = _snapshot.value.ipv6BytesBlocked + bytes,
         )
     }
 

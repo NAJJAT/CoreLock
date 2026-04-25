@@ -244,6 +244,6 @@ data class WeeklyReport(
         get() = when {
             totalDataSaved < 1024 -> "$totalDataSaved B"
             totalDataSaved < 1024 * 1024 -> "${totalDataSaved / 1024} KB"
-            else -> String.format("%.1f MB", totalDataSaved / (1024.0 * 1024.0))
+            else -> String.format(Locale.US, "%.1f MB", totalDataSaved / (1024.0 * 1024.0))
         }
 }

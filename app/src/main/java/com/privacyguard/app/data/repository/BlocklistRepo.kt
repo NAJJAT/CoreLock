@@ -42,8 +42,11 @@ class BlocklistRepo(private val blocklistDao: BlocklistDao) {
 
     companion object {
         const val SOURCE_EASYLIST = "EasyList"
+        const val SOURCE_EASYPRIVACY = "EasyPrivacy"
         const val SOURCE_STEVEN_BLACK = "StevenBlack"
         const val SOURCE_OISD = "OISD"
+        const val SOURCE_HAGEZI = "Hagezi"
+        const val SOURCE_BUILTIN = "BuiltIn"
         const val CAT_ADS = "ads"
         const val CAT_TRACKERS = "trackers"
         const val CAT_MALWARE = "malware"

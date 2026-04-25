@@ -12,7 +12,8 @@
       "Bash(./gradlew assembleDebug)",
       "mcp__ide__getDiagnostics",
       "Bash(python3 *)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(./gradlew compileDebugKotlin)"
     ]
   }
 }

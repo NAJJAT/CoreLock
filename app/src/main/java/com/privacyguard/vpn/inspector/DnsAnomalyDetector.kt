@@ -18,6 +18,7 @@ class DnsAnomalyDetector {
     enum class AnomalyType {
         DNS_TUNNELING,
         DGA_BEACON,
+        HIGH_ENTROPY,
         HIGH_FREQUENCY,
         EXCESSIVE_SUBDOMAINS,
         LONG_LABEL,
@@ -84,6 +85,24 @@ class DnsAnomalyDetector {
             )
         }
 
+        val registrableLabel = domain.substringBefore('.')
+        val entropy = shannonEntropy(registrableLabel)
+        val digitRatio = registrableLabel.count { it.isDigit() }.toFloat() / registrableLabel.length.coerceAtLeast(1)
+        if (
+            registrableLabel.length >= MIN_DGA_LABEL_LENGTH &&
+            entropy >= HIGH_ENTROPY_THRESHOLD &&
+            digitRatio >= MIN_DGA_DIGIT_RATIO
+        ) {
+            anomalies += Anomaly(
+                timestamp   = now,
+                packageName = pkgKey,
+                domain      = domain,
+                type        = AnomalyType.HIGH_ENTROPY,
+                description = "High entropy DNS label: ${"%.2f".format(entropy)} bits/char",
+                severity    = 8,
+            )
+        }
+
         // High frequency: >20 queries in last 10 seconds
         val windowStart = now - 10_000L
         val recentCount = history.count { (ts, _) -> ts > windowStart }
@@ -98,10 +117,38 @@ class DnsAnomalyDetector {
             )
         }
 
+        val sameDomainCount = history.count { (ts, seenDomain) -> ts > windowStart && seenDomain == domain }
+        if (sameDomainCount >= BEACON_QUERY_THRESHOLD) {
+            anomalies += Anomaly(
+                timestamp   = now,
+                packageName = pkgKey,
+                domain      = domain,
+                type        = AnomalyType.DGA_BEACON,
+                description = "$sameDomainCount repeated DNS lookups in 10 seconds",
+                severity    = 7,
+            )
+        }
+
         detectedAnomalies.addAndGet(anomalies.size.toLong())
         anomalies.forEach { anomalyListener?.onAnomaly(it) }
         return anomalies
     }
 
     fun seenDomainCount(): Int = seenDomains.size
+
+    companion object {
+        const val HIGH_ENTROPY_THRESHOLD = 3.4
+        const val MIN_DGA_LABEL_LENGTH = 12
+        const val MIN_DGA_DIGIT_RATIO = 0.15f
+        const val BEACON_QUERY_THRESHOLD = 8
+
+        fun shannonEntropy(value: String): Double {
+            if (value.isBlank()) return 0.0
+            val frequencies = value.groupingBy { it }.eachCount()
+            return frequencies.values.sumOf { count ->
+                val p = count.toDouble() / value.length.toDouble()
+                -p * kotlin.math.log2(p)
+            }
+        }
+    }
 }

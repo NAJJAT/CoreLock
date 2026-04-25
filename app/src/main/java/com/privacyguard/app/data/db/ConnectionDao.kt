@@ -46,6 +46,14 @@ interface ConnectionDao {
         LIMIT 100
     """)
     suspend fun getDomainsForPackage(packageName: String): List<TopBlockedDomain>
+
+    @Query("""
+        SELECT * FROM connections
+        WHERE packageName = :packageName
+        ORDER BY timestamp DESC
+        LIMIT :limit
+    """)
+    suspend fun getRecentConnectionsForPackage(packageName: String, limit: Int = 40): List<ConnectionEntity>
     
     /**
      * Gets blocked connections count for today

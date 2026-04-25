@@ -1,11 +1,13 @@
 package com.privacyguard.ui
 
 import androidx.compose.foundation.BorderStroke
+import android.net.Uri
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Icon
@@ -20,7 +22,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -30,6 +34,7 @@ import androidx.navigation.compose.rememberNavController
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
 import com.privacyguard.app.ui.apps.AppDetailScreen
 import com.privacyguard.app.ui.apps.AppsScreen
+import com.privacyguard.app.ui.ads.AdsScreen
 import com.privacyguard.app.ui.connections.ConnectionsScreen
 import com.privacyguard.app.ui.dashboard.DashboardScreen
 import com.privacyguard.app.ui.onboarding.OnboardingScreen
@@ -45,10 +50,11 @@ private data class NavTab(val route: String, val label: String, val icon: ImageV
 
 private val tabs = listOf(
     NavTab("dashboard", "Home", Icons.Default.Home),
-    NavTab("connections", "Connections", Icons.Default.Wifi),
+    NavTab("connections", "Traffic", Icons.Default.Wifi),
     NavTab("apps", "Apps", Icons.Default.Apps),
+    NavTab("ads", "Ads", Icons.Default.MonetizationOn),
     NavTab("statistics", "Stats", Icons.Default.BarChart),
-    NavTab("settings", "Settings", Icons.Default.Settings),
+    NavTab("settings", "Prefs", Icons.Default.Settings),
 )
 
 private val topLevelRoutes = tabs.map { it.route }.toSet()
@@ -98,7 +104,15 @@ fun AppNavHost(
                                 }
                             },
                             icon = { Icon(tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label) },
+                            label = {
+                                Text(
+                                    text = tab.label,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Clip,
+                                    softWrap = false,
+                                    fontSize = 11.sp,
+                                )
+                            },
                             alwaysShowLabel = true,
                             colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
                                 selectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
@@ -136,9 +150,10 @@ fun AppNavHost(
             composable("connections") { ConnectionsScreen() }
             composable("apps") {
                 AppsScreen(onAppClick = { pkg, name ->
-                    navController.navigate("appDetail/$pkg?appName=$name")
+                    navController.navigate("appDetail/${Uri.encode(pkg)}?appName=${Uri.encode(name)}")
                 })
             }
+            composable("ads") { AdsScreen() }
             composable("statistics") { StatisticsScreen() }
             composable("settings") { SettingsScreen(onLanguageChanged = {}) }
             composable("appDetail/{packageName}?appName={appName}") { backStack ->

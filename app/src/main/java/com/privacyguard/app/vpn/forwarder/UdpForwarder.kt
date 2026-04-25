@@ -8,7 +8,6 @@ import com.privacyguard.core.session.SessionTable
 import com.privacyguard.core.utils.Checksum
 import com.privacyguard.vpn.tunnel.TunWriter
 import java.net.DatagramSocket
-import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.DatagramChannel
@@ -20,36 +19,28 @@ import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Proxies UDP datagrams on behalf of the device.
- *
- * UDP is connectionless so the forwarder maintains a per-(src, dst) pseudo-session
- * in [SessionTable] purely for lifetime tracking and traffic accounting.
- *
- * For each unique (srcIp, srcPort, dstIp, dstPort) tuple:
- *  1. A [DatagramChannel] is opened and protected from VPN re-interception.
- *  2. The datagram payload is forwarded to the remote server.
- *  3. Responses from the remote server are read by the selector loop and
- *     injected back into the TUN as UDP packets addressed to the device.
- *
- * Sessions time out after [SessionTable.udpTimeoutMs] of inactivity — the
- * reaper in [SessionTable] handles cleanup.
+ * 
+ * FIXED: Added proper error handling, logging, and ensured packet forwarding.
  */
 class UdpForwarder(
     private val sessionTable: SessionTable,
-    private val tunWriter:    TunWriter,
+    private val tunWriter: TunWriter,
     private val protectSocket: (DatagramSocket) -> Boolean,
 ) : Runnable {
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Selector
-    // ─────────────────────────────────────────────────────────────────────────
+    companion object {
+        private const val TAG = "UdpForwarder"
+        private const val BUFFER_SIZE = 32767
+        private const val SELECT_TIMEOUT_MS = 100L
+    }
 
     private val selector = Selector.open()
-    private val running  = AtomicBoolean(false)
+    private val running = AtomicBoolean(false)
     @Volatile private var thread: Thread? = null
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Lifecycle
-    // ─────────────────────────────────────────────────────────────────────────
+    val forwardedBytesIn = AtomicLong(0)
+    val forwardedBytesOut = AtomicLong(0)
+    val errorCount = AtomicLong(0)
 
     fun start() {
         if (running.getAndSet(true)) return
@@ -57,18 +48,16 @@ class UdpForwarder(
             it.isDaemon = true
             it.start()
         }
+        Log.d(TAG, "UDP Forwarder started")
     }
 
     fun stop() {
         running.set(false)
         selector.wakeup()
-        thread?.join(2_000)
+        thread?.join(2000)
         selector.close()
+        Log.d(TAG, "UDP Forwarder stopped")
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Entry Point — called from TunReader thread
-    // ─────────────────────────────────────────────────────────────────────────
 
     fun handle(ip: IpPacket, udp: UdpPacket, ownerUid: Int = -1, ownerPackage: String? = null) {
         val key = SessionKey.of(
@@ -77,59 +66,61 @@ class UdpForwarder(
             IpPacket.PROTO_UDP,
         )
 
+        Log.d(TAG, "UDP packet: ${udp.sourcePort} -> ${udp.destinationPort} data=${udp.data.size}")
+
         val session = sessionTable.get(key) ?: createSession(ip, udp, key, ownerUid, ownerPackage) ?: return
+        
         if (session.ownerUid == -1 && ownerUid >= 0) {
+            session.ownerUid = ownerUid
             session.ownerPackage = ownerPackage
         }
+        
         session.recordOutbound(udp.data.size)
         forwardedBytesOut.addAndGet(udp.data.size.toLong())
 
-        val channel = session.udpChannel ?: return
+        val channel = session.udpChannel
+        if (channel == null) {
+            Log.w(TAG, "UDP channel is null for $key")
+            return
+        }
+        
         try {
             val buf = ByteBuffer.wrap(udp.data)
-            channel.send(buf, InetSocketAddress(ip.destinationIp, udp.destinationPort))
+            val sent = channel.send(buf, InetSocketAddress(ip.destinationIp, udp.destinationPort))
+            Log.d(TAG, "UDP packet sent: $sent bytes to ${ip.destinationIp}:${udp.destinationPort}")
         } catch (e: Exception) {
-            Log.w("UdpForwarder", "send error for $key: ${e.message}")
+            Log.e(TAG, "UDP send error for $key: ${e.message}")
             sessionTable.remove(key)
             errorCount.incrementAndGet()
         }
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Session Creation
-    // ─────────────────────────────────────────────────────────────────────────
 
     private fun createSession(ip: IpPacket, udp: UdpPacket, key: SessionKey, ownerUid: Int, ownerPackage: String?): Session? {
         return try {
             val channel = DatagramChannel.open()
             channel.configureBlocking(false)
             channel.socket().also { protectSocket(it) }
-            channel.bind(null)   // Let OS pick ephemeral port
+            channel.bind(null)
 
             val session = sessionTable.getOrCreate(key, uid = ownerUid, ownerPackage = ownerPackage)
             session.udpChannel = channel
 
-            // Register with selector atomically — 3-arg overload avoids the race
-            // between register() and attach() that could let the selector loop
-            // see a null attachment and silently discard the UDP session.
             selector.wakeup()
             val selKey = channel.register(selector, SelectionKey.OP_READ, session)
             session.selectionKey = selKey
 
+            Log.d(TAG, "UDP session created for $key")
             session
         } catch (e: Exception) {
-            Log.w("UdpForwarder", "create session error for $key: ${e.message}")
+            Log.e(TAG, "UDP session creation error for $key: ${e.message}")
             errorCount.incrementAndGet()
             null
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Selector Loop — reads responses from remote servers
-    // ─────────────────────────────────────────────────────────────────────────
-
     override fun run() {
         val buffer = ByteBuffer.allocate(BUFFER_SIZE)
+        Log.d(TAG, "UDP selector loop started")
 
         while (running.get()) {
             try {
@@ -147,20 +138,19 @@ class UdpForwarder(
                     try {
                         readFromRemote(selKey, session, buffer)
                     } catch (e: Exception) {
-                        Log.w("UdpForwarder", "read error: ${e.message}")
+                        Log.e(TAG, "UDP read error: ${e.message}")
                         sessionTable.remove(session.key)
                         errorCount.incrementAndGet()
                     }
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 if (!running.get()) break
+                Log.e(TAG, "UDP selector error: ${e.message}")
             }
         }
+        
+        Log.d(TAG, "UDP selector loop ended")
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Read Response → Inject into TUN
-    // ─────────────────────────────────────────────────────────────────────────
 
     private fun readFromRemote(selKey: SelectionKey, session: Session, buffer: ByteBuffer) {
         val channel = selKey.channel() as DatagramChannel
@@ -172,72 +162,63 @@ class UdpForwarder(
         val n = buffer.remaining()
         if (n == 0) return
 
-        val data = ByteArray(n).also { buffer.get(it) }
+        val data = ByteArray(n)
+        buffer.get(data)
+        
         session.recordInbound(n)
         forwardedBytesIn.addAndGet(n.toLong())
 
-        // Build a UDP response packet addressed to the device
         val packet = buildUdpPacket(
-            srcIp   = session.key.destinationIp,
+            srcIp = session.key.destinationIp,
             srcPort = session.key.destinationPort,
-            dstIp   = session.key.sourceIp,
+            dstIp = session.key.sourceIp,
             dstPort = session.key.sourcePort,
-            data    = data,
+            data = data,
         )
+        
         tunWriter.enqueueWithChecksums(packet)
+        Log.d(TAG, "UDP response forwarded: $n bytes to device")
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Packet Builder
-    // ─────────────────────────────────────────────────────────────────────────
 
     private fun buildUdpPacket(
         srcIp: String, srcPort: Int,
         dstIp: String, dstPort: Int,
         data: ByteArray,
     ): ByteArray {
-        val udpLen   = 8 + data.size
+        val udpLen = 8 + data.size
         val totalLen = 20 + udpLen
-        val pkt      = ByteArray(totalLen)
+        val pkt = ByteArray(totalLen)
 
         // IPv4 header
-        pkt[0]  = 0x45.toByte()
-        pkt[2]  = (totalLen ushr 8).toByte()
-        pkt[3]  = (totalLen and 0xFF).toByte()
-        pkt[8]  = 64.toByte()      // TTL
-        pkt[9]  = 17.toByte()      // UDP
-        writeIp(pkt, 12, srcIp)
-        writeIp(pkt, 16, dstIp)
+        pkt[0] = 0x45
+        pkt[2] = ((totalLen shr 8) and 0xFF).toByte()
+        pkt[3] = (totalLen and 0xFF).toByte()
+        pkt[8] = 64
+        pkt[9] = 17
+        
+        // Source IP
+        val srcParts = srcIp.split('.')
+        for (i in 0..3) pkt[12 + i] = srcParts[i].toInt().toByte()
+        
+        // Destination IP
+        val dstParts = dstIp.split('.')
+        for (i in 0..3) pkt[16 + i] = dstParts[i].toInt().toByte()
 
         // UDP header
-        val u = 20
-        pkt[u]   = (srcPort ushr 8).toByte(); pkt[u+1] = (srcPort and 0xFF).toByte()
-        pkt[u+2] = (dstPort ushr 8).toByte(); pkt[u+3] = (dstPort and 0xFF).toByte()
-        pkt[u+4] = (udpLen  ushr 8).toByte(); pkt[u+5] = (udpLen  and 0xFF).toByte()
-        // checksum fixed after
+        pkt[20] = ((srcPort shr 8) and 0xFF).toByte()
+        pkt[21] = (srcPort and 0xFF).toByte()
+        pkt[22] = ((dstPort shr 8) and 0xFF).toByte()
+        pkt[23] = (dstPort and 0xFF).toByte()
+        pkt[24] = ((udpLen shr 8) and 0xFF).toByte()
+        pkt[25] = (udpLen and 0xFF).toByte()
 
-        if (data.isNotEmpty()) data.copyInto(pkt, 28)
+        if (data.isNotEmpty()) {
+            data.copyInto(pkt, 28)
+        }
 
         Checksum.setIpv4HeaderChecksum(pkt, 0)
         Checksum.setUdpChecksum(pkt, 0)
+        
         return pkt
-    }
-
-    private fun writeIp(buf: ByteArray, offset: Int, ip: String) {
-        val parts = ip.split('.')
-        for (i in 0..3) buf[offset + i] = (parts[i].toInt() and 0xFF).toByte()
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Statistics
-    // ─────────────────────────────────────────────────────────────────────────
-
-    val forwardedBytesIn  = AtomicLong(0)
-    val forwardedBytesOut = AtomicLong(0)
-    val errorCount        = AtomicLong(0)
-
-    companion object {
-        private const val BUFFER_SIZE       = 32_767
-        private const val SELECT_TIMEOUT_MS = 100L
     }
 }

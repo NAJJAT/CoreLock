@@ -9,7 +9,6 @@ import android.os.Build
 import android.os.ParcelFileDescriptor
 import androidx.room.Room
 import com.privacyguard.core.filter.FilterEngine
-import com.privacyguard.core.filter.FilterRule
 import com.privacyguard.core.metadata.EncryptionStatus
 import com.privacyguard.core.metadata.MetadataEngine
 import com.privacyguard.core.packet.IpPacket
@@ -34,89 +33,85 @@ import com.privacyguard.app.core.stats.ActiveConnectionInfo
 import com.privacyguard.app.core.stats.ActivityInfo
 import com.privacyguard.app.core.stats.AppStat
 import com.privacyguard.app.core.stats.StatsManager
+import android.util.Log
 import kotlinx.coroutines.*
 import java.util.concurrent.atomic.AtomicLong
 
-/**
- * The central Android VPN service — wires all four pillars:
- *
- * ┌──────────────────────────────────────────────────────────────────────┐
- * │  PILLAR 1 — Metadata Engine                                          │
- * │    Every closed session → MetadataEngine.record()                    │
- * │    → ConnectionProfile (who connects where, how often, background?)  │
- * │                                                                       │
- * │  PILLAR 2 — DNS Shield                                               │
- * │    DnsHandler: blocklist + DnsAnomalyDetector                        │
- * │    → blocks known trackers, detects DNS tunneling / DGA              │
- * │                                                                       │
- * │  PILLAR 3 — Blocking                                                 │
- * │    FilterEngine: domain / IP / app / port rules                      │
- * │    3 levels: MINIMAL / STANDARD / STRICT                             │
- * │                                                                       │
- * │  PILLAR 4 — Encryption Enforcement                                   │
- * │    EncryptionEnforcer: port + TLS ClientHello inspection             │
- * │    → classify CLEARTEXT / WEAK_TLS / TLS / TLS_1.3                  │
- * │    → block cleartext if user enabled "HTTPS-only" rule               │
- * └──────────────────────────────────────────────────────────────────────┘
- */
 class PrivacyVpnService : VpnService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    // ── Pillar 1: Metadata ────────────────────────────────────────────────────
     private lateinit var metadataEngine: MetadataEngine
-
-    // ── Pillar 2: DNS Shield ──────────────────────────────────────────────────
-    private lateinit var dnsHandler:       DnsHandler
+    private lateinit var dnsHandler: DnsHandler
     private lateinit var dnsAnomalyDetector: DnsAnomalyDetector
-
-    // ── Pillar 3: Blocking ────────────────────────────────────────────────────
     private lateinit var filterEngine: FilterEngine
     private lateinit var domainFilter: DomainFilter
-    private lateinit var ipFilter:     IpFilter
-    private lateinit var appFilter:    AppFilter
-
-    // ── Pillar 4: Encryption Enforcement ─────────────────────────────────────
+    private lateinit var ipFilter: IpFilter
+    private lateinit var appFilter: AppFilter
     private lateinit var encEnforcer: EncryptionEnforcer
-
-    // ── Infrastructure ────────────────────────────────────────────────────────
     private lateinit var sessionTable: SessionTable
-    private lateinit var appTracker:   AppTracker
-    private lateinit var notifHelper:  NotificationHelper
+    private lateinit var appTracker: AppTracker
+    private lateinit var notifHelper: NotificationHelper
     private lateinit var tunInterface: TunInterface
-    private lateinit var tunReader:    TunReader
-    private lateinit var tunWriter:    TunWriter
+    private lateinit var tunReader: TunReader
+    private lateinit var tunWriter: TunWriter
     private lateinit var tcpForwarder: TcpForwarder
     private lateinit var udpForwarder: UdpForwarder
-
-    // ── Repositories ──────────────────────────────────────────────────────────
-    private lateinit var connectionRepo:  ConnectionRepo
-    private lateinit var rulesRepo:       RulesRepo
-    private lateinit var blocklistRepo:   BlocklistRepo
-    private lateinit var metadataRepo:    MetadataRepo
-    private lateinit var dnsAnomalyRepo:  DnsAnomalyRepo
+    private lateinit var connectionRepo: ConnectionRepo
+    private lateinit var rulesRepo: RulesRepo
+    private lateinit var blocklistRepo: BlocklistRepo
+    private lateinit var metadataRepo: MetadataRepo
+    private lateinit var dnsAnomalyRepo: DnsAnomalyRepo
 
     private var tunFd: ParcelFileDescriptor? = null
     private val totalBlocked = AtomicLong(0)
     private val totalCleartext = AtomicLong(0)
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Lifecycle
-    // ─────────────────────────────────────────────────────────────────────────
+    companion object {
+        private const val TAG = "PrivacyVpnService"
+        const val ACTION_STOP = "com.privacyguard.action.STOP_VPN"
+
+        @Volatile var isRunning = false
+            private set
+
+        fun startIntent(ctx: Context) = Intent(ctx, PrivacyVpnService::class.java)
+        fun stopIntent(ctx: Context) = Intent(ctx, PrivacyVpnService::class.java).also { it.action = ACTION_STOP }
+
+        private fun ipToString(ip: Int): String {
+            return "${(ip ushr 24) and 0xFF}.${(ip ushr 16) and 0xFF}.${(ip ushr 8) and 0xFF}.${ip and 0xFF}"
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        Log.i(TAG, "VPN service created")
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.i(TAG, "onStartCommand action=${intent?.action}")
         if (intent?.action == ACTION_STOP) { stopVpn(); return START_NOT_STICKY }
         if (!isRunning) startVpn()
         return START_STICKY
     }
 
-    override fun onDestroy() { stopVpn(); scope.cancel(); super.onDestroy() }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Start
-    // ─────────────────────────────────────────────────────────────────────────
+    override fun onDestroy() {
+        Log.i(TAG, "VPN service destroyed")
+        stopVpn()
+        scope.cancel()
+        super.onDestroy()
+    }
 
     private fun startVpn() {
+        Log.i(TAG, "startVpn() — building components")
+        try {
+            startVpnInternal()
+        } catch (e: Throwable) {
+            Log.e(TAG, "FATAL: startVpn crashed", e)
+            stopSelf()
+        }
+    }
+
+    private fun startVpnInternal() {
         com.privacyguard.app.vpn.BootReceiver.markVpnActive(this)
         notifHelper = NotificationHelper(this).also { it.createChannels() }
         startForeground(
@@ -126,50 +121,42 @@ class PrivacyVpnService : VpnService() {
 
         val db = buildDatabase()
 
-        // ── Pillar 3: Blocking setup ──────────────────────────────────────────
-        filterEngine  = FilterEngine()
-        domainFilter  = DomainFilter()
-        ipFilter      = IpFilter()
-        appFilter     = AppFilter { uid -> packageManager.getNameForUid(uid) }
-        appTracker    = AppTracker(this, appFilter)
+        filterEngine = FilterEngine()
+        domainFilter = DomainFilter()
+        ipFilter = IpFilter()
+        appFilter = AppFilter { uid -> packageManager.getNameForUid(uid) }
+        appTracker = AppTracker(this, appFilter)
 
-        // ── Repositories ──────────────────────────────────────────────────────
         connectionRepo = ConnectionRepo(db.connectionDao())
-        rulesRepo      = RulesRepo(db.rulesDao(), filterEngine)
-        blocklistRepo  = BlocklistRepo(db.blocklistDao())
-        metadataRepo   = MetadataRepo(db.connectionProfileDao())
+        rulesRepo = RulesRepo(db.rulesDao(), filterEngine)
+        blocklistRepo = BlocklistRepo(db.blocklistDao())
+        metadataRepo = MetadataRepo(db.connectionProfileDao())
         dnsAnomalyRepo = DnsAnomalyRepo(db.dnsAnomalyDao())
 
-        // ── Pillar 4: Encryption ──────────────────────────────────────────────
-        encEnforcer   = EncryptionEnforcer()
+        encEnforcer = EncryptionEnforcer()
 
-        // ── Pillar 2: DNS Shield ──────────────────────────────────────────────
         dnsAnomalyDetector = DnsAnomalyDetector()
         dnsAnomalyDetector.anomalyListener = DnsAnomalyDetector.AnomalyListener { anomaly ->
             scope.launch {
                 dnsAnomalyRepo.save(anomaly)
-                // Elevate high-severity anomalies to notification
                 if (anomaly.severity >= 8) {
                     notifHelper.postSuspiciousAlert(
-                        appName           = appTracker.labelForPackage(anomaly.packageName) ?: anomaly.packageName,
-                        domain            = anomaly.domain,
+                        appName = appTracker.labelForPackage(anomaly.packageName) ?: anomaly.packageName,
+                        domain = anomaly.domain,
                         mainActivityClass = getMainActivityClass(),
                     )
                 }
             }
         }
 
-        // ── Pillar 1: Metadata ────────────────────────────────────────────────
         metadataEngine = MetadataEngine()
 
-        // ── Load async ───────────────────────────────────────────────────────
         scope.launch {
             rulesRepo.loadIntoEngine()
             val allDomains = blocklistRepo.allDomains()
             domainFilter.rebuild(allDomains)
             metadataEngine.knownTrackers = allDomains.toSet()
             appTracker.preloadInstalledApps()
-            // Initialise Exodus cache from disk, then refresh if stale
             com.privacyguard.app.core.tracker.ExodusUpdater.initialize(applicationContext)
             com.privacyguard.app.core.tracker.ExodusUpdater.refresh(applicationContext)
         }
@@ -180,45 +167,54 @@ class PrivacyVpnService : VpnService() {
             }
         }
 
-        // ── Session table ────────────────────────────────────────────────────
+        scope.launch {
+            BlocklistSyncBus.version.collect {
+                val allDomains = blocklistRepo.allDomains()
+                domainFilter.rebuild(allDomains)
+                metadataEngine.knownTrackers = allDomains.toSet()
+            }
+        }
+
         sessionTable = SessionTable()
         sessionTable.startReaper()
         sessionTable.addListener(SessionLifecycleListener())
 
-        // ── TUN interface ─────────────────────────────────────────────────────
-        // Phase 1: IPv4-only tunnel.
-        // addRoute("::", 0) was removed intentionally — TunReader has no IPv6 handlers,
-        // so routing IPv6 through the VPN silently drops every IPv6 packet, making
-        // modern apps (which prefer AAAA / Happy Eyeballs) unable to connect at all.
-        // IPv6 traffic bypasses the VPN and goes directly to the internet.
+        Log.i(TAG, "Calling Builder().establish() — requesting TUN fd")
         val fd = Builder()
             .setSession("PrivacyGuard")
-            .addAddress("10.0.0.2", 32)
-            .addDnsServer("10.0.0.1")
+            .addAddress("10.0.0.2", 24)
+            .addAddress("fd00:1:fd00:1::2", 64)
+            .addDnsServer("8.8.8.8")
+            .addDnsServer("8.8.4.4")
+            .addDnsServer("1.1.1.1")
             .addRoute("0.0.0.0", 0)
+            .addRoute("::", 0)
             .setMtu(1500)
-            .establish() ?: run { stopSelf(); return }
+            .establish() ?: run {
+            Log.e(TAG, "establish() returned null — VPN permission not granted")
+            stopSelf(); return
+        }
+        Log.i(TAG, "TUN fd established: $fd")
 
-        tunFd        = fd
+        tunFd = fd
         tunInterface = TunInterface(fd.fileDescriptor)
-        tunWriter    = TunWriter(tunInterface).also { it.start() }
+        tunWriter = TunWriter(tunInterface).also { it.start() }
 
-        // ── DNS handler ───────────────────────────────────────────────────────
         val settings = com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(this)
         dnsHandler = DnsHandler(
-            filterEngine    = filterEngine,
-            tunWriter       = tunWriter,
+            filterEngine = filterEngine,
+            tunWriter = tunWriter,
             anomalyDetector = dnsAnomalyDetector,
-            upstreamDns     = settings.upstreamDns.value,
-            dohEnabled      = settings.dohEnabled.value,
-            dohProvider     = settings.dohProvider.value,
-            protectSocket   = { sock -> protect(sock) },
+            upstreamDns = settings.upstreamDns.value,
+            dohEnabled = settings.dohEnabled.value,
+            dohProvider = settings.dohProvider.value,
+            protectSocket = { sock -> protect(sock) },
+            protectTcpSocket = { sock -> protect(sock) },
         ).also { h ->
             h.resolvedListener = DnsHandler.ResolvedListener { ip, hostname ->
                 sessionTable.allSessions()
                     .filter { it.key.destinationIp == ip && it.resolvedHostname == null }
                     .forEach { it.resolvedHostname = hostname }
-                // Backfill hostname into any active connection entries already in StatsManager
                 StatsManager.update {
                     copy(activeConnections = activeConnections.map { conn ->
                         if (conn.destinationIp == ip && conn.hostName == null)
@@ -227,71 +223,112 @@ class PrivacyVpnService : VpnService() {
                     })
                 }
             }
-            h.anomalyListener = DnsHandler.AnomalyListener { /* already handled in dnsAnomalyDetector */ }
+            h.anomalyListener = DnsHandler.AnomalyListener { /* handled in dnsAnomalyDetector */ }
         }
 
-        // ── Reactive DoH setting updates ──────────────────────────────────────
-        // Propagate changes from SettingsPreferences to DnsHandler at runtime
-        // so toggling DoH or switching provider takes effect without restarting VPN.
-        scope.launch { settings.dohEnabled.collect  { dnsHandler.dohEnabled  = it } }
+        filterEngine.blockLevel = runCatching {
+            FilterEngine.BlockLevel.valueOf(settings.protectionLevel.value)
+        }.getOrDefault(FilterEngine.BlockLevel.STANDARD)
+        scope.launch { settings.dohEnabled.collect { dnsHandler.dohEnabled = it } }
         scope.launch { settings.dohProvider.collect { dnsHandler.dohProvider = it } }
+        scope.launch {
+            settings.protectionLevel.collect { level ->
+                filterEngine.blockLevel = runCatching {
+                    FilterEngine.BlockLevel.valueOf(level)
+                }.getOrDefault(FilterEngine.BlockLevel.STANDARD)
+            }
+        }
 
-        // ── Forwarders ────────────────────────────────────────────────────────
         tcpForwarder = TcpForwarder(sessionTable, tunWriter, encEnforcer, filterEngine, ::protect).also { it.start() }
         udpForwarder = UdpForwarder(sessionTable, tunWriter, ::protect).also { it.start() }
 
-        // ── TUN reader — hot path ─────────────────────────────────────────────
         tunReader = TunReader(tunInterface).also {
             it.addHandler { ip -> onPacket(ip) }
+            it.addIpv6Handler { raw -> onIpv6Packet(raw) }
             it.start()
         }
 
-        registerReceiver(stopReceiver, IntentFilter(NotificationHelper.ACTION_STOP_VPN))
+        Log.i(TAG, "Forwarders and TunReader started")
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(stopReceiver, IntentFilter(NotificationHelper.ACTION_STOP_VPN), RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(stopReceiver, IntentFilter(NotificationHelper.ACTION_STOP_VPN))
+        }
+
         if (com.privacyguard.app.vpn.KillSwitch.isEnabled()) {
             com.privacyguard.app.vpn.KillSwitch.startMonitoring(this)
         }
         isRunning = true
+        Log.i(TAG, "VPN fully started — all pillars active")
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // ★ Packet Processing Hot Path
-    // ─────────────────────────────────────────────────────────────────────────
+    private fun onIpv6Packet(raw: ByteArray) {
+        StatsManager.recordIpv6Blocked(raw.size.toLong())
+        if (raw.size >= 40) {
+            val destination = ipv6ToString(raw, 24)
+            Log.d(TAG, "IPv6 packet captured and blocked to prevent leak: $destination len=${raw.size}")
+        }
+    }
 
+    private fun ipv6ToString(raw: ByteArray, offset: Int): String {
+        if (raw.size < offset + 16) return "::"
+        return (0 until 16 step 2)
+            .joinToString(":") { i ->
+                val value = ((raw[offset + i].toInt() and 0xFF) shl 8) or (raw[offset + i + 1].toInt() and 0xFF)
+                value.toString(16)
+            }
+    }
+
+    // 🔥 FIXED: ipFilter.isBlocked() takes Int, not String
     private fun onPacket(ip: IpPacket) {
+        Log.d(TAG, "📨 onPacket: ${ip.sourceIp} → ${ip.destinationIp}, proto=${ip.protocol}, len=${ip.totalLength}")
+
         StatsManager.recordPacket(ip.totalLength.toLong())
 
-        // ── IP-level block (no UID needed) ───────────────────────────────────
+        // Pass Int directly - ipFilter expects Int
         if (ipFilter.isBlocked(ip.destinationIp)) {
-            recordBlock(); return
+            Log.d(TAG, "IP blocked: ${ip.destinationIp}")
+            recordBlock()
+            return
         }
 
         when (ip.protocol) {
-
-            // ── UDP ──────────────────────────────────────────────────────────
             IpPacket.PROTO_UDP -> {
                 val udp = UdpPacket.parse(ip) ?: return
                 val uid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(udp.sourcePort, 17)
                 val pkg = appTracker.packageForUid(uid)
+                val sessionId = com.privacyguard.core.session.SessionKey.of(
+                    ip.sourceIp,
+                    udp.sourcePort,
+                    ip.destinationIp,
+                    udp.destinationPort,
+                    IpPacket.PROTO_UDP,
+                ).toString()
+                updateActiveConnectionIdentity(sessionId, resolvedAppLabel(uid, pkg), pkg)
                 if (dnsHandler.handle(ip, udp, pkg)) return
                 val decision = filterEngine.evaluate(uid, pkg, null, ip.destinationIp, udp.destinationPort, 17)
                 if (decision.isBlocked) { recordBlock(); return }
                 udpForwarder.handle(ip, udp, uid, pkg)
             }
-
-            // ── TCP ──────────────────────────────────────────────────────────
             IpPacket.PROTO_TCP -> {
                 val tcp = TcpPacket.parse(ip) ?: return
+                val uid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(tcp.sourcePort, 6)
+                val pkg = appTracker.packageForUid(uid)
+                val sessionId = com.privacyguard.core.session.SessionKey.of(
+                    ip.sourceIp,
+                    tcp.sourcePort,
+                    ip.destinationIp,
+                    tcp.destinationPort,
+                    IpPacket.PROTO_TCP,
+                ).toString()
+                updateActiveConnectionIdentity(sessionId, resolvedAppLabel(uid, pkg), pkg)
                 if (tcp.isSyn) {
-                    val uid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(tcp.sourcePort, 6)
-                    val pkg = appTracker.packageForUid(uid)
                     val decision = filterEngine.evaluate(uid, pkg, null, ip.destinationIp, tcp.destinationPort, 6)
                     if (decision.isBlocked) { recordBlock(); return }
-                    tcpForwarder.handle(ip, tcp, uid, pkg)
-                } else {
-                    val uid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(tcp.sourcePort, 6)
-                    val pkg = appTracker.packageForUid(uid)
-                    tcpForwarder.handle(ip, tcp, uid, pkg)
                 }
+                tcpForwarder.handle(ip, tcp, uid, pkg)
             }
         }
     }
@@ -302,110 +339,100 @@ class PrivacyVpnService : VpnService() {
         if (n % 25 == 0L) notifHelper.updateVpnNotification(n, getMainActivityClass())
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Session Lifecycle → Metadata Engine + DB
-    // ─────────────────────────────────────────────────────────────────────────
-
     private inner class SessionLifecycleListener : SessionTable.Listener {
         override fun onSessionCreated(session: Session) {
-            val appLabel = appTracker.labelForPackage(session.ownerPackage ?: "")
-                ?: session.ownerPackage ?: "Unknown"
+            val resolvedPackage = resolvedPackageName(session.ownerUid, session.ownerPackage)
+            val appLabel = resolvedAppLabel(session.ownerUid, resolvedPackage)
             StatsManager.update {
                 copy(activeConnections = activeConnections + ActiveConnectionInfo(
-                    id              = session.key.toString(),
-                    appName         = appLabel,
-                    destination     = "${session.key.destinationIp}:${session.key.destinationPort}",
-                    destinationIp   = session.key.destinationIp,
+                    id = session.key.toString(),
+                    appName = appLabel,
+                    packageName = resolvedPackage,
+                    destination = "${session.key.destinationIp}:${session.key.destinationPort}",
+                    destinationIp = session.key.destinationIp,
                     destinationPort = session.key.destinationPort,
-                    protocol        = session.key.protocolName,
-                    isBlocked       = false,
+                    protocol = session.key.protocolName,
+                    isBlocked = false,
                     bytesTransferred = 0L,
-                    hostName        = session.hostname,
-                    securityInfo    = session.encryptionStatus.name,
-                    encryptionInfo  = session.tlsVersion?.name ?: "",
+                    hostName = session.hostname,
+                    securityInfo = session.encryptionStatus.name,
+                    encryptionInfo = session.tlsVersion?.name ?: "",
                 ))
             }
         }
 
         override fun onSessionClosed(session: Session) {
-            // Remove from live connections list
             val sessionId = session.key.toString()
             StatsManager.update {
                 copy(activeConnections = activeConnections.filter { it.id != sessionId })
             }
 
-            com.privacyguard.app.vpn.UidMapper.evict(
-                session.key.sourcePort, session.key.protocol)
+            com.privacyguard.app.vpn.UidMapper.evict(session.key.sourcePort, session.key.protocol)
             val snapshot = session.snapshot()
             if (snapshot.encryptionStatus == EncryptionStatus.CLEARTEXT) {
                 totalCleartext.incrementAndGet()
             }
 
             scope.launch {
-                // ── Pillar 1: Feed MetadataEngine ────────────────────────────
                 metadataEngine.record(
-                    snapshot     = snapshot,
+                    snapshot = snapshot,
                     isBackground = snapshot.wasBackground,
-                    encStatus    = snapshot.encryptionStatus,
-                    tlsVer       = snapshot.tlsVersion,
-                    sni          = snapshot.tlsSni,
+                    encStatus = snapshot.encryptionStatus,
+                    tlsVer = snapshot.tlsVersion,
+                    sni = snapshot.tlsSni,
                 )
 
-                val appLabel = appTracker.labelForPackage(snapshot.ownerPackage ?: "")
-                    ?: snapshot.ownerPackage ?: "Unknown"
-
-                // ── Persist connection record (BRD §8.1) ────────────────────
-                val dstIp   = snapshot.key.destinationIp
-                val isIpv6  = dstIp.contains(':')
+                val resolvedPackage = resolvedPackageName(snapshot.ownerUid, snapshot.ownerPackage)
+                val appLabel = resolvedAppLabel(snapshot.ownerUid, resolvedPackage)
+                val dstIp = snapshot.key.destinationIp
+                val isIpv6 = dstIp.contains(':')
                 connectionRepo.save(ConnectionEntity(
-                    appUid          = snapshot.ownerUid,
-                    appName         = appLabel,
-                    packageName     = snapshot.ownerPackage ?: "",
-                    domain          = snapshot.hostname,
-                    destinationIp   = dstIp,
+                    appUid = snapshot.ownerUid,
+                    appName = appLabel,
+                    packageName = resolvedPackage,
+                    domain = snapshot.hostname,
+                    destinationIp = dstIp,
                     destinationPort = snapshot.key.destinationPort,
                     destinationIpv6 = if (isIpv6) dstIp else null,
-                    isIPv6          = isIpv6,
-                    sniHostname     = snapshot.tlsSni,
-                    protocol        = snapshot.key.protocolName,
-                    bytesSent       = snapshot.bytesFromDevice,
-                    bytesReceived   = snapshot.bytesToDevice,
-                    wasBlocked      = false,
-                    timestamp       = snapshot.createdAt,
-                    durationMs      = snapshot.ageMs,
+                    isIPv6 = isIpv6,
+                    sniHostname = snapshot.tlsSni,
+                    protocol = snapshot.key.protocolName,
+                    bytesSent = snapshot.bytesFromDevice,
+                    bytesReceived = snapshot.bytesToDevice,
+                    wasBlocked = false,
+                    timestamp = snapshot.createdAt,
+                    durationMs = snapshot.ageMs,
                     encryptionStatus = snapshot.encryptionStatus.name,
-                    tlsVersion      = snapshot.tlsVersion?.name,
-                    wasBackground   = snapshot.wasBackground,
+                    tlsVersion = snapshot.tlsVersion?.name,
+                    wasBackground = snapshot.wasBackground,
                 ))
 
-                // ── Persist updated profile every 10 sessions ────────────────
                 if (metadataEngine.totalRecorded.get() % 10 == 0L) {
-                    val pkg = snapshot.ownerPackage ?: return@launch
+                    val pkg = resolvedPackage.takeIf { it.isNotBlank() } ?: return@launch
                     val profiles = metadataEngine.profilesForApp(pkg)
                     metadataRepo.saveAll(profiles)
                 }
 
-                // ── Push to StatsManager (feeds dashboard UI) ────────────────
                 val hostname = snapshot.hostname ?: snapshot.key.destinationIp
                 val sessionBytes = snapshot.bytesFromDevice + snapshot.bytesToDevice
-                val pkg = snapshot.ownerPackage ?: ""
+                val pkg = resolvedPackage
                 StatsManager.update {
                     val existing = appStats.find { it.packageName == pkg }
                     val updatedStat = existing?.copy(
                         bytesTransferred = existing.bytesTransferred + sessionBytes,
                     ) ?: AppStat(
-                        uid              = snapshot.ownerUid,
-                        packageName      = pkg,
-                        appName          = appLabel,
-                        blockedCount     = 0L,
+                        uid = snapshot.ownerUid,
+                        packageName = pkg,
+                        appName = appLabel,
+                        blockedCount = 0L,
                         bytesTransferred = sessionBytes,
                     )
                     copy(
                         recentActivity = (listOf(ActivityInfo(
-                            appName     = appLabel,
+                            appName = appLabel,
                             description = hostname,
-                            timeMillis  = snapshot.createdAt,
-                            isBlocked   = false,
+                            timeMillis = snapshot.createdAt,
+                            isBlocked = false,
                         )) + recentActivity).take(50),
                         appStats = (appStats.filter { it.packageName != pkg } + updatedStat)
                             .sortedByDescending { it.bytesTransferred }
@@ -416,9 +443,37 @@ class PrivacyVpnService : VpnService() {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Stop
-    // ─────────────────────────────────────────────────────────────────────────
+    private fun resolvedPackageName(uid: Int, packageName: String?): String =
+        packageName?.takeIf { it.isNotBlank() }
+            ?: appTracker.packageForUid(uid)
+            ?: ""
+
+    private fun resolvedAppLabel(uid: Int, packageName: String?): String {
+        val resolvedPackage = resolvedPackageName(uid, packageName)
+        return when {
+            resolvedPackage.isNotBlank() -> appTracker.labelForPackage(resolvedPackage) ?: resolvedPackage
+            uid >= 0 -> appTracker.labelForUid(uid)
+            else -> "Unknown"
+        }
+    }
+
+    private fun updateActiveConnectionIdentity(sessionId: String, appLabel: String, packageName: String?) {
+        if (appLabel == "Unknown" && packageName.isNullOrBlank()) return
+        StatsManager.update {
+            copy(
+                activeConnections = activeConnections.map { info ->
+                    if (info.id == sessionId) {
+                        info.copy(
+                            appName = if (appLabel != "Unknown") appLabel else info.appName,
+                            packageName = packageName?.takeIf { it.isNotBlank() } ?: info.packageName,
+                        )
+                    } else {
+                        info
+                    }
+                }
+            )
+        }
+    }
 
     private fun stopVpn() {
         if (!isRunning) return
@@ -426,7 +481,6 @@ class PrivacyVpnService : VpnService() {
         com.privacyguard.app.vpn.BootReceiver.markVpnStopped(this)
         runCatching { unregisterReceiver(stopReceiver) }
 
-        // Flush remaining profiles to DB before stopping
         scope.launch {
             metadataRepo.saveAll(metadataEngine.allProfiles())
             val retentionDays = com.privacyguard.app.data.local.preferences.SettingsPreferences
@@ -447,18 +501,9 @@ class PrivacyVpnService : VpnService() {
         com.privacyguard.app.vpn.UidMapper.clear()
         StatsManager.reset()
         runCatching { tunFd?.close() }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        } else {
-            @Suppress("DEPRECATION")
-            stopForeground(true)
-        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Helpers
-    // ─────────────────────────────────────────────────────────────────────────
 
     private val stopReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -472,19 +517,7 @@ class PrivacyVpnService : VpnService() {
         PrivacyVpnService::class.java
     }
 
-    private fun buildDatabase(): AppDatabase =
-        Room.databaseBuilder(
-            this, AppDatabase::class.java,
-            AppDatabase.DATABASE_NAME,
-        ).fallbackToDestructiveMigration(dropAllTables = true).build()
-
-    companion object {
-        const val ACTION_STOP = "com.privacyguard.action.STOP_VPN"
-
-        @Volatile var isRunning = false
-            private set
-
-        fun startIntent(ctx: Context) = Intent(ctx, PrivacyVpnService::class.java)
-        fun stopIntent(ctx: Context)  = Intent(ctx, PrivacyVpnService::class.java).also { it.action = ACTION_STOP }
-    }
+    private fun buildDatabase(): AppDatabase = Room.databaseBuilder(
+        this, AppDatabase::class.java, AppDatabase.DATABASE_NAME,
+    ).fallbackToDestructiveMigration(dropAllTables = true).build()
 }

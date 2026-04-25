@@ -104,6 +104,7 @@ object GeoIpResolver {
         range("157.240.0.0/16",   "US", "United States", "Meta Platforms"),
         range("163.70.128.0/17",  "US", "United States", "Meta Platforms"),
         range("173.252.64.0/19",  "US", "United States", "Meta Platforms"),
+        range("179.60.192.0/22",  "US", "United States", "Meta Platforms"),
         range("185.60.216.0/22",  "IE", "Ireland",       "Meta Platforms"),
 
         // Akamai

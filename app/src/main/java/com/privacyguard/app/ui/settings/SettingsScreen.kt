@@ -11,13 +11,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -39,10 +42,15 @@ import com.privacyguard.app.ui.theme.PgAccent
 import com.privacyguard.app.ui.theme.PgAccentDim
 import com.privacyguard.app.ui.theme.PgDanger
 import com.privacyguard.app.ui.theme.PgDangerDim
+import com.privacyguard.app.ui.theme.PgInfo
+import com.privacyguard.app.ui.theme.PgInfoDim
 import com.privacyguard.app.ui.theme.PgText
 import com.privacyguard.app.ui.theme.PgTextMuted
+import com.privacyguard.app.ui.theme.PgWarning
+import com.privacyguard.app.ui.theme.PgWarningDim
 import com.privacyguard.app.workers.BlocklistUpdateWorker
 import com.privacyguard.app.workers.WeeklyReportWorker
+import com.privacyguard.core.filter.FilterEngine
 
 @Composable
 fun SettingsScreen(
@@ -57,8 +65,10 @@ fun SettingsScreen(
     val dohProvider by settingsPreferences.dohProvider.collectAsState()
     val retentionDays by settingsPreferences.retentionDays.collectAsState()
     val upstreamDns by settingsPreferences.upstreamDns.collectAsState()
+    val protectionLevel by settingsPreferences.protectionLevel.collectAsState()
     val blocklistSize by BlocklistManager.size.collectAsState()
     val securityState by settingsViewModel.securityState.collectAsState()
+    val diagnosticsState by settingsViewModel.diagnosticsState.collectAsState()
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -69,10 +79,22 @@ fun SettingsScreen(
                 SectionLabel("Protection level")
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StatusPill("Minimal", background = MaterialTheme.colorScheme.surfaceVariant, content = PgTextMuted)
-                    StatusPill("Standard", background = PgAccentDim, content = PgAccent)
-                    StatusPill("Strict", background = MaterialTheme.colorScheme.surfaceVariant, content = PgTextMuted)
+                    SelectablePill("Minimal", protectionLevel == FilterEngine.BlockLevel.MINIMAL.name) {
+                        settingsPreferences.setProtectionLevel(FilterEngine.BlockLevel.MINIMAL.name)
+                    }
+                    SelectablePill("Standard", protectionLevel == FilterEngine.BlockLevel.STANDARD.name) {
+                        settingsPreferences.setProtectionLevel(FilterEngine.BlockLevel.STANDARD.name)
+                    }
+                    SelectablePill("Strict", protectionLevel == FilterEngine.BlockLevel.STRICT.name) {
+                        settingsPreferences.setProtectionLevel(FilterEngine.BlockLevel.STRICT.name)
+                    }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Current engine level: ${protectionLevel.lowercase().replaceFirstChar { it.uppercase() }}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PgTextMuted,
+                )
             }
         }
 
@@ -112,6 +134,19 @@ fun SettingsScreen(
             SettingBlock(
                 title = "Upstream DNS",
                 footer = {
+                    OutlinedTextField(
+                        value = upstreamDns,
+                        onValueChange = { value ->
+                            if (value.length <= 45 && value.all { it.isDigit() || it == '.' || it == ':' }) {
+                                settingsPreferences.setUpstreamDns(value)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        textStyle = MaterialTheme.typography.titleMedium,
+                        label = { Text("Resolver") }
+                    )
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         SelectablePill("Cloudflare", upstreamDns == "1.1.1.1") {
@@ -126,6 +161,7 @@ fun SettingsScreen(
                             settingsPreferences.setUpstreamDns("9.9.9.9")
                             settingsPreferences.setDohProvider(SettingsPreferences.DOH_QUAD9)
                         }
+                        SelectablePill("Custom", upstreamDns !in setOf("1.1.1.1", "8.8.8.8", "9.9.9.9")) { }
                     }
                     if (dohEnabled) {
                         Spacer(modifier = Modifier.height(10.dp))
@@ -133,8 +169,32 @@ fun SettingsScreen(
                     }
                 },
                 items = listOf(
-                    SettingUiItem("Resolver", upstreamDns, true, Icons.Default.Lock, onClick = { }),
                     SettingUiItem("Language", "English", true, Icons.Default.Language, onClick = { onLanguageChanged() })
+                )
+            )
+        }
+
+        item {
+            SettingBlock(
+                title = "Network diagnostics",
+                footer = {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    diagnosticsState.checks.forEach { check ->
+                        DiagnosticRow(check)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                },
+                items = listOf(
+                    SettingUiItem(
+                        "Run connectivity checks",
+                        if (diagnosticsState.isRunning) "Checking VPN, DNS, IPv6, and app inventory" else "Validate VPN/DNS status on this device",
+                        !diagnosticsState.isRunning,
+                        Icons.Default.NetworkCheck,
+                        onClick = {
+                            settingsViewModel.runDiagnostics()
+                            Toast.makeText(context, "Diagnostics started", Toast.LENGTH_SHORT).show()
+                        }
+                    )
                 )
             )
         }
@@ -199,6 +259,28 @@ fun SettingsScreen(
             )
         }
         item { Spacer(modifier = Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+private fun DiagnosticRow(check: DiagnosticCheck) {
+    val (background, content) = when (check.status) {
+        DiagnosticStatus.PASS -> PgAccentDim to PgAccent
+        DiagnosticStatus.WARN -> PgWarningDim to PgWarning
+        DiagnosticStatus.FAIL -> PgDangerDim to PgDanger
+        DiagnosticStatus.RUNNING -> PgInfoDim to PgInfo
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(check.label, style = MaterialTheme.typography.titleSmall, color = PgText)
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(check.detail, style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+        }
+        StatusPill(check.status.name, background, content)
     }
 }
 

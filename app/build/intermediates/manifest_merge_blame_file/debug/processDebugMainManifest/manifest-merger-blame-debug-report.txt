@@ -18,362 +18,368 @@
 13    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 13-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:7:5-79
 13-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:7:22-76
-14    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
-14-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:8:5-79
-14-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:8:22-76
-15
-16    <!-- Foreground service — VPN requires specialUse on API 34+ -->
-17    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-17-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:11:5-77
-17-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:11:22-74
-18    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-18-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:12:5-89
-18-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:12:22-86
-19
-20    <!-- Wake lock for background processing -->
-21    <uses-permission android:name="android.permission.WAKE_LOCK" />
-21-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:15:5-68
-21-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:15:22-65
-22
-23    <!-- App usage stats for per-app attribution (protected; user grants in Settings) -->
-24    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
-24-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:18:5-20:47
-24-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:19:9-62
-25
-26    <!-- Boot receiver — restart VPN after reboot (FR-VPN-10) -->
-27    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-27-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:23:5-81
-27-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:23:22-78
-28
-29    <!-- External storage for PCAP export (API ≤ 28 only) -->
-30    <uses-permission
-30-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:26:5-28:38
-31        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-31-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:27:9-65
-32        android:maxSdkVersion="28" />
-32-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:28:9-35
-33    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-33-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:29:5-80
-33-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:29:22-77
-34
-35    <!-- Post notifications (required API 33+) -->
-36    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-36-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:32:5-77
-36-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:32:22-74
-37
-38    <permission
-38-->[androidx.core:core:1.18.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\2813150418e210db91790f3952f818ce\transformed\core-1.18.0\AndroidManifest.xml:22:5-24:47
-39        android:name="com.privacyguard.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
-39-->[androidx.core:core:1.18.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\2813150418e210db91790f3952f818ce\transformed\core-1.18.0\AndroidManifest.xml:23:9-81
-40        android:protectionLevel="signature" />
-40-->[androidx.core:core:1.18.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\2813150418e210db91790f3952f818ce\transformed\core-1.18.0\AndroidManifest.xml:24:9-44
+14    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+14-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:8:5-76
+14-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:8:22-73
+15    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+15-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:9:5-79
+15-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:9:22-76
+16    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+16-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:10:5-12:53
+16-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:11:9-61
+17
+18    <!-- Foreground service — VPN requires specialUse on API 34+ -->
+19    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+19-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:15:5-77
+19-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:15:22-74
+20    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+20-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:16:5-89
+20-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:16:22-86
+21
+22    <!-- Wake lock for background processing -->
+23    <uses-permission android:name="android.permission.WAKE_LOCK" />
+23-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:19:5-68
+23-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:19:22-65
+24
+25    <!-- App usage stats for per-app attribution (protected; user grants in Settings) -->
+26    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
+26-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:22:5-24:47
+26-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:23:9-62
+27
+28    <!-- Boot receiver — restart VPN after reboot (FR-VPN-10) -->
+29    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+29-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:27:5-81
+29-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:27:22-78
+30
+31    <!-- External storage for PCAP export (API ≤ 28 only) -->
+32    <uses-permission
+32-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:30:5-32:38
+33        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+33-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:31:9-65
+34        android:maxSdkVersion="28" />
+34-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:32:9-35
+35    <uses-permission
+35-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:33:5-35:38
+36        android:name="android.permission.READ_EXTERNAL_STORAGE"
+36-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:34:9-64
+37        android:maxSdkVersion="32" />
+37-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:35:9-35
+38
+39    <!-- Post notifications (required API 33+) -->
+40    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+40-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:38:5-77
+40-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:38:22-74
 41
-42    <uses-permission android:name="com.privacyguard.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
-42-->[androidx.core:core:1.18.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\2813150418e210db91790f3952f818ce\transformed\core-1.18.0\AndroidManifest.xml:26:5-97
-42-->[androidx.core:core:1.18.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\2813150418e210db91790f3952f818ce\transformed\core-1.18.0\AndroidManifest.xml:26:22-94
-43
-44    <application
-44-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:34:5-101:19
-45        android:name="com.privacyguard.app.PrivacyGuardApplication"
-45-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:35:9-48
-46        android:allowBackup="true"
-46-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:36:9-35
-47        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
-47-->[androidx.core:core:1.18.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\2813150418e210db91790f3952f818ce\transformed\core-1.18.0\AndroidManifest.xml:28:18-86
-48        android:dataExtractionRules="@xml/data_extraction_rules"
-48-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:37:9-65
-49        android:debuggable="true"
-50        android:extractNativeLibs="false"
-50-->INJECTED
-51        android:fullBackupContent="@xml/backup_rules"
-51-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:38:9-54
-52        android:icon="@mipmap/ic_launcher"
-52-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:39:9-43
-53        android:label="@string/app_name"
-53-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:40:9-41
-54        android:roundIcon="@mipmap/ic_launcher_round"
-54-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:41:9-54
-55        android:supportsRtl="true"
-55-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:42:9-35
-56        android:testOnly="true"
-57        android:theme="@style/Theme.Privacyguard" >
-57-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:43:9-50
-58        <activity
-58-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:45:9-54:20
-59            android:name="com.privacyguard.app.MainActivity"
-59-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:46:13-41
-60            android:exported="true"
-60-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:47:13-36
-61            android:label="@string/app_name"
-61-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:48:13-45
-62            android:theme="@style/Theme.Privacyguard" >
-62-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:49:13-54
-63            <intent-filter>
-63-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:50:13-53:29
-64                <action android:name="android.intent.action.MAIN" />
-64-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:51:17-69
-64-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:51:25-66
-65
-66                <category android:name="android.intent.category.LAUNCHER" />
-66-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:52:17-77
-66-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:52:27-74
-67            </intent-filter>
-68        </activity>
-69
-70        <!--
-71            Primary VPN service — must carry android.net.VpnService intent-filter
-72            so that VpnService.prepare() grants permission to this class.
-73            foregroundServiceType="specialUse" is required for API 34+ VPN services.
-74        -->
-75        <service
-75-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:61:9-73:19
-76            android:name="com.privacyguard.platform.android.PrivacyVpnService"
-76-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:62:13-79
-77            android:exported="false"
-77-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:63:13-37
-78            android:foregroundServiceType="specialUse"
-78-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:64:13-55
-79            android:permission="android.permission.BIND_VPN_SERVICE" >
-79-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:65:13-69
-80            <intent-filter>
-80-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:66:13-68:29
-81                <action android:name="android.net.VpnService" />
-81-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:67:17-65
-81-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:67:25-62
-82            </intent-filter>
-83            <!-- Required metadata for specialUse FGS on API 34+ -->
-84            <property
-84-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:70:13-72:39
-85                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-85-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:71:17-76
-86                android:value="VPN" />
-86-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:72:17-36
-87        </service>
-88
-89        <!-- Boot receiver — re-starts VPN if it was active before shutdown (FR-VPN-10) -->
-90        <receiver
-90-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:76:9-83:20
-91            android:name="com.privacyguard.app.vpn.BootReceiver"
-91-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:77:13-45
-92            android:exported="true" >
-92-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:78:13-36
-93            <intent-filter>
-93-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:79:13-82:29
-94                <action android:name="android.intent.action.BOOT_COMPLETED" />
-94-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:80:17-79
-94-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:80:25-76
-95                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
-95-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:81:17-82
-95-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:81:25-79
-96            </intent-filter>
-97        </receiver>
-98
-99        <!-- Notification dismiss receiver -->
-100        <receiver
-100-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:86:9-88:40
-101            android:name="com.privacyguard.app.core.utils.NotificationDismissReceiver"
-101-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:87:13-67
-102            android:exported="false" />
-102-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:88:13-37
-103
-104        <!-- FileProvider for PCAP export -->
-105        <provider
-105-->INJECTED
-106            android:name="androidx.core.content.FileProvider"
-106-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:92:13-62
-107            android:authorities="com.privacyguard.app.fileprovider"
+42    <permission
+42-->[androidx.core:core:1.18.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\2813150418e210db91790f3952f818ce\transformed\core-1.18.0\AndroidManifest.xml:22:5-24:47
+43        android:name="com.privacyguard.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+43-->[androidx.core:core:1.18.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\2813150418e210db91790f3952f818ce\transformed\core-1.18.0\AndroidManifest.xml:23:9-81
+44        android:protectionLevel="signature" />
+44-->[androidx.core:core:1.18.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\2813150418e210db91790f3952f818ce\transformed\core-1.18.0\AndroidManifest.xml:24:9-44
+45
+46    <uses-permission android:name="com.privacyguard.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+46-->[androidx.core:core:1.18.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\2813150418e210db91790f3952f818ce\transformed\core-1.18.0\AndroidManifest.xml:26:5-97
+46-->[androidx.core:core:1.18.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\2813150418e210db91790f3952f818ce\transformed\core-1.18.0\AndroidManifest.xml:26:22-94
+47
+48    <application
+48-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:40:5-106:19
+49        android:name="com.privacyguard.app.PrivacyGuardApplication"
+49-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:41:9-48
+50        android:allowBackup="true"
+50-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:42:9-35
+51        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+51-->[androidx.core:core:1.18.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\2813150418e210db91790f3952f818ce\transformed\core-1.18.0\AndroidManifest.xml:28:18-86
+52        android:dataExtractionRules="@xml/data_extraction_rules"
+52-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:43:9-65
+53        android:debuggable="true"
+54        android:extractNativeLibs="false"
+54-->INJECTED
+55        android:fullBackupContent="@xml/backup_rules"
+55-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:44:9-54
+56        android:icon="@mipmap/ic_launcher"
+56-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:45:9-43
+57        android:label="@string/app_name"
+57-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:46:9-41
+58        android:roundIcon="@mipmap/ic_launcher_round"
+58-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:47:9-54
+59        android:supportsRtl="true"
+59-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:48:9-35
+60        android:theme="@style/Theme.Privacyguard" >
+60-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:49:9-50
+61        <activity
+61-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:51:9-59:20
+62            android:name="com.privacyguard.app.MainActivity"
+62-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:52:13-41
+63            android:exported="true"
+63-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:53:13-36
+64            android:theme="@style/Theme.Privacyguard" >
+64-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:54:13-54
+65            <intent-filter>
+65-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:55:13-58:29
+66                <action android:name="android.intent.action.MAIN" />
+66-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:56:17-69
+66-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:56:25-66
+67
+68                <category android:name="android.intent.category.LAUNCHER" />
+68-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:57:17-77
+68-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:57:27-74
+69            </intent-filter>
+70        </activity>
+71
+72        <!--
+73            Primary VPN service — must carry android.net.VpnService intent-filter
+74            so that VpnService.prepare() grants permission to this class.
+75            foregroundServiceType="specialUse" is required for API 34+ VPN services.
+76        -->
+77        <service
+77-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:66:9-78:19
+78            android:name="com.privacyguard.platform.android.PrivacyVpnService"
+78-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:67:13-79
+79            android:exported="false"
+79-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:68:13-37
+80            android:foregroundServiceType="specialUse"
+80-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:69:13-55
+81            android:permission="android.permission.BIND_VPN_SERVICE" >
+81-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:70:13-69
+82            <intent-filter>
+82-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:71:13-73:29
+83                <action android:name="android.net.VpnService" />
+83-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:72:17-65
+83-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:72:25-62
+84            </intent-filter>
+85            <!-- Required metadata for specialUse FGS on API 34+ -->
+86            <property
+86-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:75:13-77:39
+87                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+87-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:76:17-76
+88                android:value="VPN" />
+88-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:77:17-36
+89        </service>
+90
+91        <!-- Boot receiver — re-starts VPN if it was active before shutdown (FR-VPN-10) -->
+92        <receiver
+92-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:81:9-88:20
+93            android:name="com.privacyguard.app.vpn.BootReceiver"
+93-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:82:13-45
+94            android:exported="true" >
+94-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:83:13-36
+95            <intent-filter>
+95-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:84:13-87:29
+96                <action android:name="android.intent.action.BOOT_COMPLETED" />
+96-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:85:17-79
+96-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:85:25-76
+97                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+97-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:86:17-82
+97-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:86:25-79
+98            </intent-filter>
+99        </receiver>
+100
+101        <!-- Notification dismiss receiver -->
+102        <receiver
+102-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:91:9-93:40
+103            android:name="com.privacyguard.app.core.utils.NotificationDismissReceiver"
+103-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:92:13-67
+104            android:exported="false" />
+104-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:93:13-37
+105
+106        <!-- FileProvider for PCAP export -->
+107        <provider
 107-->INJECTED
-108            android:exported="false"
-108-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:94:13-37
-109            android:grantUriPermissions="true" >
-109-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:95:13-47
-110            <meta-data
-110-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:96:13-98:54
-111                android:name="android.support.FILE_PROVIDER_PATHS"
-111-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:97:17-67
-112                android:resource="@xml/file_paths" />
-112-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:98:17-51
-113        </provider>
-114
-115        <activity
-115-->[androidx.compose.ui:ui-tooling-android:1.10.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c797993b464714f603fe934d8314b97d\transformed\ui-tooling\AndroidManifest.xml:23:9-25:39
-116            android:name="androidx.compose.ui.tooling.PreviewActivity"
-116-->[androidx.compose.ui:ui-tooling-android:1.10.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c797993b464714f603fe934d8314b97d\transformed\ui-tooling\AndroidManifest.xml:24:13-71
-117            android:exported="true" />
-117-->[androidx.compose.ui:ui-tooling-android:1.10.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c797993b464714f603fe934d8314b97d\transformed\ui-tooling\AndroidManifest.xml:25:13-36
-118
-119        <provider
-119-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:29:9-37:20
-120            android:name="androidx.startup.InitializationProvider"
-120-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:30:13-67
-121            android:authorities="com.privacyguard.app.androidx-startup"
-121-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:31:13-68
-122            android:exported="false" >
-122-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:32:13-37
-123            <meta-data
-123-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:34:13-36:52
-124                android:name="androidx.work.WorkManagerInitializer"
-124-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:35:17-68
-125                android:value="androidx.startup" />
-125-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:36:17-49
-126            <meta-data
-126-->[androidx.emoji2:emoji2:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\a8e98169cab130024118fa89142f7032\transformed\emoji2-1.4.0\AndroidManifest.xml:29:13-31:52
-127                android:name="androidx.emoji2.text.EmojiCompatInitializer"
-127-->[androidx.emoji2:emoji2:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\a8e98169cab130024118fa89142f7032\transformed\emoji2-1.4.0\AndroidManifest.xml:30:17-75
-128                android:value="androidx.startup" />
-128-->[androidx.emoji2:emoji2:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\a8e98169cab130024118fa89142f7032\transformed\emoji2-1.4.0\AndroidManifest.xml:31:17-49
-129            <meta-data
-129-->[androidx.lifecycle:lifecycle-process:2.10.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\9572f0bb9074c7b1795c0c22521f13a0\transformed\lifecycle-process-2.10.0\AndroidManifest.xml:29:13-31:52
-130                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-130-->[androidx.lifecycle:lifecycle-process:2.10.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\9572f0bb9074c7b1795c0c22521f13a0\transformed\lifecycle-process-2.10.0\AndroidManifest.xml:30:17-78
-131                android:value="androidx.startup" />
-131-->[androidx.lifecycle:lifecycle-process:2.10.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\9572f0bb9074c7b1795c0c22521f13a0\transformed\lifecycle-process-2.10.0\AndroidManifest.xml:31:17-49
-132            <meta-data
-132-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:29:13-31:52
-133                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
-133-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:30:17-85
-134                android:value="androidx.startup" />
-134-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:31:17-49
-135        </provider>
-136
-137        <service
-137-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:39:9-45:35
-138            android:name="androidx.work.impl.background.systemjob.SystemJobService"
-138-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:40:13-84
-139            android:directBootAware="false"
-139-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:41:13-44
-140            android:enabled="@bool/enable_system_job_service_default"
-140-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:42:13-70
-141            android:exported="true"
-141-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:43:13-36
-142            android:permission="android.permission.BIND_JOB_SERVICE" />
-142-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:44:13-69
-143        <service
-143-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:46:9-52:35
-144            android:name="androidx.work.impl.foreground.SystemForegroundService"
-144-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:47:13-81
-145            android:directBootAware="false"
-145-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:48:13-44
-146            android:enabled="@bool/enable_system_foreground_service_default"
-146-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:49:13-77
-147            android:exported="false" />
-147-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:50:13-37
-148
-149        <receiver
-149-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:54:9-59:35
-150            android:name="androidx.work.impl.utils.ForceStopRunnable$BroadcastReceiver"
-150-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:55:13-88
-151            android:directBootAware="false"
-151-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:56:13-44
-152            android:enabled="true"
-152-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:57:13-35
-153            android:exported="false" />
-153-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:58:13-37
-154        <receiver
-154-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:60:9-69:20
-155            android:name="androidx.work.impl.background.systemalarm.RescheduleReceiver"
-155-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:61:13-88
-156            android:directBootAware="false"
-156-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:62:13-44
-157            android:enabled="false"
-157-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:63:13-36
-158            android:exported="false" >
-158-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:64:13-37
-159            <intent-filter>
-159-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:66:13-68:29
-160                <action android:name="android.intent.action.BOOT_COMPLETED" />
-160-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:80:17-79
-160-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:80:25-76
-161            </intent-filter>
-162        </receiver>
-163        <receiver
-163-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:70:9-80:20
-164            android:name="androidx.work.impl.diagnostics.DiagnosticsReceiver"
-164-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:71:13-78
-165            android:directBootAware="false"
-165-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:72:13-44
-166            android:enabled="true"
-166-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:73:13-35
-167            android:exported="true"
-167-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:74:13-36
-168            android:permission="android.permission.DUMP" >
-168-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:75:13-57
-169            <intent-filter>
-169-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:77:13-79:29
-170                <action android:name="androidx.work.diagnostics.REQUEST_DIAGNOSTICS" />
-170-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:78:17-88
-170-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:78:25-85
-171            </intent-filter>
-172        </receiver>
-173
-174        <uses-library
-174-->[androidx.window:window:1.5.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\3e5138bbf0ce9172b7583499432e9527\transformed\window-1.5.0\AndroidManifest.xml:23:9-25:40
-175            android:name="androidx.window.extensions"
-175-->[androidx.window:window:1.5.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\3e5138bbf0ce9172b7583499432e9527\transformed\window-1.5.0\AndroidManifest.xml:24:13-54
-176            android:required="false" />
-176-->[androidx.window:window:1.5.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\3e5138bbf0ce9172b7583499432e9527\transformed\window-1.5.0\AndroidManifest.xml:25:13-37
-177        <uses-library
-177-->[androidx.window:window:1.5.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\3e5138bbf0ce9172b7583499432e9527\transformed\window-1.5.0\AndroidManifest.xml:26:9-28:40
-178            android:name="androidx.window.sidecar"
-178-->[androidx.window:window:1.5.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\3e5138bbf0ce9172b7583499432e9527\transformed\window-1.5.0\AndroidManifest.xml:27:13-51
-179            android:required="false" />
-179-->[androidx.window:window:1.5.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\3e5138bbf0ce9172b7583499432e9527\transformed\window-1.5.0\AndroidManifest.xml:28:13-37
-180
-181        <activity
-181-->[androidx.compose.ui:ui-test-manifest:1.10.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\4c6b5f238ebaabc293765a9b5812cfdb\transformed\ui-test-manifest-1.10.4\AndroidManifest.xml:23:9-26:79
-182            android:name="androidx.activity.ComponentActivity"
-182-->[androidx.compose.ui:ui-test-manifest:1.10.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\4c6b5f238ebaabc293765a9b5812cfdb\transformed\ui-test-manifest-1.10.4\AndroidManifest.xml:24:13-63
-183            android:exported="true"
-183-->[androidx.compose.ui:ui-test-manifest:1.10.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\4c6b5f238ebaabc293765a9b5812cfdb\transformed\ui-test-manifest-1.10.4\AndroidManifest.xml:25:13-36
-184            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
-184-->[androidx.compose.ui:ui-test-manifest:1.10.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\4c6b5f238ebaabc293765a9b5812cfdb\transformed\ui-test-manifest-1.10.4\AndroidManifest.xml:26:13-76
-185
-186        <service
-186-->[androidx.room:room-runtime-android:2.8.1] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\31615ae36b405b01d385696b9da87df8\transformed\room-runtime\AndroidManifest.xml:24:9-28:63
-187            android:name="androidx.room.MultiInstanceInvalidationService"
-187-->[androidx.room:room-runtime-android:2.8.1] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\31615ae36b405b01d385696b9da87df8\transformed\room-runtime\AndroidManifest.xml:25:13-74
-188            android:directBootAware="true"
-188-->[androidx.room:room-runtime-android:2.8.1] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\31615ae36b405b01d385696b9da87df8\transformed\room-runtime\AndroidManifest.xml:26:13-43
-189            android:exported="false" />
-189-->[androidx.room:room-runtime-android:2.8.1] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\31615ae36b405b01d385696b9da87df8\transformed\room-runtime\AndroidManifest.xml:27:13-37
-190
-191        <receiver
-191-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:34:9-52:20
-192            android:name="androidx.profileinstaller.ProfileInstallReceiver"
-192-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:35:13-76
-193            android:directBootAware="false"
-193-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:36:13-44
-194            android:enabled="true"
-194-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:37:13-35
-195            android:exported="true"
-195-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:38:13-36
-196            android:permission="android.permission.DUMP" >
-196-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:39:13-57
-197            <intent-filter>
-197-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:40:13-42:29
-198                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
-198-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:41:17-91
-198-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:41:25-88
-199            </intent-filter>
-200            <intent-filter>
-200-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:43:13-45:29
-201                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
-201-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:44:17-85
-201-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:44:25-82
-202            </intent-filter>
-203            <intent-filter>
-203-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:46:13-48:29
-204                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
-204-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:47:17-88
-204-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:47:25-85
-205            </intent-filter>
-206            <intent-filter>
-206-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:49:13-51:29
-207                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
-207-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:50:17-95
-207-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:50:25-92
-208            </intent-filter>
-209        </receiver>
-210    </application>
-211
-212</manifest>
+108            android:name="androidx.core.content.FileProvider"
+108-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:97:13-62
+109            android:authorities="com.privacyguard.app.fileprovider"
+109-->INJECTED
+110            android:exported="false"
+110-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:99:13-37
+111            android:grantUriPermissions="true" >
+111-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:100:13-47
+112            <meta-data
+112-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:101:13-103:54
+113                android:name="android.support.FILE_PROVIDER_PATHS"
+113-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:102:17-67
+114                android:resource="@xml/file_paths" />
+114-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:103:17-51
+115        </provider>
+116
+117        <activity
+117-->[androidx.compose.ui:ui-tooling-android:1.10.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c797993b464714f603fe934d8314b97d\transformed\ui-tooling\AndroidManifest.xml:23:9-25:39
+118            android:name="androidx.compose.ui.tooling.PreviewActivity"
+118-->[androidx.compose.ui:ui-tooling-android:1.10.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c797993b464714f603fe934d8314b97d\transformed\ui-tooling\AndroidManifest.xml:24:13-71
+119            android:exported="true" />
+119-->[androidx.compose.ui:ui-tooling-android:1.10.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c797993b464714f603fe934d8314b97d\transformed\ui-tooling\AndroidManifest.xml:25:13-36
+120
+121        <provider
+121-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:29:9-37:20
+122            android:name="androidx.startup.InitializationProvider"
+122-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:30:13-67
+123            android:authorities="com.privacyguard.app.androidx-startup"
+123-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:31:13-68
+124            android:exported="false" >
+124-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:32:13-37
+125            <meta-data
+125-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:34:13-36:52
+126                android:name="androidx.work.WorkManagerInitializer"
+126-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:35:17-68
+127                android:value="androidx.startup" />
+127-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:36:17-49
+128            <meta-data
+128-->[androidx.emoji2:emoji2:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\a8e98169cab130024118fa89142f7032\transformed\emoji2-1.4.0\AndroidManifest.xml:29:13-31:52
+129                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+129-->[androidx.emoji2:emoji2:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\a8e98169cab130024118fa89142f7032\transformed\emoji2-1.4.0\AndroidManifest.xml:30:17-75
+130                android:value="androidx.startup" />
+130-->[androidx.emoji2:emoji2:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\a8e98169cab130024118fa89142f7032\transformed\emoji2-1.4.0\AndroidManifest.xml:31:17-49
+131            <meta-data
+131-->[androidx.lifecycle:lifecycle-process:2.10.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\9572f0bb9074c7b1795c0c22521f13a0\transformed\lifecycle-process-2.10.0\AndroidManifest.xml:29:13-31:52
+132                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+132-->[androidx.lifecycle:lifecycle-process:2.10.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\9572f0bb9074c7b1795c0c22521f13a0\transformed\lifecycle-process-2.10.0\AndroidManifest.xml:30:17-78
+133                android:value="androidx.startup" />
+133-->[androidx.lifecycle:lifecycle-process:2.10.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\9572f0bb9074c7b1795c0c22521f13a0\transformed\lifecycle-process-2.10.0\AndroidManifest.xml:31:17-49
+134            <meta-data
+134-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:29:13-31:52
+135                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+135-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:30:17-85
+136                android:value="androidx.startup" />
+136-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:31:17-49
+137        </provider>
+138
+139        <service
+139-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:39:9-45:35
+140            android:name="androidx.work.impl.background.systemjob.SystemJobService"
+140-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:40:13-84
+141            android:directBootAware="false"
+141-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:41:13-44
+142            android:enabled="@bool/enable_system_job_service_default"
+142-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:42:13-70
+143            android:exported="true"
+143-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:43:13-36
+144            android:permission="android.permission.BIND_JOB_SERVICE" />
+144-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:44:13-69
+145        <service
+145-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:46:9-52:35
+146            android:name="androidx.work.impl.foreground.SystemForegroundService"
+146-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:47:13-81
+147            android:directBootAware="false"
+147-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:48:13-44
+148            android:enabled="@bool/enable_system_foreground_service_default"
+148-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:49:13-77
+149            android:exported="false" />
+149-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:50:13-37
+150
+151        <receiver
+151-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:54:9-59:35
+152            android:name="androidx.work.impl.utils.ForceStopRunnable$BroadcastReceiver"
+152-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:55:13-88
+153            android:directBootAware="false"
+153-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:56:13-44
+154            android:enabled="true"
+154-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:57:13-35
+155            android:exported="false" />
+155-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:58:13-37
+156        <receiver
+156-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:60:9-69:20
+157            android:name="androidx.work.impl.background.systemalarm.RescheduleReceiver"
+157-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:61:13-88
+158            android:directBootAware="false"
+158-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:62:13-44
+159            android:enabled="false"
+159-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:63:13-36
+160            android:exported="false" >
+160-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:64:13-37
+161            <intent-filter>
+161-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:66:13-68:29
+162                <action android:name="android.intent.action.BOOT_COMPLETED" />
+162-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:85:17-79
+162-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\app\src\main\AndroidManifest.xml:85:25-76
+163            </intent-filter>
+164        </receiver>
+165        <receiver
+165-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:70:9-80:20
+166            android:name="androidx.work.impl.diagnostics.DiagnosticsReceiver"
+166-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:71:13-78
+167            android:directBootAware="false"
+167-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:72:13-44
+168            android:enabled="true"
+168-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:73:13-35
+169            android:exported="true"
+169-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:74:13-36
+170            android:permission="android.permission.DUMP" >
+170-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:75:13-57
+171            <intent-filter>
+171-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:77:13-79:29
+172                <action android:name="androidx.work.diagnostics.REQUEST_DIAGNOSTICS" />
+172-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:78:17-88
+172-->[androidx.work:work-runtime:2.11.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\cda51fb220e04e4c005d3200cead014a\transformed\work-runtime-2.11.0\AndroidManifest.xml:78:25-85
+173            </intent-filter>
+174        </receiver>
+175
+176        <uses-library
+176-->[androidx.window:window:1.5.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\3e5138bbf0ce9172b7583499432e9527\transformed\window-1.5.0\AndroidManifest.xml:23:9-25:40
+177            android:name="androidx.window.extensions"
+177-->[androidx.window:window:1.5.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\3e5138bbf0ce9172b7583499432e9527\transformed\window-1.5.0\AndroidManifest.xml:24:13-54
+178            android:required="false" />
+178-->[androidx.window:window:1.5.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\3e5138bbf0ce9172b7583499432e9527\transformed\window-1.5.0\AndroidManifest.xml:25:13-37
+179        <uses-library
+179-->[androidx.window:window:1.5.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\3e5138bbf0ce9172b7583499432e9527\transformed\window-1.5.0\AndroidManifest.xml:26:9-28:40
+180            android:name="androidx.window.sidecar"
+180-->[androidx.window:window:1.5.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\3e5138bbf0ce9172b7583499432e9527\transformed\window-1.5.0\AndroidManifest.xml:27:13-51
+181            android:required="false" />
+181-->[androidx.window:window:1.5.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\3e5138bbf0ce9172b7583499432e9527\transformed\window-1.5.0\AndroidManifest.xml:28:13-37
+182
+183        <activity
+183-->[androidx.compose.ui:ui-test-manifest:1.10.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\4c6b5f238ebaabc293765a9b5812cfdb\transformed\ui-test-manifest-1.10.4\AndroidManifest.xml:23:9-26:79
+184            android:name="androidx.activity.ComponentActivity"
+184-->[androidx.compose.ui:ui-test-manifest:1.10.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\4c6b5f238ebaabc293765a9b5812cfdb\transformed\ui-test-manifest-1.10.4\AndroidManifest.xml:24:13-63
+185            android:exported="true"
+185-->[androidx.compose.ui:ui-test-manifest:1.10.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\4c6b5f238ebaabc293765a9b5812cfdb\transformed\ui-test-manifest-1.10.4\AndroidManifest.xml:25:13-36
+186            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+186-->[androidx.compose.ui:ui-test-manifest:1.10.4] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\4c6b5f238ebaabc293765a9b5812cfdb\transformed\ui-test-manifest-1.10.4\AndroidManifest.xml:26:13-76
+187
+188        <service
+188-->[androidx.room:room-runtime-android:2.8.1] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\31615ae36b405b01d385696b9da87df8\transformed\room-runtime\AndroidManifest.xml:24:9-28:63
+189            android:name="androidx.room.MultiInstanceInvalidationService"
+189-->[androidx.room:room-runtime-android:2.8.1] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\31615ae36b405b01d385696b9da87df8\transformed\room-runtime\AndroidManifest.xml:25:13-74
+190            android:directBootAware="true"
+190-->[androidx.room:room-runtime-android:2.8.1] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\31615ae36b405b01d385696b9da87df8\transformed\room-runtime\AndroidManifest.xml:26:13-43
+191            android:exported="false" />
+191-->[androidx.room:room-runtime-android:2.8.1] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\31615ae36b405b01d385696b9da87df8\transformed\room-runtime\AndroidManifest.xml:27:13-37
+192
+193        <receiver
+193-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:34:9-52:20
+194            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+194-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:35:13-76
+195            android:directBootAware="false"
+195-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:36:13-44
+196            android:enabled="true"
+196-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:37:13-35
+197            android:exported="true"
+197-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:38:13-36
+198            android:permission="android.permission.DUMP" >
+198-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:39:13-57
+199            <intent-filter>
+199-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:40:13-42:29
+200                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+200-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:41:17-91
+200-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:41:25-88
+201            </intent-filter>
+202            <intent-filter>
+202-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:43:13-45:29
+203                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+203-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:44:17-85
+203-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:44:25-82
+204            </intent-filter>
+205            <intent-filter>
+205-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:46:13-48:29
+206                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+206-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:47:17-88
+206-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:47:25-85
+207            </intent-filter>
+208            <intent-filter>
+208-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:49:13-51:29
+209                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+209-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:50:17-95
+209-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\ooo77\.gradle\caches\9.4.1\transforms\c151e6bf08705d01f41b965bd630869d\transformed\profileinstaller-1.4.0\AndroidManifest.xml:50:25-92
+210            </intent-filter>
+211        </receiver>
+212    </application>
+213
+214</manifest>

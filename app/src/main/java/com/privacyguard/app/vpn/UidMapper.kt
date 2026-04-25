@@ -52,13 +52,13 @@ object UidMapper {
                 var line = reader.readLine()
                 while (line != null) {
                     val parts = line.trim().split("\\s+".toRegex())
-                    // Column layout: sl local_address rem_address st tx:rx tr tm inode uid ...
-                    // index:          0  1              2            3  4    5  6  7     8   ...
+                    // Column layout: sl local_address rem_address st tx_queue:rx_queue tr tm->when retrnsmt uid timeout inode ...
+                    // index:          0  1              2           3  4                 5  6        7   8       9
                     if (parts.size < 8) { line = reader.readLine(); continue }
                     val local = parts[1]
                     val colonIdx = local.lastIndexOf(':')
                     if (colonIdx >= 0 && local.substring(colonIdx + 1).equals(portHex, ignoreCase = true)) {
-                        return parts[7].toIntOrNull() ?: -1
+                        return parts.getOrNull(7)?.toIntOrNull() ?: -1
                     }
                     line = reader.readLine()
                 }

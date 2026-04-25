@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -75,8 +76,22 @@ fun AppsScreen(
             ScreenScaffold(
                 title = "Apps",
                 subtitle = "Per-app privacy risk and traffic visibility",
-                badge = "${apps.count { it.maxRiskScore >= 70 }} HIGH RISK"
+                badge = "${apps.count { it.maxRiskScore >= 70 || it.stalkerwareScore >= 70 }} HIGH RISK"
             ) {
+                val stalkerwareAlerts = apps.count { it.stalkerwareScore >= 70 }
+                if (stalkerwareAlerts > 0) {
+                    PanelCard(modifier = Modifier.padding(bottom = 12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Visibility, contentDescription = null, tint = PgDanger, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.size(10.dp))
+                            Column {
+                                Text("Potential stalkerware signals", style = MaterialTheme.typography.titleMedium, color = PgText)
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text("$stalkerwareAlerts apps matched hidden-install, night-activity, or background-tracking patterns.", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                            }
+                        }
+                    }
+                }
                 SearchShell(
                     query = searchQuery,
                     onValueChange = viewModel::setSearchQuery
@@ -99,6 +114,7 @@ fun AppsScreen(
 
         items(filteredApps) { app ->
             val (riskLabel, tint, bg) = when {
+                app.stalkerwareScore >= 70 -> Triple("STALKER", PgDanger, PgDangerDim)
                 app.maxRiskScore >= 70 -> Triple("HIGH", PgDanger, PgDangerDim)
                 app.maxRiskScore >= 40 -> Triple("MED", PgWarning, PgWarningDim)
                 else -> Triple("LOW", PgAccent, PgAccentDim)
@@ -144,7 +160,8 @@ fun AppsScreen(
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             "${app.totalDestinations} destinations · ${app.suspiciousCount} suspicious" +
-                                if (app.cleartextCount > 0) " · ${app.cleartextCount} cleartext" else "",
+                                (if (app.cleartextCount > 0) " · ${app.cleartextCount} cleartext" else "") +
+                                (if (app.stalkerwareScore >= 40) " · stalkerware ${app.stalkerwareScore}" else ""),
                             style = MaterialTheme.typography.bodySmall,
                             color = PgTextMuted
                         )

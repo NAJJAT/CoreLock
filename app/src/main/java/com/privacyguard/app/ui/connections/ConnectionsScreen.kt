@@ -15,13 +15,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.privacyguard.app.ui.components.PanelCard
 import com.privacyguard.app.ui.components.ScreenScaffold
@@ -49,6 +50,7 @@ import com.privacyguard.app.ui.theme.PgTextFaint
 import com.privacyguard.app.ui.theme.PgTextMuted
 import com.privacyguard.app.ui.theme.PgWarning
 import com.privacyguard.app.ui.theme.PgWarningDim
+import java.util.Locale
 
 @Composable
 fun ConnectionsScreen(
@@ -60,6 +62,16 @@ fun ConnectionsScreen(
         if (liveConnections.isNotEmpty()) liveConnections else storedConnections
     }
     val filter by viewModel.filter.collectAsState()
+    val dnsLookup by viewModel.dnsLookup.collectAsState()
+    val selectedConnection by viewModel.selectedConnection.collectAsState()
+
+    selectedConnection?.let {
+        ConnectionDetailDialog(
+            detail = it,
+            onClose = viewModel::clearSelectedConnection,
+            onToggleBlock = { viewModel.toggleConnectionBlocked(it.connection) }
+        )
+    }
 
     LazyColumn(
         modifier = Modifier.background(MaterialTheme.colorScheme.background),
@@ -75,6 +87,10 @@ fun ConnectionsScreen(
                     query = filter.query,
                     onValueChange = { viewModel.setFilter(filter.copy(query = it)) }
                 )
+                if (dnsLookup.query.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    DnsLookupPanel(dnsLookup)
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip("All", !filter.showBlockedOnly && !filter.showCleartextOnly) {
@@ -112,7 +128,11 @@ fun ConnectionsScreen(
         }
 
         items(connections) { connection ->
-            PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+            PanelCard(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .clickable { viewModel.selectConnection(connection) }
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val (icon, tint, bg) = when {
                         connection.isBlocked -> Triple(Icons.Default.Warning, PgDanger, PgDangerDim)
@@ -149,11 +169,11 @@ fun ConnectionsScreen(
                     Column(horizontalAlignment = Alignment.End) {
                         Text(connection.dataRate, style = MaterialTheme.typography.labelMedium, color = PgTextFaint)
                         Spacer(modifier = Modifier.height(6.dp))
-                        Box(modifier = Modifier.clickable(enabled = !connection.isBlocked) {
-                            viewModel.blockApp(connection.packageName)
+                        Box(modifier = Modifier.clickable {
+                            viewModel.toggleConnectionBlocked(connection)
                         }) {
                             StatusPill(
-                                text = if (connection.isBlocked) "BLOCKED" else "BLOCK",
+                                text = if (connection.isBlocked) "UNBLOCK" else "BLOCK",
                                 background = if (connection.isBlocked) PgDangerDim else PgPanelRaised,
                                 content = PgDanger
                             )
@@ -170,6 +190,178 @@ fun ConnectionsScreen(
             }
         }
         item { Spacer(modifier = Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+private fun ConnectionDetailDialog(
+    detail: ConnectionDetailState,
+    onClose: () -> Unit,
+    onToggleBlock: () -> Unit,
+) {
+    val connection = detail.connection
+    Dialog(onDismissRequest = onClose) {
+        PanelCard {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = detail.displayHost,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = PgText,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "${connection.destinationIp}:${connection.destinationPort}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = PgTextMuted,
+                            fontFamily = MonoFont
+                        )
+                    }
+                    StatusPill(
+                        text = if (connection.isBlocked) "BLOCKED" else connection.protocol,
+                        background = if (connection.isBlocked) PgDangerDim else PgAccentDim,
+                        content = if (connection.isBlocked) PgDanger else PgAccent
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = PgBackgroundAlt)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                DetailRow("App", connection.appName)
+                DetailRow("Package", connection.packageName)
+                DetailRow("DNS name", connection.hostName ?: detail.reverseDns ?: if (detail.isResolvingReverseDns) "Resolving..." else "Unknown")
+                DetailRow("Security", listOf(connection.securityInfo, connection.encryptionInfo).filter { it.isNotBlank() }.joinToString(" / "))
+                DetailRow("Transferred", "${formatBytes(connection.bytesSent)} up · ${formatBytes(connection.bytesReceived)} down")
+
+                Spacer(modifier = Modifier.height(12.dp))
+                PanelCard {
+                    Column {
+                        Text("Route", style = MaterialTheme.typography.labelSmall, color = PgTextFaint)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        val geo = detail.geo
+                        Text(
+                            text = if (geo != null) {
+                                "This device -> ${geo.countryName} (${geo.countryCode})"
+                            } else {
+                                "This device -> Unknown country"
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            color = PgText
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = geo?.org ?: "No local GeoIP match for this address",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = PgTextMuted,
+                            fontFamily = MonoFont
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Button(
+                        onClick = onToggleBlock,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = PgDangerDim,
+                            contentColor = PgDanger
+                        )
+                    ) {
+                        Text(if (connection.isBlocked) "Unblock" else "Block")
+                    }
+                    Button(
+                        onClick = onClose,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = PgAccentDim,
+                            contentColor = PgAccent
+                        )
+                    ) {
+                        Text("Close")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailRow(label: String, value: String) {
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = PgTextFaint)
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = value.ifBlank { "Unknown" },
+            style = MaterialTheme.typography.bodyMedium,
+            color = PgText,
+            fontFamily = MonoFont,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun DnsLookupPanel(result: DnsLookupState) {
+    PanelCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "DNS lookup",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = PgTextFaint
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = result.query,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = PgText
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                val detail = when {
+                    result.isLoading -> "Resolving..."
+                    result.error != null -> result.error
+                    result.addresses.isNotEmpty() -> result.addresses.joinToString(" · ")
+                    else -> "No result"
+                }
+                Text(
+                    text = detail,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (result.error != null) PgDanger else PgTextMuted,
+                    fontFamily = MonoFont
+                )
+            }
+            StatusPill(
+                text = when {
+                    result.isLoading -> "DNS"
+                    result.error != null -> "FAIL"
+                    else -> "OK"
+                },
+                background = if (result.error != null) PgDangerDim else PgAccentDim,
+                content = if (result.error != null) PgDanger else PgAccent
+            )
+        }
+    }
+}
+
+private fun formatBytes(bytes: Long): String {
+    return when {
+        bytes >= 1024 * 1024 -> String.format(Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0))
+        bytes >= 1024 -> String.format(Locale.US, "%.1f KB", bytes / 1024.0)
+        else -> "$bytes B"
     }
 }
 

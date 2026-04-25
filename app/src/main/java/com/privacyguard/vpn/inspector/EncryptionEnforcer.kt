@@ -1,36 +1,53 @@
 package com.privacyguard.vpn.inspector
 
+import android.util.Log
 import com.privacyguard.core.metadata.EncryptionStatus
 import com.privacyguard.core.metadata.TlsVersion
 import com.privacyguard.core.packet.IpPacket
 import com.privacyguard.core.packet.TcpPacket
 
-/**
- * Classifies the encryption status of a TCP connection by inspecting the
- * first data packet (TLS ClientHello or plaintext HTTP).
- *
- * Zero decryption — only reads the unencrypted TLS handshake record layer.
- */
 class EncryptionEnforcer {
+
+    companion object {
+        private const val TAG = "EncryptionEnforcer"
+    }
 
     data class Result(
         val encryptionStatus: EncryptionStatus,
-        val tlsVersion:       TlsVersion?,
-        val sniHostname:      String?,
+        val tlsVersion: TlsVersion?,
+        val sniHostname: String?,
     )
 
     fun inspect(ip: IpPacket, tcp: TcpPacket): Result {
         val port = tcp.destinationPort
         val data = tcp.data
 
-        // Port-based quick classification
+        Log.d(TAG, "Inspecting connection to port $port, data size ${data.size}")
+
+        // FIXED: Don't block, just classify
         return when {
-            port == 80 || port == 8080 -> Result(EncryptionStatus.CLEARTEXT, null, null)
-            port == 443 || port == 8443 -> inspectTls(data)
-            port == 443 && ip.protocol == IpPacket.PROTO_UDP -> Result(EncryptionStatus.QUIC, null, null)
-            data.size > 5 && isTlsClientHello(data) -> inspectTls(data)
-            data.size > 0 && isPlaintextHttp(data) -> Result(EncryptionStatus.CLEARTEXT, null, null)
-            else -> Result(EncryptionStatus.UNKNOWN, null, null)
+            port == 80 || port == 8080 -> {
+                Log.d(TAG, "Port $port detected as CLEARTEXT")
+                Result(EncryptionStatus.CLEARTEXT, null, null)
+            }
+            port == 443 || port == 8443 -> {
+                val result = inspectTls(data)
+                Log.d(TAG, "Port $port detected as ${result.encryptionStatus}")
+                result
+            }
+            data.size > 5 && isTlsClientHello(data) -> {
+                val result = inspectTls(data)
+                Log.d(TAG, "TLS ClientHello detected as ${result.encryptionStatus}")
+                result
+            }
+            data.size > 0 && isPlaintextHttp(data) -> {
+                Log.d(TAG, "Plaintext HTTP detected as CLEARTEXT")
+                Result(EncryptionStatus.CLEARTEXT, null, null)
+            }
+            else -> {
+                Log.d(TAG, "Unknown encryption status for port $port")
+                Result(EncryptionStatus.UNKNOWN, null, null)
+            }
         }
     }
 
@@ -38,7 +55,6 @@ class EncryptionEnforcer {
         if (data.size < 6) return Result(EncryptionStatus.TLS, null, null)
         if (!isTlsClientHello(data)) return Result(EncryptionStatus.TLS, null, null)
 
-        // TLS record layer version: bytes 1-2
         val major = data[1].toInt() and 0xFF
         val minor = data[2].toInt() and 0xFF
 
@@ -50,17 +66,14 @@ class EncryptionEnforcer {
             else -> TlsVersion.UNKNOWN
         }
 
-        // Try to extract SNI from ClientHello extension
         val sni = extractSni(data)
-
-        // Check for supported_versions extension (TLS 1.3 indicator)
-        val finalVersion = if (hasTls13SupportedVersions(data)) TlsVersion.TLS_1_3 else recordVersion
+        val hasTls13 = hasTls13SupportedVersions(data)
+        val finalVersion = if (hasTls13) TlsVersion.TLS_1_3 else recordVersion
 
         val encStatus = when (finalVersion) {
             TlsVersion.TLS_1_3 -> EncryptionStatus.TLS_1_3
             TlsVersion.TLS_1_2 -> EncryptionStatus.TLS_1_2
-            TlsVersion.TLS_1_0,
-            TlsVersion.TLS_1_1 -> EncryptionStatus.WEAK_TLS
+            TlsVersion.TLS_1_0, TlsVersion.TLS_1_1 -> EncryptionStatus.WEAK_TLS
             else -> EncryptionStatus.TLS
         }
 
@@ -68,9 +81,9 @@ class EncryptionEnforcer {
     }
 
     private fun isTlsClientHello(data: ByteArray): Boolean {
-        if (data.size < 6) return false
-        return data[0].toInt() and 0xFF == 0x16 &&   // Content type: handshake
-               data[5].toInt() and 0xFF == 0x01       // Handshake type: ClientHello
+        return data.size >= 6 && 
+               data[0].toInt() == 0x16 &&   // Content type: handshake
+               data[5].toInt() == 0x01       // Handshake type: ClientHello
     }
 
     private fun isPlaintextHttp(data: ByteArray): Boolean {
@@ -83,12 +96,7 @@ class EncryptionEnforcer {
 
     private fun extractSni(data: ByteArray): String? {
         try {
-            // TLS record header: 5 bytes
-            // Handshake header: 4 bytes
-            // ClientHello: version(2) + random(32) + session_id_len(1) + session_id(var)
-            //              + cipher_suites_len(2) + cipher_suites(var) + compression_len(1)
-            //              + compression(var) + extensions_len(2) + extensions
-            var offset = 5 + 4 + 2 + 32  // skip record header, handshake header, version, random
+            var offset = 5 + 4 + 2 + 32  // record, handshake, version, random
             if (offset >= data.size) return null
 
             val sessionIdLen = data[offset].toInt() and 0xFF
@@ -109,10 +117,10 @@ class EncryptionEnforcer {
             val extEnd = offset + extensionsLen
             while (offset + 4 <= extEnd && offset + 4 <= data.size) {
                 val extType = ((data[offset].toInt() and 0xFF) shl 8) or (data[offset + 1].toInt() and 0xFF)
-                val extLen  = ((data[offset + 2].toInt() and 0xFF) shl 8) or (data[offset + 3].toInt() and 0xFF)
+                val extLen = ((data[offset + 2].toInt() and 0xFF) shl 8) or (data[offset + 3].toInt() and 0xFF)
                 offset += 4
-                if (extType == 0) {
-                    // SNI extension
+                
+                if (extType == 0) { // SNI extension
                     if (offset + 5 <= data.size) {
                         val nameType = data[offset + 2].toInt() and 0xFF
                         if (nameType == 0) {
@@ -126,7 +134,9 @@ class EncryptionEnforcer {
                 }
                 offset += extLen
             }
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to extract SNI: ${e.message}")
+        }
         return null
     }
 
@@ -134,24 +144,29 @@ class EncryptionEnforcer {
         try {
             var offset = 5 + 4 + 2 + 32
             if (offset >= data.size) return false
+            
             val sessionIdLen = data[offset].toInt() and 0xFF
             offset += 1 + sessionIdLen
             if (offset + 2 >= data.size) return false
+            
             val cipherLen = ((data[offset].toInt() and 0xFF) shl 8) or (data[offset + 1].toInt() and 0xFF)
             offset += 2 + cipherLen
             if (offset >= data.size) return false
+            
             val compLen = data[offset].toInt() and 0xFF
             offset += 1 + compLen
             if (offset + 2 >= data.size) return false
+            
             val extLen = ((data[offset].toInt() and 0xFF) shl 8) or (data[offset + 1].toInt() and 0xFF)
             offset += 2
+            
             val extEnd = offset + extLen
             while (offset + 4 <= extEnd && offset + 4 <= data.size) {
                 val extType = ((data[offset].toInt() and 0xFF) shl 8) or (data[offset + 1].toInt() and 0xFF)
                 val extDataLen = ((data[offset + 2].toInt() and 0xFF) shl 8) or (data[offset + 3].toInt() and 0xFF)
                 offset += 4
+                
                 if (extType == 0x002B) { // supported_versions
-                    // Check if 0x0304 (TLS 1.3) is in the list
                     val end = offset + extDataLen
                     var i = offset + 1
                     while (i + 2 <= end && i + 2 <= data.size) {
@@ -162,7 +177,9 @@ class EncryptionEnforcer {
                 }
                 offset += extDataLen
             }
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to check TLS 1.3: ${e.message}")
+        }
         return false
     }
 }

@@ -1,16 +1,17 @@
 package com.privacyguard.app.core.blocklist
 
+import android.annotation.SuppressLint
 import android.content.Context
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.remote.BlocklistDownloader
 import com.privacyguard.app.data.repository.BlocklistRepo
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
+@SuppressLint("StaticFieldLeak")
 object BlocklistManager {
 
     @Volatile private var context: Context? = null
@@ -28,9 +29,12 @@ object BlocklistManager {
 
     fun initialize(context: Context) {
         this.context = context.applicationContext
-        CoroutineScope(Dispatchers.IO).launch {
+        runBlocking(Dispatchers.IO) {
             runCatching {
                 val repo = BlocklistRepo(AppDatabase.getInstance(context.applicationContext).blocklistDao())
+                if (repo.totalCount() == 0) {
+                    seedBuiltInBlocklists(repo)
+                }
                 _size.value = repo.totalCount()
             }
         }
@@ -142,12 +146,106 @@ object BlocklistManager {
     private fun sourceMetadata(source: BlocklistSource): Pair<String, String> = when (source) {
         BlocklistSource.STEVENBLACK  -> Pair(BlocklistRepo.SOURCE_STEVEN_BLACK, BlocklistRepo.CAT_ADS)
         BlocklistSource.EASYLIST     -> Pair(BlocklistRepo.SOURCE_EASYLIST, BlocklistRepo.CAT_ADS)
-        BlocklistSource.EASYPRIVACY  -> Pair(BlocklistRepo.SOURCE_EASYLIST, BlocklistRepo.CAT_TRACKERS)
+        BlocklistSource.EASYPRIVACY  -> Pair(BlocklistRepo.SOURCE_EASYPRIVACY, BlocklistRepo.CAT_TRACKERS)
         BlocklistSource.OISD_BASIC   -> Pair(BlocklistRepo.SOURCE_OISD, BlocklistRepo.CAT_ADS)
         BlocklistSource.OISD_FULL    -> Pair(BlocklistRepo.SOURCE_OISD, BlocklistRepo.CAT_ADS)
-        BlocklistSource.HAGEZI_LIGHT -> Pair("Hagezi", BlocklistRepo.CAT_ADS)
+        BlocklistSource.HAGEZI_LIGHT -> Pair(BlocklistRepo.SOURCE_HAGEZI, BlocklistRepo.CAT_ADS)
         BlocklistSource.CUSTOM       -> Pair("Custom", BlocklistRepo.CAT_ADS)
     }
+
+    private suspend fun seedBuiltInBlocklists(repo: BlocklistRepo) {
+        BUILTIN_SEED.forEach { (source, categoryDomains) ->
+            categoryDomains.forEach { (category, domains) ->
+                if (domains.isNotEmpty()) {
+                    repo.replaceSource("$source-$category", category, domains.distinct())
+                }
+            }
+        }
+    }
+
+    private val BUILTIN_SEED: Map<String, Map<String, List<String>>> = mapOf(
+        BlocklistRepo.SOURCE_BUILTIN to mapOf(
+            BlocklistRepo.CAT_ADS to listOf(
+                "doubleclick.net",
+                "ad.doubleclick.net",
+                "pagead2.googlesyndication.com",
+                "googlesyndication.com",
+                "googleadservices.com",
+                "adservice.google.com",
+                "adservice.google.ae",
+                "adservice.google.com.eg",
+                "adnxs.com",
+                "ads.yahoo.com",
+                "taboola.com",
+                "outbrain.com",
+                "criteo.com",
+                "rubiconproject.com",
+                "openx.net",
+                "pubmatic.com",
+                "ads.pubmatic.com",
+                "moatads.com",
+                "scorecardresearch.com",
+                "zedo.com",
+                "advertising.com",
+                "adform.net",
+                "casalemedia.com",
+                "quantserve.com",
+                "smartadserver.com",
+                "amazon-adsystem.com",
+                "adsrvr.org",
+                "yieldmo.com",
+                "adsafeprotected.com",
+                "serving-sys.com",
+            ),
+            BlocklistRepo.CAT_TRACKERS to listOf(
+                "analytics.google.com",
+                "google-analytics.com",
+                "ssl.google-analytics.com",
+                "analytics.facebook.com",
+                "connect.facebook.net",
+                "graph.facebook.com",
+                "app-measurement.com",
+                "firebaseinstallations.googleapis.com",
+                "appsflyer.com",
+                "adjust.com",
+                "branch.io",
+                "segment.io",
+                "mixpanel.com",
+                "api.mixpanel.com",
+                "amplitude.com",
+                "telemetry.microsoft.com",
+                "settings-win.data.microsoft.com",
+                "bat.bing.com",
+                "stats.g.doubleclick.net",
+                "cdn.segment.com",
+                "api.segment.io",
+                "pixel.facebook.com",
+                "sdk.iad-05.braze.com",
+                "braze.com",
+                "api2.branch.io",
+            ),
+            BlocklistRepo.CAT_MALWARE to listOf(
+                "malware.testcategory.com",
+                "phishing.testcategory.com",
+                "urlhaus.abuse.ch",
+                "tracker.badexample.ru",
+                "c2-tracker.ru",
+                "command-and-control.example",
+            ),
+            BlocklistRepo.CAT_TELEMETRY to listOf(
+                "telemetry.dropbox.com",
+                "telemetry.mozilla.org",
+                "telemetry.android.com",
+                "device-metrics-us.amazon.com",
+                "settings.data.microsoft.com",
+                "browser.events.data.msn.com",
+                "safebrowsing.googleapis.com",
+                "metrics.icloud.com",
+                "metrics.apple.com",
+                "diagnostics.support.apple.com",
+            ),
+        ),
+    )
 }
 
 sealed class UpdateResult {

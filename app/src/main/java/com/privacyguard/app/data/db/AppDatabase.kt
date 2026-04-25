@@ -13,8 +13,9 @@ import androidx.room.RoomDatabase
         AppStatsEntity::class,
         ConnectionProfileEntity::class,
         DnsAnomalyEntity::class,
+        NetworkTrustEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -24,6 +25,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun appStatsDao(): AppStatsDao
     abstract fun connectionProfileDao(): ConnectionProfileDao
     abstract fun dnsAnomalyDao(): DnsAnomalyDao
+    abstract fun networkTrustDao(): NetworkTrustDao
 
     companion object {
         const val DATABASE_NAME = "privacyguard_legacy.db"

@@ -40,6 +40,10 @@
         "source": "C:\\Users\\ooo77\\.gradle\\daemon\\9.4.1\\com.privacyguard.app-main-50:\\xml\\backup_rules.xml"
     },
     {
+        "merged": "C:\\Users\\ooo77\\.gradle\\daemon\\9.4.1\\com.privacyguard.app-debug-48:\\xml_file_paths.xml.flat",
+        "source": "C:\\Users\\ooo77\\.gradle\\daemon\\9.4.1\\com.privacyguard.app-main-50:\\xml\\file_paths.xml"
+    },
+    {
         "merged": "C:\\Users\\ooo77\\.gradle\\daemon\\9.4.1\\com.privacyguard.app-debug-48:\\mipmap-anydpi-v26_ic_launcher_round.xml.flat",
         "source": "C:\\Users\\ooo77\\.gradle\\daemon\\9.4.1\\com.privacyguard.app-main-50:\\mipmap-anydpi-v26\\ic_launcher_round.xml"
     },

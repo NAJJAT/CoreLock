@@ -1,8 +1,10 @@
 package com.privacyguard.app.ui.dashboard
 
 import android.app.Activity
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,10 +22,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -43,23 +49,27 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.privacyguard.app.ui.components.LabeledProgress
+import com.privacyguard.app.ui.components.MetricRow
 import com.privacyguard.app.ui.components.PanelCard
 import com.privacyguard.app.ui.components.ScreenScaffold
 import com.privacyguard.app.ui.components.SectionLabel
 import com.privacyguard.app.ui.components.StatTile
 import com.privacyguard.app.ui.components.formatAgo
+import com.privacyguard.app.ui.components.formatBytes
 import com.privacyguard.app.vpn.VpnManager
 import com.privacyguard.app.ui.theme.PgAccent
 import com.privacyguard.app.ui.theme.PgAccentDim
 import com.privacyguard.app.ui.theme.PgDanger
 import com.privacyguard.app.ui.theme.PgDangerDim
 import com.privacyguard.app.ui.theme.PgInfo
+import com.privacyguard.app.ui.theme.PgInfoDim
 import com.privacyguard.app.ui.theme.PgPanelStrong
 import com.privacyguard.app.ui.theme.PgText
 import com.privacyguard.app.ui.theme.PgTextFaint
 import com.privacyguard.app.ui.theme.PgTextMuted
 import com.privacyguard.app.ui.theme.PgWarning
 import com.privacyguard.app.ui.theme.PgWarningDim
+import java.io.File
 
 @Composable
 fun DashboardScreen(
@@ -128,6 +138,12 @@ fun DashboardScreen(
                                         style = MaterialTheme.typography.headlineMedium,
                                         color = if (uiState.isVpnActive) PgAccent else PgDanger
                                     )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "Privacy Score ${uiState.privacyScore.score}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = PgInfo,
+                                    )
                                 }
                                 PrivacySwitch(
                                     checked = uiState.isVpnActive,
@@ -174,8 +190,48 @@ fun DashboardScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     StatTile("Trackers blocked", uiState.trackersBlocked.toString(), PgAccent, Modifier.weight(1f))
                     StatTile("Cleartext conns", uiState.cleartextCount.toString(), PgDanger, Modifier.weight(1f))
-                    StatTile("Domains loaded", uiState.blocklistDomains.toString(), PgInfo, Modifier.weight(1f))
+                    StatTile("Privacy score", uiState.privacyScore.score.toString(), PgInfo, Modifier.weight(1f))
                 }
+
+                Spacer(modifier = Modifier.height(18.dp))
+                SectionLabel("Security systems")
+                Spacer(modifier = Modifier.height(10.dp))
+                SecuritySystemsGrid(
+                    cards = uiState.securityCards,
+                    killSwitchEnabled = uiState.securityCards.firstOrNull { it.title == "Kill Switch" }?.status == "Armed",
+                    onToggleKillSwitch = { enabled -> viewModel.setKillSwitch(enabled) }
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+                WeeklyPrivacyReportCard(uiState.weeklyReport)
+
+                Spacer(modifier = Modifier.height(14.dp))
+                PcapExportCard(
+                    isCapturing = uiState.isPcapCapturing,
+                    path = uiState.pcapPath,
+                    onToggle = viewModel::togglePcapCapture,
+                    onShare = { path ->
+                        val file = File(path)
+                        if (file.exists()) {
+                            val uri = FileProvider.getUriForFile(
+                                context,
+                                "${context.packageName}.fileprovider",
+                                file
+                            )
+                            val share = Intent(Intent.ACTION_SEND).apply {
+                                type = "application/vnd.tcpdump.pcap"
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(share, "Export PCAP"))
+                        }
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+                SectionLabel("Recommendations / Security Notes")
+                Spacer(modifier = Modifier.height(10.dp))
+                RecommendationsCard(uiState.recommendations)
 
                 Spacer(modifier = Modifier.height(18.dp))
                 SectionLabel("Recent alerts")
@@ -224,6 +280,170 @@ fun DashboardScreen(
         }
 
         item { Spacer(modifier = Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+private fun SecuritySystemsGrid(
+    cards: List<SecurityCardState>,
+    killSwitchEnabled: Boolean,
+    onToggleKillSwitch: (Boolean) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        cards.chunked(2).forEach { rowCards ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                rowCards.forEach { card ->
+                    SecuritySystemCard(
+                        card = card,
+                        modifier = Modifier.weight(1f),
+                        killSwitchEnabled = killSwitchEnabled,
+                        onToggleKillSwitch = onToggleKillSwitch,
+                    )
+                }
+                if (rowCards.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SecuritySystemCard(
+    card: SecurityCardState,
+    modifier: Modifier = Modifier,
+    killSwitchEnabled: Boolean,
+    onToggleKillSwitch: (Boolean) -> Unit,
+) {
+    val (tint, bg) = when (card.severity) {
+        CardSeverity.GOOD -> PgAccent to PgAccentDim
+        CardSeverity.INFO -> PgInfo to PgInfoDim
+        CardSeverity.WARNING -> PgWarning to PgWarningDim
+        CardSeverity.CRITICAL -> PgDanger to PgDangerDim
+    }
+    PanelCard(modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(bg),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (card.title.contains("Upload")) Icons.Default.Upload else Icons.Default.Security,
+                    contentDescription = null,
+                    tint = tint,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Text(card.value, style = MaterialTheme.typography.labelMedium, color = PgTextFaint)
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(card.title, style = MaterialTheme.typography.titleMedium, color = PgText)
+        Spacer(modifier = Modifier.height(3.dp))
+        Text(card.subtitle, style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(card.status.uppercase(), style = MaterialTheme.typography.labelSmall, color = tint)
+            if (card.title == "Kill Switch") {
+                PrivacySwitch(checked = killSwitchEnabled, onToggle = { onToggleKillSwitch(!killSwitchEnabled) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun WeeklyPrivacyReportCard(report: WeeklyPrivacyReport) {
+    PanelCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text("Weekly Privacy Report", style = MaterialTheme.typography.titleLarge, color = PgText)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("Behavioral summary from the last 7 days", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+            }
+            Text(report.trustLevel.uppercase(), style = MaterialTheme.typography.labelSmall, color = PgAccent)
+        }
+        Spacer(modifier = Modifier.height(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StatTile("Connections", report.totalConnections.toString(), PgInfo, Modifier.weight(1f))
+            StatTile("Blocked", report.blockedConnections.toString(), PgDanger, Modifier.weight(1f))
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StatTile("Behavior", report.behaviorAlerts.toString(), PgWarning, Modifier.weight(1f))
+            StatTile("Score", report.privacyScore.toString(), PgAccent, Modifier.weight(1f))
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        Text("Transferred ${report.dataTransferred}", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+    }
+}
+
+@Composable
+private fun PcapExportCard(
+    isCapturing: Boolean,
+    path: String?,
+    onToggle: () -> Unit,
+    onShare: (String) -> Unit,
+) {
+    PanelCard {
+        MetricRow(
+            icon = Icons.Default.Router,
+            tint = if (isCapturing) PgDanger else PgInfo,
+            title = "PCAP Export",
+            subtitle = path ?: "Capture raw IP packets for Wireshark analysis",
+            trailing = if (isCapturing) "REC" else "READY",
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(
+            onClick = onToggle,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isCapturing) PgDangerDim else PgAccentDim,
+                contentColor = if (isCapturing) PgDanger else PgAccent
+            )
+        ) {
+            Text(if (isCapturing) "Stop Capture" else "Start Capture")
+        }
+        if (!isCapturing && path != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = { onShare(path) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PgInfoDim,
+                    contentColor = PgInfo
+                )
+            ) {
+                Text("Share Last Capture")
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecommendationsCard(notes: List<String>) {
+    PanelCard {
+        notes.forEachIndexed { index, note ->
+            Row(verticalAlignment = Alignment.Top) {
+                Text("#${index + 1}", style = MaterialTheme.typography.labelMedium, color = PgAccent)
+                Spacer(modifier = Modifier.size(10.dp))
+                Text(note, style = MaterialTheme.typography.bodySmall, color = PgTextMuted, modifier = Modifier.weight(1f))
+            }
+            if (index != notes.lastIndex) Spacer(modifier = Modifier.height(10.dp))
+        }
     }
 }
 

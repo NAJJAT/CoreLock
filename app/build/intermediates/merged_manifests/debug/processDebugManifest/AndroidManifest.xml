@@ -11,7 +11,9 @@
     <!-- Network -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 
     <!-- Foreground service — VPN requires specialUse on API 34+ -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -30,7 +32,9 @@
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 
     <!-- Post notifications (required API 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -53,12 +57,10 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:testOnly="true"
         android:theme="@style/Theme.Privacyguard" >
         <activity
             android:name="com.privacyguard.app.MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.Privacyguard" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -10,9 +10,11 @@ import com.privacyguard.vpn.inspector.DnsAnomalyDetector
 import com.privacyguard.vpn.tunnel.TunWriter
 import java.net.DatagramPacket
 import java.net.DatagramSocket
-import java.net.HttpURLConnection
 import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.net.URL
+import javax.net.ssl.SSLSocketFactory
 import java.util.concurrent.atomic.AtomicLong
 import android.util.Log
 
@@ -42,6 +44,7 @@ class DnsHandler(
     // Must be VpnService.protect() — without this, forwarded DNS sockets get
     // re-intercepted by the VPN and loop infinitely instead of reaching the upstream.
     private val protectSocket:     ((DatagramSocket) -> Boolean)? = null,
+    private val protectTcpSocket:  ((Socket) -> Boolean)? = null,
 ) {
     // ─────────────────────────────────────────────────────────────────────────
     // Listeners
@@ -215,18 +218,8 @@ class DnsHandler(
     ) {
         try {
             val queryBytes = udpPacket.data
-            val conn = URL(dohProvider).openConnection() as HttpURLConnection
-            conn.requestMethod = "POST"
-            conn.setRequestProperty("Content-Type", "application/dns-message")
-            conn.setRequestProperty("Accept", "application/dns-message")
-            conn.setRequestProperty("Content-Length", queryBytes.size.toString())
-            conn.connectTimeout = upstreamTimeoutMs
-            conn.readTimeout = upstreamTimeoutMs
-            conn.doOutput = true
-            conn.outputStream.use { it.write(queryBytes) }
-
-            if (conn.responseCode in 200..299) {
-                val responseData = conn.inputStream.use { it.readBytes() }
+            val responseData = postDoh(queryBytes)
+            if (responseData != null) {
                 injectDnsResponse(ipPacket, udpPacket, dnsQuery, responseData, ownerPackage)
             } else {
                 upstreamErrors.incrementAndGet()
@@ -237,6 +230,60 @@ class DnsHandler(
             upstreamErrors.incrementAndGet()
             forwardBlocking(ipPacket, udpPacket, dnsQuery, ownerPackage)
         }
+    }
+
+    private fun postDoh(queryBytes: ByteArray): ByteArray? {
+        val url = URL(dohProvider)
+        val host = url.host
+        val port = if (url.port > 0) url.port else 443
+        val path = if (url.query.isNullOrBlank()) url.path else "${url.path}?${url.query}"
+
+        Socket().use { rawSocket ->
+            val protected = protectTcpSocket?.invoke(rawSocket) ?: true
+            if (!protected) {
+                Log.e(TAG, "VpnService.protect() returned false for DoH socket to $host")
+                return null
+            }
+            rawSocket.connect(InetSocketAddress(host, port), upstreamTimeoutMs)
+            rawSocket.soTimeout = upstreamTimeoutMs
+
+            val sslFactory = SSLSocketFactory.getDefault() as SSLSocketFactory
+            val ssl = sslFactory.createSocket(rawSocket, host, port, true)
+            ssl.use { secureSocket ->
+                val requestHeaders = buildString {
+                    append("POST $path HTTP/1.1\r\n")
+                    append("Host: $host\r\n")
+                    append("Content-Type: application/dns-message\r\n")
+                    append("Accept: application/dns-message\r\n")
+                    append("Content-Length: ${queryBytes.size}\r\n")
+                    append("Connection: close\r\n")
+                    append("\r\n")
+                }.toByteArray(Charsets.US_ASCII)
+
+                val out = secureSocket.getOutputStream()
+                out.write(requestHeaders)
+                out.write(queryBytes)
+                out.flush()
+
+                val rawResponse = secureSocket.getInputStream().readBytes()
+                val headerEnd = rawResponse.findHeaderEnd() ?: return null
+                val headerText = rawResponse.copyOfRange(0, headerEnd).toString(Charsets.ISO_8859_1)
+                if (!headerText.startsWith("HTTP/1.1 2") && !headerText.startsWith("HTTP/1.0 2")) return null
+                return rawResponse.copyOfRange(headerEnd + 4, rawResponse.size)
+            }
+        }
+    }
+
+    private fun ByteArray.findHeaderEnd(): Int? {
+        for (i in 0 until size - 3) {
+            if (this[i] == '\r'.code.toByte() &&
+                this[i + 1] == '\n'.code.toByte() &&
+                this[i + 2] == '\r'.code.toByte() &&
+                this[i + 3] == '\n'.code.toByte()) {
+                return i
+            }
+        }
+        return null
     }
 
     // ─────────────────────────────────────────────────────────────────────────

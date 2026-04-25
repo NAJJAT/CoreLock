@@ -374,6 +374,80 @@ public class BlocklistDao_Impl(
     }
   }
 
+  public override suspend fun getSourceToggleStats(): List<SourceToggleStats> {
+    val _sql: String = """
+        |
+        |        SELECT
+        |            source,
+        |            COUNT(*) as totalCount,
+        |            SUM(CASE WHEN isEnabled = 1 THEN 1 ELSE 0 END) as enabledCount
+        |        FROM blocklist
+        |        GROUP BY source
+        |        ORDER BY totalCount DESC
+        |    
+        """.trimMargin()
+    return performSuspending(__db, true, false) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        val _columnIndexOfSource: Int = 0
+        val _columnIndexOfTotalCount: Int = 1
+        val _columnIndexOfEnabledCount: Int = 2
+        val _result: MutableList<SourceToggleStats> = mutableListOf()
+        while (_stmt.step()) {
+          val _item: SourceToggleStats
+          val _tmpSource: String
+          _tmpSource = _stmt.getText(_columnIndexOfSource)
+          val _tmpTotalCount: Int
+          _tmpTotalCount = _stmt.getLong(_columnIndexOfTotalCount).toInt()
+          val _tmpEnabledCount: Int
+          _tmpEnabledCount = _stmt.getLong(_columnIndexOfEnabledCount).toInt()
+          _item = SourceToggleStats(_tmpSource,_tmpTotalCount,_tmpEnabledCount)
+          _result.add(_item)
+        }
+        _result
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
+  public override suspend fun getCategoryToggleStats(): List<CategoryToggleStats> {
+    val _sql: String = """
+        |
+        |        SELECT
+        |            category,
+        |            COUNT(*) as totalCount,
+        |            SUM(CASE WHEN isEnabled = 1 THEN 1 ELSE 0 END) as enabledCount
+        |        FROM blocklist
+        |        GROUP BY category
+        |        ORDER BY totalCount DESC
+        |    
+        """.trimMargin()
+    return performSuspending(__db, true, false) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        val _columnIndexOfCategory: Int = 0
+        val _columnIndexOfTotalCount: Int = 1
+        val _columnIndexOfEnabledCount: Int = 2
+        val _result: MutableList<CategoryToggleStats> = mutableListOf()
+        while (_stmt.step()) {
+          val _item: CategoryToggleStats
+          val _tmpCategory: String
+          _tmpCategory = _stmt.getText(_columnIndexOfCategory)
+          val _tmpTotalCount: Int
+          _tmpTotalCount = _stmt.getLong(_columnIndexOfTotalCount).toInt()
+          val _tmpEnabledCount: Int
+          _tmpEnabledCount = _stmt.getLong(_columnIndexOfEnabledCount).toInt()
+          _item = CategoryToggleStats(_tmpCategory,_tmpTotalCount,_tmpEnabledCount)
+          _result.add(_item)
+        }
+        _result
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
   public override suspend fun setEnabled(domain: String, enabled: Boolean) {
     val _sql: String = "UPDATE blocklist SET isEnabled = ? WHERE domain = ?"
     return performSuspending(__db, false, true) { _connection ->
@@ -384,6 +458,55 @@ public class BlocklistDao_Impl(
         _stmt.bindLong(_argIndex, _tmp.toLong())
         _argIndex = 2
         _stmt.bindText(_argIndex, domain)
+        _stmt.step()
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
+  public override suspend fun setSourceEnabled(source: String, enabled: Boolean) {
+    val _sql: String = "UPDATE blocklist SET isEnabled = ? WHERE source = ?"
+    return performSuspending(__db, false, true) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        var _argIndex: Int = 1
+        val _tmp: Int = if (enabled) 1 else 0
+        _stmt.bindLong(_argIndex, _tmp.toLong())
+        _argIndex = 2
+        _stmt.bindText(_argIndex, source)
+        _stmt.step()
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
+  public override suspend fun setCategoryEnabled(category: String, enabled: Boolean) {
+    val _sql: String = "UPDATE blocklist SET isEnabled = ? WHERE category = ?"
+    return performSuspending(__db, false, true) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        var _argIndex: Int = 1
+        val _tmp: Int = if (enabled) 1 else 0
+        _stmt.bindLong(_argIndex, _tmp.toLong())
+        _argIndex = 2
+        _stmt.bindText(_argIndex, category)
+        _stmt.step()
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
+  public override suspend fun setAllEnabled(enabled: Boolean) {
+    val _sql: String = "UPDATE blocklist SET isEnabled = ?"
+    return performSuspending(__db, false, true) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        var _argIndex: Int = 1
+        val _tmp: Int = if (enabled) 1 else 0
+        _stmt.bindLong(_argIndex, _tmp.toLong())
         _stmt.step()
       } finally {
         _stmt.close()

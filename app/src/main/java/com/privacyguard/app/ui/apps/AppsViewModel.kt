@@ -1,13 +1,17 @@
 package com.privacyguard.app.ui.apps
 
 import android.app.Application
+import android.content.pm.PackageManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.privacyguard.app.core.detection.StalkerwareAssessment
+import com.privacyguard.app.core.detection.StalkerwareDetector
 import com.privacyguard.app.core.stats.StatsManager
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.repository.MetadataRepo
 import com.privacyguard.app.data.repository.RulesRepo
 import com.privacyguard.core.filter.FilterEngine
+import com.privacyguard.core.metadata.ConnectionProfile
 import com.privacyguard.core.filter.FilterRule
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +27,9 @@ data class AppRiskItem(
     val cleartextCount: Int,
     val totalBytesOut: Long,
     val maxRiskScore: Int,
-    val isBlocked: Boolean
+    val isBlocked: Boolean,
+    val stalkerwareScore: Int = 0,
+    val stalkerwareReasons: List<String> = emptyList()
 ) {
     val riskLevel: String
         get() = when {
@@ -35,6 +41,7 @@ data class AppRiskItem(
 
 class AppsViewModel(app: Application) : AndroidViewModel(app) {
     private val db = AppDatabase.getInstance(app)
+    private val packageManager = app.packageManager
     private val metadataRepo = MetadataRepo(db.connectionProfileDao())
     private val rulesRepo = RulesRepo(db.rulesDao(), FilterEngine())
 
@@ -86,7 +93,8 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
             .mapNotNull { it.matchPackage }
             .toSet()
 
-        _apps.value = if (profiles.isNotEmpty()) {
+        val installed = installedNetworkApps(blockedPackages)
+        val observed = if (profiles.isNotEmpty()) {
             // Full metadata available — use richer risk scoring from MetadataEngine
             profiles
                 .groupBy { it.packageName }
@@ -100,6 +108,8 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
                         totalBytesOut     = rows.sumOf { it.totalBytesOut },
                         maxRiskScore      = rows.maxOfOrNull { it.riskScore } ?: 0,
                         isBlocked         = pkg in blockedPackages,
+                        stalkerwareScore  = assessStalkerware(pkg, rows).score,
+                        stalkerwareReasons = assessStalkerware(pkg, rows).reasons,
                     )
                 }
                 .sortedByDescending { it.maxRiskScore }
@@ -117,10 +127,61 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
                         totalBytesOut     = stat.bytesTransferred,
                         maxRiskScore      = if (stat.blockedCount > 0) 40 else 10,
                         isBlocked         = stat.packageName in blockedPackages,
+                        stalkerwareScore  = 0,
                     )
                 }
                 .sortedByDescending { it.totalBytesOut }
         }
+
+        val observedByPackage = observed.associateBy { it.packageName }
+        _apps.value = (observed + installed.filterNot { observedByPackage.containsKey(it.packageName) })
+            .filter { it.packageName.isNotBlank() }
+            .distinctBy { it.packageName }
+            .sortedWith(compareByDescending<AppRiskItem> { it.maxRiskScore }.thenBy { it.appName.lowercase() })
+    }
+
+    private fun installedNetworkApps(blockedPackages: Set<String>): List<AppRiskItem> {
+        return runCatching {
+            @Suppress("DEPRECATION")
+            packageManager.getInstalledPackages(PackageManager.GET_PERMISSIONS)
+                .asSequence()
+                .filter { info ->
+                    info.packageName != getApplication<Application>().packageName &&
+                        info.requestedPermissions?.contains(android.Manifest.permission.INTERNET) == true
+                }
+                .map { info ->
+                    val appName = info.applicationInfo?.loadLabel(packageManager)?.toString()
+                        ?: info.packageName.substringAfterLast('.')
+                    AppRiskItem(
+                        appName = appName,
+                        packageName = info.packageName,
+                        totalDestinations = 0,
+                        suspiciousCount = 0,
+                        cleartextCount = 0,
+                        totalBytesOut = 0L,
+                        maxRiskScore = 5,
+                        isBlocked = info.packageName in blockedPackages,
+                        stalkerwareScore = 0,
+                    )
+                }
+                .toList()
+        }.getOrElse { emptyList() }
+    }
+
+    private fun assessStalkerware(
+        packageName: String,
+        rows: List<ConnectionProfile>,
+    ): StalkerwareAssessment {
+        return runCatching {
+            @Suppress("DEPRECATION")
+            val info = packageManager.getPackageInfo(packageName, PackageManager.GET_PERMISSIONS)
+            StalkerwareDetector.assess(
+                requestedPermissions = info.requestedPermissions?.toSet().orEmpty(),
+                profiles = rows,
+                hasLauncherIcon = packageManager.getLaunchIntentForPackage(packageName) != null,
+                installerPackage = runCatching { packageManager.getInstallerPackageName(packageName) }.getOrNull(),
+            )
+        }.getOrDefault(StalkerwareAssessment(0, emptyList()))
     }
 
     fun togglePackageBlocked(packageName: String, blocked: Boolean) {

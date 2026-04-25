@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicReference
 class Session(
     val key:       SessionKey,
     val createdAt: Long = System.currentTimeMillis(),
-    val ownerUid:  Int  = -1,
+    @Volatile var ownerUid:  Int  = -1,
     @Volatile var ownerPackage: String? = null,
 ) {
     // ─────────────────────────────────────────────────────────────────────────

@@ -52,6 +52,8 @@ class MetadataRepo(private val connectionProfileDao: ConnectionProfileDao) {
         connectionProfileDao.deleteAll()
     }
 
+    fun toDomainForDashboard(entity: ConnectionProfileEntity): ConnectionProfile = entity.toDomain()
+
     private fun ConnectionProfile.toEntity() = ConnectionProfileEntity(
         packageName = packageName,
         hostname = hostname,

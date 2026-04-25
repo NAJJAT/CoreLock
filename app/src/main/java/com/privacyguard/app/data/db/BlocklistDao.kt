@@ -66,6 +66,15 @@ interface BlocklistDao {
     @Query("UPDATE blocklist SET isEnabled = :enabled WHERE domain = :domain")
     suspend fun setEnabled(domain: String, enabled: Boolean)
 
+    @Query("UPDATE blocklist SET isEnabled = :enabled WHERE source = :source")
+    suspend fun setSourceEnabled(source: String, enabled: Boolean)
+
+    @Query("UPDATE blocklist SET isEnabled = :enabled WHERE category = :category")
+    suspend fun setCategoryEnabled(category: String, enabled: Boolean)
+
+    @Query("UPDATE blocklist SET isEnabled = :enabled")
+    suspend fun setAllEnabled(enabled: Boolean)
+
     @Query("DELETE FROM blocklist WHERE domain = :domain")
     suspend fun deleteEntry(domain: String)
     
@@ -119,6 +128,28 @@ interface BlocklistDao {
         ORDER BY count DESC
     """)
     suspend fun getStatsByCategory(): List<CategoryStats>
+
+    @Query("""
+        SELECT
+            source,
+            COUNT(*) as totalCount,
+            SUM(CASE WHEN isEnabled = 1 THEN 1 ELSE 0 END) as enabledCount
+        FROM blocklist
+        GROUP BY source
+        ORDER BY totalCount DESC
+    """)
+    suspend fun getSourceToggleStats(): List<SourceToggleStats>
+
+    @Query("""
+        SELECT
+            category,
+            COUNT(*) as totalCount,
+            SUM(CASE WHEN isEnabled = 1 THEN 1 ELSE 0 END) as enabledCount
+        FROM blocklist
+        GROUP BY category
+        ORDER BY totalCount DESC
+    """)
+    suspend fun getCategoryToggleStats(): List<CategoryToggleStats>
 }
 
 data class SourceStats(
@@ -129,4 +160,16 @@ data class SourceStats(
 data class CategoryStats(
     val category: String,
     val count: Int
+)
+
+data class SourceToggleStats(
+    val source: String,
+    val totalCount: Int,
+    val enabledCount: Int,
+)
+
+data class CategoryToggleStats(
+    val category: String,
+    val totalCount: Int,
+    val enabledCount: Int,
 )
