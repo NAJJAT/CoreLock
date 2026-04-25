@@ -15,3 +15,5 @@
 local.properties
 .claude/settings.local.json
 .claude/settings.json
+/release-signing.properties
+/release-signing.local.properties

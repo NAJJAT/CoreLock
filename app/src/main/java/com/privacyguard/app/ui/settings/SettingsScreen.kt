@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.privacyguard.app.BuildConfig
 import com.privacyguard.app.core.blocklist.BlocklistManager
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
 import com.privacyguard.app.ui.components.PanelCard
@@ -156,6 +157,14 @@ fun SettingsScreen(
                             "App signature",
                             if (posture.signatureValid) DiagnosticStatus.PASS else DiagnosticStatus.FAIL,
                             if (posture.signatureValid) "Signature matches trusted signing certificate" else "Signature mismatch detected",
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DiagnosticRow(
+                        DiagnosticCheck(
+                            "Signing mode",
+                            if (BuildConfig.IS_RELEASE_SIGNING_CONFIGURED || BuildConfig.DEBUG) DiagnosticStatus.PASS else DiagnosticStatus.WARN,
+                            BuildConfig.APP_SIGNING_MODE,
                         )
                     )
                     Spacer(modifier = Modifier.height(8.dp))

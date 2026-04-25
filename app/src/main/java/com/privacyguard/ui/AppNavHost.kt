@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import android.net.Uri
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ManageSearch
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Home
@@ -31,12 +32,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.privacyguard.app.BuildConfig
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
 import com.privacyguard.app.ui.apps.AppDetailScreen
 import com.privacyguard.app.ui.apps.AppsScreen
 import com.privacyguard.app.ui.ads.AdsScreen
 import com.privacyguard.app.ui.connections.ConnectionsScreen
 import com.privacyguard.app.ui.dashboard.DashboardScreen
+import com.privacyguard.app.ui.mitm.MitmScreen
 import com.privacyguard.app.ui.onboarding.OnboardingScreen
 import com.privacyguard.app.ui.settings.SettingsScreen
 import com.privacyguard.app.ui.statistics.StatisticsScreen
@@ -48,23 +51,26 @@ import androidx.compose.ui.platform.LocalContext
 
 private data class NavTab(val route: String, val label: String, val icon: ImageVector)
 
-private val tabs = listOf(
-    NavTab("dashboard", "Home", Icons.Default.Home),
-    NavTab("connections", "Traffic", Icons.Default.Wifi),
-    NavTab("apps", "Apps", Icons.Default.Apps),
-    NavTab("ads", "Ads", Icons.Default.MonetizationOn),
-    NavTab("statistics", "Stats", Icons.Default.BarChart),
-    NavTab("settings", "Prefs", Icons.Default.Settings),
-)
-
-private val topLevelRoutes = tabs.map { it.route }.toSet()
-
 @Composable
 fun AppNavHost(
     onRequestVpn: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val settingsPreferences = remember(context) { SettingsPreferences.getInstance(context) }
+    val tabs = remember {
+        buildList {
+            add(NavTab("dashboard", "Home", Icons.Default.Home))
+            add(NavTab("connections", "Traffic", Icons.Default.Wifi))
+            add(NavTab("apps", "Apps", Icons.Default.Apps))
+            add(NavTab("ads", "Ads", Icons.Default.MonetizationOn))
+            add(NavTab("statistics", "Stats", Icons.Default.BarChart))
+            if (BuildConfig.MITM_AVAILABLE) {
+                add(NavTab("payloads", "Payloads", Icons.AutoMirrored.Filled.ManageSearch))
+            }
+            add(NavTab("settings", "Prefs", Icons.Default.Settings))
+        }
+    }
+    val topLevelRoutes = remember(tabs) { tabs.map { it.route }.toSet() }
     val onboardingCompleted by settingsPreferences.onboardingCompleted.collectAsState()
     val navController = rememberNavController()
     val navBackStack by navController.currentBackStackEntryAsState()
@@ -155,6 +161,9 @@ fun AppNavHost(
             }
             composable("ads") { AdsScreen() }
             composable("statistics") { StatisticsScreen() }
+            if (BuildConfig.MITM_AVAILABLE) {
+                composable("payloads") { MitmScreen() }
+            }
             composable("settings") { SettingsScreen(onLanguageChanged = {}) }
             composable("appDetail/{packageName}?appName={appName}") { backStack ->
                 val pkg = backStack.arguments?.getString("packageName") ?: ""

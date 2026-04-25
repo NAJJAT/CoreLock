@@ -28,6 +28,12 @@ class SettingsPreferences private constructor(context: Context) {
         private const val KEY_UPSTREAM_DNS               = "upstream_dns"
         private const val KEY_ONBOARDING_COMPLETED       = "onboarding_completed"
         private const val KEY_PROTECTION_LEVEL           = "protection_level"
+        private const val KEY_ENTERPRISE_INSPECTION_ENABLED = "enterprise_inspection_enabled"
+        private const val KEY_ENTERPRISE_CONSENT_TS         = "enterprise_consent_ts"
+        private const val KEY_ENTERPRISE_SIEM_ENDPOINT      = "enterprise_siem_endpoint"
+        private const val KEY_ENTERPRISE_SIEM_API_KEY       = "enterprise_siem_api_key"
+        private const val KEY_ENTERPRISE_SHIP_ENABLED       = "enterprise_ship_enabled"
+        private const val KEY_ENTERPRISE_LOCAL_LOG_ENABLED  = "enterprise_local_log_enabled"
 
         const val DOH_CLOUDFLARE = "https://cloudflare-dns.com/dns-query"
         const val DOH_GOOGLE     = "https://dns.google/dns-query"
@@ -84,6 +90,36 @@ class SettingsPreferences private constructor(context: Context) {
             ?: FilterEngine.BlockLevel.STANDARD.name
     )
     val protectionLevel: StateFlow<String> = _protectionLevel.asStateFlow()
+
+    private val _enterpriseInspectionEnabled = MutableStateFlow(
+        prefs.getBoolean(KEY_ENTERPRISE_INSPECTION_ENABLED, false)
+    )
+    val enterpriseInspectionEnabled: StateFlow<Boolean> = _enterpriseInspectionEnabled.asStateFlow()
+
+    private val _enterpriseConsentTimestampMs = MutableStateFlow(
+        prefs.getLong(KEY_ENTERPRISE_CONSENT_TS, 0L)
+    )
+    val enterpriseConsentTimestampMs: StateFlow<Long> = _enterpriseConsentTimestampMs.asStateFlow()
+
+    private val _enterpriseSiemEndpoint = MutableStateFlow(
+        prefs.getString(KEY_ENTERPRISE_SIEM_ENDPOINT, "") ?: ""
+    )
+    val enterpriseSiemEndpoint: StateFlow<String> = _enterpriseSiemEndpoint.asStateFlow()
+
+    private val _enterpriseSiemApiKey = MutableStateFlow(
+        prefs.getString(KEY_ENTERPRISE_SIEM_API_KEY, "") ?: ""
+    )
+    val enterpriseSiemApiKey: StateFlow<String> = _enterpriseSiemApiKey.asStateFlow()
+
+    private val _enterpriseShipEnabled = MutableStateFlow(
+        prefs.getBoolean(KEY_ENTERPRISE_SHIP_ENABLED, false)
+    )
+    val enterpriseShipEnabled: StateFlow<Boolean> = _enterpriseShipEnabled.asStateFlow()
+
+    private val _enterpriseLocalLogEnabled = MutableStateFlow(
+        prefs.getBoolean(KEY_ENTERPRISE_LOCAL_LOG_ENABLED, true)
+    )
+    val enterpriseLocalLogEnabled: StateFlow<Boolean> = _enterpriseLocalLogEnabled.asStateFlow()
 
     fun setNotificationsEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_NOTIFICATIONS_ENABLED, enabled).apply()
@@ -148,6 +184,36 @@ class SettingsPreferences private constructor(context: Context) {
     fun setProtectionLevel(level: String) {
         prefs.edit().putString(KEY_PROTECTION_LEVEL, level).apply()
         _protectionLevel.value = level
+    }
+
+    fun setEnterpriseInspectionEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_ENTERPRISE_INSPECTION_ENABLED, enabled).apply()
+        _enterpriseInspectionEnabled.value = enabled
+    }
+
+    fun setEnterpriseConsentTimestampMs(timestampMs: Long) {
+        prefs.edit().putLong(KEY_ENTERPRISE_CONSENT_TS, timestampMs).apply()
+        _enterpriseConsentTimestampMs.value = timestampMs
+    }
+
+    fun setEnterpriseSiemEndpoint(endpoint: String) {
+        prefs.edit().putString(KEY_ENTERPRISE_SIEM_ENDPOINT, endpoint).apply()
+        _enterpriseSiemEndpoint.value = endpoint
+    }
+
+    fun setEnterpriseSiemApiKey(apiKey: String) {
+        prefs.edit().putString(KEY_ENTERPRISE_SIEM_API_KEY, apiKey).apply()
+        _enterpriseSiemApiKey.value = apiKey
+    }
+
+    fun setEnterpriseShipEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_ENTERPRISE_SHIP_ENABLED, enabled).apply()
+        _enterpriseShipEnabled.value = enabled
+    }
+
+    fun setEnterpriseLocalLogEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_ENTERPRISE_LOCAL_LOG_ENABLED, enabled).apply()
+        _enterpriseLocalLogEnabled.value = enabled
     }
 
     fun shouldShowNotification(type: NotificationType): Boolean {
