@@ -39,6 +39,7 @@ import com.privacyguard.app.ui.components.ScreenScaffold
 import com.privacyguard.app.ui.components.SectionLabel
 import com.privacyguard.app.ui.components.StatusPill
 import com.privacyguard.app.ui.components.ToggleChip
+import com.privacyguard.app.ui.security.rememberProtectedActionRunner
 import com.privacyguard.app.ui.theme.PgAccent
 import com.privacyguard.app.ui.theme.PgAccentDim
 import com.privacyguard.app.ui.theme.PgDanger
@@ -70,6 +71,7 @@ fun SettingsScreen(
     val blocklistSize by BlocklistManager.size.collectAsState()
     val securityState by settingsViewModel.securityState.collectAsState()
     val diagnosticsState by settingsViewModel.diagnosticsState.collectAsState()
+    val runProtectedAction = rememberProtectedActionRunner()
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -176,6 +178,14 @@ fun SettingsScreen(
                             "Debugger",
                             if (posture.debuggerAttached) DiagnosticStatus.FAIL else DiagnosticStatus.PASS,
                             if (posture.debuggerAttached) "Debugger attached to process" else "No debugger detected",
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DiagnosticRow(
+                        DiagnosticCheck(
+                            "Emulator",
+                            if (posture.emulatorDetected) DiagnosticStatus.WARN else DiagnosticStatus.PASS,
+                            if (posture.emulatorDetected) "Emulator-like environment detected" else "Physical device heuristics look normal",
                         )
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -321,8 +331,13 @@ fun SettingsScreen(
                 items = listOf(
                     SettingUiItem("Data retention", "$retentionDays days", true, Icons.Default.Storage, onClick = { }),
                     SettingUiItem("Clear all connection data", "Danger zone", false, Icons.Default.Warning, onClick = {
-                        settingsViewModel.clearConnectionData()
-                        Toast.makeText(context, "Connection history cleared", Toast.LENGTH_SHORT).show()
+                        runProtectedAction(
+                            "Clear connection data",
+                            "Confirm access before deleting local connection history",
+                        ) {
+                            settingsViewModel.clearConnectionData()
+                            Toast.makeText(context, "Connection history cleared", Toast.LENGTH_SHORT).show()
+                        }
                     }, danger = true)
                 )
             )

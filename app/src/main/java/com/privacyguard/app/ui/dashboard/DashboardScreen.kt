@@ -56,6 +56,7 @@ import com.privacyguard.app.ui.components.SectionLabel
 import com.privacyguard.app.ui.components.StatTile
 import com.privacyguard.app.ui.components.formatAgo
 import com.privacyguard.app.ui.components.formatBytes
+import com.privacyguard.app.ui.security.rememberProtectedActionRunner
 import com.privacyguard.app.vpn.VpnManager
 import com.privacyguard.app.ui.theme.PgAccent
 import com.privacyguard.app.ui.theme.PgAccentDim
@@ -79,6 +80,7 @@ fun DashboardScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    val runProtectedAction = rememberProtectedActionRunner()
 
     val vpnPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -209,21 +211,33 @@ fun DashboardScreen(
                 PcapExportCard(
                     isCapturing = uiState.isPcapCapturing,
                     path = uiState.pcapPath,
-                    onToggle = viewModel::togglePcapCapture,
+                    onToggle = {
+                        runProtectedAction(
+                            if (uiState.isPcapCapturing) "Stop packet capture" else "Start packet capture",
+                            "Confirm access to raw packet capture controls",
+                        ) {
+                            viewModel.togglePcapCapture()
+                        }
+                    },
                     onShare = { path ->
-                        val file = File(path)
-                        if (file.exists()) {
-                            val uri = FileProvider.getUriForFile(
-                                context,
-                                "${context.packageName}.fileprovider",
-                                file
-                            )
-                            val share = Intent(Intent.ACTION_SEND).apply {
-                                type = "application/vnd.tcpdump.pcap"
-                                putExtra(Intent.EXTRA_STREAM, uri)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        runProtectedAction(
+                            "Share PCAP capture",
+                            "Confirm access before exporting raw network traffic",
+                        ) {
+                            val file = File(path)
+                            if (file.exists()) {
+                                val uri = FileProvider.getUriForFile(
+                                    context,
+                                    "${context.packageName}.fileprovider",
+                                    file
+                                )
+                                val share = Intent(Intent.ACTION_SEND).apply {
+                                    type = "application/vnd.tcpdump.pcap"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(share, "Export PCAP"))
                             }
-                            context.startActivity(Intent.createChooser(share, "Export PCAP"))
                         }
                     }
                 )

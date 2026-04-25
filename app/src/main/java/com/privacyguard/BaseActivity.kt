@@ -2,9 +2,9 @@ package com.privacyguard
 
 import android.os.Bundle
 import android.view.WindowManager
+import androidx.activity.ComponentActivity
 import com.privacyguard.app.core.security.AppSecurityMonitor
 import com.privacyguard.app.core.security.SecurityRiskLevel
-import androidx.activity.ComponentActivity
 
 /**
  * Base activity for all PrivacyGuard activities.

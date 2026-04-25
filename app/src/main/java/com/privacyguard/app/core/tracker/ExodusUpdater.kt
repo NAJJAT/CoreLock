@@ -2,11 +2,12 @@ package com.privacyguard.app.core.tracker
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.net.HttpURLConnection
 import java.net.URL
+import javax.net.ssl.HttpsURLConnection
 
 /**
  * Fetches the Exodus Privacy tracker list and merges it into [TrackerDatabase].
@@ -35,11 +36,18 @@ object ExodusUpdater {
         if (System.currentTimeMillis() - lastUpdated < TTL_MS) return@withContext true
 
         return@withContext try {
-            val conn = URL(API_URL).openConnection() as HttpURLConnection
+            if (!API_URL.startsWith("https://", ignoreCase = true)) return@withContext false
+            val conn = URL(API_URL).openConnection() as HttpsURLConnection
             conn.connectTimeout = 15_000
             conn.readTimeout    = 30_000
+            conn.instanceFollowRedirects = false
             conn.setRequestProperty("Accept", "application/json")
             if (conn.responseCode in 200..299) {
+                val finalUrl = conn.url.toString()
+                if (!finalUrl.startsWith("https://", ignoreCase = true)) {
+                    conn.disconnect()
+                    return@withContext false
+                }
                 val json = conn.inputStream.bufferedReader().readText()
                 prefs.edit()
                     .putString(KEY_JSON, json)
@@ -49,7 +57,7 @@ object ExodusUpdater {
                 true
             } else false
         } catch (e: Exception) {
-            android.util.Log.w("ExodusUpdater", "Tracker refresh failed: ${e.message}")
+            Log.w("ExodusUpdater", "Tracker refresh failed: ${e.message}")
             false
         }
     }

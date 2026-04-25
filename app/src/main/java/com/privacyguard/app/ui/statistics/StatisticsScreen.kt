@@ -31,6 +31,7 @@ import com.privacyguard.app.ui.components.PanelCard
 import com.privacyguard.app.ui.components.ScreenScaffold
 import com.privacyguard.app.ui.components.SectionLabel
 import com.privacyguard.app.ui.components.StatTile
+import com.privacyguard.app.ui.security.rememberProtectedActionRunner
 import com.privacyguard.app.ui.components.formatAgo
 import com.privacyguard.app.ui.theme.PgAccent
 import com.privacyguard.app.ui.theme.PgAccentDim
@@ -48,6 +49,7 @@ fun StatisticsScreen(
     viewModel: StatisticsViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val runProtectedAction = rememberProtectedActionRunner()
     val stats by viewModel.stats.collectAsState()
     val topBlockedDomains by viewModel.topBlockedDomains.collectAsState()
     val highSeverityAnomalies by viewModel.highSeverityAnomalies.collectAsState()
@@ -92,7 +94,14 @@ fun StatisticsScreen(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
-                    onClick = { viewModel.exportItReport() },
+                    onClick = {
+                        runProtectedAction(
+                            "Generate IT report",
+                            "Confirm access before exporting security telemetry",
+                        ) {
+                            viewModel.exportItReport()
+                        }
+                    },
                     colors = ButtonDefaults.buttonColors(containerColor = PgInfoDim, contentColor = PgInfo),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -110,14 +119,19 @@ fun StatisticsScreen(
                     Spacer(modifier = Modifier.height(10.dp))
                     Button(
                         onClick = {
-                            val jsonUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", java.io.File(paths.first))
-                            val pdfUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", java.io.File(paths.second))
-                            val share = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
-                                type = "application/octet-stream"
-                                putParcelableArrayListExtra(Intent.EXTRA_STREAM, arrayListOf(jsonUri, pdfUri))
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            runProtectedAction(
+                                "Share IT report",
+                                "Confirm access before sharing JSON and PDF exports",
+                            ) {
+                                val jsonUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", java.io.File(paths.first))
+                                val pdfUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", java.io.File(paths.second))
+                                val share = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                                    type = "application/octet-stream"
+                                    putParcelableArrayListExtra(Intent.EXTRA_STREAM, arrayListOf(jsonUri, pdfUri))
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(share, "Share with IT"))
                             }
-                            context.startActivity(Intent.createChooser(share, "Share with IT"))
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = PgAccentDim, contentColor = PgAccent),
                         modifier = Modifier.fillMaxWidth(),

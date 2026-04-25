@@ -25,6 +25,7 @@ data class SecurityPosture(
     val signatureValid: Boolean = true,
     val hardwareBackedKeystore: Boolean = false,
     val buildTagsRisk: Boolean = false,
+    val emulatorDetected: Boolean = false,
     val riskLevel: SecurityRiskLevel = SecurityRiskLevel.LOW,
     val summary: String = "Trusted runtime",
 )
@@ -61,6 +62,7 @@ object AppSecurityMonitor {
         val debuggerAttached = Debug.isDebuggerConnected() || Debug.waitingForDebugger()
         val rooted = rootIndicators.any { path -> File(path).exists() }
         val buildTagsRisk = Build.TAGS?.contains("test-keys") == true
+        val emulatorDetected = isProbablyEmulator()
         val suspicious = suspiciousPackages.filter { pkg ->
             runCatching {
                 context.packageManager.getPackageInfo(pkg, 0)
@@ -69,12 +71,15 @@ object AppSecurityMonitor {
         }
         val signatureValid = verifySignature(context)
         val hardwareBackedKeystore = readHardwareBackedKeystore(context)
-        val riskLevel = when {
-            !signatureValid -> SecurityRiskLevel.HIGH
-            debuggerAttached || rooted || suspicious.isNotEmpty() -> SecurityRiskLevel.HIGH
-            buildTagsRisk || !hardwareBackedKeystore -> SecurityRiskLevel.ELEVATED
-            else -> SecurityRiskLevel.LOW
-        }
+        val riskLevel = assessRiskLevel(
+            signatureValid = signatureValid,
+            debuggerAttached = debuggerAttached,
+            rooted = rooted,
+            suspiciousPackagesPresent = suspicious.isNotEmpty(),
+            buildTagsRisk = buildTagsRisk,
+            hardwareBackedKeystore = hardwareBackedKeystore,
+            emulatorDetected = emulatorDetected,
+        )
         val summary = when (riskLevel) {
             SecurityRiskLevel.LOW -> "Trusted runtime"
             SecurityRiskLevel.ELEVATED -> "Hardened, but hardware/integrity guarantees are reduced"
@@ -87,11 +92,29 @@ object AppSecurityMonitor {
             signatureValid = signatureValid,
             hardwareBackedKeystore = hardwareBackedKeystore,
             buildTagsRisk = buildTagsRisk,
+            emulatorDetected = emulatorDetected,
             riskLevel = riskLevel,
             summary = summary,
         ).also {
             _state.value = it
-            Log.i(TAG, "Security posture=${it.riskLevel} rooted=${it.rooted} debugger=${it.debuggerAttached} signatureValid=${it.signatureValid}")
+            Log.i(TAG, "Security posture=${it.riskLevel} rooted=${it.rooted} debugger=${it.debuggerAttached} emulator=${it.emulatorDetected} signatureValid=${it.signatureValid}")
+        }
+    }
+
+    internal fun assessRiskLevel(
+        signatureValid: Boolean,
+        debuggerAttached: Boolean,
+        rooted: Boolean,
+        suspiciousPackagesPresent: Boolean,
+        buildTagsRisk: Boolean,
+        hardwareBackedKeystore: Boolean,
+        emulatorDetected: Boolean,
+    ): SecurityRiskLevel {
+        return when {
+            !signatureValid -> SecurityRiskLevel.HIGH
+            debuggerAttached || rooted || suspiciousPackagesPresent -> SecurityRiskLevel.HIGH
+            emulatorDetected || buildTagsRisk || !hardwareBackedKeystore -> SecurityRiskLevel.ELEVATED
+            else -> SecurityRiskLevel.LOW
         }
     }
 
@@ -128,5 +151,27 @@ object AppSecurityMonitor {
         } catch (_: Exception) {
             false
         }
+    }
+
+    internal fun isProbablyEmulator(): Boolean {
+        val fingerprint = Build.FINGERPRINT.orEmpty().lowercase()
+        val model = Build.MODEL.orEmpty().lowercase()
+        val brand = Build.BRAND.orEmpty().lowercase()
+        val device = Build.DEVICE.orEmpty().lowercase()
+        val product = Build.PRODUCT.orEmpty().lowercase()
+        val hardware = Build.HARDWARE.orEmpty().lowercase()
+        val manufacturer = Build.MANUFACTURER.orEmpty().lowercase()
+
+        return fingerprint.contains("generic") ||
+            fingerprint.contains("emulator") ||
+            model.contains("emulator") ||
+            model.contains("sdk built for") ||
+            brand.startsWith("generic") ||
+            device.startsWith("generic") ||
+            product.contains("sdk") ||
+            product.contains("emulator") ||
+            hardware.contains("goldfish") ||
+            hardware.contains("ranchu") ||
+            manufacturer.contains("genymotion")
     }
 }
