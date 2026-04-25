@@ -4,9 +4,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.ConnectivityManager
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
+import android.system.OsConstants
 import androidx.room.Room
 import com.privacyguard.core.filter.FilterEngine
 import com.privacyguard.core.metadata.EncryptionStatus
@@ -34,6 +36,7 @@ import com.privacyguard.app.core.stats.ActivityInfo
 import com.privacyguard.app.core.stats.AppStat
 import com.privacyguard.app.core.stats.StatsManager
 import android.util.Log
+import java.net.InetSocketAddress
 import kotlinx.coroutines.*
 import java.util.concurrent.atomic.AtomicLong
 
@@ -297,7 +300,14 @@ class PrivacyVpnService : VpnService() {
         when (ip.protocol) {
             IpPacket.PROTO_UDP -> {
                 val udp = UdpPacket.parse(ip) ?: return
-                val uid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(udp.sourcePort, 17)
+                val uid = resolveOwnerUid(
+                    fallbackUid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(udp.sourcePort, 17),
+                    protocol = OsConstants.IPPROTO_UDP,
+                    sourceIp = ip.sourceIp,
+                    sourcePort = udp.sourcePort,
+                    destinationIp = ip.destinationIp,
+                    destinationPort = udp.destinationPort,
+                )
                 val pkg = appTracker.packageForUid(uid)
                 val sessionId = com.privacyguard.core.session.SessionKey.of(
                     ip.sourceIp,
@@ -314,7 +324,14 @@ class PrivacyVpnService : VpnService() {
             }
             IpPacket.PROTO_TCP -> {
                 val tcp = TcpPacket.parse(ip) ?: return
-                val uid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(tcp.sourcePort, 6)
+                val uid = resolveOwnerUid(
+                    fallbackUid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(tcp.sourcePort, 6),
+                    protocol = OsConstants.IPPROTO_TCP,
+                    sourceIp = ip.sourceIp,
+                    sourcePort = tcp.sourcePort,
+                    destinationIp = ip.destinationIp,
+                    destinationPort = tcp.destinationPort,
+                )
                 val pkg = appTracker.packageForUid(uid)
                 val sessionId = com.privacyguard.core.session.SessionKey.of(
                     ip.sourceIp,
@@ -473,6 +490,27 @@ class PrivacyVpnService : VpnService() {
                 }
             )
         }
+    }
+
+    private fun resolveOwnerUid(
+        fallbackUid: Int,
+        protocol: Int,
+        sourceIp: String,
+        sourcePort: Int,
+        destinationIp: String,
+        destinationPort: Int,
+    ): Int {
+        if (fallbackUid >= 0) return fallbackUid
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return fallbackUid
+
+        return runCatching {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            cm?.getConnectionOwnerUid(
+                protocol,
+                InetSocketAddress(sourceIp, sourcePort),
+                InetSocketAddress(destinationIp, destinationPort),
+            ) ?: fallbackUid
+        }.getOrDefault(fallbackUid)
     }
 
     private fun stopVpn() {

@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 data class DomainRow(
     val domain: String,
@@ -105,11 +106,13 @@ class AppDetailViewModel(
     private fun observeTraffic() {
         viewModelScope.launch {
             StatsManager.snapshot.collectLatest { snapshot ->
+                val since = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
                 val persistedConnections = runCatching {
-                    db.connectionDao().getRecentConnectionsForPackage(packageName)
+                    db.connectionDao().getRecentConnections(since, 400)
                 }.getOrElse { emptyList() }
+                    .filter { matchesSelectedApp(it.packageName, it.appName, it.domain ?: it.sniHostname, it.destinationIp) }
                 val liveConnections = snapshot.activeConnections
-                    .filter { it.packageName == packageName }
+                    .filter { matchesSelectedApp(it.packageName, it.appName, it.hostName, it.destinationIp) }
                     .map { it.toConnectionEntity() }
 
                 val mergedConnections = (liveConnections + persistedConnections)
@@ -154,11 +157,13 @@ class AppDetailViewModel(
         viewModelScope.launch {
             val requestedPermissions = loadRequestedPermissions(packageName)
             val observedDomains = runCatching {
-                db.connectionDao().getDomainsForPackage(packageName).map { it.domain }
+                val since = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
+                db.connectionDao().getRecentConnections(since, 400)
+                    .filter { matchesSelectedApp(it.packageName, it.appName, it.domain ?: it.sniHostname, it.destinationIp) }
+                    .mapNotNull { it.domain ?: it.sniHostname }
+                    .distinct()
             }.getOrElse { emptyList() }
-            val profiles = runCatching {
-                metadataRepo.profilesForApp(packageName)
-            }.getOrElse { emptyList() }
+            val profiles = loadObservedProfiles()
 
             val findings = PermissionMismatchDetector.analyze(
                 appName = appName,
@@ -187,7 +192,7 @@ class AppDetailViewModel(
                 requestedPermissions = _state.value.declaredPermissions,
                 observedDomains = _state.value.domains.map { it.domain },
                 detectedSdks = found,
-                profiles = runCatching { metadataRepo.profilesForApp(packageName) }.getOrElse { emptyList() },
+                profiles = loadObservedProfiles(),
             )
             _state.value = _state.value.copy(
                 detectedSdks = found,
@@ -205,7 +210,7 @@ class AppDetailViewModel(
             requestedPermissions = _state.value.declaredPermissions,
             observedDomains = observedDomains,
             detectedSdks = _state.value.detectedSdks,
-            profiles = runCatching { metadataRepo.profilesForApp(packageName) }.getOrElse { emptyList() },
+            profiles = loadObservedProfiles(),
         )
         _state.value = _state.value.copy(
             mismatchFindings = findings,
@@ -222,6 +227,57 @@ class AppDetailViewModel(
                 ?.toSet()
                 .orEmpty()
         }.getOrDefault(emptySet())
+
+    private suspend fun loadObservedProfiles() =
+        runCatching {
+            metadataRepo.recent()
+                .filter {
+                    matchesSelectedApp(
+                        observedPackage = it.packageName,
+                        observedAppName = it.packageName.substringAfterLast('.'),
+                        observedHost = it.hostname.ifBlank { it.sniHostname },
+                        destinationIp = it.destinationIp,
+                    )
+                }
+        }.getOrElse { emptyList() }
+
+    private fun matchesSelectedApp(
+        observedPackage: String,
+        observedAppName: String,
+        observedHost: String?,
+        destinationIp: String,
+    ): Boolean {
+        if (observedPackage == packageName) return true
+
+        val selectedFamily = packageFamily(packageName)
+        val observedFamily = packageFamily(observedPackage)
+        if (selectedFamily != null && observedFamily == selectedFamily) return true
+
+        val host = observedHost.orEmpty().lowercase(Locale.ROOT)
+        val app = observedAppName.lowercase(Locale.ROOT)
+        val keywords = relatedKeywords(packageName)
+        if (keywords.any { keyword -> host.contains(keyword) || app.contains(keyword) }) return true
+
+        val geoOrg = GeoIpResolver.lookup(destinationIp)?.org.orEmpty().lowercase(Locale.ROOT)
+        return keywords.any { keyword -> geoOrg.contains(keyword) }
+    }
+
+    private fun packageFamily(value: String): String? {
+        if (value.isBlank() || !value.contains('.')) return null
+        return when {
+            value.startsWith("com.facebook.") -> "com.facebook"
+            value.startsWith("com.instagram.") -> "com.instagram"
+            value == "com.whatsapp" -> "com.whatsapp"
+            else -> null
+        }
+    }
+
+    private fun relatedKeywords(value: String): List<String> = when {
+        value.startsWith("com.facebook.") -> listOf("facebook", "meta", "messenger", "fbcdn", "fbsbx")
+        value.startsWith("com.instagram.") -> listOf("instagram", "meta", "cdninstagram")
+        value == "com.whatsapp" -> listOf("whatsapp", "whatsapp.net", "meta")
+        else -> listOf(value.substringAfterLast('.').lowercase(Locale.ROOT))
+    }
 
     private fun buildQueryLog(domains: List<DomainRow>): List<TopologyQueryLogItem> =
         domains.take(8).mapIndexed { index, row ->

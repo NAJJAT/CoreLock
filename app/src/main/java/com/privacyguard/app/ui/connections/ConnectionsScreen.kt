@@ -151,7 +151,7 @@ fun ConnectionsScreen(
                     Spacer(modifier = Modifier.size(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = connection.hostName ?: connection.destination,
+                            text = connection.appName.ifBlank { "Unknown app" },
                             style = MaterialTheme.typography.titleMedium,
                             color = if (connection.isBlocked) PgDanger else PgText,
                             maxLines = 1,
@@ -159,7 +159,7 @@ fun ConnectionsScreen(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "${connection.appName} • :${connection.destinationPort}",
+                            text = connection.packageName.ifBlank { "Unknown package" },
                             style = MaterialTheme.typography.bodySmall,
                             color = PgTextMuted,
                             maxLines = 1,
@@ -182,7 +182,11 @@ fun ConnectionsScreen(
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = "${connection.securityInfo} • ${connection.encryptionInfo}",
+                    text = listOf(
+                        connection.hostName ?: connection.destination,
+                        connection.securityInfo.takeIf { it.isNotBlank() && !it.equals("Unknown", ignoreCase = true) },
+                        connection.encryptionInfo.takeIf { it.isNotBlank() },
+                    ).filterNotNull().joinToString(" • "),
                     style = MaterialTheme.typography.bodySmall,
                     color = PgTextMuted,
                     fontFamily = MonoFont

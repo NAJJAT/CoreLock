@@ -47,12 +47,12 @@
 
     <application
         android:name="com.privacyguard.app.PrivacyGuardApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:appComponentFactory="androidx.core.app.CoreComponentFactory"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:debuggable="true"
         android:extractNativeLibs="false"
-        android:fullBackupContent="@xml/backup_rules"
+        android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"

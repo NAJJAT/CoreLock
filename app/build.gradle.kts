@@ -18,6 +18,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+        buildConfigField("String", "APP_SIGNATURE_SHA256", "\"\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -25,11 +26,21 @@ android {
     buildTypes {
         debug {
             isDebuggable = true
+            buildConfigField(
+                "String",
+                "APP_SIGNATURE_SHA256",
+                "\"E1D461FFE96AC468E338CA1DC251C926DC42F3293618632D7819D4A5C9829A43\""
+            )
         }
         release {
             isMinifyEnabled = false
             isDebuggable = false
             signingConfig = signingConfigs.getByName("debug")
+            buildConfigField(
+                "String",
+                "APP_SIGNATURE_SHA256",
+                "\"E1D461FFE96AC468E338CA1DC251C926DC42F3293618632D7819D4A5C9829A43\""
+            )
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -42,6 +53,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

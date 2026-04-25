@@ -65,6 +65,7 @@ data class ConnectionDetailState(
 class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
     private val db = AppDatabase.getInstance(app)
     private val rulesRepo = RulesRepo(db.rulesDao(), FilterEngine())
+    private val packageManager = app.packageManager
 
     private val _recentConnections = MutableStateFlow<List<Connection>>(emptyList())
     val recentConnections: StateFlow<List<Connection>> = _recentConnections.asStateFlow()
@@ -76,7 +77,10 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
             snapshot.activeConnections.map {
                 Connection(
                     id = it.id,
-                    appName = it.appName,
+                    appName = displayAppName(
+                        appName = it.appName,
+                        packageName = it.packageName,
+                    ),
                     packageName = it.packageName.ifBlank { it.appName },
                     destination = it.destination,
                     destinationIp = it.destinationIp,
@@ -121,9 +125,10 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
                 _recentConnections.value = db.connectionDao().getRecentConnections(since, 100).map {
                     Connection(
                         id = it.id.toString(),
-                        appName = it.appName.ifBlank {
-                            it.packageName.ifBlank { "Unknown" }
-                        },
+                        appName = displayAppName(
+                            appName = it.appName,
+                            packageName = it.packageName,
+                        ),
                         packageName = it.packageName.ifBlank {
                             it.appName.ifBlank { "Unknown" }
                         },
@@ -148,6 +153,29 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
 
     val dataRate: String
         get() = formatRate(connections.value.sumOf { it.bytesSent })
+
+    private fun displayAppName(appName: String, packageName: String): String {
+        val resolvedPackage = packageName.takeIf { it.isNotBlank() && it != "Unknown" }
+        if (resolvedPackage != null) {
+            runCatching {
+                val info = packageManager.getApplicationInfo(resolvedPackage, 0)
+                val label = packageManager.getApplicationLabel(info).toString().trim()
+                if (label.isNotBlank()) return label
+            }
+        }
+
+        val candidate = appName.takeIf { it.isNotBlank() && it != "Unknown" } ?: resolvedPackage.orEmpty()
+        if (candidate.isBlank()) return "Unknown app"
+        if (!candidate.contains('.')) return candidate
+
+        return candidate
+            .substringAfterLast('.')
+            .replace('_', ' ')
+            .replace('-', ' ')
+            .replaceFirstChar { ch ->
+                if (ch.isLowerCase()) ch.titlecase(Locale.getDefault()) else ch.toString()
+            }
+    }
 
     fun setFilter(filter: ConnectionFilter) {
         _filter.value = filter

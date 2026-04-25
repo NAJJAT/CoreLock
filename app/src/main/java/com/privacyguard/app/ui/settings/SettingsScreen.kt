@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.MaterialTheme
@@ -126,6 +127,74 @@ fun SettingsScreen(
                     SettingUiItem("DNS over HTTPS", "Encrypt DNS queries", dohEnabled, Icons.Default.Lock, onClick = {
                         settingsPreferences.setDohEnabled(!dohEnabled)
                     })
+                )
+            )
+        }
+
+        item {
+            val posture = securityState.posture
+            SettingBlock(
+                title = "Runtime integrity",
+                footer = {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    DiagnosticRow(
+                        DiagnosticCheck(
+                            "Runtime posture",
+                            when (posture.riskLevel.name) {
+                                "HIGH" -> DiagnosticStatus.FAIL
+                                "ELEVATED" -> DiagnosticStatus.WARN
+                                else -> DiagnosticStatus.PASS
+                            },
+                            posture.summary,
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DiagnosticRow(
+                        DiagnosticCheck(
+                            "App signature",
+                            if (posture.signatureValid) DiagnosticStatus.PASS else DiagnosticStatus.FAIL,
+                            if (posture.signatureValid) "Signature matches trusted signing certificate" else "Signature mismatch detected",
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DiagnosticRow(
+                        DiagnosticCheck(
+                            "Root / tamper",
+                            if (!posture.rooted && posture.suspiciousPackages.isEmpty()) DiagnosticStatus.PASS else DiagnosticStatus.FAIL,
+                            when {
+                                posture.rooted && posture.suspiciousPackages.isNotEmpty() ->
+                                    "Root indicators present · ${posture.suspiciousPackages.joinToString()}"
+                                posture.rooted -> "Root indicators present on this device"
+                                posture.suspiciousPackages.isNotEmpty() -> "Suspicious tooling detected: ${posture.suspiciousPackages.joinToString()}"
+                                else -> "No root or tamper tooling detected"
+                            },
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DiagnosticRow(
+                        DiagnosticCheck(
+                            "Debugger",
+                            if (posture.debuggerAttached) DiagnosticStatus.FAIL else DiagnosticStatus.PASS,
+                            if (posture.debuggerAttached) "Debugger attached to process" else "No debugger detected",
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DiagnosticRow(
+                        DiagnosticCheck(
+                            "Keystore backing",
+                            if (posture.hardwareBackedKeystore) DiagnosticStatus.PASS else DiagnosticStatus.WARN,
+                            if (posture.hardwareBackedKeystore) "Master key is backed by secure hardware" else "Hardware-backed keystore unavailable",
+                        )
+                    )
+                },
+                items = listOf(
+                    SettingUiItem(
+                        "Memory-level hardening",
+                        "Keys stay in Android Keystore; risky runtimes get secure-window protection",
+                        securityState.posture.riskLevel.name != "HIGH",
+                        Icons.Default.Security,
+                        onClick = { settingsViewModel.runDiagnostics() }
+                    )
                 )
             )
         }

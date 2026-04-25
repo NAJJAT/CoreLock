@@ -8,6 +8,7 @@ import com.privacyguard.app.core.detection.StalkerwareAssessment
 import com.privacyguard.app.core.detection.StalkerwareDetector
 import com.privacyguard.app.core.stats.StatsManager
 import com.privacyguard.app.data.db.AppDatabase
+import com.privacyguard.app.data.db.ConnectionEntity
 import com.privacyguard.app.data.repository.MetadataRepo
 import com.privacyguard.app.data.repository.RulesRepo
 import com.privacyguard.core.filter.FilterEngine
@@ -81,7 +82,10 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun refresh() {
         val profiles   = metadataRepo.recent()
         val liveStats  = StatsManager.snapshot.value.appStats
-        val names      = liveStats.associate { it.packageName to it.appName }
+        val since = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
+        val recentConnections = runCatching {
+            db.connectionDao().getRecentConnections(since, 800)
+        }.getOrElse { emptyList() }
         val blockedPackages = db.rulesDao()
             .getAllRules()
             .filter {
@@ -94,39 +98,53 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
             .toSet()
 
         val installed = installedNetworkApps(blockedPackages)
+        val installedPackages = installed.map { it.packageName }.toSet()
+        val installedNames = installed.associate { it.packageName to it.appName }
+        val profileBuckets = profiles.groupBy { canonicalPackageForObserved(it.packageName, installedPackages) }
+        val liveBuckets = liveStats.groupBy { canonicalPackageForObserved(it.packageName, installedPackages) }
+        val connectionBuckets = recentConnections.groupBy { canonicalPackageForObserved(it.packageName, installedPackages) }
         val observed = if (profiles.isNotEmpty()) {
-            // Full metadata available — use richer risk scoring from MetadataEngine
-            profiles
-                .groupBy { it.packageName }
-                .map { (pkg, rows) ->
+            installed
+                .mapNotNull { installedApp ->
+                    val pkg = installedApp.packageName
+                    val rows = profileBuckets[pkg].orEmpty()
+                    val liveRows = liveBuckets[pkg].orEmpty()
+                    val connectionRows = connectionBuckets[pkg].orEmpty()
+                    if (rows.isEmpty() && liveRows.isEmpty() && connectionRows.isEmpty()) return@mapNotNull null
+                    val stalkerware = assessStalkerware(pkg, rows)
+                    val fallbackMetrics = connectionMetrics(connectionRows)
                     AppRiskItem(
-                        appName           = names[pkg].orEmpty().ifBlank { pkg.substringAfterLast('.') },
+                        appName           = installedNames[pkg].orEmpty().ifBlank { pkg.substringAfterLast('.') },
                         packageName       = pkg,
-                        totalDestinations = rows.size,
-                        suspiciousCount   = rows.count { it.riskScore >= 40 },
-                        cleartextCount    = rows.count { it.encryptionStatus.name == "CLEARTEXT" || it.encryptionStatus.name == "UNKNOWN" },
-                        totalBytesOut     = rows.sumOf { it.totalBytesOut },
-                        maxRiskScore      = rows.maxOfOrNull { it.riskScore } ?: 0,
+                        totalDestinations = rows.size.takeIf { it > 0 } ?: fallbackMetrics.totalDestinations,
+                        suspiciousCount   = rows.count { it.riskScore >= 40 }.takeIf { it > 0 } ?: fallbackMetrics.suspiciousCount,
+                        cleartextCount    = rows.count { it.encryptionStatus.name == "CLEARTEXT" || it.encryptionStatus.name == "UNKNOWN" }
+                            .takeIf { it > 0 } ?: fallbackMetrics.cleartextCount,
+                        totalBytesOut     = rows.sumOf { it.totalBytesOut } + liveRows.sumOf { it.bytesTransferred } + fallbackMetrics.totalBytes,
+                        maxRiskScore      = (rows.maxOfOrNull { it.riskScore } ?: fallbackMetrics.maxRiskScore),
                         isBlocked         = pkg in blockedPackages,
-                        stalkerwareScore  = assessStalkerware(pkg, rows).score,
-                        stalkerwareReasons = assessStalkerware(pkg, rows).reasons,
+                        stalkerwareScore  = stalkerware.score,
+                        stalkerwareReasons = stalkerware.reasons,
                     )
                 }
-                .sortedByDescending { it.maxRiskScore }
+                .sortedWith(compareByDescending<AppRiskItem> { it.maxRiskScore }.thenByDescending { it.totalBytesOut })
         } else {
             // VPN just started — DB not warm yet. Show live traffic from StatsManager
             // so the Apps screen is never completely blank while VPN is running.
-            liveStats
-                .map { stat ->
+            liveBuckets
+                .map { (pkg, stats) ->
+                    val displayName = installedNames[pkg].orEmpty().ifBlank {
+                        stats.firstOrNull()?.appName?.takeIf { it.isNotBlank() } ?: pkg.substringAfterLast('.')
+                    }
                     AppRiskItem(
-                        appName           = stat.appName.ifBlank { stat.packageName.substringAfterLast('.') },
-                        packageName       = stat.packageName,
+                        appName           = displayName,
+                        packageName       = pkg,
                         totalDestinations = 0,
                         suspiciousCount   = 0,
                         cleartextCount    = 0,
-                        totalBytesOut     = stat.bytesTransferred,
-                        maxRiskScore      = if (stat.blockedCount > 0) 40 else 10,
-                        isBlocked         = stat.packageName in blockedPackages,
+                        totalBytesOut     = stats.sumOf { it.bytesTransferred },
+                        maxRiskScore      = if (stats.any { it.blockedCount > 0 }) 40 else 10,
+                        isBlocked         = pkg in blockedPackages,
                         stalkerwareScore  = 0,
                     )
                 }
@@ -166,6 +184,62 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 .toList()
         }.getOrElse { emptyList() }
+    }
+
+    private fun connectionMetrics(rows: List<ConnectionEntity>): ConnectionMetrics {
+        if (rows.isEmpty()) return ConnectionMetrics()
+        val destinations = rows
+            .map { (it.sniHostname ?: it.domain ?: it.destinationIp).ifBlank { it.destinationIp } }
+            .distinct()
+            .size
+        val suspicious = rows.count { it.wasBlocked }
+        val cleartext = rows.count { it.encryptionStatus.equals("CLEARTEXT", ignoreCase = true) || it.encryptionStatus.equals("UNKNOWN", ignoreCase = true) }
+        val totalBytes = rows.sumOf { it.bytesSent + it.bytesReceived }
+        val risk = when {
+            suspicious > 0 -> 40
+            cleartext > 0 -> 25
+            else -> 12
+        }
+        return ConnectionMetrics(
+            totalDestinations = destinations,
+            suspiciousCount = suspicious,
+            cleartextCount = cleartext,
+            totalBytes = totalBytes,
+            maxRiskScore = risk,
+        )
+    }
+
+    private data class ConnectionMetrics(
+        val totalDestinations: Int = 0,
+        val suspiciousCount: Int = 0,
+        val cleartextCount: Int = 0,
+        val totalBytes: Long = 0L,
+        val maxRiskScore: Int = 0,
+    )
+
+    private fun canonicalPackageForObserved(
+        observedPackage: String,
+        installedPackages: Set<String>,
+    ): String {
+        if (observedPackage in installedPackages) return observedPackage
+        val preferred = preferredFamilyPackage(observedPackage, installedPackages)
+        return preferred ?: observedPackage
+    }
+
+    private fun preferredFamilyPackage(
+        observedPackage: String,
+        installedPackages: Set<String>,
+    ): String? = when {
+        observedPackage.startsWith("com.facebook.") -> when {
+            "com.facebook.katana" in installedPackages -> "com.facebook.katana"
+            else -> installedPackages.firstOrNull { it.startsWith("com.facebook.") }
+        }
+        observedPackage.startsWith("com.instagram.") -> when {
+            "com.instagram.android" in installedPackages -> "com.instagram.android"
+            else -> installedPackages.firstOrNull { it.startsWith("com.instagram.") }
+        }
+        observedPackage == "com.whatsapp" -> observedPackage.takeIf { it in installedPackages }
+        else -> null
     }
 
     private fun assessStalkerware(

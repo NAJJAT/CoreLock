@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.pm.PackageManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.privacyguard.app.core.security.AppSecurityMonitor
+import com.privacyguard.app.core.security.SecurityPosture
 import com.privacyguard.app.core.stats.StatsManager
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
@@ -28,6 +30,7 @@ data class SecuritySettingsState(
     val blockCleartext: Boolean = false,
     val blockWeakTls: Boolean = false,
     val killSwitch: Boolean = false,
+    val posture: SecurityPosture = SecurityPosture(),
 )
 
 data class DiagnosticCheck(
@@ -154,6 +157,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                     it.matchEncryption == EncryptionStatus.WEAK_TLS.name
             },
             killSwitch = settingsPreferences.killSwitchEnabled.value,
+            posture = AppSecurityMonitor.refresh(getApplication()),
         )
     }
 
