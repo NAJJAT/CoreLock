@@ -14,7 +14,6 @@ import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.BasicConstraints
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.KeyUsage
-import org.bouncycastle.asn1.x509.SubjectKeyIdentifier
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
@@ -22,7 +21,6 @@ import java.math.BigInteger
 import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.KeyStore
-import java.security.MessageDigest
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.Date
@@ -185,18 +183,6 @@ class CaManager(
             Extension.keyUsage,
             true,
             KeyUsage(KeyUsage.keyCertSign or KeyUsage.cRLSign)
-        )
-
-        // Add subject key identifier
-        val subjectKeyId = SubjectKeyIdentifier.getInstance(
-            org.bouncycastle.asn1.DEROctetString(
-                MessageDigest.getInstance("SHA-256").digest(keyPair.public.encoded)
-            )
-        )
-        certBuilder.addExtension(
-            Extension.subjectKeyIdentifier,
-            false,
-            subjectKeyId
         )
 
         val signer = JcaContentSignerBuilder("SHA256WithRSA").build(keyPair.private)

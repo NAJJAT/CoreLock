@@ -41,7 +41,8 @@ class MitmEngine(
     private val certForger: CertForger,
     private val pinningDetector: PinningDetector,
     private val caManager: CaManager,
-    private val payloadParser: PayloadParser
+    private val payloadParser: PayloadParser,
+    private val protectSocket: (java.net.Socket) -> Boolean = { true },
 ) {
 
     companion object {
@@ -56,47 +57,59 @@ class MitmEngine(
     private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     /**
-     * Intercept TLS traffic for a session
+     * Intercept TLS traffic for a session.
+     *
+     * Creates a local SSL server socket synchronously (so the port is known before returning),
+     * then launches a coroutine to accept the device connection and proxy it to the real server.
+     * TcpForwarder must redirect the session's NIO channel to this port after calling intercept().
      *
      * @param session The VPN session (already classified as TLS)
      * @param onPayload Callback for each payload chunk (direction, bytes, session)
-     *
-     * @return true if interception started successfully, false otherwise
+     * @return local port the MITM server is listening on, or -1 if interception was skipped/failed
      */
     fun intercept(
         session: Session,
         onPayload: (direction: String, bytes: ByteArray, session: Session) -> Unit
-    ): Boolean {
-        val domain = session.tlsSni ?: return false
+    ): Int {
+        val domain = session.tlsSni ?: return -1
 
         // Check if we should skip due to pinning
         if (pinningDetector.isPinned(session.ownerPackage, domain)) {
             Log.d(TAG, "Skipping MITM for pinned domain: $domain")
-            // ADDED
             _statusFlow.value = MitmRuntimeStatus(
                 state = "PINNED_BYPASS",
                 message = "Pinned app/domain bypassed interception",
                 domain = domain,
                 timestamp = System.currentTimeMillis(),
             )
-            return false
+            return -1
         }
 
-        // Mark session as intercepted
+        // Create server socket NOW (synchronously) so the caller gets the port immediately
+        val serverSocket = try {
+            val ctx = createServerSslContext(domain)
+            (ctx.serverSocketFactory.createServerSocket(0) as SSLServerSocket).also {
+                it.soTimeout = 10_000  // 10 s for TcpForwarder to connect back to us
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to create MITM server socket for $domain", e)
+            return -1
+        }
+        val localPort = serverSocket.localPort
+        Log.d(TAG, "MITM server socket on port $localPort for $domain")
+
         session.isMitmIntercepted = true
 
-        // Launch interception coroutine
+        // Launch coroutine to wait for device connection and proxy the traffic
         coroutineScope.launch {
             try {
-                // ADDED
                 _statusFlow.value = MitmRuntimeStatus(
                     state = "STARTING",
-                    message = "Starting interception",
+                    message = "Waiting for device on port $localPort",
                     domain = domain,
                     timestamp = System.currentTimeMillis(),
                 )
-                performInterception(session, domain, onPayload)
-                // ADDED
+                performInterception(session, domain, serverSocket, onPayload)
                 _statusFlow.value = MitmRuntimeStatus(
                     state = "ACTIVE",
                     message = "Interception active",
@@ -104,11 +117,10 @@ class MitmEngine(
                     timestamp = System.currentTimeMillis(),
                 )
             } catch (e: SSLHandshakeException) {
-                // Handle pinning detection failure
                 handleHandshakeFailure(session, domain, e)
+                serverSocket.runCatching { close() }
             } catch (e: Exception) {
                 Log.e(TAG, "MITM interception failed for ${session.key}", e)
-                // ADDED
                 _statusFlow.value = MitmRuntimeStatus(
                     state = "ERROR",
                     message = e.message ?: e::class.java.simpleName,
@@ -116,25 +128,26 @@ class MitmEngine(
                     timestamp = System.currentTimeMillis(),
                 )
                 session.isMitmIntercepted = false
+                serverSocket.runCatching { close() }
             }
         }
 
-        return true
+        return localPort
     }
 
     private suspend fun performInterception(
         session: Session,
         domain: String,
+        serverSocket: SSLServerSocket,
         onPayload: (String, ByteArray, Session) -> Unit
     ) = withContext(Dispatchers.IO) {
 
-        // Setup device-side SSL server socket (presenting forged cert)
-        val serverSslContext = createServerSslContext(domain)
-        val serverSocket = serverSslContext.serverSocketFactory.createServerSocket(0) as SSLServerSocket
         serverSocket.use {
-            // Setup real server-side SSL socket
+            // Setup real server-side SSL socket, protected from the VPN tunnel so it
+            // reaches the internet directly without looping back through TcpForwarder.
             val clientSslContext = createClientSslContext()
             val clientSocket = clientSslContext.socketFactory.createSocket() as SSLSocket
+            protectSocket(clientSocket)
             clientSocket.connect(InetSocketAddress(domain, 443))
 
             // Set SNI for real connection
@@ -143,7 +156,7 @@ class MitmEngine(
             clientSocket.sslParameters = params
             clientSocket.startHandshake()
 
-            // Accept device connection
+            // Accept device connection (TcpForwarder redirected the session channel here)
             val deviceSocket = it.accept()
 
             // Relay data both ways with interception

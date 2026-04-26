@@ -86,6 +86,7 @@ android {
             )
             buildConfigField("boolean", "IS_RELEASE_SIGNING_CONFIGURED", releaseSigningConfigured.toString())
             buildConfigField("String", "APP_SIGNING_MODE", "\"Debug certificate\"")
+            buildConfigField("boolean", "MITM_AVAILABLE", "true")
         }
         release {
             isMinifyEnabled = false

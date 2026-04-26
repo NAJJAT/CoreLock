@@ -21,7 +21,9 @@ data class MitmUiState(
     val isLoading: Boolean = false,
     val mitmStatus: String = "IDLE",
     val mitmStatusMessage: String = "MITM idle",
-    val mitmStatusDomain: String? = null
+    val mitmStatusDomain: String? = null,
+    val methodFilter: String? = null,
+    val showFlaggedOnly: Boolean = false,
 )
 
 class MitmViewModel(
@@ -114,6 +116,16 @@ class MitmViewModel(
         observeLogs()
     }
 
+    fun setMethodFilter(method: String?) {
+        _uiState.update { it.copy(methodFilter = method) }
+        observeLogs()
+    }
+
+    fun setShowFlaggedOnly(flagged: Boolean) {
+        _uiState.update { it.copy(showFlaggedOnly = flagged) }
+        observeLogs()
+    }
+
     private fun applyFilters(logs: List<PayloadLogEntity>): List<PayloadLogEntity> {
         var filtered = logs
 
@@ -123,6 +135,18 @@ class MitmViewModel(
 
         if (_uiState.value.filterHasBody) {
             filtered = filtered.filter { !it.body.isNullOrEmpty() }
+        }
+
+        _uiState.value.methodFilter?.let { method ->
+            filtered = filtered.filter { it.method?.uppercase() == method.uppercase() }
+        }
+
+        if (_uiState.value.showFlaggedOnly) {
+            filtered = filtered.filter { log ->
+                log.piiRedacted ||
+                log.headers.lowercase().contains("authorization") ||
+                log.headers.lowercase().contains("x-device")
+            }
         }
 
         if (_uiState.value.searchQuery.isNotBlank()) {

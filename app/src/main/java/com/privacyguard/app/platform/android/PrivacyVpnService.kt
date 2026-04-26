@@ -9,7 +9,6 @@ import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.system.OsConstants
-import androidx.room.Room
 import com.privacyguard.core.filter.FilterEngine
 import com.privacyguard.core.metadata.EncryptionStatus
 import com.privacyguard.core.metadata.MetadataEngine
@@ -82,7 +81,6 @@ class PrivacyVpnService : VpnService() {
     companion object {
         private const val TAG = "PrivacyVpnService"
         const val ACTION_STOP = "com.privacyguard.action.STOP_VPN"
-        private const val DATABASE_NAME = "privacyguard_database"
 
         @Volatile var isRunning = false
             private set
@@ -267,7 +265,7 @@ class PrivacyVpnService : VpnService() {
         val payloadParser = PayloadParser(piiRedactor)
         val payloadShipper = PayloadShipper(mitmConfig)
         val certForger = CertForger(caManager)
-        val mitmEngine = MitmEngine(certForger, pinningDetector, caManager, payloadParser)
+        val mitmEngine = MitmEngine(certForger, pinningDetector, caManager, payloadParser, ::protect)
         val payloadLogRepository = PayloadLogRepositoryImpl(
             db.payloadLogDao()
         )
@@ -587,7 +585,5 @@ class PrivacyVpnService : VpnService() {
         PrivacyVpnService::class.java
     }
 
-    private fun buildDatabase(): AppDatabase = Room.databaseBuilder(
-        this, AppDatabase::class.java, DATABASE_NAME
-    ).fallbackToDestructiveMigration(dropAllTables = true).build()
+    private fun buildDatabase(): AppDatabase = AppDatabase.getInstance(this)
 }

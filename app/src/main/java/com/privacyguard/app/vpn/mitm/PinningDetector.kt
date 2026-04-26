@@ -19,32 +19,16 @@ class PinningDetector {
     companion object {
         private const val TAG = "PinningDetector"
 
-        // Hardcoded known pinned packages (based on public documentation)
-        private val PINNED_PACKAGES = setOf(
-            "com.whatsapp",
-            "com.instagram.android",
-            "com.facebook.katana",
-            "com.twitter.android",
-            "com.google.android.gm",
-            "com.snapchat.android",
-            "com.zhiliaoapp.musically",
-            "net.one97.paytm",
-            "com.phonepe.app",
-            "com.bankofamerica.mobile",
-            "com.chase.sig.android"
-        )
+        // No hard-coded package blocks — let MITM attempt every app and detect
+        // pinning dynamically from SSLHandshakeException failures at runtime.
+        private val PINNED_PACKAGES = emptySet<String>()
 
-        // Hardcoded known pinned domains
+        // Only block domains where MITM will always fail AND cause user-visible
+        // breakage (push/notification servers, payment backends, bank APIs).
         private val PINNED_DOMAINS = setOf(
-            "api.whatsapp.com",
-            "graph.facebook.com",
-            "api.twitter.com",
-            "mail.google.com",
-            "accounts.google.com",
-            "appleid.apple.com",
-            "api.snapchat.com",
             "push.apple.com",
-            "gateway.push.apple.com"
+            "gateway.push.apple.com",
+            "courier.push.apple.com"
         )
     }
 

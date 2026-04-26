@@ -172,43 +172,133 @@ class TcpForwarder(
             }
         }
 
-        // MITM INTERCEPTION HOOK
-        // ==================== MITM INTERCEPTION HOOK ====================
-        Log.d(TAG, "🔍 MITM CHECK: port=${session.key.destinationPort}, " +
-                "sni=${session.tlsSni}, " +
-                "mitmEnabled=${mitmConfig.isEnabled}, " +
-                "MITM_AVAILABLE=${BuildConfig.MITM_AVAILABLE}")
+        // ==================== PAYLOAD CAPTURE HOOK ====================
 
-        if (BuildConfig.MITM_AVAILABLE &&
-            session.key.destinationPort == 443 &&
-            session.tlsSni != null &&
-            mitmConfig.isEnabled &&
-            !pinningDetector.isPinned(session.ownerPackage, session.tlsSni)) {
+        if (BuildConfig.MITM_AVAILABLE && mitmConfig.isEnabled) {
 
-            Log.d(TAG, "✅ MITM CONDITIONS MET - Intercepting: ${session.tlsSni}")
-            mitmInterceptedCount.incrementAndGet()
+            // ── HTTPS: log a metadata stub once per session so the inspector always
+            //    shows the connection even if we cannot decrypt the body.
+            if (session.key.destinationPort == 443 &&
+                session.tlsSni != null &&
+                !session.metadataLogged) {
 
-            val success = mitmEngine.intercept(session) { direction, bytes, sess ->
-                processPayload(direction, bytes, sess)
+                session.metadataLogged = true
+                coroutineScope.launch {
+                    payloadLogRepository.saveLog(PayloadLogEntity(
+                        timestamp = System.currentTimeMillis(),
+                        sessionId = session.key.toString(),
+                        direction = "OUTBOUND",
+                        ownerPackage = session.ownerPackage,
+                        sniHostname = session.tlsSni,
+                        destinationIp = session.key.destinationIp,
+                        destinationPort = session.key.destinationPort,
+                        protocol = session.encryptionStatus.name,
+                        method = null,
+                        urlPath = null,
+                        headers = "{}",
+                        body = null,
+                        bodyEncoding = "binary",
+                        sizeBytes = tcp.data.size,
+                        piiRedacted = false,
+                        isMitmSuccess = false
+                    ))
+                }
+                Log.d(TAG, "📋 HTTPS metadata stub saved for ${session.tlsSni}")
             }
 
-            if (success) {
-                Log.d(TAG, "✅ MITM intercept SUCCESS for ${session.tlsSni}")
-                return
-            } else {
-                Log.e(TAG, "❌ MITM intercept FAILED for ${session.tlsSni}")
+            // ── HTTP (cleartext): buffer TCP segments until a complete HTTP message
+            //    (headers + full body) is assembled, then parse and save it.
+            if (session.encryptionStatus == EncryptionStatus.CLEARTEXT) {
+                bufferAndCapture("OUTBOUND", tcp.data, session)
             }
-        } else {
-            Log.d(TAG, "❌ MITM CONDITIONS NOT MET: " +
-                    "portCheck=${session.key.destinationPort == 443}, " +
-                    "sniNotNull=${session.tlsSni != null}, " +
-                    "enabled=${mitmConfig.isEnabled}, " +
-                    "pinned=${pinningDetector.isPinned(session.ownerPackage, session.tlsSni)}")
         }
-// ==================== END MITM HOOK ====================
+        // ==================== END PAYLOAD CAPTURE HOOK ====================
+
+        // Forward data to remote server (plain pass-through when MITM is off or not applicable)
+        val channel = session.tcpChannel ?: run {
+            Log.w(TAG, "No channel for data packet: $key")
+            return
+        }
+        try {
+            val buf = ByteBuffer.wrap(tcp.data)
+            while (buf.hasRemaining()) {
+                channel.write(buf)
+            }
+            session.recordOutbound(tcp.data.size)
+            forwardedBytesOut.addAndGet(tcp.data.size.toLong())
+            sendAckToDevice(ip, tcp, session)
+            Log.d(TAG, "Forwarded ${tcp.data.size}B → ${key.destinationIp}:${key.destinationPort}")
+        } catch (e: Exception) {
+            Log.w(TAG, "Data forward failed for $key: ${e.message}")
+            sessionTable.remove(key)
+            sendRstToDevice(ip, tcp)
+            errorCount.incrementAndGet()
+        }
     }
 
 
+    // ── TCP segment accumulator ──────────────────────────────────────────────
+    // HTTP messages (especially POSTs) routinely span multiple TCP segments:
+    //   segment 1 → request line + headers
+    //   segment 2 → body
+    // This function appends to a per-session buffer and only fires processPayload
+    // once a complete HTTP message (headers + Content-Length bytes of body) is ready.
+
+    private fun bufferAndCapture(direction: String, newBytes: ByteArray, session: Session) {
+        val combined = if (direction == "OUTBOUND") {
+            session.httpOutBytes + newBytes
+        } else {
+            session.httpInBytes + newBytes
+        }
+
+        val headerEnd = findHttpHeaderEnd(combined)
+        if (headerEnd < 0) {
+            // Haven't received complete headers yet — keep buffering (cap at 64 KB).
+            if (combined.size <= 65_536) {
+                if (direction == "OUTBOUND") session.httpOutBytes = combined
+                else session.httpInBytes = combined
+            }
+            return
+        }
+
+        val contentLength = extractContentLength(combined, headerEnd)
+        val bodyStart = headerEnd + 4  // length of "\r\n\r\n"
+        val totalExpected = bodyStart + contentLength
+
+        if (contentLength > 0 && combined.size < totalExpected && combined.size <= 262_144) {
+            // Body is still arriving in later segments — keep buffering.
+            if (direction == "OUTBOUND") session.httpOutBytes = combined
+            else session.httpInBytes = combined
+            return
+        }
+
+        // Complete message — parse it.
+        val toParse = if (combined.size >= totalExpected) combined.copyOfRange(0, totalExpected) else combined
+        coroutineScope.launch { processPayload(direction, toParse, session) }
+        Log.d(TAG, "📦 HTTP $direction captured ${toParse.size}B (${session.tlsSni ?: session.key.destinationIp})")
+
+        // Clear buffer; carry over any bytes that belong to the next message.
+        val leftover = if (combined.size > totalExpected)
+            combined.copyOfRange(totalExpected, combined.size) else ByteArray(0)
+        if (direction == "OUTBOUND") session.httpOutBytes = leftover
+        else session.httpInBytes = leftover
+    }
+
+    private fun findHttpHeaderEnd(data: ByteArray): Int {
+        for (i in 0..data.size - 4) {
+            if (data[i]     == '\r'.code.toByte() && data[i + 1] == '\n'.code.toByte() &&
+                data[i + 2] == '\r'.code.toByte() && data[i + 3] == '\n'.code.toByte()) return i
+        }
+        return -1
+    }
+
+    private fun extractContentLength(data: ByteArray, headerEnd: Int): Int {
+        val headers = String(data.copyOfRange(0, headerEnd), Charsets.ISO_8859_1)
+        return Regex("Content-Length:\\s*(\\d+)", RegexOption.IGNORE_CASE)
+            .find(headers)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 0
+    }
+
+    // ── Payload parse + save ─────────────────────────────────────────────────
     private fun processPayload(direction: String, bytes: ByteArray, session: Session) {
         try {
             val parsed = payloadParser.parse(bytes, direction, session)
@@ -304,8 +394,25 @@ class TcpForwarder(
                 connectingCount.decrementAndGet()
                 session.tcpState.set(Session.TcpState.ESTABLISHED)
                 selKey.interestOps(SelectionKey.OP_READ)
-                sendSynAckToDevice(session)
-                Log.d(TAG, "Connected → SYN-ACK sent for ${session.key}")
+
+                val pending = session.pendingMitmData
+                if (pending != null) {
+                    // This is a MITM redirect connect — replay the ClientHello into the
+                    // local MITM server socket. Do NOT send another SYN-ACK; the device
+                    // already received one when the original channel connected.
+                    session.pendingMitmData = null
+                    try {
+                        val buf = ByteBuffer.wrap(pending)
+                        while (buf.hasRemaining()) channel.write(buf)
+                        Log.d(TAG, "Replayed ${pending.size}B ClientHello to MITM port")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to replay MITM ClientHello: ${e.message}")
+                    }
+                } else {
+                    // Normal initial connection — send SYN-ACK to device.
+                    sendSynAckToDevice(session)
+                    Log.d(TAG, "Connected → SYN-ACK sent for ${session.key}")
+                }
             }
         } catch (e: Exception) {
             Log.w(TAG, "finishConnect failed for ${session.key}: ${e.message}")
@@ -327,6 +434,13 @@ class TcpForwarder(
         val data = ByteArray(n).also { buffer.get(it) }
         session.recordInbound(n)
         forwardedBytesIn.addAndGet(n.toLong())
+
+        // Capture HTTP responses — buffer until the full response body arrives.
+        if (BuildConfig.MITM_AVAILABLE && mitmConfig.isEnabled &&
+            session.encryptionStatus == EncryptionStatus.CLEARTEXT) {
+            bufferAndCapture("INBOUND", data.copyOf(), session)
+        }
+
         injectDataToDevice(session, data)
         Log.d(TAG, "Read $n bytes from server → injected to device")
     }

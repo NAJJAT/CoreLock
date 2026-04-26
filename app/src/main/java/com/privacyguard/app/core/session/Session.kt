@@ -141,6 +141,20 @@ class Session(
      */
     val payloadCount = AtomicInteger(0)
 
+    /**
+     * TLS ClientHello bytes to replay into the MITM local port once the channel connects.
+     * Set by TcpForwarder when redirecting a session to the MitmEngine's server socket.
+     */
+    @Volatile var pendingMitmData: ByteArray? = null
+
+    /** True once a metadata-only log entry has been saved for this session. */
+    @Volatile var metadataLogged: Boolean = false
+
+    // Per-session TCP segment accumulators so split HTTP request/response bodies
+    // (headers in segment N, body in segment N+1) are reassembled before parsing.
+    @Volatile var httpOutBytes: ByteArray = ByteArray(0)  // device → server (requests)
+    @Volatile var httpInBytes:  ByteArray = ByteArray(0)  // server → device (responses)
+
     // ─────────────────────────────────────────────────────────────────────────
     // Derived
     // ─────────────────────────────────────────────────────────────────────────
