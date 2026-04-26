@@ -1,14 +1,32 @@
 package com.privacyguard.app.ui.mitm
 
 import android.content.Context
+import com.privacyguard.vpn.mitm.MitmConfig
 import java.io.File
-import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
 import java.util.Locale
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import javax.net.ssl.HttpsURLConnection
+
+/**
+ * Represents a single metadata item for payload inspection
+ */
+data class PayloadMetadataItem(
+    val packageName: String,
+    val appName: String,
+    val hostname: String,
+    val destinationIp: String,
+    val destinationPort: Int,
+    val protocol: String,
+    val direction: String,
+    val preview: String,
+    val sizeBytes: Int,
+    val timestamp: Long,
+    val wasBlocked: Boolean,
+    val encryptionLabel: String
+)
 
 /**
  * Ships enterprise metadata batches to a configured SIEM endpoint or persists
@@ -83,10 +101,12 @@ class EnterpriseMetadataShipper(
         }
 
         val payload = buildJson(items)
-        val endpoint = config.siemEndpoint.value.trim()
-        val apiKey = config.siemApiKey.value.trim()
+        // FIXED: Remove .value access - use direct property access
+        val endpoint = config.siemEndpoint.trim()
+        val apiKey = config.siemApiKey.trim()
 
-        if (config.shipToSiem.value && endpoint.startsWith("https://", ignoreCase = true) && apiKey.isNotBlank()) {
+        // FIXED: Remove .value access - use direct boolean property
+        if (config.shipToSiem && endpoint.startsWith("https://", ignoreCase = true) && apiKey.isNotBlank()) {
             val current = sendBatch(endpoint, apiKey, payload)
             if (current.success) {
                 flushPending(endpoint, apiKey)
@@ -94,12 +114,13 @@ class EnterpriseMetadataShipper(
             }
         }
 
-        return if (config.writeLocalLog.value) {
+        // FIXED: Remove .value access - use direct boolean property
+        return if (config.writeLocalLog) {
             persistPending(items.size, payload)
             ShipResult(
                 success = false,
                 shippedCount = 0,
-                message = if (config.shipToSiem.value) {
+                message = if (config.shipToSiem) {
                     "SIEM shipping unavailable. Metadata saved locally."
                 } else {
                     "SIEM shipping is off. Metadata saved locally."

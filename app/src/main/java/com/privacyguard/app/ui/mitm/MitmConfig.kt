@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.StateFlow
  * SharedPreferences-backed setters.
  */
 class MitmConfig private constructor(
+
+
     private val prefs: SettingsPreferences,
 ) {
     companion object {
@@ -53,4 +55,5 @@ class MitmConfig private constructor(
         val recorded = consentTimestampMs.value
         return recorded > 0L && nowMs - recorded <= CONSENT_VALIDITY_MS
     }
+
 }

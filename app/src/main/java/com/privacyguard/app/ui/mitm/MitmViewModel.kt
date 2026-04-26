@@ -1,265 +1,144 @@
-package com.privacyguard.app.ui.mitm
+package com.privacyguard.ui.mitm
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.privacyguard.app.data.db.AppDatabase
-import com.privacyguard.app.data.db.ConnectionEntity
-import com.privacyguard.app.ui.components.formatAgo
-import com.privacyguard.app.ui.components.formatBytes
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import com.privacyguard.data.db.PayloadLogEntity
+import com.privacyguard.domain.repository.PayloadLogRepository
+import com.privacyguard.vpn.mitm.MitmEngine
+import com.privacyguard.vpn.mitm.MitmConfig
+import com.privacyguard.vpn.mitm.PayloadShipper
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.io.File
-import java.nio.charset.StandardCharsets
-
-enum class PayloadDirectionFilter { ALL, OUTBOUND, INBOUND }
-
-data class PayloadMetadataItem(
-    val id: Long,
-    val packageName: String,
-    val appName: String,
-    val hostname: String,
-    val destinationIp: String,
-    val destinationPort: Int,
-    val protocol: String,
-    val methodHint: String?,
-    val direction: String,
-    val preview: String,
-    val timestamp: Long,
-    val sizeBytes: Long,
-    val relativeTime: String,
-    val sizeLabel: String,
-    val wasBlocked: Boolean,
-    val encryptionLabel: String,
-)
 
 data class MitmUiState(
-    val enabled: Boolean = false,
-    val consentFresh: Boolean = false,
-    val interceptedSessions: Int = 0,
-    val pinnedBypassed: Int = 0,
+    val isEnabled: Boolean = false,
+    val isConsentValid: Boolean = false,
     val pendingEvents: Int = 0,
+    val recentLogs: List<PayloadLogEntity> = emptyList(),
+    val filterDirection: String? = null,
+    val filterHasBody: Boolean = false,
     val searchQuery: String = "",
-    val directionFilter: PayloadDirectionFilter = PayloadDirectionFilter.ALL,
-    val withBodyOnly: Boolean = false,
-    val logs: List<PayloadMetadataItem> = emptyList(),
-    val siemEndpoint: String = "",
-    val siemApiKey: String = "",
-    val shipToSiem: Boolean = false,
-    val writeLocalLog: Boolean = true,
-    val isShipping: Boolean = false,
-    val shipMessage: String? = null,
-    val queuedBatches: List<QueuedBatchInfo> = emptyList(),
+    val isLoading: Boolean = false,
+    val mitmStatus: String = "IDLE",
+    val mitmStatusMessage: String = "MITM idle",
+    val mitmStatusDomain: String? = null
 )
 
-/**
- * ViewModel for the enterprise Payloads tab.
- *
- * Business reason:
- * Enterprise operators need a controlled screen for inspecting metadata and
- * managing consent-backed inspection settings on managed devices.
- *
- * Thread safety:
- * State is exposed via [StateFlow]. Refresh runs in the ViewModel coroutine
- * scope and only mutates a single flow.
- */
-class MitmViewModel(app: Application) : AndroidViewModel(app) {
-    private val db = AppDatabase.getInstance(app)
-    private val config = MitmConfig.getInstance(app)
-    private val shipper = EnterpriseMetadataShipper(app, config)
-    private val _state = MutableStateFlow(MitmUiState())
-    val state: StateFlow<MitmUiState> = _state.asStateFlow()
+class MitmViewModel(
+    private val mitmConfig: MitmConfig,
+    private val payloadLogRepository: PayloadLogRepository,
+    private val payloadShipper: PayloadShipper
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(MitmUiState())
+    val uiState: StateFlow<MitmUiState> = _uiState.asStateFlow()
 
     init {
+        observeSettings()
+        observeLogs()
+    }
+
+    private fun observeSettings() {
         viewModelScope.launch {
-            while (true) {
-                refresh()
-                delay(1_000)
+            mitmConfig.isEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(isEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isConsentValid = mitmConfig.isConsentValid()) }
+        }
+        viewModelScope.launch {
+            MitmEngine.statusFlow.collect { status ->
+                _uiState.update {
+                    it.copy(
+                        mitmStatus = status.state,
+                        mitmStatusMessage = status.message,
+                        mitmStatusDomain = status.domain
+                    )
+                }
             }
         }
     }
 
-    fun setSearchQuery(query: String) {
-        _state.value = _state.value.copy(searchQuery = query)
-        viewModelScope.launch { refresh() }
-    }
-
-    fun setDirectionFilter(filter: PayloadDirectionFilter) {
-        _state.value = _state.value.copy(directionFilter = filter)
-        viewModelScope.launch { refresh() }
-    }
-
-    fun setWithBodyOnly(enabled: Boolean) {
-        _state.value = _state.value.copy(withBodyOnly = enabled)
-        viewModelScope.launch { refresh() }
-    }
-
-    fun setEnabled(enabled: Boolean) {
-        config.setEnabled(enabled)
-        _state.value = _state.value.copy(enabled = enabled)
-    }
-
-    fun recordConsentNow() {
-        config.recordConsent(System.currentTimeMillis())
-        viewModelScope.launch { refresh() }
-    }
-
-    fun setSiemEndpoint(endpoint: String) {
-        config.setSiemEndpoint(endpoint)
-        _state.value = _state.value.copy(siemEndpoint = endpoint)
-    }
-
-    fun setSiemApiKey(apiKey: String) {
-        config.setSiemApiKey(apiKey)
-        _state.value = _state.value.copy(siemApiKey = apiKey)
-    }
-
-    fun setShipToSiem(enabled: Boolean) {
-        config.setShipToSiem(enabled)
-        _state.value = _state.value.copy(shipToSiem = enabled)
-    }
-
-    fun setWriteLocalLog(enabled: Boolean) {
-        config.setWriteLocalLog(enabled)
-        _state.value = _state.value.copy(writeLocalLog = enabled)
-    }
-
-    fun exportLogs(): File {
-        val exportDir = File(getApplication<Application>().filesDir, "enterprise_exports").apply { mkdirs() }
-        val file = File(exportDir, "payload_metadata_export.json")
-        val content = buildString {
-            appendLine("[")
-            state.value.logs.forEachIndexed { index, item ->
-                append("  {")
-                append("\"packageName\":\"${escapeJson(item.packageName)}\",")
-                append("\"appName\":\"${escapeJson(item.appName)}\",")
-                append("\"hostname\":\"${escapeJson(item.hostname)}\",")
-                append("\"destination\":\"${escapeJson("${item.destinationIp}:${item.destinationPort}")}\",")
-                append("\"protocol\":\"${escapeJson(item.protocol)}\",")
-                append("\"direction\":\"${escapeJson(item.direction)}\",")
-                append("\"sizeBytes\":${item.sizeBytes},")
-                append("\"preview\":\"${escapeJson(item.preview)}\",")
-                append("\"timestamp\":${item.timestamp},")
-                append("\"blocked\":${item.wasBlocked}")
-                append("}")
-                if (index != state.value.logs.lastIndex) append(",")
-                appendLine()
+    private fun observeLogs() {
+        viewModelScope.launch {
+            payloadLogRepository.recentLogs(200).collect { logs ->
+                val filtered = applyFilters(logs)
+                _uiState.update { it.copy(recentLogs = filtered, isLoading = false) }
             }
-            appendLine("]")
         }
-        file.writeText(content, StandardCharsets.UTF_8)
-        return file
+        viewModelScope.launch {
+            _uiState.update { it.copy(pendingEvents = payloadShipper.pendingCount()) }
+        }
+    }
+
+    fun enableMitm() {
+        viewModelScope.launch {
+            mitmConfig.setEnabled(true)
+        }
+    }
+
+    fun disableMitm() {
+        viewModelScope.launch {
+            mitmConfig.setEnabled(false)
+        }
+    }
+
+    fun recordConsent() {
+        viewModelScope.launch {
+            mitmConfig.recordConsent()
+            _uiState.update { it.copy(isConsentValid = true) }
+            enableMitm()
+        }
     }
 
     fun shipNow() {
-        val snapshot = state.value.logs
-        _state.value = _state.value.copy(isShipping = true, shipMessage = null)
+        payloadShipper.shipNow()
         viewModelScope.launch {
-            val result = shipper.shipNow(snapshot)
-            _state.value = _state.value.copy(
-                isShipping = false,
-                shipMessage = result.message,
-            )
-            refresh()
+            _uiState.update { it.copy(pendingEvents = payloadShipper.pendingCount()) }
         }
     }
 
-    fun clearPendingQueue() {
-        viewModelScope.launch {
-            val removed = shipper.clearPending()
-            _state.value = _state.value.copy(
-                shipMessage = if (removed > 0) "Cleared $removed queued batch${if (removed == 1) "" else "es"}." else "No queued batches to clear.",
-            )
-            refresh()
+    fun setFilterDirection(direction: String?) {
+        _uiState.update { it.copy(filterDirection = direction) }
+        observeLogs()
+    }
+
+    fun setFilterHasBody(hasBody: Boolean) {
+        _uiState.update { it.copy(filterHasBody = hasBody) }
+        observeLogs()
+    }
+
+    fun setSearchQuery(query: String) {
+        _uiState.update { it.copy(searchQuery = query) }
+        observeLogs()
+    }
+
+    private fun applyFilters(logs: List<PayloadLogEntity>): List<PayloadLogEntity> {
+        var filtered = logs
+
+        _uiState.value.filterDirection?.let { direction ->
+            filtered = filtered.filter { it.direction == direction }
         }
-    }
 
-    private suspend fun refresh() {
-        val recent = db.connectionDao().getRecentConnections(
-            since = System.currentTimeMillis() - 24L * 60L * 60L * 1000L,
-            limit = 200,
-        )
-        val filtered = applyFilters(recent, _state.value.searchQuery, _state.value.directionFilter, _state.value.withBodyOnly)
-        val items = filtered.map { it.toPayloadMetadataItem() }
-        _state.value = _state.value.copy(
-            enabled = config.isEnabled.value,
-            consentFresh = config.isConsentFresh(),
-            interceptedSessions = recent.count { it.encryptionStatus == "TLS" || it.encryptionStatus == "WEAK_TLS" },
-            pinnedBypassed = recent.count { (it.packageName.contains("facebook") || it.packageName.contains("whatsapp")) && it.encryptionStatus == "TLS" },
-            pendingEvents = shipper.pendingEventCount().takeIf { it > 0 } ?: items.size.coerceAtMost(50),
-            logs = items,
-            siemEndpoint = config.siemEndpoint.value,
-            siemApiKey = config.siemApiKey.value,
-            shipToSiem = config.shipToSiem.value,
-            writeLocalLog = config.writeLocalLog.value,
-            isShipping = _state.value.isShipping,
-            shipMessage = _state.value.shipMessage,
-            queuedBatches = shipper.queuedBatches(),
-        )
-    }
+        if (_uiState.value.filterHasBody) {
+            filtered = filtered.filter { !it.body.isNullOrEmpty() }
+        }
 
-    private fun applyFilters(
-        input: List<ConnectionEntity>,
-        query: String,
-        direction: PayloadDirectionFilter,
-        withBodyOnly: Boolean,
-    ): List<ConnectionEntity> {
-        val lowered = query.trim().lowercase()
-        return input.filter { entity ->
-            val matchesDirection = when (direction) {
-                PayloadDirectionFilter.ALL -> true
-                PayloadDirectionFilter.OUTBOUND -> entity.bytesSent > 0
-                PayloadDirectionFilter.INBOUND -> entity.bytesReceived > 0
+        if (_uiState.value.searchQuery.isNotBlank()) {
+            val query = _uiState.value.searchQuery.lowercase()
+            filtered = filtered.filter {
+                it.sniHostname?.lowercase()?.contains(query) == true ||
+                        it.ownerPackage?.lowercase()?.contains(query) == true ||
+                        it.urlPath?.lowercase()?.contains(query) == true ||
+                        it.body?.lowercase()?.contains(query) == true
             }
-            val preview = buildPreview(entity)
-            val matchesBody = !withBodyOnly || preview.isNotBlank()
-            val matchesQuery = lowered.isBlank() || listOf(
-                entity.packageName,
-                entity.appName,
-                entity.domain,
-                entity.sniHostname,
-                entity.destinationIp,
-            ).filterNotNull().any { it.lowercase().contains(lowered) }
-            matchesDirection && matchesBody && matchesQuery
         }
+
+        return filtered
     }
 
-    private fun ConnectionEntity.toPayloadMetadataItem(): PayloadMetadataItem {
-        val preview = buildPreview(this)
-        return PayloadMetadataItem(
-            id = id,
-            packageName = packageName,
-            appName = appName.ifBlank { packageName },
-            hostname = sniHostname ?: domain ?: destinationIp,
-            destinationIp = destinationIp,
-            destinationPort = destinationPort,
-            protocol = protocol,
-            methodHint = protocol.takeIf { it == "HTTP" || it == "HTTPS" }?.let { "CONNECT" },
-            direction = if (bytesSent >= bytesReceived) "OUTBOUND" else "INBOUND",
-            preview = preview,
-            timestamp = timestamp,
-            sizeBytes = bytesSent + bytesReceived,
-            relativeTime = formatAgo(timestamp),
-            sizeLabel = formatBytes(bytesSent + bytesReceived),
-            wasBlocked = wasBlocked,
-            encryptionLabel = encryptionStatus.ifBlank { "UNKNOWN" },
-        )
+    fun refresh() {
+        observeLogs()
     }
-
-    private fun buildPreview(entity: ConnectionEntity): String {
-        val host = entity.sniHostname ?: entity.domain ?: entity.destinationIp
-        val encryption = entity.encryptionStatus.lowercase()
-        return "${entity.protocol} $host · $encryption · ${entity.bytesSent + entity.bytesReceived} bytes"
-            .take(80)
-    }
-
-    private fun escapeJson(input: String): String =
-        input
-            .replace("\\", "\\\\")
-            .replace("\"", "\\\"")
-            .replace("\n", "\\n")
-            .replace("\r", "\\r")
 }

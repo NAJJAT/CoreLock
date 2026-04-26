@@ -49,6 +49,11 @@
         android:theme="@style/Theme.Privacyguard">
 
         <activity
+            android:name=".vpn.mitm.PayloadInspectorActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Privacyguard" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/Theme.Privacyguard">
@@ -92,7 +97,7 @@
             android:name=".core.utils.NotificationDismissReceiver"
             android:exported="false" />
 
-        <!-- FileProvider for PCAP export -->
+        <!-- FileProvider for PCAP export and CA certificate export -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

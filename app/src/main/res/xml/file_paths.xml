@@ -1,9 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
+    <!-- Existing paths -->
     <files-path
         name="captures"
         path="." />
     <external-files-path
         name="downloads"
         path="Download/PrivacyGuard/" />
+
+    <!-- MITM: For CA certificate export (required for CA installation) -->
+    <external-downloads-path
+        name="ca_downloads"
+        path="Download/" />
+
+    <!-- MITM: For local encrypted payload logs -->
+    <files-path
+        name="mitm_logs"
+        path="payload_logs/" />
+
+    <!-- MITM: For temporary files during export -->
+    <cache-path
+        name="mitm_cache"
+        path="/" />
 </paths>

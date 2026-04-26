@@ -1,6 +1,5 @@
 package com.privacyguard.ui
 
-import androidx.compose.foundation.BorderStroke
 import android.net.Uri
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -23,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,14 +32,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.privacyguard.app.BuildConfig
+import com.privacyguard.app.BuildConfig  // FIXED: Correct import path
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
 import com.privacyguard.app.ui.apps.AppDetailScreen
 import com.privacyguard.app.ui.apps.AppsScreen
 import com.privacyguard.app.ui.ads.AdsScreen
 import com.privacyguard.app.ui.connections.ConnectionsScreen
 import com.privacyguard.app.ui.dashboard.DashboardScreen
-import com.privacyguard.app.ui.mitm.MitmScreen
 import com.privacyguard.app.ui.onboarding.OnboardingScreen
 import com.privacyguard.app.ui.settings.SettingsScreen
 import com.privacyguard.app.ui.statistics.StatisticsScreen
@@ -47,7 +46,7 @@ import com.privacyguard.app.ui.theme.PgBackgroundAlt
 import com.privacyguard.app.ui.theme.PgBorder
 import com.privacyguard.app.ui.theme.PgTextFaint
 import com.privacyguard.app.ui.theme.PgTextMuted
-import androidx.compose.ui.platform.LocalContext
+import com.privacyguard.ui.mitm.MitmScreen
 
 private data class NavTab(val route: String, val label: String, val icon: ImageVector)
 
@@ -57,6 +56,7 @@ fun AppNavHost(
 ) {
     val context = LocalContext.current
     val settingsPreferences = remember(context) { SettingsPreferences.getInstance(context) }
+
     val tabs = remember {
         buildList {
             add(NavTab("dashboard", "Home", Icons.Default.Home))
@@ -64,12 +64,14 @@ fun AppNavHost(
             add(NavTab("apps", "Apps", Icons.Default.Apps))
             add(NavTab("ads", "Ads", Icons.Default.MonetizationOn))
             add(NavTab("statistics", "Stats", Icons.Default.BarChart))
+            // MITM tab - only available in enterprise build
             if (BuildConfig.MITM_AVAILABLE) {
                 add(NavTab("payloads", "Payloads", Icons.AutoMirrored.Filled.ManageSearch))
             }
             add(NavTab("settings", "Prefs", Icons.Default.Settings))
         }
     }
+
     val topLevelRoutes = remember(tabs) { tabs.map { it.route }.toSet() }
     val onboardingCompleted by settingsPreferences.onboardingCompleted.collectAsState()
     val navController = rememberNavController()
@@ -150,21 +152,45 @@ fun AppNavHost(
                     }
                 )
             }
+
             composable("dashboard") {
-                DashboardScreen(onRequestVpn = onRequestVpn, onOpenSettings = { navController.navigate("settings") })
+                DashboardScreen(
+                    onRequestVpn = onRequestVpn,
+                    onOpenSettings = { navController.navigate("settings") }
+                )
             }
-            composable("connections") { ConnectionsScreen() }
+
+            composable("connections") {
+                ConnectionsScreen()
+            }
+
             composable("apps") {
-                AppsScreen(onAppClick = { pkg, name ->
-                    navController.navigate("appDetail/${Uri.encode(pkg)}?appName=${Uri.encode(name)}")
-                })
+                AppsScreen(
+                    onAppClick = { pkg, name ->
+                        navController.navigate("appDetail/${Uri.encode(pkg)}?appName=${Uri.encode(name)}")
+                    }
+                )
             }
-            composable("ads") { AdsScreen() }
-            composable("statistics") { StatisticsScreen() }
+
+            composable("ads") {
+                AdsScreen()
+            }
+
+            composable("statistics") {
+                StatisticsScreen()
+            }
+
+            // MITM Screen - only in enterprise build
             if (BuildConfig.MITM_AVAILABLE) {
-                composable("payloads") { MitmScreen() }
+                composable("payloads") {
+                    MitmScreen()
+                }
             }
-            composable("settings") { SettingsScreen(onLanguageChanged = {}) }
+
+            composable("settings") {
+                SettingsScreen(onLanguageChanged = {})
+            }
+
             composable("appDetail/{packageName}?appName={appName}") { backStack ->
                 val pkg = backStack.arguments?.getString("packageName") ?: ""
                 val appName = backStack.arguments?.getString("appName") ?: pkg

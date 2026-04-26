@@ -39,6 +39,15 @@ import android.util.Log
 import java.net.InetSocketAddress
 import kotlinx.coroutines.*
 import java.util.concurrent.atomic.AtomicLong
+import com.privacyguard.vpn.mitm.CaManager
+import com.privacyguard.vpn.mitm.CertForger
+import com.privacyguard.vpn.mitm.MitmConfig
+import com.privacyguard.vpn.mitm.MitmEngine
+import com.privacyguard.vpn.mitm.PayloadParser
+import com.privacyguard.vpn.mitm.PayloadShipper
+import com.privacyguard.vpn.mitm.PiiRedactor
+import com.privacyguard.vpn.mitm.PinningDetector
+import com.privacyguard.data.repository.PayloadLogRepositoryImpl
 
 class PrivacyVpnService : VpnService() {
 
@@ -73,6 +82,7 @@ class PrivacyVpnService : VpnService() {
     companion object {
         private const val TAG = "PrivacyVpnService"
         const val ACTION_STOP = "com.privacyguard.action.STOP_VPN"
+        private const val DATABASE_NAME = "privacyguard_database"
 
         @Volatile var isRunning = false
             private set
@@ -242,7 +252,31 @@ class PrivacyVpnService : VpnService() {
             }
         }
 
-        tcpForwarder = TcpForwarder(sessionTable, tunWriter, encEnforcer, filterEngine, ::protect).also { it.start() }
+        // ==================== MITM INITIALIZATION ====================
+        val caManager = CaManager(this)
+
+        // IMPORTANT: Initialize CA before using it (FIXED)
+        runBlocking {
+            caManager.initialize()
+            Log.d(TAG, "✅ CA Manager initialized successfully")
+        }
+
+        val piiRedactor = PiiRedactor()
+        val pinningDetector = PinningDetector()
+        val mitmConfig = MitmConfig(this)
+        val payloadParser = PayloadParser(piiRedactor)
+        val payloadShipper = PayloadShipper(mitmConfig)
+        val certForger = CertForger(caManager)
+        val mitmEngine = MitmEngine(certForger, pinningDetector, caManager, payloadParser)
+        val payloadLogRepository = PayloadLogRepositoryImpl(
+            db.payloadLogDao()
+        )
+        tcpForwarder = TcpForwarder(
+            sessionTable, tunWriter, encEnforcer, filterEngine, ::protect,
+            mitmEngine, pinningDetector, mitmConfig, payloadParser, payloadShipper, payloadLogRepository
+        ).also { it.start() }
+        // ==================== END MITM INITIALIZATION ====================
+
         udpForwarder = UdpForwarder(sessionTable, tunWriter, ::protect).also { it.start() }
 
         tunReader = TunReader(tunInterface).also {
@@ -284,13 +318,11 @@ class PrivacyVpnService : VpnService() {
             }
     }
 
-    // 🔥 FIXED: ipFilter.isBlocked() takes Int, not String
     private fun onPacket(ip: IpPacket) {
         Log.d(TAG, "📨 onPacket: ${ip.sourceIp} → ${ip.destinationIp}, proto=${ip.protocol}, len=${ip.totalLength}")
 
         StatsManager.recordPacket(ip.totalLength.toLong())
 
-        // Pass Int directly - ipFilter expects Int
         if (ipFilter.isBlocked(ip.destinationIp)) {
             Log.d(TAG, "IP blocked: ${ip.destinationIp}")
             recordBlock()
@@ -556,6 +588,6 @@ class PrivacyVpnService : VpnService() {
     }
 
     private fun buildDatabase(): AppDatabase = Room.databaseBuilder(
-        this, AppDatabase::class.java, AppDatabase.DATABASE_NAME,
+        this, AppDatabase::class.java, DATABASE_NAME
     ).fallbackToDestructiveMigration(dropAllTables = true).build()
 }

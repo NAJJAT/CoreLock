@@ -7,6 +7,7 @@ import java.nio.channels.SelectionKey
 import java.nio.channels.SocketChannel
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Represents the live state of a single proxied network session.
@@ -19,18 +20,18 @@ import java.util.concurrent.atomic.AtomicReference
  * [AtomicReference], or @Volatile primitives.
  */
 class Session(
-    val key:       SessionKey,
+    val key: SessionKey,
     val createdAt: Long = System.currentTimeMillis(),
-    @Volatile var ownerUid:  Int  = -1,
+    @Volatile var ownerUid: Int = -1,
     @Volatile var ownerPackage: String? = null,
 ) {
     // ─────────────────────────────────────────────────────────────────────────
     // Real socket handles
     // ─────────────────────────────────────────────────────────────────────────
 
-    @Volatile var tcpChannel:   SocketChannel?   = null
-    @Volatile var udpChannel:   DatagramChannel? = null
-    @Volatile var selectionKey: SelectionKey?    = null
+    @Volatile var tcpChannel: SocketChannel? = null
+    @Volatile var udpChannel: DatagramChannel? = null
+    @Volatile var selectionKey: SelectionKey? = null
 
     // ─────────────────────────────────────────────────────────────────────────
     // TCP State Machine
@@ -46,26 +47,26 @@ class Session(
     // TCP Sequence / Acknowledgment Numbers
     // ─────────────────────────────────────────────────────────────────────────
 
-    @Volatile var lastDeviceSeq:   Long = 0L
-    @Volatile var sendSeq:         Long = System.nanoTime() and 0xFFFFFFFFL
+    @Volatile var lastDeviceSeq: Long = 0L
+    @Volatile var sendSeq: Long = System.nanoTime() and 0xFFFFFFFFL
     @Volatile var lastAckToDevice: Long = 0L
 
     // ─────────────────────────────────────────────────────────────────────────
     // Traffic Counters
     // ─────────────────────────────────────────────────────────────────────────
 
-    val bytesFromDevice   = AtomicLong(0)
-    val bytesToDevice     = AtomicLong(0)
+    val bytesFromDevice = AtomicLong(0)
+    val bytesToDevice = AtomicLong(0)
     val packetsFromDevice = AtomicLong(0)
-    val packetsToDevice   = AtomicLong(0)
+    val packetsToDevice = AtomicLong(0)
 
     // ─────────────────────────────────────────────────────────────────────────
     // Lifecycle
     // ─────────────────────────────────────────────────────────────────────────
 
-    @Volatile var lastActivityAt: Long    = createdAt
-    @Volatile var isClosing:      Boolean = false
-    @Volatile var isClosed:       Boolean = false
+    @Volatile var lastActivityAt: Long = createdAt
+    @Volatile var isClosing: Boolean = false
+    @Volatile var isClosed: Boolean = false
 
     // ─────────────────────────────────────────────────────────────────────────
     // Hostname Resolution (DNS + SNI — zero decryption)
@@ -89,7 +90,7 @@ class Session(
     val hostname: String? get() = tlsSni ?: resolvedHostname
 
     // ─────────────────────────────────────────────────────────────────────────
-    // ★ Encryption Metadata (no decryption required)
+    // Encryption Metadata (no decryption required)
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
@@ -114,7 +115,7 @@ class Session(
     @Volatile var encryptionClassified: Boolean = false
 
     // ─────────────────────────────────────────────────────────────────────────
-    // ★ Behavioral Context (feeds MetadataEngine)
+    // Behavioral Context (feeds MetadataEngine)
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
@@ -124,13 +125,30 @@ class Session(
     @Volatile var wasBackground: Boolean = false
 
     // ─────────────────────────────────────────────────────────────────────────
+    // ★ MITM (Man-in-the-Middle) Fields (Enterprise Feature)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Whether this session is currently being intercepted by the MITM engine.
+     * Set to true when TLS interception is active for this session.
+     */
+    @Volatile
+    var isMitmIntercepted: Boolean = false
+
+    /**
+     * Counter of payload chunks intercepted for this session.
+     * Used for statistics and debugging.
+     */
+    val payloadCount = AtomicInteger(0)
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Derived
     // ─────────────────────────────────────────────────────────────────────────
 
-    val ageMs:         Long    get() = System.currentTimeMillis() - createdAt
-    val idleMs:        Long    get() = System.currentTimeMillis() - lastActivityAt
-    val isCleartext:   Boolean get() = encryptionStatus == EncryptionStatus.CLEARTEXT
-    val isWeakTls:     Boolean get() = !encryptionStatus.let {
+    val ageMs: Long get() = System.currentTimeMillis() - createdAt
+    val idleMs: Long get() = System.currentTimeMillis() - lastActivityAt
+    val isCleartext: Boolean get() = encryptionStatus == EncryptionStatus.CLEARTEXT
+    val isWeakTls: Boolean get() = !encryptionStatus.let {
         it == EncryptionStatus.TLS && tlsVersion?.isSecure != false
     }
 
@@ -155,13 +173,13 @@ class Session(
     fun close() {
         if (isClosed) return
         isClosing = true
-        isClosed  = true
+        isClosed = true
         tcpState.set(TcpState.CLOSED)
         runCatching { selectionKey?.cancel() }
         runCatching { tcpChannel?.close() }
         runCatching { udpChannel?.close() }
-        tcpChannel   = null
-        udpChannel   = null
+        tcpChannel = null
+        udpChannel = null
         selectionKey = null
     }
 
@@ -170,27 +188,29 @@ class Session(
     // ─────────────────────────────────────────────────────────────────────────
 
     fun snapshot(): SessionSnapshot = SessionSnapshot(
-        key               = key,
-        createdAt         = createdAt,
-        lastActivityAt    = lastActivityAt,
-        ownerUid          = ownerUid,
-        ownerPackage      = ownerPackage,
-        bytesFromDevice   = bytesFromDevice.get(),
-        bytesToDevice     = bytesToDevice.get(),
+        key = key,
+        createdAt = createdAt,
+        lastActivityAt = lastActivityAt,
+        ownerUid = ownerUid,
+        ownerPackage = ownerPackage,
+        bytesFromDevice = bytesFromDevice.get(),
+        bytesToDevice = bytesToDevice.get(),
         packetsFromDevice = packetsFromDevice.get(),
-        packetsToDevice   = packetsToDevice.get(),
-        tcpState          = tcpState.get(),
-        hostname          = hostname,
-        encryptionStatus  = encryptionStatus,
-        tlsVersion        = tlsVersion,
-        tlsSni            = tlsSni,
-        wasBackground     = wasBackground,
-        isClosed          = isClosed,
+        packetsToDevice = packetsToDevice.get(),
+        tcpState = tcpState.get(),
+        hostname = hostname,
+        encryptionStatus = encryptionStatus,
+        tlsVersion = tlsVersion,
+        tlsSni = tlsSni,
+        wasBackground = wasBackground,
+        isClosed = isClosed,
+        isMitmIntercepted = isMitmIntercepted,
+        payloadCount = payloadCount.get()
     )
 
     override fun toString(): String =
         "Session[$key uid=$ownerUid enc=$encryptionStatus " +
-        "sni=$tlsSni ↑${bytesFromDevice.get()}B ↓${bytesToDevice.get()}B]"
+                "sni=$tlsSni mitm=$isMitmIntercepted ↑${bytesFromDevice.get()}B ↓${bytesToDevice.get()}B]"
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -198,27 +218,30 @@ class Session(
 // ─────────────────────────────────────────────────────────────────────────────
 
 data class SessionSnapshot(
-    val key:               SessionKey,
-    val createdAt:         Long,
-    val lastActivityAt:    Long,
-    val ownerUid:          Int,
-    val ownerPackage:      String?,
-    val bytesFromDevice:   Long,
-    val bytesToDevice:     Long,
+    val key: SessionKey,
+    val createdAt: Long,
+    val lastActivityAt: Long,
+    val ownerUid: Int,
+    val ownerPackage: String?,
+    val bytesFromDevice: Long,
+    val bytesToDevice: Long,
     val packetsFromDevice: Long,
-    val packetsToDevice:   Long,
-    val tcpState:          Session.TcpState,
-    val hostname:          String?,
-    val encryptionStatus:  EncryptionStatus,
-    val tlsVersion:        TlsVersion?,
-    val tlsSni:            String?,
-    val wasBackground:     Boolean,
-    val isClosed:          Boolean,
+    val packetsToDevice: Long,
+    val tcpState: Session.TcpState,
+    val hostname: String?,
+    val encryptionStatus: EncryptionStatus,
+    val tlsVersion: TlsVersion?,
+    val tlsSni: String?,
+    val wasBackground: Boolean,
+    val isClosed: Boolean,
+    // MITM fields in snapshot
+    val isMitmIntercepted: Boolean,
+    val payloadCount: Int,
 ) {
-    val totalBytes:  Long    get() = bytesFromDevice + bytesToDevice
-    val ageMs:       Long    get() = System.currentTimeMillis() - createdAt
-    val idleMs:      Long    get() = System.currentTimeMillis() - lastActivityAt
+    val totalBytes: Long get() = bytesFromDevice + bytesToDevice
+    val ageMs: Long get() = System.currentTimeMillis() - createdAt
+    val idleMs: Long get() = System.currentTimeMillis() - lastActivityAt
     val isCleartext: Boolean get() = encryptionStatus == EncryptionStatus.CLEARTEXT
-    val isWeakTls:   Boolean get() = encryptionStatus == EncryptionStatus.WEAK_TLS ||
-                                     tlsVersion?.isSecure == false
+    val isWeakTls: Boolean get() = encryptionStatus == EncryptionStatus.WEAK_TLS ||
+            tlsVersion?.isSecure == false
 }

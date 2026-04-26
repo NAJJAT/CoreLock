@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 import java.util.Properties
@@ -111,6 +112,7 @@ android {
             )
         }
     }
+
     productFlavors {
         create("consumer") {
             dimension = "distribution"
@@ -123,10 +125,12 @@ android {
             buildConfigField("boolean", "MITM_AVAILABLE", "true")
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -134,6 +138,7 @@ android {
 }
 
 dependencies {
+    // Existing dependencies
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material.icons.extended)
@@ -153,6 +158,22 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.guava)
     ksp(libs.androidx.room.compiler)
+
+    // ==================== MITM DEPENDENCIES ====================
+
+    // Bouncy Castle (X.509 certificate generation for MITM)
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.77")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.77")
+
+    // OkHttp (SIEM shipping for MITM payloads)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // Kotlinx Serialization (JSON serialization for MITM payloads)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
+    // ==================== END MITM DEPENDENCIES ====================
+
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

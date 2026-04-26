@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PrivacyGuard — Payload Inspector</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@500;600;700;800&display=swap');
+
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+  :root{
+    --bg:#080b10;--bg1:#0d1117;--bg2:#111720;--bg3:#19212e;--bg4:#1e2836;
+    --line:rgba(255,255,255,0.07);--line2:rgba(255,255,255,0.13);
+    --ac:#00f5c4;--ac-dim:rgba(0,245,196,0.13);--ac-dim2:rgba(0,245,196,0.07);
+    --red:#ff4560;--red-dim:rgba(255,69,96,0.13);
+    --amber:#ffb300;--amber-dim:rgba(255,179,0,0.11);
+    --blue:#3d9eff;--blue-dim:rgba(61,158,255,0.11);
+    --purple:#9d7aff;--purple-dim:rgba(157,122,255,0.11);
+    --tx:#dde3f0;--tx2:#7a87a3;--tx3:#48566a;
+    --mono:'JetBrains Mono',monospace;--disp:'Syne',sans-serif;
+    --r:12px;--r2:16px;--r3:20px;
+    --safe-top:env(safe-area-inset-top,0px);
+    --safe-bot:env(safe-area-inset-bottom,0px);
+  }
+
+  html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:13px;overflow:hidden;position:fixed;width:100%}
+
+  .shell{display:flex;flex-direction:column;height:100%;height:100dvh}
+  .topbar{background:var(--bg1);border-bottom:1px solid var(--line);padding:calc(var(--safe-top) + 10px) 16px 10px;display:flex;align-items:center;gap:10px;flex-shrink:0;z-index:20}
+  .logo{font-family:var(--disp);font-size:15px;font-weight:800;color:var(--ac);letter-spacing:.05em}
+  .logo-badge{font-size:10px;color:var(--tx3);font-family:var(--disp);font-weight:500;margin-left:2px}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--ac);box-shadow:0 0 7px var(--ac);animation:blink 2s ease-in-out infinite;flex-shrink:0}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+  .tb-spacer{flex:1}
+  .tb-icon-btn{width:34px;height:34px;border-radius:10px;background:var(--bg3);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s;flex-shrink:0}
+  .tb-icon-btn:active{background:var(--bg4)}
+  .pps-chip{background:var(--ac-dim2);border:1px solid rgba(0,245,196,.2);border-radius:8px;padding:4px 10px;font-size:10px;font-family:var(--disp);color:var(--ac);font-weight:600}
+
+  .screen{display:none;flex-direction:column;flex:1;overflow:hidden}
+  .screen.active{display:flex}
+
+  .bottom-nav{background:var(--bg1);border-top:1px solid var(--line);padding:8px 0 calc(var(--safe-bot) + 8px);display:flex;flex-shrink:0;z-index:20}
+  .bn-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:4px 0;transition:all .15s}
+  .bn-tab .bn-icon{width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+  .bn-tab .bn-label{font-size:9px;color:var(--tx3);font-family:var(--disp);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+  .bn-tab.active .bn-label{color:var(--ac)}
+  .bn-tab.active svg{stroke:var(--ac) !important}
+  .bn-badge{position:absolute;top:-3px;right:-3px;width:14px;height:14px;border-radius:50%;background:var(--red);color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:var(--disp)}
+
+  .filter-bar{padding:10px 14px;background:var(--bg1);border-bottom:1px solid var(--line);display:flex;gap:6px;overflow-x:auto;flex-shrink:0}
+  .filter-bar::-webkit-scrollbar{display:none}
+  .fchip{background:var(--bg3);border:1px solid var(--line);border-radius:20px;padding:5px 12px;font-size:11px;color:var(--tx2);white-space:nowrap;cursor:pointer;transition:all .15s;font-family:var(--disp);font-weight:600}
+  .fchip.active{background:var(--ac-dim);border-color:rgba(0,245,196,.4);color:var(--ac)}
+  .fchip.red{border-color:rgba(255,69,96,.25);color:var(--red)}
+  .fchip.red.active{background:var(--red-dim);border-color:rgba(255,69,96,.4)}
+
+  .search-wrap{padding:10px 14px 6px;flex-shrink:0}
+  .search-input{width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:9px 12px 9px 36px;font-size:12px;font-family:var(--mono);color:var(--tx);outline:none;-webkit-appearance:none}
+  .search-input:focus{border-color:rgba(0,245,196,.35)}
+  .search-input::placeholder{color:var(--tx3)}
+  .search-icon{position:absolute;left:24px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--tx3);pointer-events:none}
+
+  .req-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .req-list::-webkit-scrollbar{display:none}
+  .req-item{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;cursor:pointer;transition:background .12s;position:relative}
+  .req-item:active{background:var(--bg2)}
+  .req-item.selected{background:var(--bg2);border-left:2.5px solid var(--ac)}
+  .ri-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .ri-main{flex:1;min-width:0}
+  .ri-top{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+  .ri-app{font-family:var(--disp);font-size:13px;font-weight:700;color:var(--tx)}
+  .ri-method{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.04em}
+  .method-post{background:var(--amber-dim);color:var(--amber)}
+  .method-get{background:var(--ac-dim);color:var(--ac)}
+  .method-put{background:var(--purple-dim);color:var(--purple)}
+  .method-delete{background:var(--red-dim);color:var(--red)}
+  .ri-host{font-size:11px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ri-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+  .ri-size{font-size:10px;color:var(--tx3)}
+  .ri-time{font-size:9px;color:var(--tx3)}
+  .ri-status{font-size:10px;font-weight:700;font-family:var(--disp)}
+  .flag-strip{position:absolute;right:0;top:0;bottom:0;width:3px;background:var(--red);border-radius:0 var(--r) var(--r) 0}
+
+  .detail-header{background:var(--bg1);border-bottom:1px solid var(--line);padding:12px 16px;flex-shrink:0}
+  .dh-back{display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer}
+  .dh-back-label{font-size:13px;color:var(--ac);font-family:var(--disp);font-weight:600}
+  .dh-url{font-size:11px;color:var(--tx2);word-break:break-all;line-height:1.55;margin-bottom:10px}
+  .dh-url .meth{font-weight:700}
+  .dh-url .host{color:var(--blue)}
+  .dh-meta{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .dh-cell{background:var(--bg2);border-radius:8px;padding:8px 10px;text-align:center}
+  .dh-cell-key{font-size:8px;color:var(--tx3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px;font-family:var(--disp);font-weight:600}
+  .dh-cell-val{font-size:12px;font-weight:700;font-family:var(--disp)}
+
+  .detail-tabs{background:var(--bg1);border-bottom:1px solid var(--line);display:flex;overflow-x:auto;flex-shrink:0}
+  .detail-tabs::-webkit-scrollbar{display:none}
+  .dtab{padding:10px 16px;font-size:11px;font-weight:600;color:var(--tx3);cursor:pointer;border-bottom:2.5px solid transparent;white-space:nowrap;font-family:var(--disp);letter-spacing:.04em;text-transform:uppercase;transition:all .15s}
+  .dtab.active{color:var(--ac);border-bottom-color:var(--ac)}
+
+  .detail-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .detail-body::-webkit-scrollbar{display:none}
+
+  .risk-hero{margin:14px 14px 10px;background:var(--bg2);border-radius:var(--r2);border:1px solid var(--line);padding:16px;display:flex;align-items:center;gap:16px}
+  .risk-ring-wrap{position:relative;width:70px;height:70px;flex-shrink:0}
+  .risk-ring-wrap svg{position:absolute;inset:0}
+  .risk-ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .risk-ring-num{font-family:var(--disp);font-size:22px;font-weight:800;line-height:1}
+  .risk-ring-label{font-size:8px;color:var(--tx3);font-family:var(--disp);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-top:2px}
+  .risk-info{flex:1}
+  .risk-info-title{font-family:var(--disp);font-size:16px;font-weight:800;margin-bottom:4px}
+  .risk-info-sub{font-size:11px;color:var(--tx2);line-height:1.5}
+
+  .payload-section{margin:0 14px 16px}
+  .ps-label{font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;padding:14px 0 8px;border-bottom:1px solid var(--line);font-family:var(--disp);display:flex;align-items:center;justify-content:space-between}
+  .ps-copy-btn{font-size:9px;font-family:var(--disp);color:var(--ac);background:var(--ac-dim2);border:1px solid rgba(0,245,196,.2);border-radius:6px;padding:3px 9px;cursor:pointer;font-weight:700}
+  .fmt-row{display:flex;gap:6px;margin-bottom:8px}
+  .fmt-btn{background:var(--bg3);border:1px solid var(--line);border-radius:6px;padding:5px 12px;font-size:10px;font-family:var(--mono);color:var(--tx2);cursor:pointer;transition:all .12s}
+  .fmt-btn.active{border-color:rgba(0,245,196,.4);color:var(--ac);background:var(--ac-dim2)}
+  .payload-box{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);overflow:auto;-webkit-overflow-scrolling:touch;max-height:260px;position:relative}
+  .payload-box::-webkit-scrollbar{width:3px;height:3px}
+  .payload-box::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
+  .pl-nums{position:absolute;left:0;top:0;padding:12px 0;background:var(--bg1);border-right:1px solid var(--line);min-height:100%;z-index:1}
+  .pl-num{display:block;width:32px;text-align:right;padding-right:8px;font-size:10px;color:var(--tx3);line-height:1.72}
+  .pl-code{padding:12px 12px 12px 44px;font-size:10px;line-height:1.72;white-space:pre;color:var(--tx);min-width:max-content}
+  .t-key{color:#7dd3fc}.t-str{color:#86efac}.t-num{color:#fca5a5}.t-bool{color:var(--purple)}.t-null{color:var(--tx3)}
+
+  .anomaly-list{padding:0 14px}
+  .anomaly-item{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r2);padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color .15s}
+  .anomaly-item:active{border-color:var(--line2)}
+  .ai-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+  .ai-icon{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .ai-icon.crit{background:var(--red-dim)}
+  .ai-icon.warn{background:var(--amber-dim)}
+  .ai-icon.info{background:var(--blue-dim)}
+  .ai-text{flex:1}
+  .ai-title{font-family:var(--disp);font-size:13px;font-weight:700;color:var(--tx);margin-bottom:4px}
+  .ai-body{font-size:11px;color:var(--tx2);line-height:1.55}
+  .ai-badge{font-size:9px;font-weight:700;padding:3px 8px;border-radius:5px;font-family:var(--disp);letter-spacing:.05em}
+  .ai-badge.crit{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,69,96,.25)}
+  .ai-badge.warn{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(255,179,0,.25)}
+  .ai-badge.info{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(61,158,255,.25)}
+
+  .hdr-section{padding:14px 14px 0}
+  .hdr-group-label{font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;font-family:var(--disp)}
+  .hdr-item{padding:10px 12px;background:var(--bg2);border-radius:var(--r);margin-bottom:4px;border-left:2.5px solid var(--line2)}
+  .hdr-item.flagged{border-left-color:var(--red)}
+  .hdr-item.warn{border-left-color:var(--amber)}
+  .hdr-name{font-size:10px;color:var(--blue);margin-bottom:3px}
+  .hdr-val{font-size:11px;color:var(--tx);word-break:break-all}
+  .hdr-flag{display:inline-block;font-size:8px;font-weight:700;padding:1px 6px;border-radius:4px;margin-top:4px;font-family:var(--disp);letter-spacing:.06em}
+  .hdr-flag.bad{background:var(--red-dim);color:var(--red)}
+  .hdr-flag.warn{background:var(--amber-dim);color:var(--amber)}
+
+  .field-section{padding:14px}
+  .field-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .field-item:last-child{border-bottom:none}
+  .field-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
+  .field-key{font-size:10px;color:var(--blue);margin-bottom:3px}
+  .field-val{font-size:11px;color:var(--tx);word-break:break-all;line-height:1.5}
+  .field-flag{display:inline-block;font-size:8px;font-weight:700;padding:2px 7px;border-radius:4px;margin-top:4px;font-family:var(--disp);letter-spacing:.05em}
+
+  .tl-section{padding:14px}
+  .tl-item{display:flex;align-items:flex-start;gap:0;margin-bottom:0}
+  .tl-left{display:flex;flex-direction:column;align-items:center;width:22px;flex-shrink:0}
+  .tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
+  .tl-line{width:1.5px;flex:1;min-height:24px;background:var(--line);margin:4px 0}
+  .tl-content{flex:1;padding-bottom:16px;padding-left:10px}
+  .tl-time{font-size:9px;color:var(--tx3);margin-bottom:3px;font-family:var(--disp)}
+  .tl-event{font-size:12px;color:var(--tx);margin-bottom:4px}
+  .tl-badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;font-family:var(--disp);letter-spacing:.05em}
+
+  .action-bar{padding:10px 14px calc(var(--safe-bot) + 10px);border-top:1px solid var(--line);display:flex;gap:8px;flex-shrink:0;background:var(--bg1)}
+  .act-btn{flex:1;border-radius:var(--r);padding:11px 8px;font-size:11px;font-family:var(--disp);font-weight:700;cursor:pointer;border:1px solid var(--line2);background:transparent;color:var(--tx2);transition:all .15s;text-align:center;letter-spacing:.03em}
+  .act-btn:active{opacity:.7}
+  .act-btn.block{border-color:rgba(255,69,96,.3);color:var(--red);background:var(--red-dim)}
+  .act-btn.export{border-color:rgba(0,245,196,.3);color:var(--ac);background:var(--ac-dim2)}
+
+  .stats-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px}
+  .stats-scroll::-webkit-scrollbar{display:none}
+  .stat-hero{background:var(--bg2);border-radius:var(--r2);border:1px solid var(--line);padding:20px;text-align:center;margin-bottom:12px}
+  .stat-hero-num{font-family:var(--disp);font-size:52px;font-weight:800;color:var(--ac);line-height:1}
+  .stat-hero-label{font-size:12px;color:var(--tx2);margin-top:6px;font-family:var(--disp)}
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .stat-card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+  .sc-val{font-family:var(--disp);font-size:24px;font-weight:800;margin-bottom:3px}
+  .sc-key{font-size:10px;color:var(--tx3);font-family:var(--disp);font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+  .bar-chart{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r2);padding:16px;margin-bottom:12px}
+  .bc-title{font-family:var(--disp);font-size:12px;font-weight:700;color:var(--tx);margin-bottom:14px}
+  .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .bar-row:last-child{margin-bottom:0}
+  .bar-app{font-size:11px;color:var(--tx2);width:70px;flex-shrink:0;font-family:var(--disp);font-weight:600}
+  .bar-outer{flex:1;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden}
+  .bar-inner{height:100%;border-radius:3px;transition:width .6s ease}
+  .bar-val{font-family:var(--disp);font-size:10px;color:var(--tx3);width:30px;text-align:right}
+
+  .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--line2);border-radius:20px;padding:8px 18px;font-size:12px;color:var(--tx);opacity:0;pointer-events:none;transition:opacity .2s;z-index:999;white-space:nowrap;font-family:var(--disp);font-weight:600}
+  .toast.show{opacity:1}
+
+  .sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:50;opacity:0;pointer-events:none;transition:opacity .25s}
+  .sheet-overlay.open{opacity:1;pointer-events:all}
+  .sheet{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-radius:20px 20px 0 0;border-top:1px solid var(--line);padding:0 0 calc(var(--safe-bot) + 20px);transform:translateY(100%);transition:transform .3s cubic-bezier(.32,1,.23,1);z-index:51;max-height:85vh;overflow-y:auto}
+  .sheet.open{transform:translateY(0)}
+  .sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--line2);margin:12px auto 16px}
+  .sheet-title{font-family:var(--disp);font-size:14px;font-weight:800;color:var(--tx);padding:0 18px 14px;border-bottom:1px solid var(--line)}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <div class="topbar">
+    <div class="live-dot"></div>
+    <div class="logo">PRIVACYGUARD <span class="logo-badge">PAYLOAD</span></div>
+    <div class="tb-spacer"></div>
+    <div class="pps-chip" id="pps-chip">0 pkt/s</div>
+    <div class="tb-icon-btn" onclick="openFilterSheet()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tx2)" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+    </div>
+  </div>
+
+  <div class="screen active" id="sc-list">
+    <div class="filter-bar">
+      <div class="fchip active" onclick="setFilter('ALL',this)">All</div>
+      <div class="fchip" onclick="setFilter('POST',this)">POST</div>
+      <div class="fchip" onclick="setFilter('GET',this)">GET</div>
+      <div class="fchip red" onclick="setFilter('FLAGGED',this)">⚑ Flagged</div>
+      <div class="fchip" onclick="setFilter('BLOCKED',this)">Blocked</div>
+    </div>
+    <div style="padding:8px 14px 4px;position:relative">
+      <span class="search-icon">⌕</span>
+      <input class="search-input" placeholder="Search app, host, domain…" oninput="filterList(this.value)"/>
+    </div>
+    <div class="req-list" id="req-list"></div>
+  </div>
+
+  <div class="screen" id="sc-detail">
+    <div class="detail-header">
+      <div class="dh-back" onclick="goBack()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        <span class="dh-back-label">Captures</span>
+      </div>
+      <div class="dh-url" id="dh-url"></div>
+      <div class="dh-meta" id="dh-meta"></div>
+    </div>
+    <div class="detail-tabs">
+      <div class="dtab active" onclick="switchDTab('payload',this)">Payload</div>
+      <div class="dtab" onclick="switchDTab('headers',this)">Headers</div>
+      <div class="dtab" onclick="switchDTab('risk',this)">Risk</div>
+      <div class="dtab" onclick="switchDTab('timeline',this)">Timeline</div>
+      <div class="dtab" onclick="switchDTab('fields',this)">Fields</div>
+    </div>
+    <div class="detail-body">
+      <div id="dpanel-payload">
+        <div class="payload-section">
+          <div class="ps-label">Request body <button class="ps-copy-btn" onclick="copyPayload()">Copy</button></div>
+          <div class="fmt-row">
+            <button class="fmt-btn active" onclick="setFmt('json',this)">JSON</button>
+            <button class="fmt-btn" onclick="setFmt('raw',this)">Raw</button>
+            <button class="fmt-btn" onclick="setFmt('hex',this)">Hex</button>
+          </div>
+          <div class="payload-box" id="req-box">
+            <div class="pl-nums" id="req-nums"></div>
+            <pre class="pl-code" id="req-code"></pre>
+          </div>
+        </div>
+        <div class="payload-section">
+          <div class="ps-label">Response body <button class="ps-copy-btn" onclick="copyResponse()">Copy</button></div>
+          <div class="payload-box" id="res-box">
+            <div class="pl-nums" id="res-nums"></div>
+            <pre class="pl-code" id="res-code"></pre>
+          </div>
+        </div>
+      </div>
+      <div id="dpanel-headers" style="display:none">
+        <div class="hdr-section">
+          <div class="hdr-group-label">Request headers</div>
+          <div id="req-hdrs"></div>
+          <div class="hdr-group-label" style="margin-top:16px">Response headers</div>
+          <div id="res-hdrs"></div>
+        </div>
+        <div style="height:20px"></div>
+      </div>
+      <div id="dpanel-risk" style="display:none">
+        <div id="risk-hero-wrap"></div>
+        <div class="anomaly-list" id="anomaly-list"></div>
+        <div style="height:16px"></div>
+      </div>
+      <div id="dpanel-timeline" style="display:none">
+        <div class="tl-section" id="tl-section"></div>
+      </div>
+      <div id="dpanel-fields" style="display:none">
+        <div class="field-section" id="field-section"></div>
+      </div>
+    </div>
+    <div class="action-bar">
+      <button class="act-btn block" onclick="blockDomain()">Block domain</button>
+      <button class="act-btn" onclick="toast('Allowlisted ✓')">Allowlist</button>
+      <button class="act-btn export" onclick="toast('Exported as JSON ✓')">Export</button>
+    </div>
+  </div>
+
+  <div class="screen" id="sc-stats">
+    <div class="stats-scroll">
+      <div class="stat-hero">
+        <div class="stat-hero-num" id="total-cap">0</div>
+        <div class="stat-hero-label">Total requests captured</div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="sc-val" style="color:var(--red)" id="s-flagged">0</div><div class="sc-key">Flagged</div></div>
+        <div class="stat-card"><div class="sc-val" style="color:var(--amber)" id="s-warn">0</div><div class="sc-key">Warnings</div></div>
+        <div class="stat-card"><div class="sc-val" style="color:var(--ac)" id="s-clean">0</div><div class="sc-key">Clean</div></div>
+        <div class="stat-card"><div class="sc-val" style="color:var(--blue)" id="s-kb">0</div><div class="sc-key">Total KB</div></div>
+      </div>
+      <div class="bar-chart">
+        <div class="bc-title">Risk by app</div>
+        <div id="risk-by-app-bars"></div>
+      </div>
+      <div class="bar-chart">
+        <div class="bc-title">Traffic by protocol</div>
+        <div class="bar-row"><div class="bar-app">HTTPS</div><div class="bar-outer"><div class="bar-inner" id="bar-https" style="width:0%;background:var(--ac)"></div></div><div class="bar-val" id="bv-https">0%</div></div>
+        <div class="bar-row"><div class="bar-app">HTTP</div><div class="bar-outer"><div class="bar-inner" id="bar-http" style="width:0%;background:var(--red)"></div></div><div class="bar-val" id="bv-http">0%</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="bn-tab active" id="bnt-list" onclick="goScreen('list')">
+      <div class="bn-icon" style="position:relative">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="3" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>
+        <div class="bn-badge" id="flag-badge">0</div>
+      </div>
+      <div class="bn-label">Captures</div>
+    </div>
+    <div class="bn-tab" id="bnt-stats" onclick="goScreen('stats')">
+      <div class="bn-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--tx3)" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </div>
+      <div class="bn-label">Analytics</div>
+    </div>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="sheet-overlay" onclick="closeFilterSheet()"></div>
+<div class="sheet" id="filter-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Filter & Sort</div>
+  <div style="padding:14px 18px;display:flex;flex-direction:column;gap:8px">
+    <div style="font-size:10px;color:var(--tx3);font-family:var(--disp);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px">Method</div>
+    <div style="display:flex;gap:8px">
+      <div class="fchip active" style="flex:1;text-align:center" onclick="setFilter('ALL',this)">All</div>
+      <div class="fchip" style="flex:1;text-align:center" onclick="setFilter('POST',this)">POST</div>
+      <div class="fchip" style="flex:1;text-align:center" onclick="setFilter('GET',this)">GET</div>
+    </div>
+    <button style="margin-top:10px;background:var(--ac);color:#000;border:none;border-radius:12px;padding:13px;font-family:var(--disp);font-size:13px;font-weight:800;cursor:pointer;width:100%" onclick="closeFilterSheet()">Apply</button>
+  </div>
+</div>
+
+<div class="toast" id="toast-el"></div>
+
+<script>
+// ── DEMO DATA (shown in browser; replaced by live DB data on Android) ──────────
+var DEMO_REQUESTS=[
+  {id:1,app:'TikTok',method:'POST',host:'geoip.maxmind.com',path:'/geoip/v2.1/city/me',status:200,size:'4.2 KB',time:'2:14:03',flagged:true,riskScore:94,latency:'38ms',protocol:'HTTPS',tls:'TLS 1.2',
+    requestPayload:{license_key:'REDACTED',device_id:'a7f4c291-8b3d-4e2a-9c11-7d3b6f8e2a01',ip:'87.104.22.9',lang:'en-US',_meta:{client_version:'34.2.1',platform:'android',fingerprint:{screen:'2400x1080',dpi:420,timezone:'Europe/Brussels',installed_apps:['com.facebook.katana','com.instagram.android'],battery_level:0.82,is_rooted:false}}},
+    responsePayload:{status:'ok',city:'Aarschot',country:'BE',lat:50.9812,lon:4.8285,isp:'Proximus SA',asn:'AS5432',is_vpn:false},
+    reqHeaders:[['Host','geoip.maxmind.com','bad'],['User-Agent','TikTok/34.2.1 (Android 14)'],['Authorization','Bearer REDACTED','warn'],['X-Device-ID','a7f4c291…','warn'],['X-Forwarded-For','87.104.22.9','bad']],
+    resHeaders:[['Content-Type','application/json'],['Server','nginx/1.24.0'],['X-Response-Time','12ms'],['Access-Control-Allow-Origin','*','warn']],
+    risks:[{level:'crit',title:'Geolocation without permission',body:'No location permission declared yet device IP and coordinates sent to geolocation API.'},{level:'crit',title:'Device fingerprint exfiltrated',body:'Screen, DPI, timezone, installed app list, battery level all captured in payload.'},{level:'warn',title:'Auth token in header',body:'Bearer token transmitted to third-party server.'},{level:'info',title:'TLS 1.2 — upgrade recommended',body:'TLS 1.3 provides better forward secrecy.'}],
+    timeline:[{time:'2:14:03.001',event:'DNS query: geoip.maxmind.com',badge:'DNS',bc:'var(--blue)',bb:'var(--blue-dim)'},{time:'2:14:03.018',event:'TCP SYN → 134.122.0.0:443',badge:'TCP',bc:'var(--tx2)',bb:'var(--bg3)'},{time:'2:14:03.031',event:'TLS 1.2 handshake',badge:'TLS',bc:'var(--purple)',bb:'var(--purple-dim)'},{time:'2:14:03.047',event:'POST /geoip/v2.1/city/me',badge:'HTTP',bc:'var(--amber)',bb:'var(--amber-dim)'},{time:'2:14:03.069',event:'200 OK — 4.2 KB received',badge:'200',bc:'var(--ac)',bb:'var(--ac-dim)'},{time:'2:14:03.072',event:'PrivacyGuard: FLAGGED',badge:'FLAG',bc:'var(--red)',bb:'var(--red-dim)'}],
+    fields:[{key:'device_id',val:'a7f4c291-8b3d-4e2a-9c11-7d3b6f8e2a01',dot:'var(--red)',flag:'DEVICE ID',fc:'var(--red)',fb:'var(--red-dim)'},{key:'ip',val:'87.104.22.9',dot:'var(--red)',flag:'PUBLIC IP',fc:'var(--red)',fb:'var(--red-dim)'},{key:'_meta.fingerprint.installed_apps',val:'["com.facebook.katana", "com.instagram.android"]',dot:'var(--red)',flag:'APP LIST',fc:'var(--red)',fb:'var(--red-dim)'},{key:'_meta.fingerprint.timezone',val:'Europe/Brussels',dot:'var(--amber)',flag:'LOCATION HINT',fc:'var(--amber)',fb:'var(--amber-dim)'},{key:'lang',val:'en-US',dot:'var(--tx3)',flag:null}]},
+  {id:2,app:'Flashlight App',method:'POST',host:'analytics.facebook.com',path:'/v17.0/123456/events',status:200,size:'1.8 KB',time:'1:02:44',flagged:true,riskScore:81,latency:'44ms',protocol:'HTTPS',tls:'TLS 1.3',
+    requestPayload:{data:[{event_name:'app_launch',event_time:1714003364,user_data:{em:'HASHED_EMAIL',ph:'HASHED_PHONE',client_ip_address:'87.104.22.9',client_user_agent:'com.simple.flashlight/1.4'},custom_data:{session_id:'sess_b7c2',foreground_time:142}}],access_token:'EAARedacted...'},
+    responsePayload:{events_received:1,fbtrace_id:'A2Mf3kLVzPqX9Yn'},
+    reqHeaders:[['Host','analytics.facebook.com','bad'],['Content-Type','application/json'],['Authorization','Bearer EAARedacted...','warn']],
+    resHeaders:[['Content-Type','application/json'],['X-FB-Trace-ID','A2Mf3kLVzPqX9Yn']],
+    risks:[{level:'crit',title:'Flashlight → Facebook',body:'Flashlight app with no social permissions reporting to Facebook Conversions API.'},{level:'crit',title:'Hashed PII in payload',body:'Hashed email and phone (SHA-256) sent for cross-platform user matching.'},{level:'warn',title:'Real IP exposed',body:'client_ip_address contains raw device IP for cross-site tracking.'}],
+    timeline:[{time:'1:02:44.003',event:'DNS: analytics.facebook.com',badge:'DNS',bc:'var(--blue)',bb:'var(--blue-dim)'},{time:'1:02:44.037',event:'TLS 1.3 handshake',badge:'TLS',bc:'var(--ac)',bb:'var(--ac-dim)'},{time:'1:02:44.055',event:'POST /v17.0/123456/events',badge:'HTTP',bc:'var(--amber)',bb:'var(--amber-dim)'},{time:'1:02:44.099',event:'200 OK — 1.8 KB received',badge:'200',bc:'var(--ac)',bb:'var(--ac-dim)'}],
+    fields:[{key:'user_data.em',val:'HASHED_EMAIL (SHA-256)',dot:'var(--red)',flag:'PII',fc:'var(--red)',fb:'var(--red-dim)'},{key:'user_data.ph',val:'HASHED_PHONE (SHA-256)',dot:'var(--red)',flag:'PII',fc:'var(--red)',fb:'var(--red-dim)'},{key:'user_data.client_ip_address',val:'87.104.22.9',dot:'var(--red)',flag:'PUBLIC IP',fc:'var(--red)',fb:'var(--red-dim)'},{key:'access_token',val:'EAARedacted...',dot:'var(--amber)',flag:'TOKEN',fc:'var(--amber)',fb:'var(--amber-dim)'}]},
+  {id:3,app:'WhatsApp',method:'POST',host:'upload.whatsapp.net',path:'/v/media/upload',status:200,size:'2.1 MB',time:'3:17:55',flagged:true,riskScore:67,latency:'312ms',protocol:'HTTPS',tls:'TLS 1.3',
+    requestPayload:{upload_id:'wa_up_7c4d2e9f1a',media_type:'image/jpeg',file_size:2164224,chunk_offset:0,is_last_chunk:true,hash_sha256:'e3b0c44298fc1c149afb…',metadata:{width:4032,height:3024,caption:''}},
+    responsePayload:{media_id:'3AB60E05DE3B-4D8C',mime_type:'image/jpeg',file_sha256:'sha256_here'},
+    reqHeaders:[['Host','upload.whatsapp.net'],['Content-Type','multipart/form-data'],['Authorization','Bearer WA_TOKEN_REDACTED','warn'],['Content-Length','2164224']],
+    resHeaders:[['Content-Type','application/json'],['X-WA-Error-Code','200']],
+    risks:[{level:'warn',title:'Large upload at 3am',body:'2.1 MB upload outside normal usage hours — behavioral anomaly detected.'},{level:'info',title:'E2E encrypted media',body:'WhatsApp encrypts media client-side before upload. Server receives ciphertext only.'}],
+    timeline:[{time:'3:17:55.001',event:'DNS: upload.whatsapp.net',badge:'DNS',bc:'var(--blue)',bb:'var(--blue-dim)'},{time:'3:17:55.019',event:'TLS 1.3 handshake',badge:'TLS',bc:'var(--ac)',bb:'var(--ac-dim)'},{time:'3:17:55.044',event:'POST multipart/form-data 2.1 MB',badge:'HTTP',bc:'var(--amber)',bb:'var(--amber-dim)'},{time:'3:18:07.901',event:'200 OK — media_id returned',badge:'200',bc:'var(--ac)',bb:'var(--ac-dim)'}],
+    fields:[{key:'file_size',val:'2,164,224 bytes (2.1 MB)',dot:'var(--amber)',flag:'LARGE UPLOAD',fc:'var(--amber)',fb:'var(--amber-dim)'},{key:'hash_sha256',val:'e3b0c44298fc1c149afb…',dot:'var(--ac)',flag:'INTEGRITY OK',fc:'var(--ac)',fb:'var(--ac-dim)'}]},
+  {id:4,app:'Instagram',method:'GET',host:'graph.instagram.com',path:'/v18.0/me/media?fields=id,timestamp',status:200,size:'12.4 KB',time:'11:44:10',flagged:false,riskScore:28,latency:'71ms',protocol:'HTTPS',tls:'TLS 1.3',
+    requestPayload:null,responsePayload:{data:[{id:'17858893269000001',timestamp:'2024-04-24T21:44:10+0000'},{id:'17858893269000002',timestamp:'2024-04-23T09:12:00+0000'}]},
+    reqHeaders:[['Host','graph.instagram.com'],['Authorization','Bearer IGQRedacted...','warn'],['Accept','application/json']],
+    resHeaders:[['Content-Type','application/json'],['Content-Encoding','gzip'],['Cache-Control','no-cache']],
+    risks:[{level:'info',title:'OAuth token in Authorization',body:'Standard Instagram API. Token grants access to all media — revoke if app is suspicious.'}],
+    timeline:[{time:'11:44:10.002',event:'DNS: graph.instagram.com',badge:'DNS',bc:'var(--blue)',bb:'var(--blue-dim)'},{time:'11:44:10.055',event:'GET /v18.0/me/media',badge:'HTTP',bc:'var(--ac)',bb:'var(--ac-dim)'},{time:'11:44:10.126',event:'200 OK — 12.4 KB',badge:'200',bc:'var(--ac)',bb:'var(--ac-dim)'}],
+    fields:[{key:'Authorization',val:'Bearer IGQRedacted...',dot:'var(--amber)',flag:'TOKEN',fc:'var(--amber)',fb:'var(--amber-dim)'}]},
+  {id:5,app:'System / OS',method:'GET',host:'connectivitycheck.gstatic.com',path:'/generate_204',status:204,size:'0 B',time:'11:43:01',flagged:false,riskScore:2,latency:'12ms',protocol:'HTTPS',tls:'TLS 1.3',
+    requestPayload:null,responsePayload:null,
+    reqHeaders:[['Host','connectivitycheck.gstatic.com'],['User-Agent','Mozilla/5.0 (Linux; Android 14)']],
+    resHeaders:[['Content-Length','0']],
+    risks:[{level:'info',title:'Standard connectivity check',body:'Android OS connectivity probe. Normal behavior, very low risk.'}],
+    timeline:[{time:'11:43:01.001',event:'GET /generate_204',badge:'HTTP',bc:'var(--ac)',bb:'var(--ac-dim)'},{time:'11:43:01.013',event:'204 No Content',badge:'204',bc:'var(--tx2)',bb:'var(--bg3)'}],
+    fields:[]},
+];
+
+// Live data — starts as demo, replaced by real DB data when running on Android
+var requests = DEMO_REQUESTS.slice();
+var selectedId=null,activeFilter='ALL',searchText='',currentFmt='json',currentDTab='payload',currentScreen='list';
+var capCount=requests.length,totalKB=0;
+requests.forEach(function(r){totalKB+=parseFloat(r.size)||0});
+
+// ── ANDROID BRIDGE ─────────────────────────────────────────────────────────────
+
+// Called once on load: pull full log list from Room DB via the JavascriptInterface
+function loadFromAndroid(){
+  if(typeof Android==='undefined') return;
+  try{
+    var json=Android.getRequests();
+    var live=JSON.parse(json);
+    if(live.length>0){
+      requests=live;
+      capCount=requests.length;
+      totalKB=0;
+      requests.forEach(function(r){totalKB+=parseFloat(r.size)||0});
+      updateStats();
+      renderList();
+    }
+  }catch(e){}
+}
+
+// Called by Android (via evaluateJavascript) whenever Room emits a new snapshot
+window.refreshRequests=function(live){
+  try{
+    var arr=typeof live==='string'?JSON.parse(live):live;
+    requests=arr;
+    capCount=requests.length;
+    totalKB=0;
+    requests.forEach(function(r){totalKB+=parseFloat(r.size)||0});
+    updateStats();
+    renderList();
+    // Update detail panel if it is open and the selected item was updated
+    if(selectedId!=null){
+      var updated=requests.find(function(x){return x.id===selectedId});
+      if(updated) renderDetailRisk(updated);
+    }
+  }catch(e){}
+};
+
+// ── STATS ──────────────────────────────────────────────────────────────────────
+function updateStats(){
+  var flagged=requests.filter(function(r){return r.flagged}).length;
+  var warn=requests.filter(function(r){return r.riskScore>=50&&r.riskScore<80}).length;
+  var clean=requests.filter(function(r){return r.riskScore<30}).length;
+  document.getElementById('total-cap').textContent=capCount;
+  document.getElementById('s-flagged').textContent=flagged;
+  document.getElementById('s-warn').textContent=warn;
+  document.getElementById('s-clean').textContent=clean;
+  document.getElementById('s-kb').textContent=totalKB.toFixed(1);
+  document.getElementById('flag-badge').textContent=flagged;
+
+  // Protocol bars
+  var https=requests.filter(function(r){return r.protocol==='HTTPS'||r.destinationPort===443}).length;
+  var http=requests.filter(function(r){return r.protocol==='HTTP'||r.destinationPort===80}).length;
+  var total=requests.length||1;
+  var httpsP=Math.round(https/total*100),httpP=Math.round(http/total*100);
+  document.getElementById('bar-https').style.width=httpsP+'%';
+  document.getElementById('bar-http').style.width=httpP+'%';
+  document.getElementById('bv-https').textContent=httpsP+'%';
+  document.getElementById('bv-http').textContent=httpP+'%';
+
+  // Risk by app bars
+  var appRisk={};
+  requests.forEach(function(r){
+    if(!appRisk[r.app]||appRisk[r.app]<r.riskScore) appRisk[r.app]=r.riskScore;
+  });
+  var sorted=Object.entries(appRisk).sort(function(a,b){return b[1]-a[1]}).slice(0,5);
+  var barsEl=document.getElementById('risk-by-app-bars');
+  barsEl.innerHTML='';
+  sorted.forEach(function(entry){
+    var name=entry[0],score=entry[1];
+    var color=score>=80?'var(--red)':score>=50?'var(--amber)':'var(--ac)';
+    barsEl.innerHTML+='<div class="bar-row"><div class="bar-app">'+name.substring(0,9)+'</div><div class="bar-outer"><div class="bar-inner" style="width:'+score+'%;background:'+color+'"></div></div><div class="bar-val">'+score+'</div></div>';
+  });
+}
+
+// ── REQUEST LIST ───────────────────────────────────────────────────────────────
+function dotColor(r){return r.flagged?'var(--red)':r.riskScore>=50?'var(--amber)':'var(--ac)'}
+function statusColor(s){return s>=500?'var(--red)':s>=400?'var(--amber)':s>=300?'var(--amber)':'var(--ac)'}
+
+function renderList(){
+  var el=document.getElementById('req-list');el.innerHTML='';
+  visibleRequests().forEach(function(r){
+    var div=document.createElement('div');
+    div.className='req-item'+(r.id===selectedId?' selected':'');
+    div.onclick=function(){openDetail(r.id)};
+    div.innerHTML=(r.flagged?'<div class="flag-strip"></div>':'')+
+      '<div class="ri-dot" style="background:'+dotColor(r)+'"></div>'+
+      '<div class="ri-main">'+
+        '<div class="ri-top">'+
+          '<span class="ri-app">'+r.app+'</span>'+
+          '<span class="ri-method method-'+r.method.toLowerCase()+'">'+r.method+'</span>'+
+        '</div>'+
+        '<div class="ri-host">'+r.host+(r.path?r.path.substring(0,32)+(r.path.length>32?'…':''):'')+'</div>'+
+      '</div>'+
+      '<div class="ri-right">'+
+        '<span class="ri-status" style="color:'+statusColor(r.status)+'">'+r.status+'</span>'+
+        '<span class="ri-size">'+r.size+'</span>'+
+        '<span class="ri-time">'+r.time+'</span>'+
+      '</div>';
+    el.appendChild(div);
+  });
+}
+
+function visibleRequests(){
+  return requests.filter(function(r){
+    if(activeFilter==='POST'&&r.method!=='POST')return false;
+    if(activeFilter==='GET'&&r.method!=='GET')return false;
+    if(activeFilter==='FLAGGED'&&!r.flagged)return false;
+    if(activeFilter==='BLOCKED'&&r.riskScore<80)return false;
+    if(searchText&&!(r.app.toLowerCase().includes(searchText)||r.host.includes(searchText)))return false;
+    return true;
+  });
+}
+
+function setFilter(f,el){
+  activeFilter=f;
+  document.querySelectorAll('.fchip').forEach(function(c){c.classList.remove('active')});
+  el.classList.add('active');
+  renderList();
+}
+function filterList(v){searchText=v.toLowerCase();renderList()}
+
+// ── DETAIL ─────────────────────────────────────────────────────────────────────
+function openDetail(id){
+  selectedId=id;
+  var r=requests.find(function(x){return x.id===id});
+  renderList();
+  renderDetailHeader(r);
+  switchDTab('payload',null);
+  renderDetailPayload(r);
+  renderDetailHeaders(r);
+  renderDetailRisk(r);
+  renderDetailTimeline(r);
+  renderDetailFields(r);
+  goScreen('detail');
+}
+
+function renderDetailHeader(r){
+  var mc=r.method==='POST'||r.method==='PUT'?'var(--amber)':r.method==='DELETE'?'var(--red)':'var(--ac)';
+  document.getElementById('dh-url').innerHTML=
+    '<span class="meth" style="color:'+mc+'">'+r.method+'</span>  '+
+    '<span class="host">'+r.host+'</span>'+
+    '<span style="color:var(--tx2)">'+r.path+'</span>';
+  var sc=r.status>=400?'var(--red)':r.status>=300?'var(--amber)':'var(--ac)';
+  document.getElementById('dh-meta').innerHTML=
+    dhCell('Status',''+r.status,sc)+dhCell('Latency',r.latency||'—','')+
+    dhCell('TLS',r.tls||'—','')+dhCell('Size',r.size,'');
+}
+function dhCell(k,v,c){return '<div class="dh-cell"><div class="dh-cell-key">'+k+'</div><div class="dh-cell-val"'+(c?' style="color:'+c+'"':'')+'>'+v+'</div></div>'}
+
+function syntaxHL(obj){
+  if(!obj)return '<span class="t-null">null</span>';
+  return JSON.stringify(obj,null,2)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/("(?:\\u[0-9a-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,function(m){
+      var cls='t-num';
+      if(/^"/.test(m)){cls=/:$/.test(m)?'t-key':'t-str';}
+      else if(/true|false/.test(m))cls='t-bool';
+      else if(/null/.test(m))cls='t-null';
+      return'<span class="'+cls+'">'+m+'</span>';
+    });
+}
+function toHex(s){var h='',a='',r='';for(var i=0;i<Math.min(s.length,128);i++){var c=s.charCodeAt(i);h+=('0'+c.toString(16)).slice(-2)+' ';a+=(c>=32&&c<127)?s[i]:'.';if((i+1)%8===0){r+=h.padEnd(27)+'  '+a+'\n';h='';a='';}}if(h)r+=h.padEnd(27)+'  '+a;return r||'(empty)'}
+
+function renderPayloadBox(codeId,numId,obj){
+  var raw=obj?JSON.stringify(obj,null,2):'(no body)';
+  var content=currentFmt==='json'?(obj?syntaxHL(obj):'<span class="t-null">(no body)</span>'):
+    currentFmt==='hex'?'<span style="font-size:9px;color:var(--tx2)">'+toHex(raw)+'</span>':
+    raw.replace(/</g,'&lt;');
+  var codeEl=document.getElementById(codeId);codeEl.innerHTML=content;
+  var lines=codeEl.innerText.split('\n').length;
+  var numEl=document.getElementById(numId);numEl.innerHTML='';
+  for(var i=1;i<=lines;i++)numEl.innerHTML+='<span class="pl-num">'+i+'</span>';
+}
+
+function renderDetailPayload(r){
+  renderPayloadBox('req-code','req-nums',r.requestPayload);
+  renderPayloadBox('res-code','res-nums',r.responsePayload);
+}
+
+function renderDetailHeaders(r){
+  function mkRows(hdrs,elId){
+    var el=document.getElementById(elId);el.innerHTML='';
+    (hdrs||[]).forEach(function(h){
+      var div=document.createElement('div');
+      div.className='hdr-item'+(h[2]==='bad'?' flagged':h[2]==='warn'?' warn':'');
+      div.innerHTML='<div class="hdr-name">'+h[0]+'</div><div class="hdr-val">'+h[1]+'</div>'+
+        (h[2]?'<span class="hdr-flag '+h[2]+'">'+h[2].toUpperCase()+'</span>':'');
+      el.appendChild(div);
+    });
+  }
+  mkRows(r.reqHeaders,'req-hdrs');mkRows(r.resHeaders,'res-hdrs');
+}
+
+function renderDetailRisk(r){
+  var sc=r.riskScore>=80?'var(--red)':r.riskScore>=50?'var(--amber)':'var(--ac)';
+  var circ=138,offset=circ-(circ*(r.riskScore/100));
+  document.getElementById('risk-hero-wrap').innerHTML=
+    '<div class="risk-hero">'+
+    '<div class="risk-ring-wrap"><svg width="70" height="70" viewBox="0 0 70 70">'+
+    '<circle cx="35" cy="35" r="22" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>'+
+    '<circle cx="35" cy="35" r="22" fill="none" stroke="'+sc+'" stroke-width="6" stroke-dasharray="'+circ+'" stroke-dashoffset="'+offset+'" stroke-linecap="round" transform="rotate(-90 35 35)"/>'+
+    '</svg><div class="risk-ring-center"><div class="risk-ring-num" style="color:'+sc+'">'+r.riskScore+'</div><div class="risk-ring-label">RISK</div></div></div>'+
+    '<div class="risk-info"><div class="risk-info-title" style="color:'+sc+'">'+(r.riskScore>=80?'High risk':r.riskScore>=50?'Medium risk':'Low risk')+'</div>'+
+    '<div class="risk-info-sub">'+(r.risks.filter(function(x){return x.level==='crit'}).length)+' critical · '+(r.risks.filter(function(x){return x.level==='warn'}).length)+' warnings</div></div></div>';
+
+  var el=document.getElementById('anomaly-list');el.innerHTML='';
+  r.risks.forEach(function(risk){
+    var isvg=risk.level==='crit'?
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>':
+      risk.level==='warn'?
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>':
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+    var div=document.createElement('div');div.className='anomaly-item';
+    div.innerHTML='<div class="ai-top"><div class="ai-icon '+risk.level+'">'+isvg+'</div>'+
+      '<div class="ai-text"><div class="ai-title">'+risk.title+'</div><div class="ai-body">'+risk.body+'</div></div>'+
+      '<span class="ai-badge '+risk.level+'">'+risk.level.toUpperCase()+'</span></div>';
+    el.appendChild(div);
+  });
+}
+
+function renderDetailTimeline(r){
+  var el=document.getElementById('tl-section');el.innerHTML='';
+  if(!r.timeline||!r.timeline.length){
+    el.innerHTML='<div style="color:var(--tx3);font-size:12px">No timeline data captured</div>';return;
+  }
+  r.timeline.forEach(function(t,i){
+    var div=document.createElement('div');div.className='tl-item';
+    div.innerHTML='<div class="tl-left"><div class="tl-dot" style="background:'+t.bc+'"></div>'+(i<r.timeline.length-1?'<div class="tl-line"></div>':'')+'</div>'+
+      '<div class="tl-content"><div class="tl-time">'+t.time+'</div><div class="tl-event">'+t.event+'</div>'+
+      '<span class="tl-badge" style="color:'+t.bc+';background:'+t.bb+'">'+t.badge+'</span></div>';
+    el.appendChild(div);
+  });
+}
+
+function renderDetailFields(r){
+  var el=document.getElementById('field-section');el.innerHTML='';
+  if(!r.fields||!r.fields.length){el.innerHTML='<div style="color:var(--tx3);font-size:12px;padding:8px 0">No fields extracted</div>';return;}
+  r.fields.forEach(function(f){
+    var div=document.createElement('div');div.className='field-item';
+    div.innerHTML='<div class="field-dot" style="background:'+f.dot+'"></div>'+
+      '<div style="flex:1;min-width:0"><div class="field-key">'+f.key+'</div><div class="field-val">'+f.val+'</div>'+
+      (f.flag?'<span class="field-flag" style="color:'+f.fc+';background:'+f.fb+'">'+f.flag+'</span>':'')+
+      '</div>';
+    el.appendChild(div);
+  });
+}
+
+// ── TAB / SCREEN SWITCHING ─────────────────────────────────────────────────────
+function switchDTab(t,el){
+  currentDTab=t;
+  document.querySelectorAll('.dtab').forEach(function(d){d.classList.remove('active')});
+  if(el)el.classList.add('active');
+  else document.querySelectorAll('.dtab').forEach(function(d){if(d.textContent.toLowerCase().trim()===t)d.classList.add('active')});
+  ['payload','headers','risk','timeline','fields'].forEach(function(p){
+    document.getElementById('dpanel-'+p).style.display=p===t?'block':'none';
+  });
+}
+
+function setFmt(f,btn){
+  currentFmt=f;
+  document.querySelectorAll('.fmt-btn').forEach(function(b){b.classList.remove('active')});
+  if(btn)btn.classList.add('active');
+  var r=requests.find(function(x){return x.id===selectedId});
+  if(r)renderDetailPayload(r);
+}
+
+function goScreen(s){
+  currentScreen=s;
+  document.querySelectorAll('.screen').forEach(function(x){x.classList.remove('active')});
+  document.querySelectorAll('.bn-tab').forEach(function(x){x.classList.remove('active')});
+  document.getElementById('sc-'+s).classList.add('active');
+  if(s==='list')document.getElementById('bnt-list').classList.add('active');
+  else if(s==='stats')document.getElementById('bnt-stats').classList.add('active');
+}
+function goBack(){goScreen('list')}
+
+// ── SHEET ──────────────────────────────────────────────────────────────────────
+function openFilterSheet(){
+  document.getElementById('sheet-overlay').classList.add('open');
+  document.getElementById('filter-sheet').classList.add('open');
+}
+function closeFilterSheet(){
+  document.getElementById('sheet-overlay').classList.remove('open');
+  document.getElementById('filter-sheet').classList.remove('open');
+}
+
+// ── ACTIONS ────────────────────────────────────────────────────────────────────
+function blockDomain(){
+  var r=requests.find(function(x){return x.id===selectedId});
+  if(!r)return;
+  if(typeof Android!=='undefined') Android.blockDomain(r.host);
+  toast(r.host+' blocked ✓');
+}
+function copyPayload(){var r=requests.find(function(x){return x.id===selectedId});if(r&&r.requestPayload){navigator.clipboard&&navigator.clipboard.writeText(JSON.stringify(r.requestPayload,null,2));toast('Payload copied ✓')}}
+function copyResponse(){var r=requests.find(function(x){return x.id===selectedId});if(r&&r.responsePayload){navigator.clipboard&&navigator.clipboard.writeText(JSON.stringify(r.responsePayload,null,2));toast('Response copied ✓')}}
+function toast(msg){var el=document.getElementById('toast-el');el.textContent=msg;el.classList.add('show');setTimeout(function(){el.classList.remove('show')},2200)}
+
+// ── PPS TICKER (browser-only demo simulation skipped on Android) ───────────────
+var livePool=[
+  {app:'Chrome',method:'GET',host:'www.google.com',path:'/search',status:200,size:'8.1 KB',flagged:false,riskScore:5,latency:'22ms',protocol:'HTTPS',tls:'TLS 1.3',requestPayload:null,responsePayload:{result:'ok'},reqHeaders:[['Host','www.google.com']],resHeaders:[['Content-Type','text/html']],risks:[{level:'info',title:'Normal search traffic',body:'Standard HTTPS request.'}],timeline:[{time:'now',event:'GET /search',badge:'HTTP',bc:'var(--ac)',bb:'var(--ac-dim)'}],fields:[]},
+  {app:'Spotify',method:'GET',host:'api.spotify.com',path:'/v1/me/player',status:200,size:'2.4 KB',flagged:false,riskScore:12,latency:'41ms',protocol:'HTTPS',tls:'TLS 1.3',requestPayload:null,responsePayload:{is_playing:true},reqHeaders:[['Authorization','Bearer BQ...','warn']],resHeaders:[['Content-Type','application/json']],risks:[{level:'info',title:'OAuth token',body:'Standard Spotify auth.'}],timeline:[{time:'now',event:'GET /v1/me/player',badge:'HTTP',bc:'var(--ac)',bb:'var(--ac-dim)'}],fields:[]},
+];
+
+setInterval(function(){
+  var pps=Math.floor(2+Math.random()*9);
+  document.getElementById('pps-chip').textContent=pps+' pkt/s';
+  // On Android, live updates come via window.refreshRequests — skip demo simulation
+  if(typeof Android!=='undefined') return;
+  if(Math.random()<0.18){
+    var tmpl=livePool[Math.floor(Math.random()*livePool.length)];
+    var now=new Date();
+    var newR=Object.assign({},tmpl,{
+      id:Date.now(),
+      time:now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),
+      size:(Math.random()*15).toFixed(1)+' KB'
+    });
+    requests.unshift(newR);
+    if(requests.length>18)requests.pop();
+    capCount++;totalKB+=parseFloat(newR.size)||0;
+    updateStats();renderList();
+  }
+},2000);
+
+// ── INIT ───────────────────────────────────────────────────────────────────────
+updateStats();
+renderList();
+loadFromAndroid(); // No-op in browser; replaces demo data when running on Android
+</script>
+</body>
+</html>

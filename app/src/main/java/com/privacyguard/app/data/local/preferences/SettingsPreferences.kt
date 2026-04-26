@@ -35,6 +35,18 @@ class SettingsPreferences private constructor(context: Context) {
         private const val KEY_ENTERPRISE_SHIP_ENABLED       = "enterprise_ship_enabled"
         private const val KEY_ENTERPRISE_LOCAL_LOG_ENABLED  = "enterprise_local_log_enabled"
 
+        // MITM Configuration Keys
+        private const val KEY_MITM_ENABLED = "mitm_enabled"
+        private const val KEY_MITM_SKIP_PINNED_APPS = "mitm_skip_pinned_apps"
+        private const val KEY_MITM_REDACT_PII = "mitm_redact_pii"
+        private const val KEY_MITM_SIEM_ENDPOINT = "mitm_siem_endpoint"
+        private const val KEY_MITM_SIEM_API_KEY = "mitm_siem_api_key"
+        private const val KEY_MITM_MAX_PAYLOAD_SIZE = "mitm_max_payload_size"
+        private const val KEY_MITM_SHIP_TO_SIEM = "mitm_ship_to_siem"
+        private const val KEY_MITM_WRITE_LOCAL_LOG = "mitm_write_local_log"
+        private const val KEY_MITM_RETENTION_DAYS = "mitm_retention_days"
+        private const val KEY_MITM_CONSENT_TIMESTAMP = "mitm_consent_timestamp"
+
         const val DOH_CLOUDFLARE = "https://cloudflare-dns.com/dns-query"
         const val DOH_GOOGLE     = "https://dns.google/dns-query"
         const val DOH_QUAD9      = "https://dns.quad9.net/dns-query"
@@ -48,6 +60,8 @@ class SettingsPreferences private constructor(context: Context) {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    // ==================== EXISTING FLOWS ====================
 
     private val _notificationsEnabled = MutableStateFlow(prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true))
     val notificationsEnabled: StateFlow<Boolean> = _notificationsEnabled.asStateFlow()
@@ -120,6 +134,40 @@ class SettingsPreferences private constructor(context: Context) {
         prefs.getBoolean(KEY_ENTERPRISE_LOCAL_LOG_ENABLED, true)
     )
     val enterpriseLocalLogEnabled: StateFlow<Boolean> = _enterpriseLocalLogEnabled.asStateFlow()
+
+    // ==================== MITM FLOWS (NEW) ====================
+
+    private val _mitmEnabled = MutableStateFlow(prefs.getBoolean(KEY_MITM_ENABLED, false))
+    val mitmEnabled: StateFlow<Boolean> = _mitmEnabled.asStateFlow()
+
+    private val _mitmSkipPinnedApps = MutableStateFlow(prefs.getBoolean(KEY_MITM_SKIP_PINNED_APPS, true))
+    val mitmSkipPinnedApps: StateFlow<Boolean> = _mitmSkipPinnedApps.asStateFlow()
+
+    private val _mitmRedactPii = MutableStateFlow(prefs.getBoolean(KEY_MITM_REDACT_PII, true))
+    val mitmRedactPii: StateFlow<Boolean> = _mitmRedactPii.asStateFlow()
+
+    private val _mitmSiemEndpoint = MutableStateFlow(prefs.getString(KEY_MITM_SIEM_ENDPOINT, "") ?: "")
+    val mitmSiemEndpoint: StateFlow<String> = _mitmSiemEndpoint.asStateFlow()
+
+    private val _mitmSiemApiKey = MutableStateFlow(prefs.getString(KEY_MITM_SIEM_API_KEY, "") ?: "")
+    val mitmSiemApiKey: StateFlow<String> = _mitmSiemApiKey.asStateFlow()
+
+    private val _mitmMaxPayloadSize = MutableStateFlow(prefs.getInt(KEY_MITM_MAX_PAYLOAD_SIZE, 32768))
+    val mitmMaxPayloadSize: StateFlow<Int> = _mitmMaxPayloadSize.asStateFlow()
+
+    private val _mitmShipToSiem = MutableStateFlow(prefs.getBoolean(KEY_MITM_SHIP_TO_SIEM, false))
+    val mitmShipToSiem: StateFlow<Boolean> = _mitmShipToSiem.asStateFlow()
+
+    private val _mitmWriteLocalLog = MutableStateFlow(prefs.getBoolean(KEY_MITM_WRITE_LOCAL_LOG, true))
+    val mitmWriteLocalLog: StateFlow<Boolean> = _mitmWriteLocalLog.asStateFlow()
+
+    private val _mitmRetentionDays = MutableStateFlow(prefs.getInt(KEY_MITM_RETENTION_DAYS, 7))
+    val mitmRetentionDays: StateFlow<Int> = _mitmRetentionDays.asStateFlow()
+
+    private val _mitmConsentTimestamp = MutableStateFlow(prefs.getLong(KEY_MITM_CONSENT_TIMESTAMP, 0L))
+    val mitmConsentTimestamp: StateFlow<Long> = _mitmConsentTimestamp.asStateFlow()
+
+    // ==================== EXISTING SETTERS ====================
 
     fun setNotificationsEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_NOTIFICATIONS_ENABLED, enabled).apply()
@@ -215,6 +263,85 @@ class SettingsPreferences private constructor(context: Context) {
         prefs.edit().putBoolean(KEY_ENTERPRISE_LOCAL_LOG_ENABLED, enabled).apply()
         _enterpriseLocalLogEnabled.value = enabled
     }
+
+    // ==================== MITM SETTERS (NEW) ====================
+
+    fun setMitmEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_MITM_ENABLED, enabled).apply()
+        _mitmEnabled.value = enabled
+    }
+
+    fun setMitmSkipPinnedApps(skip: Boolean) {
+        prefs.edit().putBoolean(KEY_MITM_SKIP_PINNED_APPS, skip).apply()
+        _mitmSkipPinnedApps.value = skip
+    }
+
+    fun setMitmRedactPii(redact: Boolean) {
+        prefs.edit().putBoolean(KEY_MITM_REDACT_PII, redact).apply()
+        _mitmRedactPii.value = redact
+    }
+
+    fun setMitmSiemEndpoint(endpoint: String) {
+        prefs.edit().putString(KEY_MITM_SIEM_ENDPOINT, endpoint).apply()
+        _mitmSiemEndpoint.value = endpoint
+    }
+
+    fun setMitmSiemApiKey(apiKey: String) {
+        prefs.edit().putString(KEY_MITM_SIEM_API_KEY, apiKey).apply()
+        _mitmSiemApiKey.value = apiKey
+    }
+
+    fun setMitmMaxPayloadSize(size: Int) {
+        val clampedSize = size.coerceIn(1024, 1024 * 1024) // 1KB to 1MB
+        prefs.edit().putInt(KEY_MITM_MAX_PAYLOAD_SIZE, clampedSize).apply()
+        _mitmMaxPayloadSize.value = clampedSize
+    }
+
+    fun setMitmShipToSiem(ship: Boolean) {
+        prefs.edit().putBoolean(KEY_MITM_SHIP_TO_SIEM, ship).apply()
+        _mitmShipToSiem.value = ship
+    }
+
+    fun setMitmWriteLocalLog(write: Boolean) {
+        prefs.edit().putBoolean(KEY_MITM_WRITE_LOCAL_LOG, write).apply()
+        _mitmWriteLocalLog.value = write
+    }
+
+    fun setMitmRetentionDays(days: Int) {
+        val clampedDays = days.coerceIn(1, 90)
+        prefs.edit().putInt(KEY_MITM_RETENTION_DAYS, clampedDays).apply()
+        _mitmRetentionDays.value = clampedDays
+    }
+
+    fun setMitmConsentTimestamp(timestamp: Long) {
+        prefs.edit().putLong(KEY_MITM_CONSENT_TIMESTAMP, timestamp).apply()
+        _mitmConsentTimestamp.value = timestamp
+    }
+
+    /**
+     * Check if MITM consent is still valid (within 90 days)
+     */
+    fun isMitmConsentValid(): Boolean {
+        val timestamp = _mitmConsentTimestamp.value
+        if (timestamp == 0L) return false
+        val ninetyDaysAgo = System.currentTimeMillis() - (90L * 24 * 60 * 60 * 1000)
+        return timestamp > ninetyDaysAgo
+    }
+
+    /**
+     * Get current MITM enabled state (synchronous for VPN packet processing)
+     */
+    fun isMitmEnabledSync(): Boolean = prefs.getBoolean(KEY_MITM_ENABLED, false)
+
+    /**
+     * Get current MITM redact PII setting (synchronous)
+     */
+    fun isMitmRedactPiiSync(): Boolean = prefs.getBoolean(KEY_MITM_REDACT_PII, true)
+
+    /**
+     * Get current MITM max payload size (synchronous)
+     */
+    fun getMitmMaxPayloadSizeSync(): Int = prefs.getInt(KEY_MITM_MAX_PAYLOAD_SIZE, 32768)
 
     fun shouldShowNotification(type: NotificationType): Boolean {
         if (!notificationsEnabled.value) return false
