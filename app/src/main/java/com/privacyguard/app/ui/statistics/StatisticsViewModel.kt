@@ -182,9 +182,10 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
 
         _rememberedNetworks.value = db.networkTrustDao().allNetworks().take(6)
 
-        // Build 7×24 heatmap
+        // Build 7×24 heatmap from the full 7-day window (not just today)
+        val weekConnections = db.connectionDao().getRecentConnections(since, 5_000)
         val grid = Array(7) { IntArray(24) }
-        recentConnections.forEach { conn ->
+        weekConnections.forEach { conn ->
             val cal = java.util.Calendar.getInstance().apply { timeInMillis = conn.timestamp }
             val dayOfWeek = (cal.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7 // Mon=0..Sun=6
             val hour = cal.get(java.util.Calendar.HOUR_OF_DAY)
@@ -192,8 +193,8 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
         }
         _heatmap.value = grid
 
-        // Sunburst: top orgs by connection count
-        _sunburstOrgs.value = recentConnections
+        // Sunburst: top orgs across 7 days
+        _sunburstOrgs.value = weekConnections
             .mapNotNull { GeoIpResolver.lookup(it.destinationIp)?.org }
             .groupBy { it }
             .map { (org, list) -> SunburstOrgSlice(org, list.size) }
