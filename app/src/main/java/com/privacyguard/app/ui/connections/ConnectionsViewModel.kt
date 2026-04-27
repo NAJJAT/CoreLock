@@ -8,6 +8,7 @@ import com.privacyguard.app.core.geoip.GeoResult
 import com.privacyguard.app.core.stats.StatsManager
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.repository.RulesRepo
+import com.privacyguard.app.data.repository.RuleSyncBus
 import com.privacyguard.core.filter.FilterEngine
 import com.privacyguard.core.filter.FilterRule
 import java.net.InetAddress
@@ -113,10 +114,7 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         viewModelScope.launch {
-            while (true) {
-                refreshBlockedRuleKeys()
-                delay(1_000)
-            }
+            RuleSyncBus.version.collect { refreshBlockedRuleKeys() }
         }
 
         viewModelScope.launch {
