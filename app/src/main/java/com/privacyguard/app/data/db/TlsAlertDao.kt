@@ -18,6 +18,9 @@ interface TlsAlertDao {
     @Query("SELECT * FROM tls_alerts ORDER BY timestamp DESC LIMIT :limit")
     fun recentFlow(limit: Int): Flow<List<TlsAlertEntity>>
 
+    @Query("SELECT COUNT(*) FROM tls_alerts WHERE alertType = 'JA3_THREAT'")
+    fun ja3ThreatCountFlow(): Flow<Int>
+
     @Query("SELECT * FROM tls_alerts WHERE alertType = 'JA3_THREAT' ORDER BY timestamp DESC LIMIT :limit")
     suspend fun recentJa3Threats(limit: Int): List<TlsAlertEntity>
 

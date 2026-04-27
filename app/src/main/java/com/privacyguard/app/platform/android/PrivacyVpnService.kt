@@ -324,6 +324,21 @@ class PrivacyVpnService : VpnService() {
         if (com.privacyguard.app.vpn.KillSwitch.isEnabled()) {
             com.privacyguard.app.vpn.KillSwitch.startMonitoring(this)
         }
+
+        // Periodic housekeeping: prune old tls_alerts once per day while VPN runs
+        scope.launch {
+            val dayMs = 24L * 60L * 60L * 1000L
+            kotlinx.coroutines.delay(dayMs)
+            while (isRunning) {
+                val retentionDays = com.privacyguard.app.data.local.preferences.SettingsPreferences
+                    .getInstance(applicationContext).retentionDays.value
+                val cutoff = System.currentTimeMillis() - retentionDays.toLong() * 86_400_000L
+                buildDatabase().tlsAlertDao().pruneOld(cutoff)
+                Log.d(TAG, "Periodic tls_alerts prune complete (cutoff=$retentionDays days)")
+                kotlinx.coroutines.delay(dayMs)
+            }
+        }
+
         isRunning = true
         Log.i(TAG, "VPN fully started — all pillars active")
     }

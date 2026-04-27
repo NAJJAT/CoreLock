@@ -11,6 +11,8 @@ import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -34,6 +36,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.privacyguard.app.BuildConfig  // FIXED: Correct import path
+import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
 import com.privacyguard.app.ui.apps.AppDetailScreen
 import com.privacyguard.app.ui.apps.AppsScreen
@@ -77,6 +80,8 @@ fun AppNavHost(
 
     val topLevelRoutes = remember(tabs) { tabs.map { it.route }.toSet() }
     val onboardingCompleted by settingsPreferences.onboardingCompleted.collectAsState()
+    val db = remember(context) { AppDatabase.getInstance(context) }
+    val ja3ThreatCount by db.tlsAlertDao().ja3ThreatCountFlow().collectAsState(initial = 0)
     val navController = rememberNavController()
     val navBackStack by navController.currentBackStackEntryAsState()
     val currentDest = navBackStack?.destination
@@ -114,7 +119,17 @@ fun AppNavHost(
                                     restoreState = true
                                 }
                             },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
+                            icon = {
+                                if (tab.route == "crypto" && ja3ThreatCount > 0) {
+                                    BadgedBox(badge = {
+                                        Badge { Text(ja3ThreatCount.coerceAtMost(99).toString()) }
+                                    }) {
+                                        Icon(tab.icon, contentDescription = tab.label)
+                                    }
+                                } else {
+                                    Icon(tab.icon, contentDescription = tab.label)
+                                }
+                            },
                             label = {
                                 Text(
                                     text = tab.label,
