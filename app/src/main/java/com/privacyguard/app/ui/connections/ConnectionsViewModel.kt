@@ -9,6 +9,7 @@ import com.privacyguard.app.core.stats.StatsManager
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.repository.RulesRepo
 import com.privacyguard.app.data.repository.RuleSyncBus
+import com.privacyguard.app.ui.apps.AppsViewModel
 import com.privacyguard.core.filter.FilterEngine
 import com.privacyguard.core.filter.FilterRule
 import java.net.InetAddress
@@ -212,15 +213,14 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
     fun blockApp(packageName: String) {
         viewModelScope.launch {
             if (packageName.isBlank() || packageName == "Unknown") return@launch
-            val ruleId = BlockTarget(BlockTargetKind.PACKAGE, packageName).ruleId()
             rulesRepo.upsertRule(
                 FilterRule(
-                    id = ruleId,
+                    id = AppsViewModel.packageBlockRuleId(packageName),
                     label = "Block $packageName",
                     action = FilterRule.Action.DENY,
                     source = FilterRule.Source.USER,
                     priority = FilterRule.HIGH_PRIORITY,
-                    matchPackage = packageName
+                    matchPackage = packageName,
                 )
             )
             refreshBlockedRuleKeys()
@@ -324,7 +324,11 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
         val kind: BlockTargetKind,
         val value: String,
     ) {
-        fun ruleId(): String = "user:block:${kind.name.lowercase()}:$value"
+        fun ruleId(): String = when (kind) {
+            // Use the canonical package rule ID so AppsScreen and AppDetailScreen can unblock it
+            BlockTargetKind.PACKAGE -> AppsViewModel.packageBlockRuleId(value)
+            else -> "user:block:${kind.name.lowercase()}:$value"
+        }
 
         fun toRule(): FilterRule = FilterRule(
             id = ruleId(),

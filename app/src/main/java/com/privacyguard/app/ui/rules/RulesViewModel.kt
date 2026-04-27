@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
+import com.privacyguard.app.ui.apps.AppsViewModel
 import java.util.UUID
 
 class RulesViewModel(app: Application) : AndroidViewModel(app) {
@@ -63,15 +64,17 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
 
     fun addPackageRule(pkg: String, action: FilterRule.Action) {
         viewModelScope.launch {
+            val trimmed = pkg.trim()
             val rule = FilterRule(
-                id       = UUID.randomUUID().toString(),
-                label    = "${if (action == FilterRule.Action.DENY) "Block" else "Allow"} $pkg",
+                id       = if (action == FilterRule.Action.DENY) AppsViewModel.packageBlockRuleId(trimmed)
+                           else UUID.randomUUID().toString(),
+                label    = "${if (action == FilterRule.Action.DENY) "Block" else "Allow"} $trimmed",
                 action   = action,
                 source   = FilterRule.Source.USER,
                 priority = FilterRule.HIGH_PRIORITY,
-                matchPackage = pkg.trim(),
+                matchPackage = trimmed,
             )
-            repo.addRule(rule)
+            repo.upsertRule(rule)
             refresh()
         }
     }
