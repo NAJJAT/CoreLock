@@ -30,7 +30,8 @@ data class AppRiskItem(
     val maxRiskScore: Int,
     val isBlocked: Boolean,
     val stalkerwareScore: Int = 0,
-    val stalkerwareReasons: List<String> = emptyList()
+    val stalkerwareReasons: List<String> = emptyList(),
+    val backgroundCount: Int = 0,
 ) {
     val riskLevel: String
         get() = when {
@@ -125,6 +126,7 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
                         isBlocked         = pkg in blockedPackages,
                         stalkerwareScore  = stalkerware.score,
                         stalkerwareReasons = stalkerware.reasons,
+                        backgroundCount   = connectionRows.count { it.wasBackground },
                     )
                 }
                 .sortedWith(compareByDescending<AppRiskItem> { it.maxRiskScore }.thenByDescending { it.totalBytesOut })

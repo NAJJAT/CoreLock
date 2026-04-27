@@ -161,6 +161,7 @@ fun AppsScreen(
                         Text(
                             "${app.totalDestinations} destinations · ${app.suspiciousCount} suspicious" +
                                 (if (app.cleartextCount > 0) " · ${app.cleartextCount} cleartext" else "") +
+                                (if (app.backgroundCount > 0) " · ${app.backgroundCount} bg" else "") +
                                 (if (app.stalkerwareScore >= 40) " · stalkerware ${app.stalkerwareScore}" else ""),
                             style = MaterialTheme.typography.bodySmall,
                             color = PgTextMuted
