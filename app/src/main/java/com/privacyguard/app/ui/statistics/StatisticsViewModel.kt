@@ -88,13 +88,27 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
     private val _sunburstOrgs = MutableStateFlow<List<SunburstOrgSlice>>(emptyList())
     val sunburstOrgs: StateFlow<List<SunburstOrgSlice>> = _sunburstOrgs.asStateFlow()
 
+    @Volatile private var cachedProfiles: List<com.privacyguard.core.metadata.ConnectionProfile> = emptyList()
+    @Volatile private var cachedBehaviorSummaries: List<com.privacyguard.app.core.behavior.AppBehaviorSummary> = emptyList()
+
     init {
         viewModelScope.launch {
             while (true) {
-                refresh()
-                delay(3_000)
+                refreshSlow()
+                delay(60_000)
             }
         }
+        viewModelScope.launch {
+            while (true) {
+                refresh()
+                delay(5_000)
+            }
+        }
+    }
+
+    private suspend fun refreshSlow() {
+        cachedProfiles = db.connectionProfileDao().allProfiles().map { metadataRepo.toDomainForDashboard(it) }
+        cachedBehaviorSummaries = BehaviorDnaAnalyzer.summarizeAll(cachedProfiles)
     }
 
     private suspend fun refresh() {
@@ -102,8 +116,8 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
         val todaySince = now - 24L * 60L * 60L * 1000L
         val since = now - 7L * 24L * 60L * 60L * 1000L
         val recentConnections = db.connectionDao().getRecentConnections(todaySince, 1_000)
-        val profiles = db.connectionProfileDao().allProfiles().map { metadataRepo.toDomainForDashboard(it) }
-        val behaviorSummaries = BehaviorDnaAnalyzer.summarizeAll(profiles)
+        val profiles = cachedProfiles
+        val behaviorSummaries = cachedBehaviorSummaries
         val totalConnections = recentConnections.size
         val blockedToday = recentConnections.count { it.wasBlocked }
         val cleartextToday = recentConnections.count {

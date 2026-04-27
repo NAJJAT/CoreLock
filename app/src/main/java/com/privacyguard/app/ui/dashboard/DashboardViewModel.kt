@@ -72,11 +72,25 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
+    // Cached slow-path data; refreshed every 30s to avoid heavy DB reads every 1s
+    @Volatile private var cachedProfiles: List<com.privacyguard.core.metadata.ConnectionProfile> = emptyList()
+    @Volatile private var cachedAnomalies: List<com.privacyguard.app.data.db.DnsAnomalyEntity> = emptyList()
+    @Volatile private var cachedBehaviorSummaries: List<com.privacyguard.app.core.behavior.AppBehaviorSummary> = emptyList()
+    @Volatile private var cachedBehaviorAlerts: Int = 0
+
     init {
+        // Fast path: live stats + connection counts — runs every 1s
         viewModelScope.launch {
             while (true) {
-                refresh()
+                refreshFast()
                 delay(1_000)
+            }
+        }
+        // Slow path: full DB profiles + behavior DNA — runs every 30s
+        viewModelScope.launch {
+            while (true) {
+                refreshSlow()
+                delay(30_000)
             }
         }
     }
@@ -88,7 +102,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         } else {
             PcapWriter.startCapture(context)
         }
-        viewModelScope.launch { refresh() }
+        viewModelScope.launch { refreshFast() }
     }
 
     fun setKillSwitch(enabled: Boolean) {
@@ -100,23 +114,19 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             KillSwitch.disable()
             KillSwitch.stopMonitoring()
         }
-        viewModelScope.launch { refresh() }
+        viewModelScope.launch { refreshFast() }
     }
 
-    private suspend fun refresh() {
-        val snapshot = StatsManager.snapshot.value
-        val now = System.currentTimeMillis()
-        val daySince = now - 24L * 60L * 60L * 1000L
-        val weekSince = now - 7L * 24L * 60L * 60L * 1000L
-        val recentConnections = db.connectionDao().getRecentConnections(daySince, 500)
-        val weeklyConnections = db.connectionDao().getRecentConnections(weekSince, 2_000)
-        val recentAnomalies = db.dnsAnomalyDao().recent(20)
+    private suspend fun refreshSlow() {
         val profiles = db.connectionProfileDao().allProfiles().map { metadataRepo.toDomainForDashboard(it) }
-        val behaviorSummaries = BehaviorDnaAnalyzer.summarizeAll(profiles)
-        val behaviorAlerts = behaviorSummaries.sumOf { it.findings.size }
+        val summaries = BehaviorDnaAnalyzer.summarizeAll(profiles)
+        cachedProfiles = profiles
+        cachedAnomalies = db.dnsAnomalyDao().recent(20)
+        cachedBehaviorSummaries = summaries
+        cachedBehaviorAlerts = summaries.sumOf { it.findings.size }
 
         // Notify once per HIGH-severity behavior finding per VPN session
-        behaviorSummaries.forEach { summary ->
+        summaries.forEach { summary ->
             summary.findings
                 .filter { it.severity == BehaviorSeverity.HIGH }
                 .forEach { finding ->
@@ -135,6 +145,19 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
         }
+    }
+
+    private suspend fun refreshFast() {
+        val snapshot = StatsManager.snapshot.value
+        val now = System.currentTimeMillis()
+        val daySince = now - 24L * 60L * 60L * 1000L
+        val weekSince = now - 7L * 24L * 60L * 60L * 1000L
+        val recentConnections = db.connectionDao().getRecentConnections(daySince, 500)
+        val weeklyConnections = db.connectionDao().getRecentConnections(weekSince, 2_000)
+        val recentAnomalies = cachedAnomalies
+        val profiles = cachedProfiles
+        val behaviorSummaries = cachedBehaviorSummaries
+        val behaviorAlerts = cachedBehaviorAlerts
 
         val trustSummary = NetworkTrustAnalyzer.summarize(getApplication(), recentConnections, recentAnomalies)
         db.networkTrustDao().upsert(
