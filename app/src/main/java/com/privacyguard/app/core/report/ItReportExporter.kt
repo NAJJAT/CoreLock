@@ -33,12 +33,20 @@ object ItReportExporter {
         val behavior = BehaviorDnaAnalyzer.summarizeAll(profiles)
         val privacyScore = PrivacyScoreCalculator.calculate(connections, profiles, trackersBlocked, blocklistDomains)
 
+        val backgroundCount = connections.count { it.wasBackground }
+        val cleartextCount = connections.count {
+            !it.wasBlocked && (it.encryptionStatus == "CLEARTEXT" || it.encryptionStatus == "UNKNOWN")
+        }
         val json = JSONObject().apply {
             put("generatedAt", stamp)
             put("privacyScore", privacyScore.score)
+            put("encryptedRatio", privacyScore.encryptedRatio)
+            put("backgroundRatio", privacyScore.backgroundRatio)
             put("summary", JSONObject().apply {
                 put("connections", connections.size)
                 put("blocked", connections.count { it.wasBlocked })
+                put("cleartext", cleartextCount)
+                put("background", backgroundCount)
                 put("anomalies", anomalies.size)
                 put("behaviorAlerts", behavior.sumOf { it.findings.size })
             })
@@ -50,8 +58,13 @@ object ItReportExporter {
                         put("domain", connection.domain ?: connection.destinationIp)
                         put("destinationIp", connection.destinationIp)
                         put("port", connection.destinationPort)
+                        put("protocol", connection.protocol)
                         put("blocked", connection.wasBlocked)
+                        put("background", connection.wasBackground)
                         put("encryptionStatus", connection.encryptionStatus)
+                        put("tlsVersion", connection.tlsVersion ?: "")
+                        put("bytesSent", connection.bytesSent)
+                        put("bytesReceived", connection.bytesReceived)
                         put("timestamp", connection.timestamp)
                     })
                 }
@@ -70,7 +83,7 @@ object ItReportExporter {
             })
         }
         jsonFile.writeText(json.toString(2))
-        exportPdf(pdfFile, privacyScore.score, connections, anomalies, behavior)
+        exportPdf(pdfFile, privacyScore.score, connections, anomalies, behavior, backgroundCount, cleartextCount)
         return ItReportFiles(jsonFile, pdfFile)
     }
 
@@ -80,6 +93,8 @@ object ItReportExporter {
         connections: List<ConnectionEntity>,
         anomalies: List<DnsAnomalyEntity>,
         behavior: List<com.privacyguard.app.core.behavior.AppBehaviorSummary>,
+        backgroundCount: Int = 0,
+        cleartextCount: Int = 0,
     ) {
         val document = PdfDocument()
         val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
@@ -92,7 +107,7 @@ object ItReportExporter {
         y += 28f
         canvas.drawText("Privacy Score: $privacyScore/100", 36f, y, bodyPaint)
         y += 20f
-        canvas.drawText("Connections: ${connections.size}  Blocked: ${connections.count { it.wasBlocked }}  Anomalies: ${anomalies.size}", 36f, y, bodyPaint)
+        canvas.drawText("Connections: ${connections.size}  Blocked: ${connections.count { it.wasBlocked }}  Cleartext: $cleartextCount  Background: $backgroundCount  Anomalies: ${anomalies.size}", 36f, y, bodyPaint)
         y += 24f
         canvas.drawText("Top anomalies", 36f, y, titlePaint)
         y += 20f

@@ -24,6 +24,7 @@ import com.privacyguard.core.filter.FilterRule
 @Composable
 fun RulesScreen(vm: RulesViewModel = viewModel()) {
     val rules by vm.rules.collectAsState()
+    val searchQuery by vm.searchQuery.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -63,6 +64,23 @@ fun RulesScreen(vm: RulesViewModel = viewModel()) {
                 contentPadding = PaddingValues(8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
+                item {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { vm.setSearchQuery(it) },
+                        placeholder = { Text("Search domain, app, IP…", fontSize = 13.sp, color = Color.Gray) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        trailingIcon = if (searchQuery.isNotEmpty()) {{
+                            IconButton(onClick = { vm.setSearchQuery("") }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Clear")
+                            }
+                        }} else null,
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 4.dp),
+                    )
+                }
                 item {
                     Text(
                         "${rules.size} rule${if (rules.size != 1) "s" else ""}",

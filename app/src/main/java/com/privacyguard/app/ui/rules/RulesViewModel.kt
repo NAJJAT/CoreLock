@@ -10,6 +10,9 @@ import com.privacyguard.core.filter.FilterRule
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -19,14 +22,27 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
     private val engine by lazy { FilterEngine() }
     private val repo   by lazy { RulesRepo(db.rulesDao(), engine) }
 
-    private val _rules = MutableStateFlow<List<FilterRule>>(emptyList())
-    val rules: StateFlow<List<FilterRule>> = _rules.asStateFlow()
+    private val _allRules = MutableStateFlow<List<FilterRule>>(emptyList())
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    val rules: StateFlow<List<FilterRule>> = combine(_allRules, _searchQuery) { rules, q ->
+        if (q.isBlank()) rules
+        else rules.filter { rule ->
+            rule.label.contains(q, ignoreCase = true) ||
+            rule.matchDomain?.contains(q, ignoreCase = true) == true ||
+            rule.matchPackage?.contains(q, ignoreCase = true) == true ||
+            rule.matchIp?.contains(q, ignoreCase = true) == true
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    fun setSearchQuery(q: String) { _searchQuery.value = q }
 
     init { refresh() }
 
     private fun refresh() {
         viewModelScope.launch {
-            _rules.value = repo.allRules()
+            _allRules.value = repo.allRules()
         }
     }
 
