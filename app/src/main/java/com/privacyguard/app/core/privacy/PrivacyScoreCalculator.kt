@@ -12,6 +12,7 @@ data class PrivacyScoreBreakdown(
     val highRiskApps: Int,
     val cleartextConnections: Int,
     val blocklistCoverage: Float,
+    val backgroundRatio: Float = 0f,
 )
 
 object PrivacyScoreCalculator {
@@ -40,18 +41,24 @@ object PrivacyScoreCalculator {
         val cleartextConnections = connections.count {
             it.encryptionStatus == EncryptionStatus.CLEARTEXT.name || it.encryptionStatus == EncryptionStatus.UNKNOWN.name
         }
+        val backgroundConnections = connections.count { it.wasBackground }
+        val backgroundRatio = backgroundConnections.toFloat() / totalConnections.toFloat()
         val trackerDensity = (trackersBlocked.toFloat() / totalConnections.toFloat()).coerceIn(0f, 1f)
         val highRiskApps = profiles
             .groupBy { it.packageName }
             .count { (_, rows) -> rows.maxOfOrNull { it.riskScore } ?: 0 >= 70 }
         val blocklistCoverage = coverageScore(blocklistDomains)
 
+        // Background ratio penalty: deduct up to 5 pts when >50% of connections are background
+        val backgroundPenalty = (backgroundRatio * 5f).coerceIn(0f, 5f)
+
         val score = (
-            encryptedRatio * 40f +
+            encryptedRatio * 38f +
                 (1f - trackerDensity) * 20f +
                 (1f - (cleartextConnections.toFloat() / totalConnections.toFloat()).coerceIn(0f, 1f)) * 20f +
                 (1f - (highRiskApps / 10f).coerceIn(0f, 1f)) * 10f +
-                blocklistCoverage * 10f
+                blocklistCoverage * 10f +
+                (5f - backgroundPenalty) * 0.4f
             ).roundToInt().coerceIn(0, 100)
 
         return PrivacyScoreBreakdown(
@@ -61,6 +68,7 @@ object PrivacyScoreCalculator {
             highRiskApps = highRiskApps,
             cleartextConnections = cleartextConnections,
             blocklistCoverage = blocklistCoverage,
+            backgroundRatio = backgroundRatio,
         )
     }
 
