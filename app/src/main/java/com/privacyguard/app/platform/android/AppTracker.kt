@@ -1,5 +1,6 @@
 package com.privacyguard.platform.android
 
+import android.app.ActivityManager
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -144,6 +145,33 @@ class AppTracker(
     fun invalidateAll() {
         appFilter.invalidateAll()
         labelCache.clear()
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Foreground / Background detection
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Returns true if [packageName] is currently in the foreground (importance ≤ FOREGROUND).
+     * Uses ActivityManager.getRunningAppProcesses() which requires no special permission.
+     * Returns false if unknown or if [packageName] is blank.
+     */
+    fun isInForeground(packageName: String): Boolean {
+        if (packageName.isBlank()) return false
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager ?: return false
+        val processes = am.runningAppProcesses ?: return false
+        return processes.any { proc ->
+            proc.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND &&
+                proc.pkgList?.contains(packageName) == true
+        }
+    }
+
+    /**
+     * Returns true if the app owning [uid] is currently in the background.
+     */
+    fun isInBackground(uid: Int): Boolean {
+        val pkg = packageForUid(uid) ?: return false
+        return !isInForeground(pkg)
     }
 
     // ─────────────────────────────────────────────────────────────────────────

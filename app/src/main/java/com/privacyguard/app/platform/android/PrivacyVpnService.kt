@@ -415,7 +415,8 @@ class PrivacyVpnService : VpnService() {
                     IpPacket.PROTO_TCP,
                 ).toString()
                 updateActiveConnectionIdentity(sessionId, resolvedAppLabel(uid, pkg), pkg)
-                if (tcp.isSyn) {
+                val isSynPacket = tcp.isSyn && !tcp.flagAck
+                if (isSynPacket) {
                     val decision = filterEngine.evaluate(uid, pkg, null, ip.destinationIp, tcp.destinationPort, 6)
                     if (decision.isBlocked) { recordBlock(); return }
                 }
@@ -424,6 +425,12 @@ class PrivacyVpnService : VpnService() {
                     inspectTlsClientHello(tcp.data, pkg)
                 }
                 tcpForwarder.handle(ip, tcp, uid, pkg)
+                // Tag session with background state after handle() creates it for SYN
+                if (isSynPacket && pkg != null) {
+                    val synKey = com.privacyguard.core.session.SessionKey.of(
+                        ip.sourceIp, tcp.sourcePort, ip.destinationIp, tcp.destinationPort, IpPacket.PROTO_TCP)
+                    sessionTable.get(synKey)?.wasBackground = !appTracker.isInForeground(pkg)
+                }
             }
         }
     }
