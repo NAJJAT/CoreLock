@@ -65,6 +65,7 @@ fun StatisticsScreen(
     val timeline by viewModel.timeline.collectAsState()
     val rememberedNetworks by viewModel.rememberedNetworks.collectAsState()
     val lastItReportPaths by viewModel.lastItReportPaths.collectAsState()
+    val csvExportPath by viewModel.csvExportPath.collectAsState()
     val heatmap by viewModel.heatmap.collectAsState()
     val sunburstOrgs by viewModel.sunburstOrgs.collectAsState()
 
@@ -116,6 +117,33 @@ fun StatisticsScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Share with IT")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = { viewModel.exportConnectionsCsv() },
+                    colors = ButtonDefaults.buttonColors(containerColor = PgAccentDim, contentColor = PgAccent),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(if (csvExportPath != null) "CSV ready — tap to share" else "Export 7-day CSV")
+                }
+                csvExportPath?.let { path ->
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Button(
+                        onClick = {
+                            val uri = androidx.core.content.FileProvider.getUriForFile(
+                                context, "${context.packageName}.fileprovider", java.io.File(path))
+                            val share = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/csv"
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(share, "Share Connection Log"))
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = PgAccentDim, contentColor = PgAccent),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Share CSV")
+                    }
                 }
             }
         }

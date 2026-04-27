@@ -202,6 +202,26 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
             .take(12)
     }
 
+    private val _csvExportPath = MutableStateFlow<String?>(null)
+    val csvExportPath: StateFlow<String?> = _csvExportPath.asStateFlow()
+
+    fun exportConnectionsCsv() {
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val since = now - 7L * 24L * 60L * 60L * 1000L
+            val connections = db.connectionDao().getRecentConnections(since, 5_000)
+            val stamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date(now))
+            val file = java.io.File(getApplication<android.app.Application>().filesDir, "connections_$stamp.csv")
+            file.bufferedWriter().use { w ->
+                w.write("timestamp,appName,packageName,domain,destinationIp,destinationPort,protocol,bytesSent,bytesReceived,encryptionStatus,tlsVersion,wasBlocked,wasBackground\n")
+                connections.forEach { c ->
+                    w.write("${c.timestamp},${c.appName.csvEscape()},${c.packageName.csvEscape()},${(c.domain ?: c.sniHostname ?: "").csvEscape()},${c.destinationIp},${c.destinationPort},${c.protocol},${c.bytesSent},${c.bytesReceived},${c.encryptionStatus},${c.tlsVersion ?: ""},${c.wasBlocked},${c.wasBackground}\n")
+                }
+            }
+            _csvExportPath.value = file.absolutePath
+        }
+    }
+
     fun exportItReport() {
         viewModelScope.launch {
             val now = System.currentTimeMillis()
@@ -220,6 +240,8 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
             _lastItReportPaths.value = files.jsonFile.absolutePath to files.pdfFile.absolutePath
         }
     }
+
+    private fun String.csvEscape(): String = "\"${replace("\"", "\"\"")}\""
 
     private fun formatBytes(bytes: Long): String {
         return when {

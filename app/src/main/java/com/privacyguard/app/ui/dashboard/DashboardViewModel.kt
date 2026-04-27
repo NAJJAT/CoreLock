@@ -16,8 +16,10 @@ import com.privacyguard.app.data.db.DnsAnomalyEntity
 import com.privacyguard.app.data.db.NetworkTrustEntity
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
 import com.privacyguard.app.data.repository.MetadataRepo
+import com.privacyguard.app.core.behavior.BehaviorSeverity
 import com.privacyguard.app.ui.components.formatBytes
 import com.privacyguard.app.vpn.KillSwitch
+import com.privacyguard.platform.android.NotificationHelper
 import com.privacyguard.platform.android.PrivacyVpnService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -64,6 +66,8 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     private val db = AppDatabase.getInstance(app)
     private val prefs = SettingsPreferences.getInstance(app)
     private val metadataRepo = MetadataRepo(db.connectionProfileDao())
+    private val notifHelper = NotificationHelper(app)
+    private val notifiedBehaviorKeys = mutableSetOf<String>()
 
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
@@ -110,6 +114,28 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         val profiles = db.connectionProfileDao().allProfiles().map { metadataRepo.toDomainForDashboard(it) }
         val behaviorSummaries = BehaviorDnaAnalyzer.summarizeAll(profiles)
         val behaviorAlerts = behaviorSummaries.sumOf { it.findings.size }
+
+        // Notify once per HIGH-severity behavior finding per VPN session
+        behaviorSummaries.forEach { summary ->
+            summary.findings
+                .filter { it.severity == BehaviorSeverity.HIGH }
+                .forEach { finding ->
+                    val key = "${finding.packageName}|${finding.hostname}|${finding.title}"
+                    if (notifiedBehaviorKeys.add(key) && prefs.notificationsEnabled.value) {
+                        notifHelper.postBehaviorAlert(
+                            packageName = finding.packageName,
+                            title = finding.title,
+                            summary = finding.summary,
+                            mainActivityClass = try {
+                                Class.forName("com.privacyguard.app.MainActivity")
+                            } catch (_: ClassNotFoundException) {
+                                DashboardViewModel::class.java
+                            },
+                        )
+                    }
+                }
+        }
+
         val trustSummary = NetworkTrustAnalyzer.summarize(getApplication(), recentConnections, recentAnomalies)
         db.networkTrustDao().upsert(
             NetworkTrustEntity(

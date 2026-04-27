@@ -395,7 +395,13 @@ class PrivacyVpnService : VpnService() {
                 if (dnsHandler.handle(ip, udp, pkg)) return
                 val decision = filterEngine.evaluate(uid, pkg, null, ip.destinationIp, udp.destinationPort, 17)
                 if (decision.isBlocked) { recordBlock(); return }
+                val udpKey = com.privacyguard.core.session.SessionKey.of(
+                    ip.sourceIp, udp.sourcePort, ip.destinationIp, udp.destinationPort, IpPacket.PROTO_UDP)
+                val isNewUdpSession = sessionTable.get(udpKey) == null
                 udpForwarder.handle(ip, udp, uid, pkg)
+                if (isNewUdpSession && pkg != null) {
+                    sessionTable.get(udpKey)?.wasBackground = !appTracker.isInForeground(pkg)
+                }
             }
             IpPacket.PROTO_TCP -> {
                 val tcp = TcpPacket.parse(ip) ?: return
