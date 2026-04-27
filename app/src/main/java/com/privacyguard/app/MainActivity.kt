@@ -9,6 +9,7 @@ import com.privacyguard.app.ui.theme.PrivacyGuardTheme
 import com.privacyguard.app.vpn.KillSwitch
 import com.privacyguard.app.vpn.VpnManager
 import com.privacyguard.app.workers.WeeklyReportWorker
+import com.privacyguard.platform.android.NotificationHelper
 import com.privacyguard.ui.AppNavHost
 
 class MainActivity : com.privacyguard.BaseActivity() {
@@ -30,10 +31,12 @@ class MainActivity : com.privacyguard.BaseActivity() {
         if (settings.weeklyReport.value) {
             WeeklyReportWorker.scheduleWeekly(this)
         }
+        val initialRoute = intent.getStringExtra(NotificationHelper.EXTRA_NAV_ROUTE)
         setContent {
             PrivacyGuardTheme {
                 AppNavHost(
                     onRequestVpn = { requestVpnPermission() },
+                    initialRoute = initialRoute,
                 )
             }
         }

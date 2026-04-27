@@ -58,6 +58,7 @@ private data class NavTab(val route: String, val label: String, val icon: ImageV
 @Composable
 fun AppNavHost(
     onRequestVpn: () -> Unit = {},
+    initialRoute: String? = null,
 ) {
     val context = LocalContext.current
     val settingsPreferences = remember(context) { SettingsPreferences.getInstance(context) }
@@ -93,6 +94,17 @@ fun AppNavHost(
             navController.navigate(target) {
                 popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
                 launchSingleTop = true
+            }
+        }
+    }
+
+    // Navigate to a specific tab when launched from a notification deep-link
+    LaunchedEffect(initialRoute) {
+        if (initialRoute != null && onboardingCompleted) {
+            navController.navigate(initialRoute) {
+                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
             }
         }
     }

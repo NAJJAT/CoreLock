@@ -229,7 +229,7 @@ class NotificationHelper(private val context: Context) {
         sni: String?,
         mainActivityClass: Class<*>,
     ) {
-        val tapIntent  = Intent(context, mainActivityClass)
+        val tapIntent  = Intent(context, mainActivityClass).putExtra(EXTRA_NAV_ROUTE, "crypto")
         val pendingTap = PendingIntent.getActivity(
             context, NOTIFICATION_ID_JA3_THREAT, tapIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
@@ -263,7 +263,7 @@ class NotificationHelper(private val context: Context) {
         newCertCount: Int,
         mainActivityClass: Class<*>,
     ) {
-        val tapIntent  = Intent(context, mainActivityClass)
+        val tapIntent  = Intent(context, mainActivityClass).putExtra(EXTRA_NAV_ROUTE, "crypto")
         val pendingTap = PendingIntent.getActivity(
             context, NOTIFICATION_ID_CT_CERT, tapIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
@@ -336,5 +336,8 @@ class NotificationHelper(private val context: Context) {
 
         /** Broadcast action to stop the VPN from the notification's Stop button. */
         const val ACTION_STOP_VPN = "com.privacyguard.action.STOP_VPN"
+
+        /** Intent extra: nav route to open when tapping a notification (e.g. "crypto"). */
+        const val EXTRA_NAV_ROUTE = "pg_nav_route"
     }
 }
