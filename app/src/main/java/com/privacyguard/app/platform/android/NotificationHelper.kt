@@ -255,6 +255,34 @@ class NotificationHelper(private val context: Context) {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Certificate Transparency Alert
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fun postCtCertAlert(
+        domain: String,
+        newCertCount: Int,
+        mainActivityClass: Class<*>,
+    ) {
+        val tapIntent  = Intent(context, mainActivityClass)
+        val pendingTap = PendingIntent.getActivity(
+            context, NOTIFICATION_ID_CT_CERT, tapIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val body = "$newCertCount new certificate${if (newCertCount > 1) "s" else ""} issued for $domain"
+        val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("Certificate Transparency: $domain")
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle()
+                .bigText("$body. Open the Crypto tab to review the issuer details."))
+            .setContentIntent(pendingTap)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
+        manager.notify(NOTIFICATION_ID_CT_CERT, notification)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Kill Switch Alert
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -304,6 +332,7 @@ class NotificationHelper(private val context: Context) {
         const val NOTIFICATION_ID_REPORT       = 3
         const val NOTIFICATION_ID_KILL_SWITCH  = 4
         const val NOTIFICATION_ID_JA3_THREAT   = 5
+        const val NOTIFICATION_ID_CT_CERT      = 6
 
         /** Broadcast action to stop the VPN from the notification's Stop button. */
         const val ACTION_STOP_VPN = "com.privacyguard.action.STOP_VPN"

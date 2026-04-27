@@ -259,6 +259,7 @@ class PrivacyVpnService : VpnService() {
         }
 
         // ==================== TLS ANALYSIS INITIALIZATION ====================
+        val ctNotifiedDomains = mutableSetOf<String>()
         ctMonitor = CtMonitor { domain, entries ->
             val detail = entries.firstOrNull()?.let { "issuer: ${it.issuerName.take(60)}" }
             scope.launch {
@@ -270,6 +271,9 @@ class PrivacyVpnService : VpnService() {
                     sni = domain,
                     detail = detail,
                 ))
+                if (ctNotifiedDomains.add(domain)) {
+                    notifHelper.postCtCertAlert(domain, entries.size, getMainActivityClass())
+                }
             }
         }
         ctMonitor.startMonitoring()
@@ -635,6 +639,8 @@ class PrivacyVpnService : VpnService() {
             connectionRepo.pruneOldRecords(retentionDays)
             metadataRepo.pruneOld(retentionDays.toLong() * 86_400_000L)
             dnsAnomalyRepo.pruneOld(retentionDays)
+            val tlsCutoff = System.currentTimeMillis() - retentionDays.toLong() * 86_400_000L
+            buildDatabase().tlsAlertDao().pruneOld(tlsCutoff)
         }
 
         com.privacyguard.app.vpn.KillSwitch.stopMonitoring()

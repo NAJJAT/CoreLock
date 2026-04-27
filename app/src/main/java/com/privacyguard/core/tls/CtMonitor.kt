@@ -34,6 +34,7 @@ class CtMonitor(
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val watchedDomains = ConcurrentHashMap.newKeySet<String>()
     private val lastChecked = ConcurrentHashMap<String, Long>()
+    private val lastMaxCertId = ConcurrentHashMap<String, Long>()
 
     fun addDomain(hostname: String) {
         if (watchedDomains.size >= MAX_WATCHED_DOMAINS) return
@@ -79,7 +80,14 @@ class CtMonitor(
                     )
                 }
             }
-            if (entries.isNotEmpty()) onNewCert(domain, entries)
+            val knownMaxId = lastMaxCertId[domain] ?: 0L
+            val newEntries = entries.filter { it.id > knownMaxId }
+            if (newEntries.isNotEmpty()) {
+                lastMaxCertId[domain] = entries.maxOf { it.id }
+                onNewCert(domain, newEntries)
+            } else if (entries.isNotEmpty()) {
+                lastMaxCertId[domain] = maxOf(lastMaxCertId[domain] ?: 0L, entries.maxOf { it.id })
+            }
         } catch (e: Exception) {
             Log.w(TAG, "CT check failed for $domain: ${e.message}")
         }
