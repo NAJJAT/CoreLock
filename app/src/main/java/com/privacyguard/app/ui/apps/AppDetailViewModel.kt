@@ -17,6 +17,7 @@ import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.db.ConnectionEntity
 import com.privacyguard.app.data.repository.MetadataRepo
 import com.privacyguard.app.data.repository.RulesRepo
+import com.privacyguard.app.data.repository.RuleSyncBus
 import com.privacyguard.core.filter.FilterRule
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -106,17 +107,19 @@ class AppDetailViewModel(
         observeTraffic()
         loadMismatchSignals()
         scanApk()
-        checkBlockStatus()
+        observeBlockStatus()
     }
 
-    private fun checkBlockStatus() {
+    private fun observeBlockStatus() {
         viewModelScope.launch {
-            val blocked = db.rulesDao().getAllRules().any { rule ->
-                rule.matchPackage == packageName &&
-                rule.action == "DENY" &&
-                rule.enabled
+            RuleSyncBus.version.collect {
+                val blocked = db.rulesDao().getAllRules().any { rule ->
+                    rule.matchPackage == packageName &&
+                    rule.action == "DENY" &&
+                    rule.enabled
+                }
+                _state.value = _state.value.copy(isBlocked = blocked)
             }
-            _state.value = _state.value.copy(isBlocked = blocked)
         }
     }
 
