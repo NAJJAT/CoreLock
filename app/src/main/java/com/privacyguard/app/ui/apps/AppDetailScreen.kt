@@ -123,7 +123,35 @@ fun AppDetailScreen(
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            if (state.isBlocked) PgDangerDim else PgAccentDim,
+                            RoundedCornerShape(12.dp),
+                        )
+                        .clickable { vm.toggleBlock() }
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = if (state.isBlocked) Icons.Default.Block else Icons.Default.Security,
+                            contentDescription = null,
+                            tint = if (state.isBlocked) PgDanger else PgAccent,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            if (state.isBlocked) "App Blocked — tap to unblock" else "App Active — tap to block",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = if (state.isBlocked) PgDanger else PgAccent,
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     DetailTab("Mismatch", selectedTab == 0) { selectedTab = 0 }
                     DetailTab("Connections", selectedTab == 1) { selectedTab = 1 }

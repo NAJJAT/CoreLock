@@ -85,6 +85,7 @@ class PrivacyVpnService : VpnService() {
     private val totalCleartext = AtomicLong(0)
 
     private lateinit var ctMonitor: CtMonitor
+    private val ja3NotifiedHashes = mutableSetOf<String>()
 
     companion object {
         private const val TAG = "PrivacyVpnService"
@@ -433,12 +434,14 @@ class PrivacyVpnService : VpnService() {
                 ))
             }
             Log.w(TAG, "JA3 THREAT: ${ja3Alert.malwareName} hash=${ja3Alert.hash} pkg=$pkg sni=${ja3Alert.sni}")
-            notifHelper.postJa3ThreatAlert(
-                malwareName = ja3Alert.malwareName,
-                packageName = ja3Alert.packageName,
-                sni = ja3Alert.sni,
-                mainActivityClass = getMainActivityClass(),
-            )
+            if (ja3NotifiedHashes.add(ja3Alert.hash)) {
+                notifHelper.postJa3ThreatAlert(
+                    malwareName = ja3Alert.malwareName,
+                    packageName = ja3Alert.packageName,
+                    sni = ja3Alert.sni,
+                    mainActivityClass = getMainActivityClass(),
+                )
+            }
         }
 
         // Cipher suite weakness check

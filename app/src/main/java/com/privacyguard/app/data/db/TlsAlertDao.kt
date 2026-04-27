@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TlsAlertDao {
@@ -13,6 +14,9 @@ interface TlsAlertDao {
 
     @Query("SELECT * FROM tls_alerts ORDER BY timestamp DESC LIMIT :limit")
     suspend fun recent(limit: Int): List<TlsAlertEntity>
+
+    @Query("SELECT * FROM tls_alerts ORDER BY timestamp DESC LIMIT :limit")
+    fun recentFlow(limit: Int): Flow<List<TlsAlertEntity>>
 
     @Query("SELECT * FROM tls_alerts WHERE alertType = 'JA3_THREAT' ORDER BY timestamp DESC LIMIT :limit")
     suspend fun recentJa3Threats(limit: Int): List<TlsAlertEntity>

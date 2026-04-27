@@ -16,12 +16,15 @@ import com.privacyguard.app.core.tracker.TrackerEntry
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.db.ConnectionEntity
 import com.privacyguard.app.data.repository.MetadataRepo
+import com.privacyguard.app.data.repository.RulesRepo
+import com.privacyguard.core.filter.FilterRule
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.Locale
+import java.util.UUID
 
 data class DomainRow(
     val domain: String,
@@ -80,6 +83,7 @@ data class AppDetailState(
     val isScanning: Boolean = false,
     val isLoadingDomains: Boolean = true,
     val isLoadingMismatch: Boolean = true,
+    val isBlocked: Boolean = false,
 )
 
 class AppDetailViewModel(
@@ -92,6 +96,7 @@ class AppDetailViewModel(
 
     private val db by lazy { AppDatabase.getInstance(app) }
     private val metadataRepo by lazy { MetadataRepo(db.connectionProfileDao()) }
+    private val rulesRepo by lazy { RulesRepo(db.rulesDao(), com.privacyguard.core.filter.FilterEngine()) }
     private val settings by lazy { com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(app) }
 
     private val _state = MutableStateFlow(AppDetailState(packageName = packageName, appName = appName))
@@ -101,6 +106,40 @@ class AppDetailViewModel(
         observeTraffic()
         loadMismatchSignals()
         scanApk()
+        checkBlockStatus()
+    }
+
+    private fun checkBlockStatus() {
+        viewModelScope.launch {
+            val blocked = db.rulesDao().getAllRules().any { rule ->
+                rule.matchPackage == packageName &&
+                rule.action == "DENY" &&
+                rule.enabled
+            }
+            _state.value = _state.value.copy(isBlocked = blocked)
+        }
+    }
+
+    fun toggleBlock() {
+        viewModelScope.launch {
+            val currentlyBlocked = _state.value.isBlocked
+            if (currentlyBlocked) {
+                val existingId = db.rulesDao().getAllRules()
+                    .firstOrNull { it.matchPackage == packageName && it.action == "DENY" }?.id
+                if (existingId != null) rulesRepo.deleteRule(existingId)
+            } else {
+                val rule = FilterRule(
+                    id           = UUID.randomUUID().toString(),
+                    label        = "Block $packageName",
+                    action       = FilterRule.Action.DENY,
+                    source       = FilterRule.Source.USER,
+                    priority     = FilterRule.HIGH_PRIORITY,
+                    matchPackage = packageName,
+                )
+                rulesRepo.addRule(rule)
+            }
+            _state.value = _state.value.copy(isBlocked = !currentlyBlocked)
+        }
     }
 
     private fun observeTraffic() {
