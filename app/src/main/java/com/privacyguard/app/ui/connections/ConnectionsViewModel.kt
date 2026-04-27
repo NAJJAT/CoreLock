@@ -39,7 +39,8 @@ data class Connection(
     val hostName: String? = null,
     val securityInfo: String = "Unknown",
     val encryptionInfo: String = "Unknown",
-    val payloadPreview: String? = null
+    val payloadPreview: String? = null,
+    val wasBackground: Boolean = false,
 )
 
 data class ConnectionFilter(
@@ -141,7 +142,8 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
                         hostName = it.sniHostname ?: it.domain,
                         securityInfo = it.encryptionStatus,
                         encryptionInfo = it.tlsVersion ?: "",
-                        payloadPreview = null
+                        payloadPreview = null,
+                        wasBackground = it.wasBackground,
                     ).withRuleState()
                 }
                 delay(1_000)

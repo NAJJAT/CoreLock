@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -181,16 +182,29 @@ fun ConnectionsScreen(
                     }
                 }
                 Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = listOf(
-                        connection.hostName ?: connection.destination,
-                        connection.securityInfo.takeIf { it.isNotBlank() && !it.equals("Unknown", ignoreCase = true) },
-                        connection.encryptionInfo.takeIf { it.isNotBlank() },
-                    ).filterNotNull().joinToString(" • "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = PgTextMuted,
-                    fontFamily = MonoFont
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (connection.wasBackground) {
+                        Text(
+                            "BG",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = PgWarning,
+                            modifier = Modifier
+                                .background(PgWarningDim, RoundedCornerShape(4.dp))
+                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+                    Text(
+                        text = listOf(
+                            connection.hostName ?: connection.destination,
+                            connection.securityInfo.takeIf { it.isNotBlank() && !it.equals("Unknown", ignoreCase = true) },
+                            connection.encryptionInfo.takeIf { it.isNotBlank() },
+                        ).filterNotNull().joinToString(" • "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PgTextMuted,
+                        fontFamily = MonoFont,
+                    )
+                }
             }
         }
         item { Spacer(modifier = Modifier.height(8.dp)) }
