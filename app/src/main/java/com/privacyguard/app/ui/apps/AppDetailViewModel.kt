@@ -25,7 +25,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.Locale
-import java.util.UUID
 
 data class DomainRow(
     val domain: String,
@@ -127,19 +126,19 @@ class AppDetailViewModel(
         viewModelScope.launch {
             val currentlyBlocked = _state.value.isBlocked
             if (currentlyBlocked) {
-                val existingId = db.rulesDao().getAllRules()
-                    .firstOrNull { it.matchPackage == packageName && it.action == "DENY" }?.id
-                if (existingId != null) rulesRepo.deleteRule(existingId)
+                // Delete all DENY rules for this package regardless of how they were created
+                db.rulesDao().getAllRules()
+                    .filter { it.matchPackage == packageName && it.action == FilterRule.Action.DENY.name }
+                    .forEach { rulesRepo.deleteRule(it.id) }
             } else {
-                val rule = FilterRule(
-                    id           = UUID.randomUUID().toString(),
+                rulesRepo.upsertRule(FilterRule(
+                    id           = AppsViewModel.packageBlockRuleId(packageName),
                     label        = "Block $packageName",
                     action       = FilterRule.Action.DENY,
                     source       = FilterRule.Source.USER,
                     priority     = FilterRule.HIGH_PRIORITY,
                     matchPackage = packageName,
-                )
-                rulesRepo.addRule(rule)
+                ))
             }
             _state.value = _state.value.copy(isBlocked = !currentlyBlocked)
         }

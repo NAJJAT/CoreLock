@@ -262,22 +262,28 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun togglePackageBlocked(packageName: String, blocked: Boolean) {
         viewModelScope.launch {
-            val ruleId = "pkg:block:$packageName"
             if (blocked) {
                 rulesRepo.upsertRule(
                     FilterRule(
-                        id = ruleId,
+                        id = packageBlockRuleId(packageName),
                         label = "Block $packageName",
                         action = FilterRule.Action.DENY,
                         source = FilterRule.Source.USER,
                         priority = FilterRule.HIGH_PRIORITY,
-                        matchPackage = packageName
+                        matchPackage = packageName,
                     )
                 )
             } else {
-                rulesRepo.deleteRule(ruleId)
+                // Delete any DENY rule matching this package, regardless of how it was created
+                db.rulesDao().getAllRules()
+                    .filter { it.matchPackage == packageName && it.action == FilterRule.Action.DENY.name }
+                    .forEach { rulesRepo.deleteRule(it.id) }
             }
             refresh()
         }
+    }
+
+    companion object {
+        fun packageBlockRuleId(packageName: String) = "pkg:block:$packageName"
     }
 }
