@@ -172,49 +172,45 @@ class TcpForwarder(
             }
         }
 
-        // ==================== PAYLOAD CAPTURE HOOK ====================
-
+        // ── PAYLOAD CAPTURE (fully async — never touches the forwarding path) ──
         if (BuildConfig.MITM_AVAILABLE && mitmConfig.isEnabled) {
+            val snap = tcp.data.copyOf()          // snapshot before forwarding
+            val sni  = session.tlsSni
+            val port = session.key.destinationPort
+            val enc  = session.encryptionStatus
+            val needStub = port == 443 && sni != null && !session.metadataLogged
+            if (needStub) session.metadataLogged = true   // set flag on capture thread
 
-            // ── HTTPS: log a metadata stub once per session so the inspector always
-            //    shows the connection even if we cannot decrypt the body.
-            if (session.key.destinationPort == 443 &&
-                session.tlsSni != null &&
-                !session.metadataLogged) {
-
-                session.metadataLogged = true
-                coroutineScope.launch {
-                    payloadLogRepository.saveLog(PayloadLogEntity(
-                        timestamp = System.currentTimeMillis(),
-                        sessionId = session.key.toString(),
-                        direction = "OUTBOUND",
-                        ownerPackage = session.ownerPackage,
-                        sniHostname = session.tlsSni,
-                        destinationIp = session.key.destinationIp,
-                        destinationPort = session.key.destinationPort,
-                        protocol = session.encryptionStatus.name,
-                        method = null,
-                        urlPath = null,
-                        headers = "{}",
-                        body = null,
-                        bodyEncoding = "binary",
-                        sizeBytes = tcp.data.size,
-                        piiRedacted = false,
-                        isMitmSuccess = false
-                    ))
+            coroutineScope.launch {
+                try {
+                    if (needStub) {
+                        payloadLogRepository.saveLog(PayloadLogEntity(
+                            timestamp    = System.currentTimeMillis(),
+                            sessionId    = session.key.toString(),
+                            direction    = "OUTBOUND",
+                            ownerPackage = session.ownerPackage,
+                            sniHostname  = sni,
+                            destinationIp   = session.key.destinationIp,
+                            destinationPort = port,
+                            protocol     = enc.name,
+                            method = null, urlPath = null,
+                            headers = "{}", body = null,
+                            bodyEncoding = "binary",
+                            sizeBytes    = snap.size,
+                            piiRedacted  = false,
+                            isMitmSuccess = false
+                        ))
+                    }
+                    if (enc == EncryptionStatus.CLEARTEXT) {
+                        bufferAndCapture("OUTBOUND", snap, session)
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Outbound capture failed: ${e.message}")
                 }
-                Log.d(TAG, "📋 HTTPS metadata stub saved for ${session.tlsSni}")
-            }
-
-            // ── HTTP (cleartext): buffer TCP segments until a complete HTTP message
-            //    (headers + full body) is assembled, then parse and save it.
-            if (session.encryptionStatus == EncryptionStatus.CLEARTEXT) {
-                bufferAndCapture("OUTBOUND", tcp.data, session)
             }
         }
-        // ==================== END PAYLOAD CAPTURE HOOK ====================
 
-        // Forward data to remote server (plain pass-through when MITM is off or not applicable)
+        // ── FORWARD — always runs, isolated from capture ──────────────────────
         val channel = session.tcpChannel ?: run {
             Log.w(TAG, "No channel for data packet: $key")
             return
@@ -222,14 +218,14 @@ class TcpForwarder(
         try {
             val buf = ByteBuffer.wrap(tcp.data)
             while (buf.hasRemaining()) {
-                channel.write(buf)
+                val written = channel.write(buf)
+                if (written <= 0) break   // Non-blocking: socket buffer full, stop spinning
             }
             session.recordOutbound(tcp.data.size)
             forwardedBytesOut.addAndGet(tcp.data.size.toLong())
             sendAckToDevice(ip, tcp, session)
-            Log.d(TAG, "Forwarded ${tcp.data.size}B → ${key.destinationIp}:${key.destinationPort}")
         } catch (e: Exception) {
-            Log.w(TAG, "Data forward failed for $key: ${e.message}")
+            Log.w(TAG, "Forward failed for $key: ${e.message}")
             sessionTable.remove(key)
             sendRstToDevice(ip, tcp)
             errorCount.incrementAndGet()
@@ -403,7 +399,10 @@ class TcpForwarder(
                     session.pendingMitmData = null
                     try {
                         val buf = ByteBuffer.wrap(pending)
-                        while (buf.hasRemaining()) channel.write(buf)
+                        while (buf.hasRemaining()) {
+                            val n = channel.write(buf)
+                            if (n <= 0) break
+                        }
                         Log.d(TAG, "Replayed ${pending.size}B ClientHello to MITM port")
                     } catch (e: Exception) {
                         Log.w(TAG, "Failed to replay MITM ClientHello: ${e.message}")
@@ -435,13 +434,17 @@ class TcpForwarder(
         session.recordInbound(n)
         forwardedBytesIn.addAndGet(n.toLong())
 
-        // Capture HTTP responses — buffer until the full response body arrives.
+        // Capture response async — injectDataToDevice always runs regardless
         if (BuildConfig.MITM_AVAILABLE && mitmConfig.isEnabled &&
             session.encryptionStatus == EncryptionStatus.CLEARTEXT) {
-            bufferAndCapture("INBOUND", data.copyOf(), session)
+            val snap = data.copyOf()
+            coroutineScope.launch {
+                try { bufferAndCapture("INBOUND", snap, session) }
+                catch (e: Exception) { Log.w(TAG, "Inbound capture failed: ${e.message}") }
+            }
         }
 
-        injectDataToDevice(session, data)
+        injectDataToDevice(session, data)   // always executes
         Log.d(TAG, "Read $n bytes from server → injected to device")
     }
 

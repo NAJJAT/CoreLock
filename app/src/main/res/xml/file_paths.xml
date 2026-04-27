@@ -8,8 +8,8 @@
         name="downloads"
         path="Download/PrivacyGuard/" />
 
-    <!-- MITM: For CA certificate export (required for CA installation) -->
-    <external-downloads-path
+    <!-- MITM: CA certificate export — covers API ≤ 28 (getExternalStorageDirectory()/Download/) -->
+    <external-path
         name="ca_downloads"
         path="Download/" />
 

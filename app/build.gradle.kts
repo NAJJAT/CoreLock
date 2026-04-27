@@ -158,6 +158,9 @@ dependencies {
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.guava)
+    // MDM / Device Admin
+    implementation("androidx.legacy:legacy-preference-v14:1.0.0")
+    implementation("androidx.enterprise:enterprise-feedback:1.1.0")
     ksp(libs.androidx.room.compiler)
 
     // ==================== MITM DEPENDENCIES ====================

@@ -43,6 +43,7 @@ import com.privacyguard.app.data.repository.PayloadLogRepositoryImpl
 import com.privacyguard.domain.repository.PayloadLogRepository
 import com.privacyguard.vpn.mitm.MitmConfig
 import com.privacyguard.vpn.mitm.PayloadShipper
+import com.privacyguard.vpn.mitm.CaManager
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -134,8 +135,9 @@ private sealed class PScreen {
 @Composable
 fun MitmScreen() {
     val context = LocalContext.current
-    val mitmConfig = remember { MitmConfig(context) }
-    val database = remember { AppDatabase.getInstance(context) }
+    val mitmConfig  = remember { MitmConfig(context) }
+    val caManager   = remember { CaManager(context) }          // shared with CaptureListScreen
+    val database    = remember { AppDatabase.getInstance(context) }
     val repository: PayloadLogRepository = remember { PayloadLogRepositoryImpl(database.payloadLogDao()) }
     val payloadShipper = remember { PayloadShipper(mitmConfig) }
     val vm: MitmViewModel = viewModel(factory = MitmViewModelFactory(mitmConfig, repository, payloadShipper))
@@ -143,14 +145,30 @@ fun MitmScreen() {
     var screen by remember { mutableStateOf<PScreen>(PScreen.List) }
     var showConsentDialog by remember { mutableStateOf(false) }
 
+    // Show consent dialog whenever MITM is toggled on without prior consent.
     LaunchedEffect(uiState.isEnabled, uiState.isConsentValid) {
         if (uiState.isEnabled && !uiState.isConsentValid) showConsentDialog = true
+    }
+
+    // After the user accepts consent the ViewModel emits one installCaEvent.
+    // We initialize the CA (generates it if this is the first run) and immediately
+    // launch the system certificate installer — the user just sees:
+    //   "Name the certificate: PrivacyGuard CA  [OK]"
+    // and taps OK. No manual navigation needed.
+    LaunchedEffect(Unit) {
+        vm.installCaEvent.collect {
+            caManager.initialize()                                  // generates CA if absent
+            val helper = CaInstallHelper(context, caManager)
+            val intent = helper.getKeyChainInstallIntent()          // system dialog, no file write
+                ?: helper.getFileInstallIntent()                    // fallback: Downloads + ACTION_VIEW
+            intent?.let { context.startActivity(it) }
+        }
     }
 
     Box(Modifier.fillMaxSize().background(Bg)) {
         when (val s = screen) {
             is PScreen.List -> CaptureListScreen(
-                uiState = uiState, vm = vm,
+                uiState = uiState, vm = vm, caManager = caManager,
                 onItemClick = { log -> screen = PScreen.Detail(log) },
                 onStatsClick = { screen = PScreen.Analytics }
             )
@@ -168,18 +186,20 @@ fun MitmScreen() {
             AlertDialog(
                 onDismissRequest = { showConsentDialog = false },
                 containerColor = Bg2,
-                title = { Text("Legal Consent Required", color = Red, fontWeight = FontWeight.Bold) },
+                title = { Text("Enable Traffic Inspection", color = Ac, fontWeight = FontWeight.Bold) },
                 text = {
                     Text(
-                        "This feature intercepts and logs all HTTPS traffic including usernames, " +
-                                "passwords, messages, and personal data.\n\n" +
-                                "Only enable on company-managed devices with written employee consent.",
-                        color = TxS, fontSize = 13.sp
+                        "PrivacyGuard will intercept and log your HTTPS traffic so you can " +
+                        "inspect every request and response on this device.\n\n" +
+                        "After you confirm, the app will ask you to install a CA certificate. " +
+                        "This is required to decrypt HTTPS. The certificate stays on your device " +
+                        "and can be removed at any time from Settings → Security → Certificates.",
+                        color = TxS, fontSize = 13.sp, lineHeight = 19.sp
                     )
                 },
                 confirmButton = {
                     TextButton(onClick = { vm.recordConsent(); showConsentDialog = false }) {
-                        Text("I Confirm — Enable", color = Ac)
+                        Text("Confirm & Install Certificate", color = Ac, fontWeight = FontWeight.Bold)
                     }
                 },
                 dismissButton = {
@@ -198,9 +218,12 @@ fun MitmScreen() {
 private fun CaptureListScreen(
     uiState: MitmUiState,
     vm: MitmViewModel,
+    caManager: CaManager,
     onItemClick: (PayloadLogEntity) -> Unit,
     onStatsClick: () -> Unit,
 ) {
+    val context = LocalContext.current
+
     Column(Modifier.fillMaxSize().background(Bg)) {
         // Top bar
         Row(
@@ -217,6 +240,18 @@ private fun CaptureListScreen(
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // CA certificate install button
+                IconButton(onClick = {
+                    val helper = CaInstallHelper(context, caManager)
+                    // Prefer KeyChain (no file write) → file install → share
+                    val intent = helper.getKeyChainInstallIntent()
+                        ?: helper.getFileInstallIntent()
+                        ?: helper.getShareIntent()
+                    intent?.let { context.startActivity(it) }
+                }) {
+                    Icon(Icons.Default.Lock, null, tint = Ac, modifier = Modifier.size(20.dp))
+                }
+
                 Switch(
                     checked = uiState.isEnabled,
                     onCheckedChange = { on -> if (on) vm.enableMitm() else vm.disableMitm() },
@@ -283,6 +318,18 @@ private fun CaptureListScreen(
             }
         }
 
+        // CA card — shown only when CA is not yet installed (helper checks quickly).
+        if (uiState.isEnabled) {
+            CaInstallCard(context = context, caManager = caManager,
+                onInstall = {
+                    val helper = CaInstallHelper(context, caManager)
+                    val intent = helper.getKeyChainInstallIntent()
+                        ?: helper.getFileInstallIntent()
+                    intent?.let { context.startActivity(it) }
+                }
+            )
+        }
+
         // List or empty
         if (uiState.recentLogs.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -302,6 +349,94 @@ private fun CaptureListScreen(
         }
     }
 }
+
+// ── CA INSTALL CARD ───────────────────────────────────────────────────────────
+@Composable
+private fun CaInstallCard(
+    context: android.content.Context,
+    caManager: CaManager,
+    onInstall: () -> Unit,
+) {
+    val helper = remember(context, caManager) { CaInstallHelper(context, caManager) }
+    val caReady = remember { helper.isCaGenerated() }
+
+    Surface(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        color = if (caReady) Amber.copy(alpha = 0.08f) else Red.copy(alpha = 0.08f),
+        shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(
+            1.dp,
+            if (caReady) Amber.copy(alpha = 0.35f) else Red.copy(alpha = 0.35f)
+        )
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                Icons.Default.Lock,
+                contentDescription = null,
+                tint = if (caReady) Amber else Red,
+                modifier = Modifier.size(18.dp)
+            )
+            Column(Modifier.weight(1f)) {
+                Text(
+                    if (caReady) "Install CA to decrypt HTTPS" else "CA not generated",
+                    color = if (caReady) Amber else Red,
+                    fontSize = 11.sp, fontWeight = FontWeight.Bold
+                )
+                Text(
+                    if (caReady)
+                        "Tap to install the PrivacyGuard CA on this device. " +
+                        "After installing, HTTPS request/response bodies will be visible."
+                    else
+                        "Enable the VPN first — the CA is generated on first start.",
+                    color = TxS, fontSize = 10.sp, lineHeight = 15.sp
+                )
+            }
+            if (caReady) {
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Primary: KeyChain install (best UX)
+                    Surface(
+                        onClick = onInstall,
+                        color = Amber.copy(alpha = 0.18f),
+                        shape = RoundedCornerShape(6.dp),
+                        border = BorderStroke(1.dp, Amber.copy(alpha = 0.4f))
+                    ) {
+                        Text(
+                            "Install",
+                            Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            color = Amber, fontSize = 10.sp, fontWeight = FontWeight.Bold
+                        )
+                    }
+                    // Secondary: save file to Downloads
+                    Surface(
+                        onClick = {
+                            val result = helper.exportCaToDownloads()
+                            if (result != null) {
+                                // Also try to open it
+                                val intent = helper.getFileInstallIntent()
+                                intent?.let { context.startActivity(it) }
+                            }
+                        },
+                        color = Bg3,
+                        shape = RoundedCornerShape(6.dp),
+                        border = BorderStroke(1.dp, LineCol)
+                    ) {
+                        Text(
+                            "Save .crt",
+                            Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            color = TxS, fontSize = 10.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun FilterPill(label: String, selected: Boolean, accent: Color = Ac, onClick: () -> Unit) {
@@ -336,7 +471,6 @@ private fun PayloadListItem(log: PayloadLogEntity, onClick: () -> Unit) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(appName, color = TxP, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                // Show method badge; if method is null (HTTPS metadata), show protocol tag
                 if (log.method != null) {
                     MethodBadge(log.method)
                 } else {
@@ -582,11 +716,11 @@ private fun PayloadTab(log: PayloadLogEntity) {
                         Spacer(Modifier.height(4.dp))
                         Text(
                             "This connection uses HTTPS. The payload is encrypted end-to-end " +
-                            "and cannot be read without the PrivacyGuard CA certificate installed " +
-                            "on this device as a trusted authority.\n\n" +
-                            "App: ${log.ownerPackage ?: "unknown"}\n" +
-                            "Host: ${log.sniHostname ?: log.destinationIp}\n" +
-                            "Sent: ${fmtBytes(log.sizeBytes)}",
+                                    "and cannot be read without the PrivacyGuard CA certificate installed " +
+                                    "on this device as a trusted authority.\n\n" +
+                                    "App: ${log.ownerPackage ?: "unknown"}\n" +
+                                    "Host: ${log.sniHostname ?: log.destinationIp}\n" +
+                                    "Sent: ${fmtBytes(log.sizeBytes)}",
                             color = TxS, fontSize = 11.sp, lineHeight = 17.sp
                         )
                     }
@@ -702,7 +836,7 @@ private fun toHexDump(s: String): String {
         val chunk = bytes.slice(i until minOf(i + 16, bytes.size))
         val hex = chunk.joinToString(" ") { "%02x".format(it) }
         val ascii = chunk.joinToString("") { if (it.toInt() in 32..126) it.toInt().toChar().toString() else "." }
-        sb.appendLine("${"%04x".format(i)}  ${hex.padEnd(47)}  $ascii")
+        sb.appendLine("${"%04x".format(i)}  $hex  $ascii")
     }
     return sb.toString().trimEnd()
 }
@@ -891,5 +1025,37 @@ private fun FieldsTab(log: PayloadLogEntity) {
             HorizontalDivider(color = LineCol, thickness = 0.5.dp)
         }
         item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+// أضف هذه الدالة في أي مكان في الملف
+@Composable
+private fun CertificateStatusCard(caManager: CaManager) {
+    val isInstalled = remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        // محاولة التحقق من وجود الشهادة
+        isInstalled.value = caManager.getCaCert() != null
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        color = if (isInstalled.value) Ac.copy(alpha = 0.1f) else Red.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, if (isInstalled.value) Ac.copy(alpha = 0.3f) else Red.copy(alpha = 0.3f))
+    ) {
+        Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                if (isInstalled.value) Icons.Default.CheckCircle else Icons.Default.Warning,
+                null,
+                tint = if (isInstalled.value) Ac else Red,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                if (isInstalled.value) "✓ CA Certificate Installed" else "✗ CA Certificate NOT Installed",
+                color = if (isInstalled.value) Ac else Red,
+                fontSize = 11.sp
+            )
+        }
     }
 }

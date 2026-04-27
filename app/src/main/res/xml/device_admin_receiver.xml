@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Device Admin policy declaration.
+
+    For Device Owner / Profile Owner deployments the policies listed here are
+    irrelevant — owners have implicit access to all DevicePolicyManager APIs.
+    This file is only shown to the user when they manually activate Device Admin
+    from Settings, which is NOT the normal enterprise enrollment flow.
+
+    Keep this minimal: requesting scary policies (wipe-data, disable-camera, etc.)
+    from regular users will cause them to decline and will trigger Google Play
+    policy reviews.
+-->
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-policies>
+        <!-- No elevated policies needed for CA cert installation via Device Owner -->
+    </uses-policies>
+</device-admin>

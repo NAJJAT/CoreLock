@@ -4,23 +4,35 @@
     <shared>
       <config />
     </shared>
+    <layouts>
+      <layout url="file://$PROJECT_DIR$/app/src/main/res/xml/application_restrictions.xml">
+        <config>
+          <theme>@style/Theme.Privacyguard</theme>
+        </config>
+      </layout>
+    </layouts>
   </component>
   <component name="AutoImportSettings">
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c3310cda-f85f-4df1-9ea9-882636f15d4e" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.gradle/9.4.1/executionHistory/executionHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.4.1/executionHistory/executionHistory.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.4.1/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.4.1/executionHistory/executionHistory.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.4.1/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.4.1/fileHashes/fileHashes.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.4.1/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.4.1/fileHashes/fileHashes.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.4.1/fileHashes/resourceHashesCache.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.4.1/fileHashes/resourceHashesCache.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/deploymentTargetSelector.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/deploymentTargetSelector.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/app/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/core/session/Session.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/core/session/Session.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/platform/android/PrivacyVpnService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/platform/android/PrivacyVpnService.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/mitm/CaInstallHelper.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/mitm/CaInstallHelper.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/mitm/MitmScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/mitm/MitmScreen.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/mitm/MitmViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/mitm/MitmViewModel.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/forwarder/TcpForwarder.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/forwarder/TcpForwarder.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/CaManager.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/CaManager.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/MitmEngine.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/MitmEngine.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/PinningDetector.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/PinningDetector.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/CaInstallHelper.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/CaInstallHelper.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/xml/file_paths.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/res/xml/file_paths.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,6 +71,7 @@
         <option value="Class" />
         <option value="Kotlin Class" />
         <option value="Kotlin File" />
+        <option value="resourceFile" />
       </list>
     </option>
   </component>
@@ -179,22 +192,22 @@
       <map>
         <entry key="com.privacyguard.app">
           <value>
-            <CheckInfo lastCheckTimestamp="1777151183342" />
+            <CheckInfo lastCheckTimestamp="1777238431439" />
           </value>
         </entry>
         <entry key="com.privacyguard.app.enterprise">
           <value>
-            <CheckInfo lastCheckTimestamp="1777152277042" />
+            <CheckInfo lastCheckTimestamp="1777238746662" />
           </value>
         </entry>
         <entry key="com.privacyguard.app.enterprise.test">
           <value>
-            <CheckInfo lastCheckTimestamp="1777152277043" />
+            <CheckInfo lastCheckTimestamp="1777238746660" />
           </value>
         </entry>
         <entry key="com.privacyguard.app.test">
           <value>
-            <CheckInfo lastCheckTimestamp="1777151183342" />
+            <CheckInfo lastCheckTimestamp="1777238431441" />
           </value>
         </entry>
       </map>

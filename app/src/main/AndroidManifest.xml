@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Network -->
+    <!-- ── Network ────────────────────────────────────────────────────────── -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
@@ -11,31 +11,25 @@
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
-    <!-- Foreground service — VPN requires specialUse on API 34+ -->
+    <!-- ── Foreground service ─────────────────────────────────────────────── -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
-    <!-- Wake lock for background processing -->
+    <!-- ── Other system permissions ──────────────────────────────────────── -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-
-    <!-- App usage stats for per-app attribution (protected; user grants in Settings) -->
     <uses-permission
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
-
-    <!-- Boot receiver — restart VPN after reboot (FR-VPN-10) -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- External storage for PCAP export (API ≤ 28 only) -->
+    <!-- External storage — only on API ≤ 28 (scoped storage on 29+) -->
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
-
-    <!-- Post notifications (required API 33+) -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".PrivacyGuardApplication"
@@ -48,10 +42,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Privacyguard">
 
-        <activity
-            android:name=".vpn.mitm.PayloadInspectorActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Privacyguard" />
+        <!-- ── Activities ─────────────────────────────────────────────────── -->
 
         <activity
             android:name=".MainActivity"
@@ -63,10 +54,17 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".vpn.mitm.PayloadInspectorActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Privacyguard" />
+
+        <!-- ── VPN service ────────────────────────────────────────────────── -->
+
         <!--
-            Primary VPN service — must carry android.net.VpnService intent-filter
-            so that VpnService.prepare() grants permission to this class.
-            foregroundServiceType="specialUse" is required for API 34+ VPN services.
+            foregroundServiceType="specialUse" is required on API 34+.
+            The PROPERTY_SPECIAL_USE_FGS_SUBTYPE property is required
+            for Play Store review of specialUse foreground services.
         -->
         <service
             android:name="com.privacyguard.platform.android.PrivacyVpnService"
@@ -76,13 +74,14 @@
             <intent-filter>
                 <action android:name="android.net.VpnService" />
             </intent-filter>
-            <!-- Required metadata for specialUse FGS on API 34+ -->
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="VPN" />
         </service>
 
-        <!-- Boot receiver — re-starts VPN if it was active before shutdown (FR-VPN-10) -->
+        <!-- ── Receivers ──────────────────────────────────────────────────── -->
+
+        <!-- Restart VPN after device reboot -->
         <receiver
             android:name=".vpn.BootReceiver"
             android:exported="true">
@@ -92,12 +91,49 @@
             </intent-filter>
         </receiver>
 
-        <!-- Notification dismiss receiver -->
         <receiver
             android:name=".core.utils.NotificationDismissReceiver"
             android:exported="false" />
 
-        <!-- FileProvider for PCAP export and CA certificate export -->
+        <!--
+            Device / Profile Owner receiver for MDM / enterprise deployment.
+
+            android:exported="true" is REQUIRED — the OS binds Device Admin
+            receivers via the BIND_DEVICE_ADMIN permission. Without exported=true
+            Device Admin activation silently fails.
+
+            Only DEVICE_ADMIN_ENABLED goes here; APPLICATION_RESTRICTIONS_CHANGED
+            is handled by the separate MdmConfigReceiver below (different permission
+            requirement — the OS sends that broadcast without BIND_DEVICE_ADMIN).
+        -->
+        <receiver
+            android:name="com.privacyguard.mdm.DeviceAdminReceiver"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin_receiver" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
+        <!--
+            Separate receiver for managed-configuration changes.
+            The OS sends APPLICATION_RESTRICTIONS_CHANGED without the
+            BIND_DEVICE_ADMIN permission, so this receiver must NOT carry
+            that permission restriction.
+        -->
+        <receiver
+            android:name="com.privacyguard.mdm.MdmConfigReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.APPLICATION_RESTRICTIONS_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ── Providers ──────────────────────────────────────────────────── -->
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -107,6 +143,17 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- ── MDM / AppConfig metadata ───────────────────────────────────── -->
+
+        <!--
+            Declares the app's managed-configuration schema.
+            EMM consoles (Intune, Workspace ONE, Jamf, etc.) read this to build
+            their policy UI. Values are delivered at runtime via RestrictionsManager.
+        -->
+        <meta-data
+            android:name="android.content.APP_RESTRICTIONS"
+            android:resource="@xml/application_restrictions" />
 
     </application>
 

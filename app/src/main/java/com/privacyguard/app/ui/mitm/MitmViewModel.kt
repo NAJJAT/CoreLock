@@ -35,6 +35,11 @@ class MitmViewModel(
     private val _uiState = MutableStateFlow(MitmUiState())
     val uiState: StateFlow<MitmUiState> = _uiState.asStateFlow()
 
+    // One-shot event: fires after the user accepts consent so the Screen can
+    // immediately launch the system CA certificate install dialog.
+    private val _installCaEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val installCaEvent: SharedFlow<Unit> = _installCaEvent.asSharedFlow()
+
     init {
         observeSettings()
         observeLogs()
@@ -91,6 +96,8 @@ class MitmViewModel(
             mitmConfig.recordConsent()
             _uiState.update { it.copy(isConsentValid = true) }
             enableMitm()
+            // Trigger the CA certificate install dialog in the UI layer.
+            _installCaEvent.tryEmit(Unit)
         }
     }
 

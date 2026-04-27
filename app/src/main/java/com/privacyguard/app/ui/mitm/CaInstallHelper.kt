@@ -1,10 +1,14 @@
 package com.privacyguard.app.ui.mitm
 
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.MediaStore
 import android.provider.Settings
+import android.security.KeyChain
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
@@ -12,156 +16,227 @@ import com.privacyguard.vpn.mitm.CaManager
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.charset.StandardCharsets
-import java.util.Base64
 
+/**
+ * Handles CA certificate export and installation on all supported API levels.
+ *
+ * Strategy:
+ *  - Primary path (all APIs): KeyChain.createInstallIntent() — no file write, opens
+ *    the system credential installer directly with the cert pre-loaded.
+ *  - Secondary path (file export): writes to Downloads for manual install via Settings.
+ *      API ≤ 28  →  direct FileOutputStream + FileProvider URI
+ *      API 29+   →  MediaStore insertion (scoped storage, no extra permission needed)
+ */
 class CaInstallHelper(
     private val context: Context,
-    private val caManager: CaManager
+    private val caManager: CaManager,
 ) {
-
     companion object {
         private const val TAG = "CaInstallHelper"
-        private const val CA_FILENAME = "privacyguard_ca.crt"
-        private const val NOTICE_FILENAME = "privacyguard-enterprise-inspection-notice.txt"
-        private const val CERTIFICATE_INSTALLER_ACTION = "android.settings.CERTIFICATE_INSTALLER"
-
-        const val WARNING_TEXT = """
-PrivacyGuard Enterprise Inspection Notice
-
-This feature intercepts and logs all HTTPS traffic including usernames, 
-passwords, messages, and personal data.
-
-This enterprise build is intended for company-managed devices only.
-Any certificate installed for traffic inspection must only be used where
-employees have provided written consent and local law permits monitoring.
-Never install enterprise inspection trust material on personal devices.
-
-By installing this certificate, you acknowledge that:
-1. All HTTPS traffic will be decrypted and inspected
-2. Payloads may be stored locally and/or shipped to a SIEM system
-3. You have obtained necessary legal consent for monitoring
-
-If you do not agree, do NOT install this certificate.
-        """
+        const val CA_FILENAME = "privacyguard_ca.crt"
+        private const val CA_MIME = "application/x-x509-ca-cert"
     }
 
-    fun exportCaToDownloads(): File? {
-        return try {
-            val certPem = caManager.getCaCertPem()
-            if (certPem.isEmpty()) {
-                Log.e(TAG, "No CA certificate available")
-                return null
-            }
+    // ── Sealed result carrying the export URI ─────────────────────────────────
 
-            val downloadsDir = Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_DOWNLOADS
-            )
-            if (!downloadsDir.exists()) {
-                downloadsDir.mkdirs()
-            }
+    sealed class ExportResult {
+        abstract val uri: Uri
 
-            val caFile = File(downloadsDir, CA_FILENAME)
+        /** API ≤ 28: physical file written to Downloads, served through FileProvider. */
+        data class LegacyFile(val file: File, override val uri: Uri) : ExportResult()
 
-            FileOutputStream(caFile).use { output ->
-                output.write(certPem.toByteArray(StandardCharsets.UTF_8))
-            }
+        /** API 29+: entry created in the MediaStore Downloads collection. */
+        data class MediaStore(override val uri: Uri) : ExportResult()
+    }
 
-            Log.i(TAG, "CA exported to ${caFile.absolutePath}")
-            caFile
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to export CA", e)
-            null
+    // ── Primary install path ──────────────────────────────────────────────────
+
+    /**
+     * Returns an intent that opens the system credential installer with the CA
+     * certificate pre-loaded. This is the cleanest path — no file write required.
+     * The user only needs to confirm the install and give the cert a name.
+     *
+     * Returns null if the CA has not been generated yet.
+     */
+    fun getKeyChainInstallIntent(): Intent? {
+        val cert = caManager.getCaCert()
+        if (cert == null) {
+            Log.e(TAG, "getKeyChainInstallIntent: CA not yet generated")
+            return null
         }
-    }
-
-    fun exportNoticeFile(): File {
-        val downloadsDir = Environment.getExternalStoragePublicDirectory(
-            Environment.DIRECTORY_DOWNLOADS
-        )
-        if (!downloadsDir.exists()) {
-            downloadsDir.mkdirs()
-        }
-        val file = File(downloadsDir, NOTICE_FILENAME)
-        file.writeText(WARNING_TEXT.trimIndent(), StandardCharsets.UTF_8)
-        return file
-    }
-
-    fun getInstallIntent(): Intent {
-        return Intent(Settings.ACTION_SECURITY_SETTINGS).apply {
+        return KeyChain.createInstallIntent().apply {
+            putExtra(KeyChain.EXTRA_CERTIFICATE, cert.encoded)
+            putExtra(KeyChain.EXTRA_NAME, "PrivacyGuard CA")
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
     }
 
-    fun getCertificateInstallerIntent(): Intent? {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Intent(CERTIFICATE_INSTALLER_ACTION).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
+    // ── Secondary install path (export to Downloads) ──────────────────────────
+
+    /**
+     * Writes the CA PEM to the device's Downloads folder.
+     *
+     * Returns an [ExportResult] on success (carries the URI to open/share the file),
+     * or null if the CA is missing or the write fails.
+     *
+     * API routing:
+     *  - API 29+ → MediaStore (scoped storage, no permission needed)
+     *  - API ≤ 28 → direct FileOutputStream (WRITE_EXTERNAL_STORAGE capped at 28)
+     */
+    fun exportCaToDownloads(): ExportResult? {
+        val certPem = caManager.getCaCertPem()
+        if (certPem.isEmpty()) {
+            Log.e(TAG, "exportCaToDownloads: CA not available — initialize CaManager first")
+            return null
+        }
+        Log.d(TAG, "exportCaToDownloads: certPem.length=${certPem.length}, API=${Build.VERSION.SDK_INT}")
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            exportViaMediaStore(certPem)
         } else {
+            exportViaFilesystem(certPem)
+        }
+    }
+
+    // ── API 29+ ───────────────────────────────────────────────────────────────
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun exportViaMediaStore(certPem: String): ExportResult? {
+        Log.d(TAG, "exportViaMediaStore: inserting into MediaStore.Downloads")
+        val resolver = context.contentResolver
+
+        // Remove any previous copy so the file manager doesn't show duplicates.
+        resolver.query(
+            android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+            arrayOf(android.provider.MediaStore.Downloads._ID),
+            "${android.provider.MediaStore.Downloads.DISPLAY_NAME} = ?",
+            arrayOf(CA_FILENAME),
+            null,
+        )?.use { cursor ->
+            while (cursor.moveToNext()) {
+                val id = cursor.getLong(0)
+                val deleteUri = Uri.withAppendedPath(
+                    android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    id.toString()
+                )
+                resolver.delete(deleteUri, null, null)
+                Log.d(TAG, "exportViaMediaStore: deleted stale entry id=$id")
+            }
+        }
+
+        val values = ContentValues().apply {
+            put(android.provider.MediaStore.Downloads.DISPLAY_NAME, CA_FILENAME)
+            put(android.provider.MediaStore.Downloads.MIME_TYPE, CA_MIME)
+            put(android.provider.MediaStore.Downloads.IS_PENDING, 1)
+        }
+
+        val insertUri = resolver.insert(
+            android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values
+        )
+        if (insertUri == null) {
+            Log.e(TAG, "exportViaMediaStore: MediaStore.insert returned null")
+            return null
+        }
+
+        return try {
+            resolver.openOutputStream(insertUri)?.use { out ->
+                out.write(certPem.toByteArray(StandardCharsets.UTF_8))
+                out.flush()
+                Log.d(TAG, "exportViaMediaStore: wrote ${certPem.length} bytes")
+            } ?: run {
+                Log.e(TAG, "exportViaMediaStore: openOutputStream returned null")
+                resolver.delete(insertUri, null, null)
+                return null
+            }
+
+            // Mark as complete — makes it visible to other apps / file manager.
+            values.clear()
+            values.put(android.provider.MediaStore.Downloads.IS_PENDING, 0)
+            resolver.update(insertUri, values, null, null)
+
+            Log.i(TAG, "exportViaMediaStore: ✅ saved — uri=$insertUri")
+            ExportResult.MediaStore(insertUri)
+        } catch (e: Exception) {
+            Log.e(TAG, "exportViaMediaStore: write failed", e)
+            resolver.delete(insertUri, null, null)
             null
         }
     }
 
-    fun verifyCaInstalled(): Boolean {
+    // ── API ≤ 28 ──────────────────────────────────────────────────────────────
+
+    private fun exportViaFilesystem(certPem: String): ExportResult? {
+        Log.d(TAG, "exportViaFilesystem: writing to public Downloads")
         return try {
-            caManager.getCaCert() != null
-        } catch (e: Exception) {
-            Log.e(TAG, "CA verification failed", e)
-            false
-        }
-    }
+            val downloadsDir = Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS
+            )
+            if (!downloadsDir.exists()) downloadsDir.mkdirs()
 
-    fun getCaShareIntent(): Intent? {
-        val caFile = exportCaToDownloads() ?: return null
-
-        val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            caFile
-        )
-
-        return Intent(Intent.ACTION_SEND).apply {
-            type = "application/x-x509-ca-cert"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-    }
-
-    fun getNoticeShareIntent(): Intent {
-        val file = exportNoticeFile()
-        val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file
-        )
-        return Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun getCaBase64ForMdm(): String {
-        return try {
-            val cert = caManager.getCaCert()
-            if (cert != null) {
-                Base64.getEncoder().encodeToString(cert.encoded)
-            } else {
-                ""
+            val caFile = File(downloadsDir, CA_FILENAME)
+            FileOutputStream(caFile).use { out ->
+                out.write(certPem.toByteArray(StandardCharsets.UTF_8))
+                out.flush()
             }
+
+            val fileUri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                caFile,
+            )
+            Log.i(TAG, "exportViaFilesystem: ✅ saved — path=${caFile.absolutePath}")
+            ExportResult.LegacyFile(caFile, fileUri)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to encode CA certificate", e)
-            ""
+            Log.e(TAG, "exportViaFilesystem: failed", e)
+            null
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun getNoticeBase64(): String = Base64.getEncoder().encodeToString(
-        WARNING_TEXT.trimIndent().toByteArray(StandardCharsets.UTF_8)
-    )
+    // ── Convenience intents ───────────────────────────────────────────────────
 
-    fun showInstallWarning(onConfirm: () -> Unit) {
-        onConfirm()
+    /**
+     * ACTION_VIEW intent that opens the system certificate installer for the
+     * exported file. Use as a fallback when [getKeyChainInstallIntent] is unavailable.
+     */
+    fun getFileInstallIntent(): Intent? {
+        val result = exportCaToDownloads() ?: return null
+        return Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(result.uri, CA_MIME)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
     }
+
+    /**
+     * ACTION_SEND share intent — useful if neither install intent works on the device.
+     * The user can open the cert from any file manager app.
+     */
+    fun getShareIntent(): Intent? {
+        val result = exportCaToDownloads() ?: return null
+        return Intent(Intent.ACTION_SEND).apply {
+            type = CA_MIME
+            putExtra(Intent.EXTRA_STREAM, result.uri)
+            putExtra(Intent.EXTRA_SUBJECT, "PrivacyGuard CA Certificate")
+            putExtra(Intent.EXTRA_TEXT,
+                "Open this file and follow the prompts to install the " +
+                "PrivacyGuard CA as a trusted certificate authority.")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    }
+
+    /**
+     * Opens the Security & privacy settings screen as a last resort.
+     * The user can navigate to "Install a certificate" manually.
+     */
+    fun getSecuritySettingsIntent(): Intent =
+        Intent(Settings.ACTION_SECURITY_SETTINGS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+    /** True if the CA key pair exists in the AndroidKeyStore. */
+    fun isCaGenerated(): Boolean = caManager.getCaCert() != null
+
+    /** CA as Base64 DER for embedding in MDM/EMM configuration profiles. */
+    fun getCaBase64ForMdm(): String = caManager.getCaCertBase64()
 }
