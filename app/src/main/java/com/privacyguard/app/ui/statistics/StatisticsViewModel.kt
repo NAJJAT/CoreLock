@@ -118,7 +118,7 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
             cleartextToday = cleartextToday,
             dataTransferredToday = formatBytes(totalBytes),
             blockRate = if (totalConnections == 0) 0f else blockedToday.toFloat() / totalConnections.toFloat(),
-            encryptionHealth = if (totalConnections == 0) 0.87f else secureToday.toFloat() / totalConnections.toFloat(),
+            encryptionHealth = if (totalConnections == 0) 0f else secureToday.toFloat() / totalConnections.toFloat(),
             privacyScore = (
                 (if (totalConnections == 0) 0.5f else secureToday.toFloat() / totalConnections.toFloat()) * 50f +
                     (1f - (cleartextToday.toFloat() / totalConnections.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f)) * 25f +

@@ -30,7 +30,7 @@ data class DashboardUiState(
     val trackersBlocked: Int = 0,
     val cleartextCount: Int = 0,
     val blocklistDomains: Int = 0,
-    val encryptionHealth: Float = 0.87f,
+    val encryptionHealth: Float = 0f,
     val anomalies: List<DnsAnomalyEntity> = emptyList(),
     val securityCards: List<SecurityCardState> = emptyList(),
     val recommendations: List<String> = emptyList(),
@@ -131,11 +131,8 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             !it.wasBlocked && (it.encryptionStatus == "CLEARTEXT" || it.encryptionStatus == "UNKNOWN")
         }
         val secureCount = recentConnections.count { it.encryptionStatus == "TLS" || it.tlsVersion?.startsWith("TLS_1_") == true }
-        val encryptionHealth = if (recentConnections.isEmpty()) {
-            0.87f
-        } else {
-            secureCount.toFloat() / recentConnections.size.toFloat()
-        }
+        val encryptionHealth = if (recentConnections.isEmpty()) 0f
+            else secureCount.toFloat() / recentConnections.size.toFloat()
 
         val cards = buildSecurityCards(recentConnections, recentAnomalies, behaviorAlerts, trustSummary)
         val privacyScore = PrivacyScoreCalculator.calculate(
