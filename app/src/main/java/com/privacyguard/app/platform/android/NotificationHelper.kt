@@ -255,6 +255,34 @@ class NotificationHelper(private val context: Context) {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Cleartext Connection Alert
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fun postCleartextAlert(
+        packageName: String,
+        destination: String,
+        mainActivityClass: Class<*>,
+    ) {
+        val tapIntent = Intent(context, mainActivityClass).putExtra(EXTRA_NAV_ROUTE, "connections")
+        val pendingTap = PendingIntent.getActivity(
+            context, NOTIFICATION_ID_CLEARTEXT, tapIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val appLabel = packageName.substringAfterLast('.')
+        val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentTitle("Unencrypted connection: $appLabel")
+            .setContentText("$appLabel → $destination (HTTP, no TLS)")
+            .setStyle(NotificationCompat.BigTextStyle()
+                .bigText("$appLabel connected to $destination over unencrypted HTTP. Enable 'Block Cleartext' in Settings to prevent this."))
+            .setContentIntent(pendingTap)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
+        manager.notify(NOTIFICATION_ID_CLEARTEXT, notification)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Certificate Transparency Alert
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -333,6 +361,7 @@ class NotificationHelper(private val context: Context) {
         const val NOTIFICATION_ID_KILL_SWITCH  = 4
         const val NOTIFICATION_ID_JA3_THREAT   = 5
         const val NOTIFICATION_ID_CT_CERT      = 6
+        const val NOTIFICATION_ID_CLEARTEXT    = 7
 
         /** Broadcast action to stop the VPN from the notification's Stop button. */
         const val ACTION_STOP_VPN = "com.privacyguard.action.STOP_VPN"

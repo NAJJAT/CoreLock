@@ -86,6 +86,7 @@ class PrivacyVpnService : VpnService() {
 
     private lateinit var ctMonitor: CtMonitor
     private val ja3NotifiedHashes = mutableSetOf<String>()
+    private val cleartextNotifiedPackages = mutableSetOf<String>()
 
     companion object {
         private const val TAG = "PrivacyVpnService"
@@ -524,6 +525,25 @@ class PrivacyVpnService : VpnService() {
             val snapshot = session.snapshot()
             if (snapshot.encryptionStatus == EncryptionStatus.CLEARTEXT) {
                 totalCleartext.incrementAndGet()
+                val pkg = snapshot.ownerPackage
+                if (!pkg.isNullOrBlank() && cleartextNotifiedPackages.add(pkg)) {
+                    val settings = com.privacyguard.app.data.local.preferences.SettingsPreferences
+                        .getInstance(applicationContext)
+                    val blockCleartextOn = com.privacyguard.app.data.db.AppDatabase
+                        .getInstance(applicationContext).rulesDao().getAllRules().any {
+                            it.enabled &&
+                            it.action == com.privacyguard.core.filter.FilterRule.Action.DENY.name &&
+                            it.matchEncryption == com.privacyguard.core.metadata.EncryptionStatus.CLEARTEXT.name
+                        }
+                    if (!blockCleartextOn && settings.shouldShowNotification(
+                            com.privacyguard.app.domain.model.NotificationType.CONNECTION_BLOCKED)) {
+                        notifHelper.postCleartextAlert(
+                            packageName = pkg,
+                            destination = snapshot.hostname ?: snapshot.key.destinationIp,
+                            mainActivityClass = getMainActivityClass(),
+                        )
+                    }
+                }
             }
 
             scope.launch {

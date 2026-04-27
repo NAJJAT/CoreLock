@@ -81,6 +81,34 @@ interface ConnectionDao {
     suspend fun getTopBlockedDomains(since: Long, limit: Int = 10): List<TopBlockedDomain>
     
     /**
+     * Background connection count — apps that connected while not in the foreground.
+     */
+    @Query("SELECT COUNT(*) FROM connections WHERE wasBackground = 1 AND timestamp > :since")
+    suspend fun getBackgroundConnectionCount(since: Long): Int
+
+    /**
+     * Top background-connecting apps: packages sorted by background connection count.
+     */
+    @Query("""
+        SELECT packageName, COUNT(*) as count
+        FROM connections
+        WHERE wasBackground = 1 AND timestamp > :since AND packageName != ''
+        GROUP BY packageName
+        ORDER BY count DESC
+        LIMIT :limit
+    """)
+    suspend fun getTopBackgroundApps(since: Long, limit: Int = 5): List<TopBlockedDomain>
+
+    /**
+     * Cleartext (unencrypted) connection count since [since].
+     */
+    @Query("""
+        SELECT COUNT(*) FROM connections
+        WHERE encryptionStatus = 'CLEARTEXT' AND wasBlocked = 0 AND timestamp > :since
+    """)
+    suspend fun getCleartextConnectionCount(since: Long): Int
+
+    /**
      * Deletes old connections (older than specified days)
      */
     @Query("DELETE FROM connections WHERE timestamp < :cutoff")

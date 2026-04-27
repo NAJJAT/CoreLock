@@ -175,6 +175,13 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             .count { isBeaconLike(it) }
         val highEntropy = anomalies.count { it.anomalyType == "HIGH_ENTROPY" || it.anomalyType == "DGA_BEACON" }
         val highSeverity = anomalies.count { it.severity >= 8 }
+        val backgroundCount = connections.count { it.wasBackground }
+        val backgroundApps = connections.filter { it.wasBackground }
+            .mapNotNull { it.packageName.takeIf { p -> p.isNotBlank() } }
+            .distinct().size
+        val cleartextUnblocked = connections.count {
+            !it.wasBlocked && (it.encryptionStatus == "CLEARTEXT" || it.encryptionStatus == "UNKNOWN")
+        }
 
         return listOf(
             SecurityCardState(
@@ -255,6 +262,36 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
                     else -> CardSeverity.GOOD
                 },
                 value = "${trustSummary.score}/100",
+            ),
+            SecurityCardState(
+                title = "Background Activity",
+                subtitle = "Connections made while app was not in foreground",
+                status = when {
+                    backgroundApps >= 5 -> "High"
+                    backgroundApps > 0  -> "Moderate"
+                    else                -> "Quiet"
+                },
+                severity = when {
+                    backgroundApps >= 5 -> CardSeverity.WARNING
+                    backgroundApps > 0  -> CardSeverity.INFO
+                    else                -> CardSeverity.GOOD
+                },
+                value = "$backgroundCount connections · $backgroundApps apps",
+            ),
+            SecurityCardState(
+                title = "Cleartext Connections",
+                subtitle = "Unencrypted HTTP connections allowed through",
+                status = when {
+                    cleartextUnblocked >= 10 -> "Elevated"
+                    cleartextUnblocked > 0   -> "Present"
+                    else                     -> "None"
+                },
+                severity = when {
+                    cleartextUnblocked >= 10 -> CardSeverity.CRITICAL
+                    cleartextUnblocked > 0   -> CardSeverity.WARNING
+                    else                     -> CardSeverity.GOOD
+                },
+                value = "$cleartextUnblocked today",
             ),
         )
     }
