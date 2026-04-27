@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,15 +23,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.privacyguard.app.ui.components.LabeledProgress
+import com.privacyguard.app.ui.components.NetworkMapCanvas
 import com.privacyguard.app.ui.components.PanelCard
 import com.privacyguard.app.ui.components.ScreenScaffold
 import com.privacyguard.app.ui.components.SectionLabel
 import com.privacyguard.app.ui.components.StatTile
+import com.privacyguard.app.ui.components.SunburstChart
+import com.privacyguard.app.ui.components.SunburstRing
+import com.privacyguard.app.ui.components.SunburstSlice
+import com.privacyguard.app.ui.components.TemporalHeatmap
 import com.privacyguard.app.ui.security.rememberProtectedActionRunner
 import com.privacyguard.app.ui.components.formatAgo
 import com.privacyguard.app.ui.theme.PgAccent
@@ -57,6 +65,8 @@ fun StatisticsScreen(
     val timeline by viewModel.timeline.collectAsState()
     val rememberedNetworks by viewModel.rememberedNetworks.collectAsState()
     val lastItReportPaths by viewModel.lastItReportPaths.collectAsState()
+    val heatmap by viewModel.heatmap.collectAsState()
+    val sunburstOrgs by viewModel.sunburstOrgs.collectAsState()
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -107,6 +117,98 @@ fun StatisticsScreen(
                 ) {
                     Text("Share with IT")
                 }
+            }
+        }
+
+        // Real-time Network Map
+        if (topCountries.isNotEmpty()) {
+            item {
+                PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SectionLabel("Real-time Network Map")
+                    Spacer(modifier = Modifier.height(10.dp))
+                    NetworkMapCanvas(
+                        countries = topCountries,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp),
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Arcs: green = low volume · orange = medium · red = high",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = PgTextMuted,
+                    )
+                }
+            }
+        }
+
+        // Traffic Sunburst
+        if (sunburstOrgs.isNotEmpty()) {
+            item {
+                PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SectionLabel("Traffic by Organization")
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val palette = listOf(
+                            Color(0xFF00E5A0), Color(0xFF4D9CFF), Color(0xFFFFB23F),
+                            Color(0xFFFF4D6A), Color(0xFF9C6DFF), Color(0xFF00C8E0),
+                            Color(0xFFFF8C42), Color(0xFF6BFF6B), Color(0xFFFF6B9D),
+                            Color(0xFFFFD166), Color(0xFF06D6A0), Color(0xFFEF476F),
+                        )
+                        SunburstChart(
+                            rings = listOf(
+                                SunburstRing(sunburstOrgs.take(12).mapIndexed { i, s ->
+                                    SunburstSlice(s.org, s.count.toFloat(), palette[i % palette.size])
+                                })
+                            ),
+                            modifier = Modifier.size(160.dp),
+                        )
+                        Spacer(modifier = Modifier.padding(horizontal = 10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            sunburstOrgs.take(6).forEachIndexed { i, s ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(modifier = Modifier.size(8.dp).background(
+                                            palette[i % palette.size], RoundedCornerShape(2.dp)))
+                                        Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+                                        Text(
+                                            s.org.take(18),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = PgText,
+                                        )
+                                    }
+                                    Text(
+                                        s.count.toString(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = PgTextMuted,
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Temporal Heatmap
+        item {
+            PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                SectionLabel("Activity Heatmap — 7d × 24h")
+                Spacer(modifier = Modifier.height(10.dp))
+                TemporalHeatmap(
+                    grid = heatmap,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    "Darker green = more connections in that hour. Bright cells = peak activity.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = PgTextMuted,
+                )
             }
         }
 

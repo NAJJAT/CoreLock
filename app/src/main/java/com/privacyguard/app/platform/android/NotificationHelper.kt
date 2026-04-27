@@ -220,6 +220,41 @@ class NotificationHelper(private val context: Context) {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // JA3 Threat Alert
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fun postJa3ThreatAlert(
+        malwareName: String,
+        packageName: String?,
+        sni: String?,
+        mainActivityClass: Class<*>,
+    ) {
+        val tapIntent  = Intent(context, mainActivityClass)
+        val pendingTap = PendingIntent.getActivity(
+            context, NOTIFICATION_ID_JA3_THREAT, tapIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val appLabel = packageName?.substringAfterLast('.') ?: "Unknown app"
+        val body = buildString {
+            append(appLabel)
+            if (!sni.isNullOrBlank()) append(" → $sni")
+        }
+        val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentTitle("TLS Fingerprint Match: $malwareName")
+            .setContentText(body)
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("$appLabel made a TLS connection matching the \"$malwareName\" fingerprint. Check Crypto tab for details.")
+            )
+            .setContentIntent(pendingTap)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+        manager.notify(NOTIFICATION_ID_JA3_THREAT, notification)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Kill Switch Alert
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -268,6 +303,7 @@ class NotificationHelper(private val context: Context) {
         const val NOTIFICATION_ID_ALERT        = 2
         const val NOTIFICATION_ID_REPORT       = 3
         const val NOTIFICATION_ID_KILL_SWITCH  = 4
+        const val NOTIFICATION_ID_JA3_THREAT   = 5
 
         /** Broadcast action to stop the VPN from the notification's Stop button. */
         const val ACTION_STOP_VPN = "com.privacyguard.action.STOP_VPN"

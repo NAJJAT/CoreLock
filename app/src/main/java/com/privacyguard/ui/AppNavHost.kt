@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MonetizationOn
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Icon
@@ -40,6 +41,7 @@ import com.privacyguard.app.ui.ads.AdsScreen
 import com.privacyguard.app.ui.connections.ConnectionsScreen
 import com.privacyguard.app.ui.dashboard.DashboardScreen
 import com.privacyguard.app.ui.onboarding.OnboardingScreen
+import com.privacyguard.app.ui.security.SecurityAnalysisScreen
 import com.privacyguard.app.ui.settings.SettingsScreen
 import com.privacyguard.app.ui.statistics.StatisticsScreen
 import com.privacyguard.app.ui.theme.PgBackgroundAlt
@@ -64,6 +66,7 @@ fun AppNavHost(
             add(NavTab("apps", "Apps", Icons.Default.Apps))
             add(NavTab("ads", "Ads", Icons.Default.MonetizationOn))
             add(NavTab("statistics", "Stats", Icons.Default.BarChart))
+            add(NavTab("crypto", "Crypto", Icons.Default.Security))
             // MITM tab - only available in enterprise build
             if (BuildConfig.MITM_AVAILABLE) {
                 add(NavTab("payloads", "Payloads", Icons.AutoMirrored.Filled.ManageSearch))
@@ -178,6 +181,10 @@ fun AppNavHost(
 
             composable("statistics") {
                 StatisticsScreen()
+            }
+
+            composable("crypto") {
+                SecurityAnalysisScreen()
             }
 
             // MITM Screen - only in enterprise build

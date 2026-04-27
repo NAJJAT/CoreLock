@@ -17,6 +17,8 @@ import com.privacyguard.vpn.mitm.MitmEngine
 import com.privacyguard.vpn.mitm.PayloadParser
 import com.privacyguard.vpn.mitm.PayloadShipper
 import com.privacyguard.vpn.mitm.PinningDetector
+import com.privacyguard.vpn.dualvpn.DualVpnConfig
+import com.privacyguard.vpn.dualvpn.DualVpnTunnel
 import com.privacyguard.vpn.tunnel.TunWriter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,7 +48,8 @@ class TcpForwarder(
     private val mitmConfig: MitmConfig,
     private val payloadParser: PayloadParser,
     private val payloadShipper: PayloadShipper,
-    private val payloadLogRepository: PayloadLogRepository
+    private val payloadLogRepository: PayloadLogRepository,
+    private val dualVpnConfig: () -> DualVpnConfig = { DualVpnConfig() },
 ) : Runnable {
 
     companion object {
@@ -101,6 +104,14 @@ class TcpForwarder(
     private fun handleSyn(ip: IpPacket, tcp: TcpPacket, key: SessionKey, ownerUid: Int, ownerPackage: String?) {
         Log.d(TAG, "SYN: connecting to ${ip.destinationIp}:${tcp.destinationPort}")
         val session = sessionTable.getOrCreate(key, uid = ownerUid, ownerPackage = ownerPackage)
+        session.lastDeviceSeq = tcp.sequenceNumber
+
+        val cfg = dualVpnConfig()
+        if (cfg.isValid) {
+            handleSynDualVpn(ip, tcp, key, session, cfg)
+            return
+        }
+
         try {
             val channel = SocketChannel.open()
             channel.configureBlocking(false)
@@ -108,7 +119,6 @@ class TcpForwarder(
             channel.connect(InetSocketAddress(ip.destinationIp, tcp.destinationPort))
 
             session.tcpChannel = channel
-            session.lastDeviceSeq = tcp.sequenceNumber
             session.tcpState.set(Session.TcpState.SYN_RECEIVED)
 
             selector.wakeup()
@@ -121,6 +131,55 @@ class TcpForwarder(
             sessionTable.remove(key)
             sendRstToDevice(ip, tcp)
             errorCount.incrementAndGet()
+        }
+    }
+
+    private fun handleSynDualVpn(
+        ip: IpPacket,
+        tcp: TcpPacket,
+        key: SessionKey,
+        session: Session,
+        cfg: DualVpnConfig,
+    ) {
+        connectingCount.incrementAndGet()
+        session.tcpState.set(Session.TcpState.SYN_RECEIVED)
+
+        coroutineScope.launch(Dispatchers.IO) {
+            try {
+                // Open blocking SocketChannel to hop1
+                val channel = SocketChannel.open()
+                channel.configureBlocking(true)
+                protectSocket(channel.socket())
+                channel.socket().connect(
+                    InetSocketAddress(cfg.firstHopHost, cfg.firstHopPort), 15_000
+                )
+
+                // Negotiate full 2-hop SOCKS5 chain through to the real target
+                val ins  = channel.socket().getInputStream()
+                val outs = channel.socket().getOutputStream()
+                DualVpnTunnel.negotiateChain(ins, outs, cfg, ip.destinationIp, tcp.destinationPort)
+
+                // Switch to non-blocking for the selector loop
+                channel.configureBlocking(false)
+                session.tcpChannel = channel
+                session.tcpState.set(Session.TcpState.ESTABLISHED)
+
+                // Register for reads
+                selector.wakeup()
+                val selKey = channel.register(selector, SelectionKey.OP_READ, session)
+                session.selectionKey = selKey
+
+                // Notify device that connection is established
+                sendSynAckToDevice(session)
+                Log.i(TAG, "Dual VPN tunnel ready: ${cfg.firstHopHost} → ${cfg.secondHopHost} → ${ip.destinationIp}:${tcp.destinationPort}")
+            } catch (e: Exception) {
+                Log.w(TAG, "Dual VPN SYN failed for $key: ${e.message}")
+                sessionTable.remove(key)
+                sendRstToDevice(ip, tcp)
+                errorCount.incrementAndGet()
+            } finally {
+                connectingCount.decrementAndGet()
+            }
         }
     }
 

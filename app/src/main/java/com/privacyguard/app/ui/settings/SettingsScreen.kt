@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NetworkCheck
@@ -20,6 +21,8 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -73,6 +76,17 @@ fun SettingsScreen(
     val securityState by settingsViewModel.securityState.collectAsState()
     val diagnosticsState by settingsViewModel.diagnosticsState.collectAsState()
     val runProtectedAction = rememberProtectedActionRunner()
+
+    // Dual VPN state
+    val dualVpnEnabled by settingsPreferences.dualVpnEnabled.collectAsState()
+    val dualVpnHop1Host by settingsPreferences.dualVpnHop1Host.collectAsState()
+    val dualVpnHop1Port by settingsPreferences.dualVpnHop1Port.collectAsState()
+    val dualVpnHop1User by settingsPreferences.dualVpnHop1User.collectAsState()
+    val dualVpnHop1Pass by settingsPreferences.dualVpnHop1Pass.collectAsState()
+    val dualVpnHop2Host by settingsPreferences.dualVpnHop2Host.collectAsState()
+    val dualVpnHop2Port by settingsPreferences.dualVpnHop2Port.collectAsState()
+    val dualVpnHop2User by settingsPreferences.dualVpnHop2User.collectAsState()
+    val dualVpnHop2Pass by settingsPreferences.dualVpnHop2Pass.collectAsState()
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -351,6 +365,124 @@ fun SettingsScreen(
                 )
             )
         }
+        // Dual VPN section
+        item {
+            PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                Text("DUAL VPN", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable { settingsPreferences.setDualVpnEnabled(!dualVpnEnabled) },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Enable Dual VPN", style = MaterialTheme.typography.titleMedium, color = PgText)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            "Chain two SOCKS5 hops. Neither server knows both who you are and your destination.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = PgTextMuted,
+                        )
+                    }
+                    ToggleChip(dualVpnEnabled)
+                }
+
+                if (dualVpnEnabled) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text("First Hop (Server 1)", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = dualVpnHop1Host,
+                            onValueChange = { settingsPreferences.setDualVpnHop1Host(it) },
+                            label = { Text("Host") },
+                            singleLine = true,
+                            modifier = Modifier.weight(2f),
+                            shape = RoundedCornerShape(12.dp),
+                        )
+                        OutlinedTextField(
+                            value = dualVpnHop1Port.toString(),
+                            onValueChange = { settingsPreferences.setDualVpnHop1Port(it.toIntOrNull() ?: 1080) },
+                            label = { Text("Port") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = dualVpnHop1User,
+                            onValueChange = { settingsPreferences.setDualVpnHop1User(it) },
+                            label = { Text("Username (opt)") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                        )
+                        OutlinedTextField(
+                            value = dualVpnHop1Pass,
+                            onValueChange = { settingsPreferences.setDualVpnHop1Pass(it) },
+                            label = { Text("Password (opt)") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            visualTransformation = PasswordVisualTransformation(),
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text("Second Hop (Server 2)", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = dualVpnHop2Host,
+                            onValueChange = { settingsPreferences.setDualVpnHop2Host(it) },
+                            label = { Text("Host") },
+                            singleLine = true,
+                            modifier = Modifier.weight(2f),
+                            shape = RoundedCornerShape(12.dp),
+                        )
+                        OutlinedTextField(
+                            value = dualVpnHop2Port.toString(),
+                            onValueChange = { settingsPreferences.setDualVpnHop2Port(it.toIntOrNull() ?: 1080) },
+                            label = { Text("Port") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = dualVpnHop2User,
+                            onValueChange = { settingsPreferences.setDualVpnHop2User(it) },
+                            label = { Text("Username (opt)") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                        )
+                        OutlinedTextField(
+                            value = dualVpnHop2Pass,
+                            onValueChange = { settingsPreferences.setDualVpnHop2Pass(it) },
+                            label = { Text("Password (opt)") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            visualTransformation = PasswordVisualTransformation(),
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        "Traffic: You → Hop1 → Hop2 → Internet. Neither hop has the full picture.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PgAccent,
+                    )
+                }
+            }
+        }
+
         item { Spacer(modifier = Modifier.height(8.dp)) }
     }
 }

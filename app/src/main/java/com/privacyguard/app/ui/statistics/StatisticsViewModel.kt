@@ -52,6 +52,11 @@ data class ThreatTimelineItem(
     val severity: String,
 )
 
+data class SunburstOrgSlice(val org: String, val count: Int)
+
+// 7×24 connection count grid [dayOfWeek Mon=0][hour]
+typealias HeatmapGrid = Array<IntArray>
+
 class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
     private val db = AppDatabase.getInstance(app)
     private val metadataRepo = MetadataRepo(db.connectionProfileDao())
@@ -76,6 +81,12 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _lastItReportPaths = MutableStateFlow<Pair<String, String>?>(null)
     val lastItReportPaths: StateFlow<Pair<String, String>?> = _lastItReportPaths.asStateFlow()
+
+    private val _heatmap = MutableStateFlow<HeatmapGrid>(Array(7) { IntArray(24) })
+    val heatmap: StateFlow<HeatmapGrid> = _heatmap.asStateFlow()
+
+    private val _sunburstOrgs = MutableStateFlow<List<SunburstOrgSlice>>(emptyList())
+    val sunburstOrgs: StateFlow<List<SunburstOrgSlice>> = _sunburstOrgs.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -170,6 +181,24 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
             .take(20)
 
         _rememberedNetworks.value = db.networkTrustDao().allNetworks().take(6)
+
+        // Build 7×24 heatmap
+        val grid = Array(7) { IntArray(24) }
+        recentConnections.forEach { conn ->
+            val cal = java.util.Calendar.getInstance().apply { timeInMillis = conn.timestamp }
+            val dayOfWeek = (cal.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7 // Mon=0..Sun=6
+            val hour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+            if (dayOfWeek in 0..6 && hour in 0..23) grid[dayOfWeek][hour]++
+        }
+        _heatmap.value = grid
+
+        // Sunburst: top orgs by connection count
+        _sunburstOrgs.value = recentConnections
+            .mapNotNull { GeoIpResolver.lookup(it.destinationIp)?.org }
+            .groupBy { it }
+            .map { (org, list) -> SunburstOrgSlice(org, list.size) }
+            .sortedByDescending { it.count }
+            .take(12)
     }
 
     fun exportItReport() {

@@ -18,10 +18,10 @@ import com.privacyguard.app.data.db.PayloadLogEntity
         DnsAnomalyEntity::class,
         NetworkTrustEntity::class,
         AppStatsEntity::class,
-        // ADDED
         PayloadLogEntity::class,
+        TlsAlertEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -33,9 +33,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun dnsAnomalyDao(): DnsAnomalyDao
     abstract fun networkTrustDao(): NetworkTrustDao
     abstract fun appStatsDao(): AppStatsDao
-
-    // ADDED - MITM Payload DAO
     abstract fun payloadLogDao(): PayloadLogDao
+    abstract fun tlsAlertDao(): TlsAlertDao
 
     companion object {
         const val DATABASE_NAME = "privacyguard.db"

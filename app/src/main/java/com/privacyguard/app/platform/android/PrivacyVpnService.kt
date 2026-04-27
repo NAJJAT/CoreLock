@@ -47,6 +47,12 @@ import com.privacyguard.vpn.mitm.PayloadShipper
 import com.privacyguard.vpn.mitm.PiiRedactor
 import com.privacyguard.vpn.mitm.PinningDetector
 import com.privacyguard.data.repository.PayloadLogRepositoryImpl
+import com.privacyguard.core.tls.CipherRisk
+import com.privacyguard.core.tls.CipherSuiteAnalyzer
+import com.privacyguard.core.tls.ClientHelloParser
+import com.privacyguard.core.tls.CtMonitor
+import com.privacyguard.core.tls.Ja3Fingerprinter
+import com.privacyguard.app.data.db.TlsAlertEntity
 
 class PrivacyVpnService : VpnService() {
 
@@ -77,6 +83,8 @@ class PrivacyVpnService : VpnService() {
     private var tunFd: ParcelFileDescriptor? = null
     private val totalBlocked = AtomicLong(0)
     private val totalCleartext = AtomicLong(0)
+
+    private lateinit var ctMonitor: CtMonitor
 
     companion object {
         private const val TAG = "PrivacyVpnService"
@@ -250,6 +258,21 @@ class PrivacyVpnService : VpnService() {
             }
         }
 
+        // ==================== TLS ANALYSIS INITIALIZATION ====================
+        ctMonitor = CtMonitor { domain, entries ->
+            val detail = entries.firstOrNull()?.let { "issuer: ${it.issuerName.take(60)}" }
+            scope.launch {
+                db.tlsAlertDao().insert(TlsAlertEntity(
+                    timestamp = System.currentTimeMillis(),
+                    alertType = "CT_NEW_CERT",
+                    hash = null,
+                    severity = 4,
+                    sni = domain,
+                    detail = detail,
+                ))
+            }
+        }
+        ctMonitor.startMonitoring()
         // ==================== MITM INITIALIZATION ====================
         val caManager = CaManager(this)
 
@@ -271,7 +294,8 @@ class PrivacyVpnService : VpnService() {
         )
         tcpForwarder = TcpForwarder(
             sessionTable, tunWriter, encEnforcer, filterEngine, ::protect,
-            mitmEngine, pinningDetector, mitmConfig, payloadParser, payloadShipper, payloadLogRepository
+            mitmEngine, pinningDetector, mitmConfig, payloadParser, payloadShipper, payloadLogRepository,
+            dualVpnConfig = { settings.getDualVpnConfig() },
         ).also { it.start() }
         // ==================== END MITM INITIALIZATION ====================
 
@@ -375,9 +399,62 @@ class PrivacyVpnService : VpnService() {
                     val decision = filterEngine.evaluate(uid, pkg, null, ip.destinationIp, tcp.destinationPort, 6)
                     if (decision.isBlocked) { recordBlock(); return }
                 }
+                // TLS fingerprinting on first data packet to port 443
+                if (tcp.destinationPort == 443 && tcp.data.isNotEmpty()) {
+                    inspectTlsClientHello(tcp.data, pkg)
+                }
                 tcpForwarder.handle(ip, tcp, uid, pkg)
             }
         }
+    }
+
+    private fun inspectTlsClientHello(data: ByteArray, pkg: String?) {
+        val hello = ClientHelloParser.parse(data) ?: return
+        val db = buildDatabase()
+
+        // JA3 threat check
+        val ja3Alert = Ja3Fingerprinter.inspect(hello, pkg)
+        if (ja3Alert != null) {
+            scope.launch {
+                db.tlsAlertDao().insert(TlsAlertEntity(
+                    timestamp   = ja3Alert.timestamp,
+                    alertType   = "JA3_THREAT",
+                    hash        = ja3Alert.hash,
+                    ja3String   = ja3Alert.ja3String,
+                    malwareName = ja3Alert.malwareName,
+                    category    = ja3Alert.category,
+                    severity    = ja3Alert.severity,
+                    sni         = ja3Alert.sni,
+                    packageName = ja3Alert.packageName,
+                ))
+            }
+            Log.w(TAG, "JA3 THREAT: ${ja3Alert.malwareName} hash=${ja3Alert.hash} pkg=$pkg sni=${ja3Alert.sni}")
+            notifHelper.postJa3ThreatAlert(
+                malwareName = ja3Alert.malwareName,
+                packageName = ja3Alert.packageName,
+                sni = ja3Alert.sni,
+                mainActivityClass = getMainActivityClass(),
+            )
+        }
+
+        // Cipher suite weakness check
+        val cipherReport = CipherSuiteAnalyzer.analyze(hello)
+        if (cipherReport.riskLevel == CipherRisk.CRITICAL || cipherReport.riskLevel == CipherRisk.HIGH) {
+            scope.launch {
+                db.tlsAlertDao().insert(TlsAlertEntity(
+                    timestamp   = System.currentTimeMillis(),
+                    alertType   = "WEAK_CIPHER",
+                    severity    = if (cipherReport.riskLevel == CipherRisk.CRITICAL) 9 else 6,
+                    sni         = hello.sni,
+                    packageName = pkg,
+                    category    = "CIPHER_WEAKNESS",
+                    detail      = cipherReport.issues.take(3).joinToString("; "),
+                ))
+            }
+        }
+
+        // Register SNI with CT monitor
+        hello.sni?.let { ctMonitor.addDomain(it) }
     }
 
     private fun recordBlock() {
@@ -561,6 +638,7 @@ class PrivacyVpnService : VpnService() {
         }
 
         com.privacyguard.app.vpn.KillSwitch.stopMonitoring()
+        if (::ctMonitor.isInitialized) ctMonitor.stop()
         tunReader.stop()
         tunWriter.stop()
         tcpForwarder.stop()

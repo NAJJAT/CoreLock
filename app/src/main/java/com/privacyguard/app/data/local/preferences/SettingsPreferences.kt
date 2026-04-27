@@ -47,6 +47,17 @@ class SettingsPreferences private constructor(context: Context) {
         private const val KEY_MITM_RETENTION_DAYS = "mitm_retention_days"
         private const val KEY_MITM_CONSENT_TIMESTAMP = "mitm_consent_timestamp"
 
+        // Dual VPN
+        private const val KEY_DUAL_VPN_ENABLED     = "dual_vpn_enabled"
+        private const val KEY_DUAL_VPN_HOP1_HOST   = "dual_vpn_hop1_host"
+        private const val KEY_DUAL_VPN_HOP1_PORT   = "dual_vpn_hop1_port"
+        private const val KEY_DUAL_VPN_HOP1_USER   = "dual_vpn_hop1_user"
+        private const val KEY_DUAL_VPN_HOP1_PASS   = "dual_vpn_hop1_pass"
+        private const val KEY_DUAL_VPN_HOP2_HOST   = "dual_vpn_hop2_host"
+        private const val KEY_DUAL_VPN_HOP2_PORT   = "dual_vpn_hop2_port"
+        private const val KEY_DUAL_VPN_HOP2_USER   = "dual_vpn_hop2_user"
+        private const val KEY_DUAL_VPN_HOP2_PASS   = "dual_vpn_hop2_pass"
+
         const val DOH_CLOUDFLARE = "https://cloudflare-dns.com/dns-query"
         const val DOH_GOOGLE     = "https://dns.google/dns-query"
         const val DOH_QUAD9      = "https://dns.quad9.net/dns-query"
@@ -166,6 +177,35 @@ class SettingsPreferences private constructor(context: Context) {
 
     private val _mitmConsentTimestamp = MutableStateFlow(prefs.getLong(KEY_MITM_CONSENT_TIMESTAMP, 0L))
     val mitmConsentTimestamp: StateFlow<Long> = _mitmConsentTimestamp.asStateFlow()
+
+    // ==================== DUAL VPN FLOWS ====================
+
+    private val _dualVpnEnabled = MutableStateFlow(prefs.getBoolean(KEY_DUAL_VPN_ENABLED, false))
+    val dualVpnEnabled: StateFlow<Boolean> = _dualVpnEnabled.asStateFlow()
+
+    private val _dualVpnHop1Host = MutableStateFlow(prefs.getString(KEY_DUAL_VPN_HOP1_HOST, "") ?: "")
+    val dualVpnHop1Host: StateFlow<String> = _dualVpnHop1Host.asStateFlow()
+
+    private val _dualVpnHop1Port = MutableStateFlow(prefs.getInt(KEY_DUAL_VPN_HOP1_PORT, 1080))
+    val dualVpnHop1Port: StateFlow<Int> = _dualVpnHop1Port.asStateFlow()
+
+    private val _dualVpnHop1User = MutableStateFlow(prefs.getString(KEY_DUAL_VPN_HOP1_USER, "") ?: "")
+    val dualVpnHop1User: StateFlow<String> = _dualVpnHop1User.asStateFlow()
+
+    private val _dualVpnHop1Pass = MutableStateFlow(prefs.getString(KEY_DUAL_VPN_HOP1_PASS, "") ?: "")
+    val dualVpnHop1Pass: StateFlow<String> = _dualVpnHop1Pass.asStateFlow()
+
+    private val _dualVpnHop2Host = MutableStateFlow(prefs.getString(KEY_DUAL_VPN_HOP2_HOST, "") ?: "")
+    val dualVpnHop2Host: StateFlow<String> = _dualVpnHop2Host.asStateFlow()
+
+    private val _dualVpnHop2Port = MutableStateFlow(prefs.getInt(KEY_DUAL_VPN_HOP2_PORT, 1080))
+    val dualVpnHop2Port: StateFlow<Int> = _dualVpnHop2Port.asStateFlow()
+
+    private val _dualVpnHop2User = MutableStateFlow(prefs.getString(KEY_DUAL_VPN_HOP2_USER, "") ?: "")
+    val dualVpnHop2User: StateFlow<String> = _dualVpnHop2User.asStateFlow()
+
+    private val _dualVpnHop2Pass = MutableStateFlow(prefs.getString(KEY_DUAL_VPN_HOP2_PASS, "") ?: "")
+    val dualVpnHop2Pass: StateFlow<String> = _dualVpnHop2Pass.asStateFlow()
 
     // ==================== EXISTING SETTERS ====================
 
@@ -317,6 +357,34 @@ class SettingsPreferences private constructor(context: Context) {
         prefs.edit().putLong(KEY_MITM_CONSENT_TIMESTAMP, timestamp).apply()
         _mitmConsentTimestamp.value = timestamp
     }
+
+    // ==================== DUAL VPN SETTERS ====================
+
+    fun setDualVpnEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_DUAL_VPN_ENABLED, enabled).apply()
+        _dualVpnEnabled.value = enabled
+    }
+    fun setDualVpnHop1Host(host: String) { prefs.edit().putString(KEY_DUAL_VPN_HOP1_HOST, host).apply(); _dualVpnHop1Host.value = host }
+    fun setDualVpnHop1Port(port: Int)    { prefs.edit().putInt(KEY_DUAL_VPN_HOP1_PORT, port).apply();    _dualVpnHop1Port.value = port }
+    fun setDualVpnHop1User(user: String) { prefs.edit().putString(KEY_DUAL_VPN_HOP1_USER, user).apply(); _dualVpnHop1User.value = user }
+    fun setDualVpnHop1Pass(pass: String) { prefs.edit().putString(KEY_DUAL_VPN_HOP1_PASS, pass).apply(); _dualVpnHop1Pass.value = pass }
+    fun setDualVpnHop2Host(host: String) { prefs.edit().putString(KEY_DUAL_VPN_HOP2_HOST, host).apply(); _dualVpnHop2Host.value = host }
+    fun setDualVpnHop2Port(port: Int)    { prefs.edit().putInt(KEY_DUAL_VPN_HOP2_PORT, port).apply();    _dualVpnHop2Port.value = port }
+    fun setDualVpnHop2User(user: String) { prefs.edit().putString(KEY_DUAL_VPN_HOP2_USER, user).apply(); _dualVpnHop2User.value = user }
+    fun setDualVpnHop2Pass(pass: String) { prefs.edit().putString(KEY_DUAL_VPN_HOP2_PASS, pass).apply(); _dualVpnHop2Pass.value = pass }
+
+    fun getDualVpnConfig(): com.privacyguard.vpn.dualvpn.DualVpnConfig =
+        com.privacyguard.vpn.dualvpn.DualVpnConfig(
+            enabled        = _dualVpnEnabled.value,
+            firstHopHost   = _dualVpnHop1Host.value,
+            firstHopPort   = _dualVpnHop1Port.value,
+            firstHopUser   = _dualVpnHop1User.value,
+            firstHopPassword = _dualVpnHop1Pass.value,
+            secondHopHost  = _dualVpnHop2Host.value,
+            secondHopPort  = _dualVpnHop2Port.value,
+            secondHopUser  = _dualVpnHop2User.value,
+            secondHopPassword = _dualVpnHop2Pass.value,
+        )
 
     /**
      * Check if MITM consent is still valid (within 90 days)
