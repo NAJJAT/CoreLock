@@ -81,6 +81,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     @Volatile private var cachedBehaviorSummaries: List<com.privacyguard.app.core.behavior.AppBehaviorSummary> = emptyList()
     @Volatile private var cachedBehaviorAlerts: Int = 0
     @Volatile private var cachedWeeklyConnections: List<ConnectionEntity> = emptyList()
+    @Volatile private var cachedTlsAlertCount: Int = 0
     @Volatile private var slowCacheReady: Boolean = false
     @Volatile private var prevActiveBytesTotal: Long = 0L
 
@@ -143,6 +144,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         cachedBehaviorSummaries = summaries
         cachedBehaviorAlerts = summaries.sumOf { it.findings.size }
         cachedWeeklyConnections = db.connectionDao().getRecentConnections(weekSince, 2_000)
+        cachedTlsAlertCount = db.tlsAlertDao().countJa3Threats() + db.tlsAlertDao().countWeakCipher()
         slowCacheReady = true
 
         // Notify once per HIGH-severity behavior finding per VPN session
@@ -227,9 +229,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             pcapPath = PcapWriter.getCurrentFilePath() ?: PcapWriter.getLastCompletedFile()?.absolutePath,
             throughputBytesPerSec = throughput,
             activeConnectionCount = snapshot.activeConnections.size,
-            alertBadgeCount = recentAnomalies.size +
-                db.tlsAlertDao().countJa3Threats() +
-                db.tlsAlertDao().countWeakCipher(),
+            alertBadgeCount = recentAnomalies.size + cachedTlsAlertCount,
         )
     }
 

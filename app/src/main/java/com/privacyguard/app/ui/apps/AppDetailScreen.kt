@@ -236,7 +236,7 @@ private fun LazyListScope.connectionsTab(
     sort: DomainSort,
     onSortChange: (DomainSort) -> Unit,
 ) {
-    if (state.hourlyActivity.any { it > 0 }) {
+    if (state.hourlyActivity.any { it > 0 } && !state.isLoadingDomains) {
         item { HourlyActivityChart(state.hourlyActivity) }
     }
     item {
@@ -674,7 +674,7 @@ private fun LoadingCard(message: String) {
 }
 
 @Composable
-private fun HourlyActivityChart(hourly: IntArray) {
+private fun HourlyActivityChart(hourly: List<Int>) {
     val peak = hourly.max().coerceAtLeast(1)
     PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
         Text("Activity by hour (24h)", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)

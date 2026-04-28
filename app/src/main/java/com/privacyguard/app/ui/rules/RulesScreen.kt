@@ -45,7 +45,7 @@ fun RulesScreen(vm: RulesViewModel = viewModel()) {
             }
         },
     ) { padding ->
-        if (rules.isEmpty()) {
+        if (rules.isEmpty() && suggestions.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()

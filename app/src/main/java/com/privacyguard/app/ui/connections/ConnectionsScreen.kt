@@ -73,7 +73,11 @@ fun ConnectionsScreen(
         ConnectionDetailDialog(
             detail = it,
             onClose = viewModel::clearSelectedConnection,
-            onToggleBlock = { viewModel.toggleConnectionBlocked(it.connection) }
+            onToggleBlock = { viewModel.toggleConnectionBlocked(it.connection) },
+            onViewApp = { pkg, name ->
+                viewModel.clearSelectedConnection()
+                onAppClick(pkg, name)
+            },
         )
     }
 
@@ -228,6 +232,7 @@ private fun ConnectionDetailDialog(
     detail: ConnectionDetailState,
     onClose: () -> Unit,
     onToggleBlock: () -> Unit,
+    onViewApp: (packageName: String, appName: String) -> Unit = { _, _ -> },
 ) {
     val connection = detail.connection
     Dialog(onDismissRequest = onClose) {
@@ -297,6 +302,19 @@ private fun ConnectionDetailDialog(
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
+                if (connection.packageName.isNotBlank()) {
+                    Button(
+                        onClick = { onViewApp(connection.packageName, connection.appName) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = PgAccentDim,
+                            contentColor = PgAccent
+                        )
+                    ) {
+                        Text("View App →", color = PgAccent)
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Button(
                         onClick = onToggleBlock,
@@ -312,8 +330,8 @@ private fun ConnectionDetailDialog(
                         onClick = onClose,
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = PgAccentDim,
-                            contentColor = PgAccent
+                            containerColor = PgBackgroundAlt,
+                            contentColor = PgTextMuted
                         )
                     ) {
                         Text("Close")

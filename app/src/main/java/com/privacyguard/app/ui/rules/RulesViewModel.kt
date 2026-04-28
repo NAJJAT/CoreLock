@@ -55,8 +55,11 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun refresh() {
         viewModelScope.launch {
-            _allRules.value = repo.allRules()
-            buildSuggestions()
+            try {
+                _allRules.value = repo.allRules()
+                buildSuggestions()
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+              catch (_: Exception) { }
         }
     }
 

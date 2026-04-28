@@ -229,7 +229,7 @@ class NotificationHelper(private val context: Context) {
         sni: String?,
         mainActivityClass: Class<*>,
     ) {
-        val tapIntent  = Intent(context, mainActivityClass).putExtra(EXTRA_NAV_ROUTE, "crypto")
+        val tapIntent  = Intent(context, mainActivityClass).putExtra(EXTRA_NAV_ROUTE, "alerts")
         val pendingTap = PendingIntent.getActivity(
             context, NOTIFICATION_ID_JA3_THREAT, tapIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
@@ -245,7 +245,7 @@ class NotificationHelper(private val context: Context) {
             .setContentText(body)
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText("$appLabel made a TLS connection matching the \"$malwareName\" fingerprint. Check Crypto tab for details.")
+                    .bigText("$appLabel made a TLS connection matching the \"$malwareName\" fingerprint. Tap to view in Alert Inbox.")
             )
             .setContentIntent(pendingTap)
             .setAutoCancel(true)
@@ -264,7 +264,7 @@ class NotificationHelper(private val context: Context) {
         summary: String,
         mainActivityClass: Class<*>,
     ) {
-        val tapIntent = Intent(context, mainActivityClass)
+        val tapIntent = Intent(context, mainActivityClass).putExtra(EXTRA_NAV_ROUTE, "alerts")
         val pendingTap = PendingIntent.getActivity(
             context, NOTIFICATION_ID_BEHAVIOR, tapIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
@@ -319,7 +319,7 @@ class NotificationHelper(private val context: Context) {
         newCertCount: Int,
         mainActivityClass: Class<*>,
     ) {
-        val tapIntent  = Intent(context, mainActivityClass).putExtra(EXTRA_NAV_ROUTE, "crypto")
+        val tapIntent  = Intent(context, mainActivityClass).putExtra(EXTRA_NAV_ROUTE, "alerts")
         val pendingTap = PendingIntent.getActivity(
             context, NOTIFICATION_ID_CT_CERT, tapIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
@@ -330,7 +330,7 @@ class NotificationHelper(private val context: Context) {
             .setContentTitle("Certificate Transparency: $domain")
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle()
-                .bigText("$body. Open the Crypto tab to review the issuer details."))
+                .bigText("$body. Tap to review in the Alert Inbox."))
             .setContentIntent(pendingTap)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

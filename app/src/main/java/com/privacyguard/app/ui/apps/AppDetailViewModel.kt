@@ -87,7 +87,7 @@ data class AppDetailState(
     val isLoadingDomains: Boolean = true,
     val isLoadingMismatch: Boolean = true,
     val isBlocked: Boolean = false,
-    val hourlyActivity: IntArray = IntArray(24),
+    val hourlyActivity: List<Int> = List(24) { 0 },
 )
 
 class AppDetailViewModel(
@@ -201,7 +201,7 @@ class AppDetailViewModel(
                     topologyHops = buildTopology(domainRows, mergedConnections),
                     topologyQueryLog = buildQueryLog(domainRows),
                     isLoadingDomains = false,
-                    hourlyActivity = hourly,
+                    hourlyActivity = hourly.toList(),
                 )
                 refreshMismatchFindings(observedDomains = domainRows.map { it.domain })
             }
