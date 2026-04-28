@@ -21,6 +21,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.Security
@@ -77,6 +79,8 @@ fun DashboardScreen(
     onRequestVpn: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
     onOpenAlerts: () -> Unit = {},
+    onOpenConnections: () -> Unit = {},
+    onOpenApps: () -> Unit = {},
     viewModel: DashboardViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -109,7 +113,15 @@ fun DashboardScreen(
                         Icon(Icons.Default.Settings, contentDescription = "Settings", tint = PgTextMuted)
                     }
                     IconButton(onClick = onOpenAlerts) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Alerts", tint = PgTextMuted)
+                        if (uiState.alertBadgeCount > 0) {
+                            BadgedBox(badge = {
+                                Badge { Text(uiState.alertBadgeCount.coerceAtMost(99).toString()) }
+                            }) {
+                                Icon(Icons.Default.Notifications, contentDescription = "Alerts", tint = PgTextMuted)
+                            }
+                        } else {
+                            Icon(Icons.Default.Notifications, contentDescription = "Alerts", tint = PgTextMuted)
+                        }
                     }
                 }
 
@@ -195,6 +207,23 @@ fun DashboardScreen(
                     StatTile("Cleartext conns", uiState.cleartextCount.toString(), PgDanger, Modifier.weight(1f))
                     StatTile("Privacy score", uiState.privacyScore.score.toString(), PgInfo, Modifier.weight(1f))
                 }
+                if (uiState.isVpnActive) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        StatTile(
+                            "Throughput",
+                            formatThroughput(uiState.throughputBytesPerSec),
+                            PgAccent,
+                            Modifier.weight(1f),
+                        )
+                        StatTile(
+                            "Active conns",
+                            uiState.activeConnectionCount.toString(),
+                            PgInfo,
+                            Modifier.weight(1f),
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(18.dp))
                 SectionLabel("Security systems")
@@ -202,7 +231,18 @@ fun DashboardScreen(
                 SecuritySystemsGrid(
                     cards = uiState.securityCards,
                     killSwitchEnabled = uiState.securityCards.firstOrNull { it.title == "Kill Switch" }?.status == "Armed",
-                    onToggleKillSwitch = { enabled -> viewModel.setKillSwitch(enabled) }
+                    onToggleKillSwitch = { enabled -> viewModel.setKillSwitch(enabled) },
+                    onCardClick = { card ->
+                        when {
+                            card.title.contains("Cleartext", ignoreCase = true) -> onOpenConnections()
+                            card.title.contains("Behavior", ignoreCase = true)  -> onOpenAlerts()
+                            card.title.contains("DNS", ignoreCase = true)       -> onOpenAlerts()
+                            card.title.contains("Tracker", ignoreCase = true)   -> onOpenApps()
+                            card.severity == CardSeverity.CRITICAL ||
+                            card.severity == CardSeverity.WARNING              -> onOpenAlerts()
+                            else -> {}
+                        }
+                    },
                 )
 
                 Spacer(modifier = Modifier.height(18.dp))
@@ -305,6 +345,7 @@ private fun SecuritySystemsGrid(
     cards: List<SecurityCardState>,
     killSwitchEnabled: Boolean,
     onToggleKillSwitch: (Boolean) -> Unit,
+    onCardClick: (SecurityCardState) -> Unit = {},
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         cards.chunked(2).forEach { rowCards ->
@@ -315,6 +356,7 @@ private fun SecuritySystemsGrid(
                         modifier = Modifier.weight(1f),
                         killSwitchEnabled = killSwitchEnabled,
                         onToggleKillSwitch = onToggleKillSwitch,
+                        onCardClick = { onCardClick(card) },
                     )
                 }
                 if (rowCards.size == 1) {
@@ -331,6 +373,7 @@ private fun SecuritySystemCard(
     modifier: Modifier = Modifier,
     killSwitchEnabled: Boolean,
     onToggleKillSwitch: (Boolean) -> Unit,
+    onCardClick: () -> Unit = {},
 ) {
     val (tint, bg) = when (card.severity) {
         CardSeverity.GOOD -> PgAccent to PgAccentDim
@@ -338,7 +381,7 @@ private fun SecuritySystemCard(
         CardSeverity.WARNING -> PgWarning to PgWarningDim
         CardSeverity.CRITICAL -> PgDanger to PgDangerDim
     }
-    PanelCard(modifier = modifier) {
+    PanelCard(modifier = modifier.clickable(onClick = onCardClick)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -493,4 +536,10 @@ private fun PrivacySwitch(checked: Boolean, onToggle: () -> Unit) {
             .height(1.dp)
             .background(Color.Transparent)
     )
+}
+
+private fun formatThroughput(bytesPerSec: Long): String = when {
+    bytesPerSec >= 1_048_576 -> "${"%.1f".format(bytesPerSec / 1_048_576.0)} MB/s"
+    bytesPerSec >= 1_024     -> "${bytesPerSec / 1_024} KB/s"
+    else                     -> "$bytesPerSec B/s"
 }

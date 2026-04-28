@@ -124,7 +124,7 @@ fun AppNavHost(
                                 }
                             },
                             icon = {
-                                if (tab.route == "crypto" && ja3ThreatCount > 0) {
+                                if (tab.route == "settings" && ja3ThreatCount > 0) {
                                     BadgedBox(badge = {
                                         Badge { Text(ja3ThreatCount.coerceAtMost(99).toString()) }
                                     }) {
@@ -180,6 +180,8 @@ fun AppNavHost(
                     onRequestVpn = onRequestVpn,
                     onOpenSettings = { navController.navigate("settings") },
                     onOpenAlerts = { navController.navigate("alerts") },
+                    onOpenConnections = { navController.navigate("connections") },
+                    onOpenApps = { navController.navigate("apps") },
                 )
             }
 
@@ -188,7 +190,11 @@ fun AppNavHost(
             }
 
             composable("connections") {
-                ConnectionsScreen()
+                ConnectionsScreen(
+                    onAppClick = { pkg, name ->
+                        navController.navigate("appDetail/${Uri.encode(pkg)}?appName=${Uri.encode(name)}")
+                    }
+                )
             }
 
             composable("apps") {
@@ -208,7 +214,7 @@ fun AppNavHost(
             }
 
             composable("crypto") {
-                SecurityAnalysisScreen()
+                SecurityAnalysisScreen(onOpenAlerts = { navController.navigate("alerts") })
             }
 
             // MITM Screen - only in enterprise build

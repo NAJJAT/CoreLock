@@ -60,7 +60,6 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
     val state: StateFlow<AdsState> = _state.asStateFlow()
 
     init {
-        BlocklistManager.initialize(app)
         refresh()
     }
 

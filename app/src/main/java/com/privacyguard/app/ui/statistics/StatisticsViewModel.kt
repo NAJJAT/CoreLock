@@ -93,19 +93,27 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
     private val _topAppsByData = MutableStateFlow<List<AppDataStat>>(emptyList())
     val topAppsByData: StateFlow<List<AppDataStat>> = _topAppsByData.asStateFlow()
 
+    data class DayTrend(val label: String, val total: Int, val blocked: Int)
+    private val _weeklyTrend = MutableStateFlow<List<DayTrend>>(emptyList())
+    val weeklyTrend: StateFlow<List<DayTrend>> = _weeklyTrend.asStateFlow()
+
     @Volatile private var cachedProfiles: List<com.privacyguard.core.metadata.ConnectionProfile> = emptyList()
     @Volatile private var cachedBehaviorSummaries: List<com.privacyguard.app.core.behavior.AppBehaviorSummary> = emptyList()
 
     init {
         viewModelScope.launch {
             while (true) {
-                refreshSlow()
+                try { refreshSlow() }
+                catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (_: Exception) { }
                 delay(60_000)
             }
         }
         viewModelScope.launch {
             while (true) {
-                refresh()
+                try { refresh() }
+                catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (_: Exception) { }
                 delay(5_000)
             }
         }
@@ -149,6 +157,22 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
             .getTopBlockedDomains(since, 5)
             .map { BlockedDomainStat(it.domain, it.count) }
         _highSeverityAnomalies.value = db.dnsAnomalyDao().countHighSeverity()
+
+        val cal = java.util.Calendar.getInstance()
+        _weeklyTrend.value = (6 downTo 0).map { daysAgo ->
+            cal.timeInMillis = now
+            cal.add(java.util.Calendar.DAY_OF_YEAR, -daysAgo)
+            val dayStart = cal.apply {
+                set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
+                set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+            }.timeInMillis
+            val dayEnd = dayStart + 86_400_000L
+            val label = if (daysAgo == 0) "Today"
+                else java.text.SimpleDateFormat("EEE", java.util.Locale.getDefault()).format(java.util.Date(dayStart))
+            val dayConns = db.connectionDao().getRecentConnections(dayStart, 2_000)
+                .filter { it.timestamp < dayEnd }
+            DayTrend(label, dayConns.size, dayConns.count { it.wasBlocked })
+        }
 
         _topAppsByData.value = recentConnections
             .groupBy { it.packageName.ifBlank { it.appName } }

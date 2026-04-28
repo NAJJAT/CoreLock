@@ -13,6 +13,9 @@ interface PayloadLogDao {
     @Query("SELECT * FROM payload_logs ORDER BY timestamp DESC LIMIT :limit")
     fun recentLogs(limit: Int = 100): Flow<List<PayloadLogEntity>>
 
+    @Query("SELECT * FROM payload_logs ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun recentLogsList(limit: Int): List<PayloadLogEntity>
+
     @Query("SELECT * FROM payload_logs WHERE sessionId = :sessionId ORDER BY timestamp DESC")
     suspend fun logsForSession(sessionId: String): List<PayloadLogEntity>
 

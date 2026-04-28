@@ -288,8 +288,8 @@ class PrivacyVpnService : VpnService() {
         // ==================== MITM INITIALIZATION ====================
         val caManager = CaManager(this)
 
-        // IMPORTANT: Initialize CA before using it (FIXED)
-        runBlocking {
+        // Initialize CA asynchronously — it will be ready before the first TLS handshake.
+        scope.launch {
             caManager.initialize()
             Log.d(TAG, "✅ CA Manager initialized successfully")
         }

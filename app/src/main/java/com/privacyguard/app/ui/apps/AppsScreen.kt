@@ -194,12 +194,14 @@ fun AppsScreen(
                     }
                     Spacer(modifier = Modifier.size(10.dp))
                     Column(horizontalAlignment = Alignment.End) {
+                        GradeBadge(app.privacyGrade)
+                        Spacer(modifier = Modifier.height(8.dp))
                         Box(modifier = Modifier.clickable {
                             viewModel.togglePackageBlocked(app.packageName, !app.isBlocked)
                         }) {
                             ToggleChip(checked = !app.isBlocked)
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(formatBytes(app.totalBytesOut), style = MaterialTheme.typography.labelMedium, color = PgTextMuted)
                     }
                 }
@@ -222,6 +224,25 @@ private fun SearchShell(query: String, onValueChange: (String) -> Unit) {
         singleLine = true,
         shape = RoundedCornerShape(16.dp)
     )
+}
+
+@Composable
+private fun GradeBadge(grade: String) {
+    val (bg, fg) = when (grade) {
+        "A"  -> PgAccentDim  to PgAccent
+        "B"  -> PgInfoDim    to PgInfo
+        "C"  -> PgWarningDim to PgWarning
+        "D"  -> PgDangerDim  to PgDanger
+        else -> PgDangerDim  to PgDanger
+    }
+    Box(
+        modifier = Modifier
+            .size(28.dp)
+            .background(bg, RoundedCornerShape(8.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(grade, style = MaterialTheme.typography.titleMedium, color = fg)
+    }
 }
 
 @Composable

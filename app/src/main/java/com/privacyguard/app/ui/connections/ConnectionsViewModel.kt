@@ -121,6 +121,7 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
 
         viewModelScope.launch {
             while (true) {
+                try {
                 val since = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
                 _recentConnections.value = db.connectionDao().getRecentConnections(since, 100).map {
                     Connection(
@@ -147,6 +148,8 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
                         wasBackground = it.wasBackground,
                     ).withRuleState()
                 }
+                } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                  catch (_: Exception) { }
                 delay(1_000)
             }
         }

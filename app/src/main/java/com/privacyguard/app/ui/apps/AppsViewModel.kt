@@ -41,6 +41,22 @@ data class AppRiskItem(
             maxRiskScore >= 40 -> "MED"
             else -> "LOW"
         }
+
+    val privacyGrade: String
+        get() {
+            var score = 100
+            score -= (maxRiskScore * 0.4f).toInt().coerceAtMost(40)
+            score -= (cleartextCount * 5).coerceAtMost(20)
+            score -= (backgroundCount * 2).coerceAtMost(10)
+            score -= (stalkerwareScore * 0.3f).toInt().coerceAtMost(30)
+            return when (score.coerceAtLeast(0)) {
+                in 80..100 -> "A"
+                in 60..79  -> "B"
+                in 40..59  -> "C"
+                in 20..39  -> "D"
+                else       -> "F"
+            }
+        }
 }
 
 class AppsViewModel(app: Application) : AndroidViewModel(app) {
@@ -67,7 +83,9 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
     init {
         viewModelScope.launch {
             while (true) {
-                refresh()
+                try { refresh() }
+                catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (_: Exception) { }
                 delay(3_000)
             }
         }

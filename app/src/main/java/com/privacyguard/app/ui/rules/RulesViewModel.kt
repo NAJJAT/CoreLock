@@ -17,6 +17,15 @@ import kotlinx.coroutines.launch
 import com.privacyguard.app.ui.apps.AppsViewModel
 import java.util.UUID
 
+data class SuggestedRule(
+    val id: String,
+    val label: String,
+    val reason: String,
+    val action: FilterRule.Action,
+    val matchPackage: String? = null,
+    val matchDomain: String? = null,
+)
+
 class RulesViewModel(app: Application) : AndroidViewModel(app) {
 
     private val db     by lazy { AppDatabase.getInstance(app) }
@@ -26,6 +35,9 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
     private val _allRules = MutableStateFlow<List<FilterRule>>(emptyList())
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _suggestions = MutableStateFlow<List<SuggestedRule>>(emptyList())
+    val suggestions: StateFlow<List<SuggestedRule>> = _suggestions.asStateFlow()
 
     val rules: StateFlow<List<FilterRule>> = combine(_allRules, _searchQuery) { rules, q ->
         if (q.isBlank()) rules
@@ -44,7 +56,91 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
     private fun refresh() {
         viewModelScope.launch {
             _allRules.value = repo.allRules()
+            buildSuggestions()
         }
+    }
+
+    private suspend fun buildSuggestions() {
+        val since = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000L
+        val recentConns = runCatching {
+            db.connectionDao().getRecentConnections(since, 600)
+        }.getOrDefault(emptyList())
+        val existing = _allRules.value
+        val blockedPkgs = existing
+            .filter { it.isEnabled && it.action == FilterRule.Action.DENY && !it.matchPackage.isNullOrBlank() }
+            .mapNotNull { it.matchPackage }.toSet()
+        val hasGlobalCleartextBlock = existing.any {
+            it.isEnabled && it.matchEncryption != null && it.action == FilterRule.Action.DENY
+        }
+
+        val list = mutableListOf<SuggestedRule>()
+
+        // Apps with heavy cleartext traffic not already blocked
+        if (!hasGlobalCleartextBlock) {
+            recentConns
+                .filter { it.encryptionStatus == "CLEARTEXT" && !it.wasBlocked && it.packageName.isNotBlank() }
+                .groupBy { it.packageName }
+                .filter { (pkg, _) -> pkg !in blockedPkgs }
+                .mapValues { (_, c) -> c.size }
+                .filter { (_, n) -> n >= 3 }
+                .entries.sortedByDescending { it.value }.take(3)
+                .forEach { (pkg, n) ->
+                    val name = recentConns.firstOrNull { it.packageName == pkg }
+                        ?.appName?.ifBlank { pkg.substringAfterLast('.') } ?: pkg.substringAfterLast('.')
+                    list += SuggestedRule(
+                        id = "suggest:cleartext:$pkg",
+                        label = "Block $name",
+                        reason = "$n cleartext connections (7d)",
+                        action = FilterRule.Action.DENY,
+                        matchPackage = pkg,
+                    )
+                }
+        }
+
+        // Apps with excessive background connections not already blocked
+        recentConns
+            .filter { it.wasBackground && it.packageName.isNotBlank() }
+            .groupBy { it.packageName }
+            .filter { (pkg, _) -> pkg !in blockedPkgs }
+            .mapValues { (_, c) -> c.size }
+            .filter { (_, n) -> n >= 15 }
+            .entries.sortedByDescending { it.value }.take(2)
+            .forEach { (pkg, n) ->
+                if (list.none { it.matchPackage == pkg }) {
+                    val name = recentConns.firstOrNull { it.packageName == pkg }
+                        ?.appName?.ifBlank { pkg.substringAfterLast('.') } ?: pkg.substringAfterLast('.')
+                    list += SuggestedRule(
+                        id = "suggest:background:$pkg",
+                        label = "Block $name",
+                        reason = "$n background connections (7d)",
+                        action = FilterRule.Action.DENY,
+                        matchPackage = pkg,
+                    )
+                }
+            }
+
+        _suggestions.value = list.take(5)
+    }
+
+    fun acceptSuggestion(s: SuggestedRule) {
+        viewModelScope.launch {
+            val rule = FilterRule(
+                id           = s.matchPackage?.let { AppsViewModel.packageBlockRuleId(it) } ?: UUID.randomUUID().toString(),
+                label        = s.label,
+                action       = s.action,
+                source       = FilterRule.Source.USER,
+                priority     = FilterRule.HIGH_PRIORITY,
+                matchPackage = s.matchPackage,
+                matchDomain  = s.matchDomain,
+            )
+            repo.upsertRule(rule)
+            _suggestions.value = _suggestions.value.filter { it.id != s.id }
+            refresh()
+        }
+    }
+
+    fun dismissSuggestion(id: String) {
+        _suggestions.value = _suggestions.value.filter { it.id != id }
     }
 
     fun addDomainRule(domain: String, action: FilterRule.Action) {

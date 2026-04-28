@@ -87,6 +87,7 @@ data class AppDetailState(
     val isLoadingDomains: Boolean = true,
     val isLoadingMismatch: Boolean = true,
     val isBlocked: Boolean = false,
+    val hourlyActivity: IntArray = IntArray(24),
 )
 
 class AppDetailViewModel(
@@ -188,12 +189,19 @@ class AppDetailViewModel(
                     }
                     .sortedByDescending { it.count }
 
+                val hourly = IntArray(24)
+                mergedConnections.forEach { c ->
+                    val hour = java.util.Calendar.getInstance()
+                        .apply { timeInMillis = c.timestamp }.get(java.util.Calendar.HOUR_OF_DAY)
+                    hourly[hour]++
+                }
                 _state.value = _state.value.copy(
                     domains = domainRows,
                     routeSummary = buildRouteSummary(domainRows, mergedConnections),
                     topologyHops = buildTopology(domainRows, mergedConnections),
                     topologyQueryLog = buildQueryLog(domainRows),
                     isLoadingDomains = false,
+                    hourlyActivity = hourly,
                 )
                 refreshMismatchFindings(observedDomains = domainRows.map { it.domain })
             }

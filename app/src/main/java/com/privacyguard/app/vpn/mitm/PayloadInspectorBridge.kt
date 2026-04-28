@@ -4,7 +4,7 @@ import android.content.pm.PackageManager
 import android.webkit.JavascriptInterface
 import com.privacyguard.app.data.db.PayloadLogDao
 import com.privacyguard.app.data.db.PayloadLogEntity
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -19,16 +19,16 @@ class PayloadInspectorBridge(
     private val timeFmt = SimpleDateFormat("H:mm:ss", Locale.getDefault())
 
     @JavascriptInterface
-    fun getRequests(): String = runBlocking {
-        val logs = dao.recentLogs(200).first()
+    fun getRequests(): String = runBlocking(Dispatchers.IO) {
+        val logs = dao.recentLogsList(200)
         val arr = JSONArray()
         logs.forEach { arr.put(entityToJson(it)) }
         arr.toString()
     }
 
     @JavascriptInterface
-    fun getStats(): String = runBlocking {
-        val logs = dao.recentLogs(200).first()
+    fun getStats(): String = runBlocking(Dispatchers.IO) {
+        val logs = dao.recentLogsList(200)
         val flagged = logs.count { it.piiRedacted || riskScore(it) >= 70 }
         val totalBytes = logs.sumOf { it.sizeBytes }
         JSONObject().apply {

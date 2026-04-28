@@ -5,16 +5,20 @@ import android.content.Context
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.remote.BlocklistDownloader
 import com.privacyguard.app.data.repository.BlocklistRepo
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 
 @SuppressLint("StaticFieldLeak")
 object BlocklistManager {
 
     @Volatile private var context: Context? = null
+    @Volatile private var initStarted = false
+    private val initScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _size = MutableStateFlow(0)
     val size: StateFlow<Int> = _size.asStateFlow()
@@ -28,8 +32,10 @@ object BlocklistManager {
     private val downloader = BlocklistDownloader()
 
     fun initialize(context: Context) {
+        if (initStarted) return
+        initStarted = true
         this.context = context.applicationContext
-        runBlocking(Dispatchers.IO) {
+        initScope.launch {
             runCatching {
                 val repo = BlocklistRepo(AppDatabase.getInstance(context.applicationContext).blocklistDao())
                 if (repo.totalCount() == 0) {

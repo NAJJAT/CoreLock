@@ -1,6 +1,7 @@
 package com.privacyguard.app.ui.security
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,6 +10,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +46,7 @@ import com.privacyguard.app.ui.theme.PgWarningDim
 
 @Composable
 fun SecurityAnalysisScreen(
+    onOpenAlerts: () -> Unit = {},
     viewModel: SecurityAnalysisViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -72,6 +77,11 @@ fun SecurityAnalysisScreen(
                         PgInfo,
                         Modifier.weight(1f)
                     )
+                }
+                val totalAlerts = state.ja3ThreatCount + state.weakCipherCount + state.ctNewCertCount
+                if (totalAlerts > 0) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    ViewAllAlertsButton(totalAlerts, onOpenAlerts)
                 }
             }
         }
@@ -293,4 +303,28 @@ private fun DualVpnHopRow(label: String, description: String, isDevice: Boolean 
 @Composable
 private fun HopArrow() {
     Text("   ↓", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+}
+
+@Composable
+private fun ViewAllAlertsButton(count: Int, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(PgDangerDim, RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+    ) {
+        Text(
+            "View all $count alerts in inbox",
+            style = MaterialTheme.typography.titleSmall,
+            color = PgDanger,
+        )
+        Icon(
+            Icons.AutoMirrored.Filled.ArrowForward,
+            contentDescription = null,
+            tint = PgDanger,
+        )
+    }
 }

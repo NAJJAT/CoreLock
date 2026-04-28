@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -53,6 +55,7 @@ import com.privacyguard.app.ui.theme.PgInfo
 import com.privacyguard.app.ui.theme.PgInfoDim
 import com.privacyguard.app.ui.theme.PgPanelStrong
 import com.privacyguard.app.ui.theme.PgText
+import com.privacyguard.app.ui.theme.PgTextFaint
 import com.privacyguard.app.ui.theme.PgTextMuted
 import com.privacyguard.app.ui.theme.PgWarning
 
@@ -73,6 +76,7 @@ fun StatisticsScreen(
     val heatmap by viewModel.heatmap.collectAsState()
     val sunburstOrgs by viewModel.sunburstOrgs.collectAsState()
     val topAppsByData by viewModel.topAppsByData.collectAsState()
+    val weeklyTrend by viewModel.weeklyTrend.collectAsState()
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -433,6 +437,64 @@ fun StatisticsScreen(
                             Text("${network.trustScore}", style = MaterialTheme.typography.titleMedium, color = if (network.trustLevel == "Reduced") PgDanger else if (network.trustLevel == "Watch") PgWarning else PgInfo)
                         }
                         if (index != rememberedNetworks.lastIndex) Spacer(modifier = Modifier.height(10.dp))
+                    }
+                }
+            }
+        }
+
+        if (weeklyTrend.isNotEmpty()) {
+            item {
+                PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SectionLabel("7-day connection trend")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    val peak = weeklyTrend.maxOf { it.total }.coerceAtLeast(1)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.Bottom,
+                    ) {
+                        weeklyTrend.forEach { day ->
+                            val frac = day.total.toFloat() / peak.toFloat()
+                            val blockedFrac = if (day.total > 0) day.blocked.toFloat() / day.total.toFloat() else 0f
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height((60f * frac.coerceAtLeast(if (day.total > 0) 0.06f else 0f)).dp),
+                                ) {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize()
+                                            .background(PgAccentDim, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                    )
+                                    if (blockedFrac > 0) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .fillMaxHeight(blockedFrac)
+                                                .align(Alignment.BottomStart)
+                                                .background(PgDanger.copy(alpha = 0.6f), RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(day.label, style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+                                Text("${day.total}", style = MaterialTheme.typography.labelSmall, color = PgTextFaint)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Box(modifier = Modifier.size(8.dp).background(PgAccentDim, RoundedCornerShape(2.dp)))
+                            Text("Total", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Box(modifier = Modifier.size(8.dp).background(PgDanger.copy(alpha = 0.6f), RoundedCornerShape(2.dp)))
+                            Text("Blocked", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+                        }
                     }
                 }
             }

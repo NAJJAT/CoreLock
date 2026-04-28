@@ -69,7 +69,9 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         // Posture check is a system call; refresh every 30s rather than every 1s
         viewModelScope.launch {
             while (true) {
-                refreshPosture()
+                try { refreshPosture() }
+                catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (_: Exception) { }
                 delay(30_000)
             }
         }

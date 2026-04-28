@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
@@ -36,6 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.privacyguard.app.ui.components.AppIconImage
 import com.privacyguard.app.ui.components.PanelCard
 import com.privacyguard.app.ui.components.ScreenScaffold
 import com.privacyguard.app.ui.components.StatusPill
@@ -55,6 +57,7 @@ import java.util.Locale
 
 @Composable
 fun ConnectionsScreen(
+    onAppClick: (packageName: String, appName: String) -> Unit = { _, _ -> },
     viewModel: ConnectionsViewModel = viewModel()
 ) {
     val liveConnections by viewModel.connections.collectAsState()
@@ -135,22 +138,31 @@ fun ConnectionsScreen(
                     .clickable { viewModel.selectConnection(connection) }
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    val (icon, tint, bg) = when {
-                        connection.isBlocked -> Triple(Icons.Default.Warning, PgDanger, PgDangerDim)
+                    val (statusTint, statusBg) = when {
+                        connection.isBlocked -> PgDanger to PgDangerDim
                         connection.securityInfo.contains("TLS 1.0", true) || connection.securityInfo.contains("TLS 1.1", true) ->
-                            Triple(Icons.Default.Warning, PgWarning, PgWarningDim)
-                        else -> Triple(Icons.Default.Lock, PgAccent, PgAccentDim)
+                            PgWarning to PgWarningDim
+                        connection.securityInfo == "CLEARTEXT" -> PgDanger to PgDangerDim
+                        else -> PgAccent to PgAccentDim
                     }
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(bg, RoundedCornerShape(12.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+                    Box(contentAlignment = Alignment.BottomEnd) {
+                        AppIconImage(packageName = connection.packageName, size = 40.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .background(statusBg, CircleShape)
+                                .padding(2.dp)
+                                .background(statusTint, CircleShape),
+                        )
                     }
                     Spacer(modifier = Modifier.size(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable(enabled = connection.packageName.isNotBlank()) {
+                                onAppClick(connection.packageName, connection.appName)
+                            },
+                    ) {
                         Text(
                             text = connection.appName.ifBlank { "Unknown app" },
                             style = MaterialTheme.typography.titleMedium,

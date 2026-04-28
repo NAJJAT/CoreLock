@@ -40,6 +40,9 @@ data class DashboardUiState(
     val privacyScore: PrivacyScoreBreakdown = PrivacyScoreBreakdown(50, 0f, 0f, 0, 0, 0f),
     val isPcapCapturing: Boolean = false,
     val pcapPath: String? = null,
+    val throughputBytesPerSec: Long = 0L,
+    val activeConnectionCount: Int = 0,
+    val alertBadgeCount: Int = 0,
 )
 
 data class SecurityCardState(
@@ -79,23 +82,30 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     @Volatile private var cachedBehaviorAlerts: Int = 0
     @Volatile private var cachedWeeklyConnections: List<ConnectionEntity> = emptyList()
     @Volatile private var slowCacheReady: Boolean = false
+    @Volatile private var prevActiveBytesTotal: Long = 0L
 
     init {
         // Fast path: live stats + connection counts — runs every 1s
         viewModelScope.launch {
             while (true) {
-                if (slowCacheReady) {
-                    refreshFast()
-                    delay(1_000)
-                } else {
-                    delay(250)
-                }
+                try {
+                    if (slowCacheReady) {
+                        refreshFast()
+                        delay(1_000)
+                    } else {
+                        delay(250)
+                    }
+                } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                  catch (_: Exception) { delay(1_000) }
             }
         }
         // Slow path: full DB profiles + behavior DNA — runs every 30s
         viewModelScope.launch {
             while (true) {
-                refreshSlow()
+                try {
+                    refreshSlow()
+                } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                  catch (_: Exception) { /* log silently */ }
                 delay(30_000)
             }
         }
@@ -199,6 +209,9 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             trackersBlocked = snapshot.totalTrackersBlocked,
             blocklistDomains = BlocklistManager.size.value,
         )
+        val currentActiveBytes = snapshot.activeConnections.sumOf { it.bytesTransferred }
+        val throughput = (currentActiveBytes - prevActiveBytesTotal).coerceAtLeast(0L)
+        prevActiveBytesTotal = currentActiveBytes
         _uiState.value = DashboardUiState(
             isVpnActive = PrivacyVpnService.isRunning,
             trackersBlocked = snapshot.totalTrackersBlocked,
@@ -212,6 +225,11 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             privacyScore = privacyScore,
             isPcapCapturing = PcapWriter.isCapturing(),
             pcapPath = PcapWriter.getCurrentFilePath() ?: PcapWriter.getLastCompletedFile()?.absolutePath,
+            throughputBytesPerSec = throughput,
+            activeConnectionCount = snapshot.activeConnections.size,
+            alertBadgeCount = recentAnomalies.size +
+                db.tlsAlertDao().countJa3Threats() +
+                db.tlsAlertDao().countWeakCipher(),
         )
     }
 

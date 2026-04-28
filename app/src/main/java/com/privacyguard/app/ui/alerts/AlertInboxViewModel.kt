@@ -41,7 +41,9 @@ class AlertInboxViewModel(app: Application) : AndroidViewModel(app) {
     init {
         viewModelScope.launch {
             while (true) {
-                refresh()
+                try { refresh() }
+                catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                catch (_: Exception) { }
                 delay(5_000)
             }
         }

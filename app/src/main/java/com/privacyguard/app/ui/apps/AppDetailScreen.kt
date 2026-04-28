@@ -236,6 +236,9 @@ private fun LazyListScope.connectionsTab(
     sort: DomainSort,
     onSortChange: (DomainSort) -> Unit,
 ) {
+    if (state.hourlyActivity.any { it > 0 }) {
+        item { HourlyActivityChart(state.hourlyActivity) }
+    }
     item {
         Row(
             modifier = Modifier
@@ -666,6 +669,49 @@ private fun LoadingCard(message: String) {
             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = PgAccent)
             Spacer(modifier = Modifier.width(12.dp))
             Text(message, style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+        }
+    }
+}
+
+@Composable
+private fun HourlyActivityChart(hourly: IntArray) {
+    val peak = hourly.max().coerceAtLeast(1)
+    PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+        Text("Activity by hour (24h)", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            hourly.forEachIndexed { hour, count ->
+                val frac = count.toFloat() / peak.toFloat()
+                val barColor = when {
+                    hour in 0..5  -> PgInfo.copy(alpha = 0.7f)
+                    hour in 22..23 -> PgInfo.copy(alpha = 0.7f)
+                    frac > 0.7f   -> PgDanger
+                    frac > 0.3f   -> PgWarning
+                    else          -> PgAccent.copy(alpha = 0.5f)
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height((36f * frac.coerceAtLeast(if (count > 0) 0.08f else 0f)).dp)
+                            .background(barColor, RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp)),
+                    )
+                    if (hour % 6 == 0) {
+                        Text(
+                            "${hour}h",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = androidx.compose.ui.unit.TextUnit(8f, androidx.compose.ui.unit.TextUnitType.Sp)),
+                            color = PgTextFaint,
+                        )
+                    }
+                }
+            }
         }
     }
 }

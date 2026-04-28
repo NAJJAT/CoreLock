@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.privacyguard.core.filter.FilterRule
 
@@ -24,6 +26,7 @@ import com.privacyguard.core.filter.FilterRule
 @Composable
 fun RulesScreen(vm: RulesViewModel = viewModel()) {
     val rules by vm.rules.collectAsState()
+    val suggestions by vm.suggestions.collectAsState()
     val searchQuery by vm.searchQuery.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
 
@@ -81,13 +84,41 @@ fun RulesScreen(vm: RulesViewModel = viewModel()) {
                             .padding(horizontal = 4.dp, vertical = 4.dp),
                     )
                 }
-                item {
-                    Text(
-                        "${rules.size} rule${if (rules.size != 1) "s" else ""}",
-                        fontSize = 12.sp,
-                        color = Color.Gray,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    )
+                if (suggestions.isNotEmpty()) {
+                    item {
+                        Text(
+                            "SUGGESTED",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        )
+                    }
+                    items(suggestions, key = { it.id }) { s ->
+                        SuggestionCard(
+                            suggestion = s,
+                            onAccept   = { vm.acceptSuggestion(s) },
+                            onDismiss  = { vm.dismissSuggestion(s.id) },
+                        )
+                    }
+                    item {
+                        Text(
+                            "ACTIVE RULES · ${rules.size}",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        )
+                    }
+                } else {
+                    item {
+                        Text(
+                            "${rules.size} rule${if (rules.size != 1) "s" else ""}",
+                            fontSize = 12.sp,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        )
+                    }
                 }
                 items(rules, key = { it.id }) { rule ->
                     RuleCard(
@@ -280,4 +311,56 @@ private fun AddRuleDialog(
             TextButton(onClick = onDismiss) { Text("Cancel") }
         },
     )
+}
+
+@Composable
+private fun SuggestionCard(
+    suggestion: SuggestedRule,
+    onAccept: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.material3.Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        ),
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Default.Lightbulb,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.size(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    suggestion.label,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    suggestion.reason,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray,
+                )
+            }
+            Spacer(modifier = Modifier.size(8.dp))
+            TextButton(onClick = onDismiss) { Text("Skip", fontSize = 12.sp) }
+            Button(
+                onClick = onAccept,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            ) {
+                Text("Add", fontSize = 12.sp)
+            }
+        }
+    }
 }
