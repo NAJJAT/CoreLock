@@ -97,7 +97,9 @@ fun StatisticsScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 LabeledProgress("Block rate", "${(stats.blockRate * 100).toInt()}%", stats.blockRate, PgAccent)
                 Spacer(modifier = Modifier.height(14.dp))
-                LabeledProgress("Encryption health", "${(stats.encryptionHealth * 100).toInt()}% secure", stats.encryptionHealth, PgAccent)
+                LabeledProgress("Encryption health", "${(stats.encryptionHealth * 100).toInt()}% TLS", stats.encryptionHealth, PgAccent)
+                Spacer(modifier = Modifier.height(14.dp))
+                ScoreBreakdown(stats)
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
                     onClick = {
@@ -559,6 +561,59 @@ private fun AppDataRow(app: AppDataStat, fraction: Float) {
                         .fillMaxWidth(fraction.coerceAtLeast(0.03f))
                         .height(3.dp)
                         .background(PgAccent, RoundedCornerShape(999.dp))
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScoreBreakdown(stats: StatisticsData) {
+    data class Factor(val label: String, val value: String, val fraction: Float, val color: androidx.compose.ui.graphics.Color, val good: Boolean)
+
+    val total = stats.totalConnections.coerceAtLeast(1)
+    val factors = listOf(
+        Factor("Encryption",  "${(stats.encryptionHealth * 100).toInt()}% encrypted",
+            stats.encryptionHealth, PgAccent, true),
+        Factor("Block rate",  "${(stats.blockRate * 100).toInt()}% blocked",
+            stats.blockRate, PgInfo, true),
+        Factor("Cleartext",   "${stats.cleartextToday} connections",
+            (stats.cleartextToday.toFloat() / total).coerceIn(0f, 1f), PgDanger, false),
+    )
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Score factors", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+        factors.forEach { f ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    f.label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PgTextMuted,
+                    modifier = Modifier.width(90.dp),
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(6.dp)
+                        .background(PgBackgroundAlt, RoundedCornerShape(999.dp))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(if (f.good) f.fraction else f.fraction.coerceAtLeast(0.02f))
+                            .height(6.dp)
+                            .background(f.color, RoundedCornerShape(999.dp))
+                    )
+                }
+                Text(
+                    f.value,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = f.color,
+                    modifier = Modifier.width(80.dp),
+                    textAlign = TextOverflow.Companion.let { androidx.compose.ui.text.style.TextAlign.End },
                 )
             }
         }

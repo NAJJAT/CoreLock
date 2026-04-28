@@ -17,13 +17,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c3310cda-f85f-4df1-9ea9-882636f15d4e" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/platform/android/NotificationHelper.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/platform/android/NotificationHelper.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/apps/AppDetailScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/apps/AppDetailScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/apps/AppDetailViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/apps/AppDetailViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/connections/ConnectionsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/connections/ConnectionsScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/dashboard/DashboardViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/dashboard/DashboardViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/rules/RulesScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/rules/RulesScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/rules/RulesViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/rules/RulesViewModel.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/onboarding/OnboardingScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/onboarding/OnboardingScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/security/SecurityAnalysisScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/security/SecurityAnalysisScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/statistics/StatisticsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/statistics/StatisticsScreen.kt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
