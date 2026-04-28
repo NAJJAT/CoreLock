@@ -70,19 +70,21 @@ class FilterEngine(
      *                   callers without classification info still work correctly.
      */
     fun evaluate(
-        uid:       Int,
-        pkg:       String?,
-        domain:    String?,
-        ip:        String,
-        port:      Int,
-        protocol:  Int,
-        encStatus: EncryptionStatus = EncryptionStatus.UNKNOWN,
+        uid:          Int,
+        pkg:          String?,
+        domain:       String?,
+        ip:           String,
+        port:         Int,
+        protocol:     Int,
+        encStatus:    EncryptionStatus = EncryptionStatus.UNKNOWN,
+        isBackground: Boolean = false,
     ): Decision {
         totalEvaluations.incrementAndGet()
 
         for (rule in rules) {
             if (!rule.isEnabled)              continue
             if (!isActiveForLevel(rule))       continue
+            if (rule.matchBackground != null && rule.matchBackground != isBackground) continue
             if (!rule.matches(uid, pkg, domain, ip, port, protocol, encStatus)) continue
 
             return when (rule.action) {

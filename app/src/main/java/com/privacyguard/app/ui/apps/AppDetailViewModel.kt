@@ -87,6 +87,7 @@ data class AppDetailState(
     val isLoadingDomains: Boolean = true,
     val isLoadingMismatch: Boolean = true,
     val isBlocked: Boolean = false,
+    val isBackgroundBlocked: Boolean = false,
     val hourlyActivity: List<Int> = List(24) { 0 },
 )
 
@@ -116,12 +117,31 @@ class AppDetailViewModel(
     private fun observeBlockStatus() {
         viewModelScope.launch {
             RuleSyncBus.version.collect {
-                val blocked = db.rulesDao().getAllRules().any { rule ->
-                    rule.matchPackage == packageName &&
-                    rule.action == "DENY" &&
-                    rule.enabled
-                }
-                _state.value = _state.value.copy(isBlocked = blocked)
+                val rules = db.rulesDao().getAllRules()
+                    .filter { it.matchPackage == packageName && it.action == "DENY" && it.enabled }
+                _state.value = _state.value.copy(
+                    isBlocked = rules.any { it.matchBackground == null || it.matchBackground == false },
+                    isBackgroundBlocked = rules.any { it.matchBackground == true },
+                )
+            }
+        }
+    }
+
+    fun toggleBackgroundBlock() {
+        viewModelScope.launch {
+            val ruleId = "bg:block:$packageName"
+            if (_state.value.isBackgroundBlocked) {
+                rulesRepo.deleteRule(ruleId)
+            } else {
+                rulesRepo.upsertRule(FilterRule(
+                    id              = ruleId,
+                    label           = "Block $packageName (background)",
+                    action          = FilterRule.Action.DENY,
+                    source          = FilterRule.Source.USER,
+                    priority        = FilterRule.HIGH_PRIORITY,
+                    matchPackage    = packageName,
+                    matchBackground = true,
+                ))
             }
         }
     }
@@ -130,9 +150,13 @@ class AppDetailViewModel(
         viewModelScope.launch {
             val currentlyBlocked = _state.value.isBlocked
             if (currentlyBlocked) {
-                // Delete all DENY rules for this package regardless of how they were created
+                // Keep background-only deny rules intact when removing the main package block
                 db.rulesDao().getAllRules()
-                    .filter { it.matchPackage == packageName && it.action == FilterRule.Action.DENY.name }
+                    .filter {
+                        it.matchPackage == packageName &&
+                        it.action == FilterRule.Action.DENY.name &&
+                        it.matchBackground != true
+                    }
                     .forEach { rulesRepo.deleteRule(it.id) }
             } else {
                 rulesRepo.upsertRule(FilterRule(
@@ -516,6 +540,8 @@ class AppDetailViewModel(
             wasBackground = false,
         )
 }
+
+
 
 
 

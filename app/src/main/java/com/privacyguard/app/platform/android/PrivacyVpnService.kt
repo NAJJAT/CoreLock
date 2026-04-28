@@ -399,7 +399,8 @@ class PrivacyVpnService : VpnService() {
                 ).toString()
                 updateActiveConnectionIdentity(sessionId, resolvedAppLabel(uid, pkg), pkg)
                 if (dnsHandler.handle(ip, udp, pkg)) return
-                val decision = filterEngine.evaluate(uid, pkg, null, ip.destinationIp, udp.destinationPort, 17)
+                val isBackground = if (pkg != null) !appTracker.isInForeground(pkg) else false
+                val decision = filterEngine.evaluate(uid, pkg, null, ip.destinationIp, udp.destinationPort, 17, isBackground = isBackground)
                 if (decision.isBlocked) { recordBlock(); return }
                 val udpKey = com.privacyguard.core.session.SessionKey.of(
                     ip.sourceIp, udp.sourcePort, ip.destinationIp, udp.destinationPort, IpPacket.PROTO_UDP)
@@ -429,20 +430,19 @@ class PrivacyVpnService : VpnService() {
                 ).toString()
                 updateActiveConnectionIdentity(sessionId, resolvedAppLabel(uid, pkg), pkg)
                 val isSynPacket = tcp.isSyn && !tcp.flagAck
-                if (isSynPacket) {
-                    val decision = filterEngine.evaluate(uid, pkg, null, ip.destinationIp, tcp.destinationPort, 6)
-                    if (decision.isBlocked) { recordBlock(); return }
-                }
+                val isBg = if (pkg != null) !appTracker.isInForeground(pkg) else false
+                val decision = filterEngine.evaluate(uid, pkg, null, ip.destinationIp, tcp.destinationPort, 6, isBackground = isBg)
+                if (decision.isBlocked) { recordBlock(); return }
                 // TLS fingerprinting on first data packet to port 443
                 if (tcp.destinationPort == 443 && tcp.data.isNotEmpty()) {
                     inspectTlsClientHello(tcp.data, pkg)
                 }
                 tcpForwarder.handle(ip, tcp, uid, pkg)
-                // Tag session with background state after handle() creates it for SYN
-                if (isSynPacket && pkg != null) {
-                    val synKey = com.privacyguard.core.session.SessionKey.of(
+                // Keep session state aligned with current foreground/background status
+                if (pkg != null) {
+                    val tcpKey = com.privacyguard.core.session.SessionKey.of(
                         ip.sourceIp, tcp.sourcePort, ip.destinationIp, tcp.destinationPort, IpPacket.PROTO_TCP)
-                    sessionTable.get(synKey)?.wasBackground = !appTracker.isInForeground(pkg)
+                    sessionTable.get(tcpKey)?.wasBackground = isBg
                 }
             }
         }
@@ -723,4 +723,5 @@ class PrivacyVpnService : VpnService() {
 
     private fun buildDatabase(): AppDatabase = AppDatabase.getInstance(this)
 }
+
 

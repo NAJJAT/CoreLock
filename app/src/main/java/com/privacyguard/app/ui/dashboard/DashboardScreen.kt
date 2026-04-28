@@ -62,6 +62,7 @@ import com.privacyguard.app.ui.security.rememberProtectedActionRunner
 import com.privacyguard.app.vpn.VpnManager
 import com.privacyguard.app.ui.theme.PgAccent
 import com.privacyguard.app.ui.theme.PgAccentDim
+import com.privacyguard.app.ui.theme.PgBackgroundAlt
 import com.privacyguard.app.ui.theme.PgDanger
 import com.privacyguard.app.ui.theme.PgDangerDim
 import com.privacyguard.app.ui.theme.PgInfo
@@ -226,6 +227,13 @@ fun DashboardScreen(
                 }
 
                 Spacer(modifier = Modifier.height(18.dp))
+                SectionLabel("Protection level")
+                Spacer(modifier = Modifier.height(8.dp))
+                ProtectionLevelPicker(
+                    current = uiState.protectionLevel,
+                    onSelect = { viewModel.setProtectionLevel(it) },
+                )
+                Spacer(modifier = Modifier.height(18.dp))
                 SectionLabel("Security systems")
                 Spacer(modifier = Modifier.height(10.dp))
                 SecuritySystemsGrid(
@@ -337,6 +345,37 @@ fun DashboardScreen(
         }
 
         item { Spacer(modifier = Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+private fun ProtectionLevelPicker(current: String, onSelect: (String) -> Unit) {
+    val levels = listOf(
+        Triple("MINIMAL",  "Minimal",  PgInfo),
+        Triple("STANDARD", "Standard", PgAccent),
+        Triple("STRICT",   "Strict",   PgDanger),
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        levels.forEach { (key, label, color) ->
+            val selected = current == key
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .background(
+                        if (selected) color.copy(alpha = 0.18f) else PgBackgroundAlt,
+                        RoundedCornerShape(12.dp),
+                    )
+                    .clickable { onSelect(key) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    label,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (selected) color else PgTextFaint,
+                )
+            }
+        }
     }
 }
 
@@ -543,3 +582,5 @@ private fun formatThroughput(bytesPerSec: Long): String = when {
     bytesPerSec >= 1_024     -> "${bytesPerSec / 1_024} KB/s"
     else                     -> "$bytesPerSec B/s"
 }
+
+

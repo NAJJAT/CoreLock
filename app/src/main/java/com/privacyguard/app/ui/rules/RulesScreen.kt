@@ -138,6 +138,7 @@ fun RulesScreen(vm: RulesViewModel = viewModel()) {
                 when (type) {
                     RuleType.DOMAIN  -> vm.addDomainRule(value, action)
                     RuleType.PACKAGE -> vm.addPackageRule(value, action)
+                    RuleType.IP      -> vm.addIpRule(value, action)
                 }
                 showAddDialog = false
             },
@@ -215,7 +216,7 @@ private fun RuleCard(
     }
 }
 
-private enum class RuleType { DOMAIN, PACKAGE }
+private enum class RuleType { DOMAIN, PACKAGE, IP }
 
 @Composable
 private fun AddRuleDialog(
@@ -261,8 +262,11 @@ private fun AddRuleDialog(
                     onValueChange = { value = it },
                     label         = {
                         Text(
-                            if (ruleType == RuleType.DOMAIN) "Domain (e.g. ads.example.com)"
-                            else "Package (e.g. com.example.app)"
+                            when (ruleType) {
+                                RuleType.DOMAIN  -> "Domain (e.g. ads.example.com)"
+                                RuleType.PACKAGE -> "Package (e.g. com.example.app)"
+                                RuleType.IP      -> "IP or CIDR (e.g. 1.2.3.4 or 10.0.0.0/8)"
+                            }
                         )
                     },
                     singleLine    = true,

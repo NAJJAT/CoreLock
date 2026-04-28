@@ -49,7 +49,7 @@ fun TemporalHeatmap(
                 )
                 lastFrac = frac
             }
-            Spacer(modifier = Modifier.weight(1f - lastFrac))
+            Spacer(modifier = Modifier.weight((1f - lastFrac).coerceAtLeast(0.001f)))
         }
 
         Spacer(modifier = Modifier.height(3.dp))
@@ -74,7 +74,7 @@ fun TemporalHeatmap(
                         drawRect(
                             color = color,
                             topLeft = Offset(hour * cellW + 0.8f, 0f),
-                            size = Size(cellW - 1.6f, cellH),
+                            size = Size((cellW - 1.6f).coerceAtLeast(0f), cellH),
                         )
                     }
                 }
@@ -83,3 +83,4 @@ fun TemporalHeatmap(
         }
     }
 }
+

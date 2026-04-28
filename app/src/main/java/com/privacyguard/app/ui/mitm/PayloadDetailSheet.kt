@@ -106,7 +106,7 @@ fun PayloadDetailSheet(
 
             // Tabs
             val tabTitles = listOf("Headers", "Body", "Info")
-            var selectedTab by remember { mutableStateOf(0) }
+            var selectedTab by remember { mutableIntStateOf(0) }
 
             SecondaryScrollableTabRow(
                 selectedTabIndex = selectedTab,
@@ -301,3 +301,4 @@ private fun formatBytes(bytes: Int): String {
         else -> "${bytes / (1024 * 1024)} MB"
     }
 }
+

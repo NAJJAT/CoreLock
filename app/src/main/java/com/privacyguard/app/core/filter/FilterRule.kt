@@ -36,6 +36,8 @@ data class FilterRule(
      * Use [EncryptionStatus.CLEARTEXT] to block all unencrypted traffic.
      */
     val matchEncryption: EncryptionStatus? = null,
+    /** If true, rule only applies when the owning app is in the background. */
+    val matchBackground: Boolean? = null,
 ) {
     // ─────────────────────────────────────────────────────────────────────────
     // Enums
@@ -107,17 +109,29 @@ data class FilterRule(
     }
 
     private fun ipMatches(ip: String, cidr: String): Boolean {
-        if (!cidr.contains('/')) return ip == cidr
+        val candidateIp = ipToIntOrNull(ip) ?: return false
+        if (!cidr.contains('/')) return candidateIp == (ipToIntOrNull(cidr) ?: return false)
         return try {
             val (addr, prefix) = cidr.split('/')
-            val prefixLen  = prefix.toInt()
-            val mask       = if (prefixLen == 0) 0 else (-1 shl (32 - prefixLen))
-            (ipToInt(ip) and mask) == (ipToInt(addr) and mask)
+            val networkIp = ipToIntOrNull(addr) ?: return false
+            val prefixLen = prefix.toInt()
+            if (prefixLen !in 0..32) return false
+            val mask = if (prefixLen == 0) 0 else (-1 shl (32 - prefixLen))
+            (candidateIp and mask) == (networkIp and mask)
         } catch (_: Exception) { false }
     }
 
-    private fun ipToInt(ip: String): Int =
-        ip.split('.').fold(0) { acc, s -> (acc shl 8) or (s.toIntOrNull() ?: 0) }
+    private fun ipToIntOrNull(ip: String): Int? {
+        val octets = ip.split('.')
+        if (octets.size != 4) return null
+        var acc = 0
+        for (octet in octets) {
+            val value = octet.toIntOrNull() ?: return null
+            if (value !in 0..255) return null
+            acc = (acc shl 8) or value
+        }
+        return acc
+    }
 
     override fun toString(): String {
         val criteria = listOfNotNull(
@@ -207,3 +221,5 @@ data class FilterRule(
             )
     }
 }
+
+

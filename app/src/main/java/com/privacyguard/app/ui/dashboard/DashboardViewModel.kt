@@ -43,6 +43,7 @@ data class DashboardUiState(
     val throughputBytesPerSec: Long = 0L,
     val activeConnectionCount: Int = 0,
     val alertBadgeCount: Int = 0,
+    val protectionLevel: String = "STANDARD",
 )
 
 data class SecurityCardState(
@@ -120,6 +121,10 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             PcapWriter.startCapture(context)
         }
         viewModelScope.launch { refreshFast() }
+    }
+
+    fun setProtectionLevel(level: String) {
+        prefs.setProtectionLevel(level)
     }
 
     fun setKillSwitch(enabled: Boolean) {
@@ -230,6 +235,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             throughputBytesPerSec = throughput,
             activeConnectionCount = snapshot.activeConnections.size,
             alertBadgeCount = recentAnomalies.size + cachedTlsAlertCount,
+            protectionLevel = prefs.protectionLevel.value,
         )
     }
 

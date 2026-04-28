@@ -107,10 +107,20 @@ object DualVpnTunnel {
 
         // Drain address/port from reply
         when (reply[3].toInt()) {
-            0x01 -> ins.readNBytes(4 + 2)   // IPv4 + port
-            0x03 -> { val len = ins.read(); ins.readNBytes(len + 2) } // domain + port
-            0x04 -> ins.readNBytes(16 + 2)  // IPv6 + port
+            0x01 -> readExactly(ins, 4 + 2)   // IPv4 + port
+            0x03 -> { val len = ins.read(); readExactly(ins, len + 2) } // domain + port
+            0x04 -> readExactly(ins, 16 + 2)  // IPv6 + port
         }
+    }
+    private fun readExactly(input: InputStream, byteCount: Int): ByteArray {
+        val out = ByteArray(byteCount)
+        var offset = 0
+        while (offset < byteCount) {
+            val read = input.read(out, offset, byteCount - offset)
+            check(read >= 0) { "SOCKS5 stream closed before reply body" }
+            offset += read
+        }
+        return out
     }
 
     /**
@@ -146,3 +156,4 @@ object DualVpnTunnel {
         return buf
     }
 }
+

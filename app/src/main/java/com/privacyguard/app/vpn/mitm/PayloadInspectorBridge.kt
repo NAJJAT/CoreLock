@@ -60,7 +60,7 @@ class PayloadInspectorBridge(
         val sizeStr = when {
             e.sizeBytes < 1024 -> "${e.sizeBytes} B"
             e.sizeBytes < 1_048_576 -> "${e.sizeBytes / 1024} KB"
-            else -> String.format("%.1f MB", e.sizeBytes / 1_048_576f)
+            else -> String.format(Locale.getDefault(), "%.1f MB", e.sizeBytes / 1_048_576f)
         }
 
         // Parse stored headers JSON (Map<String,String>) → [[name,value] | [name,value,flag], ...]
@@ -176,3 +176,4 @@ class PayloadInspectorBridge(
         return arr
     }
 }
+

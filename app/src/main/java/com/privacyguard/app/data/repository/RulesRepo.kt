@@ -64,6 +64,7 @@ class RulesRepo(
         matchPort = matchPort,
         matchProtocol = matchProtocol?.name,
         matchEncryption = matchEncryption?.name,
+        matchBackground = matchBackground,
         action = action.name,
         enabled = isEnabled,
         priority = priority,
@@ -84,5 +85,6 @@ class RulesRepo(
         matchPort = matchPort,
         matchProtocol = matchProtocol?.let(FilterRule.Protocol::valueOf),
         matchEncryption = matchEncryption?.let(EncryptionStatus::valueOf),
+        matchBackground = matchBackground,
     )
 }

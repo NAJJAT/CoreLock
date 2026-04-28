@@ -15,7 +15,7 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 class SecureSecretStore private constructor(
-    private val context: Context,
+    private val prefs: SharedPreferences,
 ) {
     companion object {
         private const val PREFS_NAME = "privacyguard_secure_store"
@@ -29,13 +29,12 @@ class SecureSecretStore private constructor(
 
         fun getInstance(context: Context): SecureSecretStore {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: SecureSecretStore(context.applicationContext).also { INSTANCE = it }
+                INSTANCE ?: SecureSecretStore(
+                    context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                ).also { INSTANCE = it }
             }
         }
     }
-
-    private val prefs: SharedPreferences =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun bootstrap() {
         ensureKey()
@@ -130,3 +129,4 @@ class SecureSecretStore private constructor(
         return keyGenerator.generateKey()
     }
 }
+

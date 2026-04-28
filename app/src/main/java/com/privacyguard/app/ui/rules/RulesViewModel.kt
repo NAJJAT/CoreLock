@@ -161,6 +161,37 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun addIpRule(ip: String, action: FilterRule.Action) {
+        viewModelScope.launch {
+            val trimmed = ip.trim()
+            if (!isValidIpOrCidr(trimmed)) return@launch
+            val rule = FilterRule(
+                id       = UUID.randomUUID().toString(),
+                label    = "${if (action == FilterRule.Action.DENY) "Block" else "Allow"} $trimmed",
+                action   = action,
+                source   = FilterRule.Source.USER,
+                priority = FilterRule.HIGH_PRIORITY,
+                matchIp  = trimmed,
+            )
+            repo.upsertRule(rule)
+            refresh()
+        }
+    }
+
+    private fun isValidIpOrCidr(value: String): Boolean {
+        val parts = value.split('/')
+        if (parts.size !in 1..2) return false
+        if (!isValidIpv4(parts[0])) return false
+        val prefix = parts.getOrNull(1) ?: return true
+        return prefix.toIntOrNull()?.let { it in 0..32 } == true
+    }
+
+    private fun isValidIpv4(value: String): Boolean {
+        val octets = value.split('.')
+        if (octets.size != 4) return false
+        return octets.all { octet -> octet.toIntOrNull()?.let { it in 0..255 } == true }
+    }
+
     fun addPackageRule(pkg: String, action: FilterRule.Action) {
         viewModelScope.launch {
             val trimmed = pkg.trim()
@@ -192,3 +223,5 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 }
+
+

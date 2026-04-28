@@ -3,6 +3,8 @@ package com.privacyguard.app.data.db
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import android.content.Context
 
 // ADD THESE IMPORTS
@@ -21,7 +23,7 @@ import com.privacyguard.app.data.db.PayloadLogEntity
         PayloadLogEntity::class,
         TlsAlertEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -39,6 +41,12 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         const val DATABASE_NAME = "privacyguard.db"
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE rules ADD COLUMN matchBackground INTEGER")
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -48,7 +56,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     DATABASE_NAME
-                ).fallbackToDestructiveMigration().build().also {
+                ).addMigrations(MIGRATION_2_3).fallbackToDestructiveMigration().build().also {
                     INSTANCE = it
                 }
             }

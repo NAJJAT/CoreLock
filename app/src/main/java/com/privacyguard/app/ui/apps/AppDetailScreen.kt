@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MonetizationOn
@@ -41,6 +42,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import android.content.Intent
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -125,7 +127,19 @@ fun AppDetailScreen(
                         }
                         AppIconImage(packageName = state.packageName.ifBlank { packageName }, size = 32.dp, cornerRadius = 8.dp)
                     }
+                    val shareContext = LocalContext.current
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconButton(onClick = {
+                            val report = buildAppReport(state)
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_SUBJECT, "PrivacyGuard report: ${state.appName}")
+                                putExtra(Intent.EXTRA_TEXT, report)
+                            }
+                            shareContext.startActivity(Intent.createChooser(intent, "Share App Report"))
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = "Share report", tint = PgTextMuted, modifier = Modifier.size(20.dp))
+                        }
                         StatusPill(
                             "${state.mismatchFindings.size} flags",
                             if (state.mismatchFindings.isEmpty()) PgBackgroundAlt else PgWarningDim,
@@ -137,8 +151,8 @@ fun AppDetailScreen(
                             if (state.detectedSdks.isEmpty()) PgAccentDim else PgDangerDim,
                             if (state.detectedSdks.isEmpty()) PgAccent else PgDanger,
                         )
-                    }
-                }
+                    } // end inner pills Row
+                } // end outer header Row
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(
                     modifier = Modifier
@@ -166,6 +180,23 @@ fun AppDetailScreen(
                             color = if (state.isBlocked) PgDanger else PgAccent,
                         )
                     }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(PgBackgroundAlt, RoundedCornerShape(10.dp))
+                        .clickable { vm.toggleBackgroundBlock() }
+                        .padding(horizontal = 14.dp, vertical = 9.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Block background network access",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (state.isBackgroundBlocked) PgWarning else PgTextMuted,
+                    )
+                    com.privacyguard.app.ui.components.ToggleChip(state.isBackgroundBlocked)
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -875,6 +906,41 @@ private data class HopAppearance(
     val cardTint: Color,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
 )
+
+private fun buildAppReport(state: AppDetailState): String = buildString {
+    appendLine("PrivacyGuard App Report")
+    appendLine("======================")
+    appendLine("App:     ${state.appName}")
+    appendLine("Package: ${state.packageName}")
+    appendLine()
+    appendLine("Traffic (24h)")
+    appendLine("  Domains contacted: ${state.domains.size}")
+    appendLine("  Background conns:  ${state.domains.sumOf { it.backgroundCount }}")
+    val totalBytes = state.domains.sumOf { it.bytesSent + it.bytesReceived }
+    appendLine("  Data transferred:  ${formatBytes(totalBytes)}")
+    appendLine()
+    if (state.detectedSdks.isNotEmpty()) {
+        appendLine("Tracker SDKs detected: ${state.detectedSdks.size}")
+        state.detectedSdks.take(5).forEach { sdk ->
+            appendLine("  · ${sdk.name} (${sdk.company})")
+        }
+        appendLine()
+    }
+    if (state.mismatchFindings.isNotEmpty()) {
+        appendLine("Permission mismatches: ${state.mismatchFindings.size}")
+        state.mismatchFindings.take(3).forEach { f ->
+            appendLine("  · ${f.title}")
+        }
+        appendLine()
+    }
+    appendLine("Top domains:")
+    state.domains.take(8).forEach { d ->
+        val tracker = if (d.trackerName != null) " [TRACKER: ${d.trackerName}]" else ""
+        appendLine("  ${d.count}x  ${d.domain}$tracker")
+    }
+    appendLine()
+    appendLine("Generated by PrivacyGuard · ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}")
+}
 
 private fun countryFlag(countryCode: String): String {
     if (countryCode.length != 2) return ""

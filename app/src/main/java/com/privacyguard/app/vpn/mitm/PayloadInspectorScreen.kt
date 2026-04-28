@@ -15,13 +15,13 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 
-@SuppressLint("SetJavaScriptEnabled")
+@SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
 @Composable
 fun PayloadInspectorScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val dao = remember { AppDatabase.getInstance(context).payloadLogDao() }
-    val bridge = remember { PayloadInspectorBridge(dao, context.packageManager) }
+    val bridge: PayloadInspectorBridge = remember { PayloadInspectorBridge(dao, context.packageManager) }
 
     AndroidView(
         modifier = modifier.fillMaxSize(),
@@ -48,3 +48,5 @@ fun PayloadInspectorScreen(modifier: Modifier = Modifier) {
         }
     )
 }
+
+

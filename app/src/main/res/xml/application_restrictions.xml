@@ -14,21 +14,21 @@
 
     <restriction
         android:key="mitm_enabled"
-        android:title="Enable HTTPS Payload Inspection"
+        android:title="@string/restriction_mitm_enabled_title"
         android:description="@string/restriction_mitm_enabled_desc"
         android:restrictionType="bool"
         android:defaultValue="false" />
 
     <restriction
         android:key="mitm_consent_given"
-        android:title="Enterprise Legal Consent Pre-confirmed"
+        android:title="@string/restriction_mitm_consent_title"
         android:description="@string/restriction_mitm_consent_desc"
         android:restrictionType="bool"
         android:defaultValue="false" />
 
     <restriction
         android:key="ca_install_automatic"
-        android:title="Install CA Certificate Automatically"
+        android:title="@string/restriction_ca_install_automatic_title"
         android:description="@string/restriction_ca_install_automatic_desc"
         android:restrictionType="bool"
         android:defaultValue="false" />
@@ -37,14 +37,14 @@
 
     <restriction
         android:key="mitm_redact_pii"
-        android:title="Redact PII from Payloads"
+        android:title="@string/restriction_mitm_redact_pii_title"
         android:description="@string/restriction_mitm_redact_pii_desc"
         android:restrictionType="bool"
         android:defaultValue="true" />
 
     <restriction
         android:key="mitm_retention_days"
-        android:title="Payload Log Retention (days)"
+        android:title="@string/restriction_mitm_retention_days_title"
         android:description="@string/restriction_mitm_retention_days_desc"
         android:restrictionType="integer"
         android:defaultValue="7" />
@@ -53,24 +53,25 @@
 
     <restriction
         android:key="mitm_ship_to_siem"
-        android:title="Ship Payloads to SIEM"
+        android:title="@string/restriction_mitm_ship_to_siem_title"
         android:description="@string/restriction_mitm_ship_to_siem_desc"
         android:restrictionType="bool"
         android:defaultValue="false" />
 
     <restriction
         android:key="mitm_siem_endpoint"
-        android:title="SIEM Endpoint URL"
+        android:title="@string/restriction_mitm_siem_endpoint_title"
         android:description="@string/restriction_mitm_siem_endpoint_desc"
         android:restrictionType="string"
         android:defaultValue="" />
 
     <restriction
         android:key="mitm_siem_api_key"
-        android:title="SIEM API Key"
+        android:title="@string/restriction_mitm_siem_api_key_title"
         android:description="@string/restriction_mitm_siem_api_key_desc"
         android:restrictionType="string"
         android:defaultValue="" />
 
 </restrictions>
+
 

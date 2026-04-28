@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.lifecycle.lifecycleScope
 import com.privacyguard.app.data.db.AppDatabase // FIXED
 import kotlinx.coroutines.flow.collectLatest
@@ -32,6 +33,14 @@ class PayloadInspectorActivity : ComponentActivity() {
         }
         setContentView(webView)
 
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (webView.canGoBack()) webView.goBack() else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
         // Observe Room for changes and push the refreshed list to the WebView
         lifecycleScope.launch {
             dao.recentLogs(200).collectLatest { logs ->
@@ -44,9 +53,5 @@ class PayloadInspectorActivity : ComponentActivity() {
             }
         }
     }
-
-    @Suppress("OVERRIDE_DEPRECATION")
-    override fun onBackPressed() {
-        if (webView.canGoBack()) webView.goBack() else super.onBackPressed()
-    }
 }
+

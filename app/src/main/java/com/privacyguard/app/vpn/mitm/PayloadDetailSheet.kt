@@ -86,7 +86,7 @@ fun PayloadDetailSheet(
 
             // Tabs
             val tabTitles = listOf("Headers", "Body", "Raw")
-            var selectedTab by remember { mutableStateOf(0) }
+            var selectedTab by remember { mutableIntStateOf(0) }
 
             TabRow(selectedTabIndex = selectedTab) {
                 tabTitles.forEachIndexed { index, title ->
@@ -262,3 +262,4 @@ private fun formatBytes(bytes: Int): String {
         else -> "${bytes / (1024 * 1024)} MB"
     }
 }
+

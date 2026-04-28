@@ -99,13 +99,24 @@
     <string name="system_apps">System Apps</string>
     <string name="saved">Saved</string>
     <string name="tracker">Tracker</string>
-    <string name="restriction_mitm_enabled_desc">Turn on MITM traffic interception for all managed apps.</string>
-    <string name="restriction_mitm_consent_desc">Set to true to confirm that the organisation has obtained the necessary legal consent to monitor employee HTTPS traffic on this device. When true the app skips the in-app consent dialog.</string>
-    <string name="restriction_ca_install_automatic_desc">When true and the app is Device Owner or Profile Owner, the PrivacyGuard CA is installed into the system trust store silently without any user prompt. All apps on the device or work profile will then trust certificates signed by PrivacyGuard.</string>
-    <string name="restriction_mitm_redact_pii_desc">Automatically redact personally identifiable information such as emails, phone numbers, credit cards, and passwords before storing or shipping payloads.</string>
-    <string name="restriction_mitm_retention_days_desc">Number of days to keep intercepted payload logs on device. Allowed range: 1 to 90.</string>
-    <string name="restriction_mitm_ship_to_siem_desc">Enable forwarding of intercepted payloads to the configured SIEM endpoint.</string>
-    <string name="restriction_mitm_siem_endpoint_desc">HTTPS URL of the log aggregation or SIEM server, for example https://siem.corp.example.com/api/events.</string>
-    <string name="restriction_mitm_siem_api_key_desc">Bearer token or API key used to authenticate requests to the SIEM endpoint.</string>
+    <string name="restriction_mitm_enabled_title" translatable="false">Enable HTTPS Payload Inspection</string>
+    <string name="restriction_mitm_consent_title" translatable="false">Enterprise Legal Consent Pre-confirmed</string>
+    <string name="restriction_ca_install_automatic_title" translatable="false">Install CA Certificate Automatically</string>
+    <string name="restriction_mitm_redact_pii_title" translatable="false">Redact PII from Payloads</string>
+    <string name="restriction_mitm_retention_days_title" translatable="false">Payload Log Retention (days)</string>
+    <string name="restriction_mitm_ship_to_siem_title" translatable="false">Ship Payloads to SIEM</string>
+    <string name="restriction_mitm_siem_endpoint_title" translatable="false">SIEM Endpoint URL</string>
+    <string name="restriction_mitm_siem_api_key_title" translatable="false">SIEM API Key</string>
+    <string name="restriction_mitm_enabled_desc" translatable="false">Turn on MITM traffic interception for all managed apps.</string>
+    <string name="restriction_mitm_consent_desc" translatable="false">Set to true to confirm that the organisation has obtained the necessary legal consent to monitor employee HTTPS traffic on this device. When true the app skips the in-app consent dialog.</string>
+    <string name="restriction_ca_install_automatic_desc" translatable="false">When true and the app is Device Owner or Profile Owner, the PrivacyGuard CA is installed into the system trust store silently without any user prompt. All apps on the device or work profile will then trust certificates signed by PrivacyGuard.</string>
+    <string name="restriction_mitm_redact_pii_desc" translatable="false">Automatically redact personally identifiable information such as emails, phone numbers, credit cards, and passwords before storing or shipping payloads.</string>
+    <string name="restriction_mitm_retention_days_desc" translatable="false">Number of days to keep intercepted payload logs on device. Allowed range: 1 to 90.</string>
+    <string name="restriction_mitm_ship_to_siem_desc" translatable="false">Enable forwarding of intercepted payloads to the configured SIEM endpoint.</string>
+    <string name="restriction_mitm_siem_endpoint_desc" translatable="false">HTTPS URL of the log aggregation or SIEM server, for example https://siem.corp.example.com/api/events.</string>
+    <string name="restriction_mitm_siem_api_key_desc" translatable="false">Bearer token or API key used to authenticate requests to the SIEM endpoint.</string>
 </resources>
+
+
+
 
