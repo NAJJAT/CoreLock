@@ -196,8 +196,16 @@ private fun RuleCard(
                     rule.matchDomain?.let { "domain: $it" },
                     rule.matchPackage?.let { "pkg: $it" },
                     rule.matchIp?.let { "ip: $it" },
+                    rule.matchBackground?.let { if (it) "background only" else null },
                 ).joinToString(" · ").ifBlank { rule.source.name }
                 Text(detail, fontSize = 11.sp, color = Color.Gray, maxLines = 1)
+                if (rule.hitCount > 0) {
+                    Text(
+                        "Triggered ${rule.hitCount} time${if (rule.hitCount > 1) "s" else ""}",
+                        fontSize = 10.sp,
+                        color = actionColor.copy(alpha = 0.7f),
+                    )
+                }
             }
 
             Switch(

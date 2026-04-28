@@ -160,6 +160,60 @@ fun AdsScreen(
                 }
             }
         }
+
+        if (state.topTrackerApps.isNotEmpty()) {
+            item {
+                PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SectionLabel("Top apps contacting trackers (24h)")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    val maxHits = state.topTrackerApps.first().trackerHits.coerceAtLeast(1)
+                    state.topTrackerApps.forEachIndexed { index, app ->
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                com.privacyguard.app.ui.components.AppIconImage(
+                                    packageName = app.packageName,
+                                    size = 28.dp,
+                                    cornerRadius = 7.dp,
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    app.appName,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = PgText,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                )
+                                Text(
+                                    "${app.trackerHits} hits",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = PgDanger,
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Box(
+                                modifier = Modifier.fillMaxWidth().height(3.dp)
+                                    .background(PgBackgroundAlt, androidx.compose.foundation.shape.RoundedCornerShape(999.dp))
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(app.trackerHits.toFloat() / maxHits.toFloat())
+                                        .height(3.dp)
+                                        .background(PgDanger, androidx.compose.foundation.shape.RoundedCornerShape(999.dp))
+                                )
+                            }
+                        }
+                        if (index != state.topTrackerApps.lastIndex) Spacer(modifier = Modifier.height(10.dp))
+                    }
+                }
+            }
+        }
+
+        item { Spacer(modifier = Modifier.height(8.dp)) }
     }
 
     if (dialogOpen) {

@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.privacyguard.app.core.blocklist.BlocklistManager
+import com.privacyguard.app.core.tracker.TrackerDatabase
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.db.CategoryToggleStats
 import com.privacyguard.app.data.db.SourceToggleStats
@@ -38,6 +39,8 @@ data class CustomDomainRuleUi(
     val isAllow: Boolean,
 )
 
+data class TrackerAppUi(val appName: String, val packageName: String, val trackerHits: Int)
+
 data class AdsState(
     val masterEnabled: Boolean = true,
     val blockedToday: Int = 0,
@@ -48,6 +51,7 @@ data class AdsState(
     val customRules: List<CustomDomainRuleUi> = emptyList(),
     val totalDomainsLoaded: Int = 0,
     val isRefreshing: Boolean = false,
+    val topTrackerApps: List<TrackerAppUi> = emptyList(),
 )
 
 class AdsViewModel(app: Application) : AndroidViewModel(app) {
@@ -72,6 +76,27 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
             val blockedToday = runCatching { connectionDao.getBlockedCountToday(since) }.getOrDefault(0)
             val totalToday = runCatching { connectionDao.getCount() }.getOrDefault(0)
 
+            val recentConns = runCatching {
+                connectionDao.getRecentConnections(since, 1_000)
+            }.getOrDefault(emptyList())
+            val topTrackerApps = recentConns
+                .filter { conn ->
+                    val host = conn.sniHostname ?: conn.domain ?: return@filter false
+                    TrackerDatabase.lookupByDomain(host) != null
+                }
+                .groupBy { it.packageName }
+                .filter { it.key.isNotBlank() }
+                .map { (pkg, conns) ->
+                    TrackerAppUi(
+                        appName = conns.firstOrNull { it.appName.isNotBlank() }?.appName
+                            ?: pkg.substringAfterLast('.'),
+                        packageName = pkg,
+                        trackerHits = conns.size,
+                    )
+                }
+                .sortedByDescending { it.trackerHits }
+                .take(5)
+
             _state.value = AdsState(
                 masterEnabled = sourceStats.any { it.enabledCount > 0 } || categoryStats.any { it.enabledCount > 0 },
                 blockedToday = blockedToday,
@@ -84,6 +109,7 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
                     .map { CustomDomainRuleUi(it.id, it.matchDomain.orEmpty(), it.action == FilterRule.Action.ALLOW) },
                 totalDomainsLoaded = sourceStats.sumOf { it.enabledCount },
                 isRefreshing = false,
+                topTrackerApps = topTrackerApps,
             )
         }
     }

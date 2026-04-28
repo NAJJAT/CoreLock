@@ -38,6 +38,7 @@ data class FilterRule(
     val matchEncryption: EncryptionStatus? = null,
     /** If true, rule only applies when the owning app is in the background. */
     val matchBackground: Boolean? = null,
+    val hitCount: Int = 0,
 ) {
     // ─────────────────────────────────────────────────────────────────────────
     // Enums

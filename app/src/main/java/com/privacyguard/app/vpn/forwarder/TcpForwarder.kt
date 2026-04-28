@@ -220,6 +220,7 @@ class TcpForwarder(
                     port = key.destinationPort,
                     protocol = IpPacket.PROTO_TCP,
                     encStatus = result.encryptionStatus,
+                    isBackground = session.wasBackground,
                 )
                 if (decision.isBlocked) {
                     Log.d(TAG, "Blocked cleartext: ${key.destinationIp}:${key.destinationPort}")

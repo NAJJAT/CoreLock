@@ -86,5 +86,6 @@ class RulesRepo(
         matchProtocol = matchProtocol?.let(FilterRule.Protocol::valueOf),
         matchEncryption = matchEncryption?.let(EncryptionStatus::valueOf),
         matchBackground = matchBackground,
+        hitCount = hitCount,
     )
 }
