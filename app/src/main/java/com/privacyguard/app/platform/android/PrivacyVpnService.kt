@@ -87,6 +87,7 @@ class PrivacyVpnService : VpnService() {
     private lateinit var ctMonitor: CtMonitor
     private val ja3NotifiedHashes = mutableSetOf<String>()
     private val cleartextNotifiedPackages = mutableSetOf<String>()
+    @Volatile private var blockCleartextRuleActive = false
 
     companion object {
         private const val TAG = "PrivacyVpnService"
@@ -185,6 +186,11 @@ class PrivacyVpnService : VpnService() {
         scope.launch {
             RuleSyncBus.version.collect {
                 rulesRepo.loadIntoEngine()
+                blockCleartextRuleActive = buildDatabase().rulesDao().getAllRules().any {
+                    it.enabled &&
+                    it.action == com.privacyguard.core.filter.FilterRule.Action.DENY.name &&
+                    it.matchEncryption == com.privacyguard.core.metadata.EncryptionStatus.CLEARTEXT.name
+                }
             }
         }
 
@@ -535,12 +541,7 @@ class PrivacyVpnService : VpnService() {
                 if (!pkg.isNullOrBlank() && cleartextNotifiedPackages.add(pkg)) {
                     val settings = com.privacyguard.app.data.local.preferences.SettingsPreferences
                         .getInstance(applicationContext)
-                    val blockCleartextOn = com.privacyguard.app.data.db.AppDatabase
-                        .getInstance(applicationContext).rulesDao().getAllRules().any {
-                            it.enabled &&
-                            it.action == com.privacyguard.core.filter.FilterRule.Action.DENY.name &&
-                            it.matchEncryption == com.privacyguard.core.metadata.EncryptionStatus.CLEARTEXT.name
-                        }
+                    val blockCleartextOn = blockCleartextRuleActive
                     if (!blockCleartextOn && settings.shouldShowNotification(
                             com.privacyguard.app.domain.model.NotificationType.CONNECTION_BLOCKED)) {
                         notifHelper.postCleartextAlert(
@@ -722,3 +723,4 @@ class PrivacyVpnService : VpnService() {
 
     private fun buildDatabase(): AppDatabase = AppDatabase.getInstance(this)
 }
+

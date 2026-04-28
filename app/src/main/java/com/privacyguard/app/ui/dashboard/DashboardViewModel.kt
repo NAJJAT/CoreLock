@@ -77,13 +77,19 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     @Volatile private var cachedAnomalies: List<com.privacyguard.app.data.db.DnsAnomalyEntity> = emptyList()
     @Volatile private var cachedBehaviorSummaries: List<com.privacyguard.app.core.behavior.AppBehaviorSummary> = emptyList()
     @Volatile private var cachedBehaviorAlerts: Int = 0
+    @Volatile private var cachedWeeklyConnections: List<ConnectionEntity> = emptyList()
+    @Volatile private var slowCacheReady: Boolean = false
 
     init {
         // Fast path: live stats + connection counts — runs every 1s
         viewModelScope.launch {
             while (true) {
-                refreshFast()
-                delay(1_000)
+                if (slowCacheReady) {
+                    refreshFast()
+                    delay(1_000)
+                } else {
+                    delay(250)
+                }
             }
         }
         // Slow path: full DB profiles + behavior DNA — runs every 30s
@@ -118,12 +124,16 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private suspend fun refreshSlow() {
+        val now = System.currentTimeMillis()
+        val weekSince = now - 7L * 24L * 60L * 60L * 1000L
         val profiles = db.connectionProfileDao().allProfiles().map { metadataRepo.toDomainForDashboard(it) }
         val summaries = BehaviorDnaAnalyzer.summarizeAll(profiles)
         cachedProfiles = profiles
         cachedAnomalies = db.dnsAnomalyDao().recent(20)
         cachedBehaviorSummaries = summaries
         cachedBehaviorAlerts = summaries.sumOf { it.findings.size }
+        cachedWeeklyConnections = db.connectionDao().getRecentConnections(weekSince, 2_000)
+        slowCacheReady = true
 
         // Notify once per HIGH-severity behavior finding per VPN session
         summaries.forEach { summary ->
@@ -151,9 +161,8 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         val snapshot = StatsManager.snapshot.value
         val now = System.currentTimeMillis()
         val daySince = now - 24L * 60L * 60L * 1000L
-        val weekSince = now - 7L * 24L * 60L * 60L * 1000L
         val recentConnections = db.connectionDao().getRecentConnections(daySince, 500)
-        val weeklyConnections = db.connectionDao().getRecentConnections(weekSince, 2_000)
+        val weeklyConnections = cachedWeeklyConnections
         val recentAnomalies = cachedAnomalies
         val profiles = cachedProfiles
         val behaviorSummaries = cachedBehaviorSummaries
@@ -424,3 +433,6 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         const val LARGE_UPLOAD_BYTES = 5L * 1024L * 1024L
     }
 }
+
+
+

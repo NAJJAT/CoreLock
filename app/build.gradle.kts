@@ -42,6 +42,11 @@ val releaseSigningConfigured = listOf(
     releaseSignatureSha256,
 ).all { !it.isNullOrBlank() }
 
+configurations.configureEach {
+    // FIXED: legacy-preference-v14 pulls ancient appcompat/vectordrawable 1.0.0 and breaks AGP 9 manifest merge.
+    exclude(group = "androidx.legacy", module = "legacy-preference-v14")
+}
+
 android {
     namespace = "com.privacyguard.app"
     flavorDimensions += "distribution"

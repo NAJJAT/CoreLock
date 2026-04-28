@@ -90,7 +90,7 @@ interface ConnectionDao {
      * Top background-connecting apps: packages sorted by background connection count.
      */
     @Query("""
-        SELECT packageName, COUNT(*) as count
+        SELECT packageName AS domain, COUNT(*) as count
         FROM connections
         WHERE wasBackground = 1 AND timestamp > :since AND packageName != ''
         GROUP BY packageName
@@ -181,3 +181,4 @@ data class DailyStats(
     val blockedConnections: Int,
     val totalBytes: Long
 )
+

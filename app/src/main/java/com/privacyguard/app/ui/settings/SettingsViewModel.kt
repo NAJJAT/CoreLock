@@ -151,6 +151,11 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private suspend fun refresh() {
+        refreshRules()
+        refreshPosture()
+    }
+
     private suspend fun refreshRules() {
         val rules = db.rulesDao().getAllRules()
         _securityState.value = _securityState.value.copy(
@@ -283,3 +288,4 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         private const val RULE_ID_BLOCK_WEAK_TLS = "global:block:weak_tls"
     }
 }
+

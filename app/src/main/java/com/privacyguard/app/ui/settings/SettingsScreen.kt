@@ -1,6 +1,7 @@
 package com.privacyguard.app.ui.settings
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,19 +11,25 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -51,6 +58,7 @@ import com.privacyguard.app.ui.theme.PgDangerDim
 import com.privacyguard.app.ui.theme.PgInfo
 import com.privacyguard.app.ui.theme.PgInfoDim
 import com.privacyguard.app.ui.theme.PgText
+import com.privacyguard.app.ui.theme.PgTextFaint
 import com.privacyguard.app.ui.theme.PgTextMuted
 import com.privacyguard.app.ui.theme.PgWarning
 import com.privacyguard.app.ui.theme.PgWarningDim
@@ -61,6 +69,9 @@ import com.privacyguard.core.filter.FilterEngine
 @Composable
 fun SettingsScreen(
     onLanguageChanged: () -> Unit,
+    onOpenSecurityAnalysis: () -> Unit = {},
+    onOpenAds: () -> Unit = {},
+    onOpenPayloads: (() -> Unit)? = null,
     settingsViewModel: SettingsViewModel = viewModel(),
 ) {
     val context = LocalContext.current
@@ -365,6 +376,20 @@ fun SettingsScreen(
                 )
             )
         }
+        item {
+            PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                Text("ANALYSIS & INSIGHTS", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+                Spacer(modifier = Modifier.height(12.dp))
+                NavRow("Security Analysis", "JA3 threats, cipher alerts, certificate transparency", Icons.Default.Security, PgAccent, onOpenSecurityAnalysis)
+                Spacer(modifier = Modifier.height(12.dp))
+                NavRow("Ads & Trackers", "Per-app tracker detection and SDK inventory", Icons.Default.MonetizationOn, PgWarning, onOpenAds)
+                if (onOpenPayloads != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    NavRow("Payload Inspector", "Intercepted HTTPS traffic logs", Icons.Default.Search, PgInfo, onOpenPayloads)
+                }
+            }
+        }
+
         // Dual VPN section
         item {
             PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
@@ -484,6 +509,42 @@ fun SettingsScreen(
         }
 
         item { Spacer(modifier = Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+private fun NavRow(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accentColor: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(
+                        accentColor.copy(alpha = 0.15f),
+                        androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(title, style = MaterialTheme.typography.titleMedium, color = PgText)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+            }
+        }
+        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = PgTextFaint, modifier = Modifier.size(18.dp))
     }
 }
 

@@ -3,12 +3,9 @@ package com.privacyguard.ui
 import android.net.Uri
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ManageSearch
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MonetizationOn
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Badge
@@ -38,6 +35,7 @@ import androidx.navigation.compose.rememberNavController
 import com.privacyguard.app.BuildConfig  // FIXED: Correct import path
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
+import com.privacyguard.app.ui.alerts.AlertInboxScreen
 import com.privacyguard.app.ui.apps.AppDetailScreen
 import com.privacyguard.app.ui.apps.AppsScreen
 import com.privacyguard.app.ui.ads.AdsScreen
@@ -64,19 +62,13 @@ fun AppNavHost(
     val settingsPreferences = remember(context) { SettingsPreferences.getInstance(context) }
 
     val tabs = remember {
-        buildList {
-            add(NavTab("dashboard", "Home", Icons.Default.Home))
-            add(NavTab("connections", "Traffic", Icons.Default.Wifi))
-            add(NavTab("apps", "Apps", Icons.Default.Apps))
-            add(NavTab("ads", "Ads", Icons.Default.MonetizationOn))
-            add(NavTab("statistics", "Stats", Icons.Default.BarChart))
-            add(NavTab("crypto", "Crypto", Icons.Default.Security))
-            // MITM tab - only available in enterprise build
-            if (BuildConfig.MITM_AVAILABLE) {
-                add(NavTab("payloads", "Payloads", Icons.AutoMirrored.Filled.ManageSearch))
-            }
-            add(NavTab("settings", "Prefs", Icons.Default.Settings))
-        }
+        listOf(
+            NavTab("dashboard", "Home",    Icons.Default.Home),
+            NavTab("apps",      "Apps",    Icons.Default.Apps),
+            NavTab("connections","Traffic", Icons.Default.Wifi),
+            NavTab("statistics","Stats",   Icons.Default.BarChart),
+            NavTab("settings",  "Settings",Icons.Default.Settings),
+        )
     }
 
     val topLevelRoutes = remember(tabs) { tabs.map { it.route }.toSet() }
@@ -186,8 +178,13 @@ fun AppNavHost(
             composable("dashboard") {
                 DashboardScreen(
                     onRequestVpn = onRequestVpn,
-                    onOpenSettings = { navController.navigate("settings") }
+                    onOpenSettings = { navController.navigate("settings") },
+                    onOpenAlerts = { navController.navigate("alerts") },
                 )
+            }
+
+            composable("alerts") {
+                AlertInboxScreen(onBack = { navController.popBackStack() })
             }
 
             composable("connections") {
@@ -222,7 +219,14 @@ fun AppNavHost(
             }
 
             composable("settings") {
-                SettingsScreen(onLanguageChanged = {})
+                SettingsScreen(
+                    onLanguageChanged = {},
+                    onOpenSecurityAnalysis = { navController.navigate("crypto") },
+                    onOpenAds = { navController.navigate("ads") },
+                    onOpenPayloads = if (BuildConfig.MITM_AVAILABLE) {
+                        { navController.navigate("payloads") }
+                    } else null,
+                )
             }
 
             composable("appDetail/{packageName}?appName={appName}") { backStack ->

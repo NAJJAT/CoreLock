@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+enum class AppSortBy { RISK, DATA, CONNECTIONS, BACKGROUND }
+
 data class AppRiskItem(
     val appName: String,
     val packageName: String,
@@ -59,6 +61,9 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
     private val _blockedOnly = MutableStateFlow(false)
     val blockedOnly: StateFlow<Boolean> = _blockedOnly.asStateFlow()
 
+    private val _sortBy = MutableStateFlow(AppSortBy.RISK)
+    val sortBy: StateFlow<AppSortBy> = _sortBy.asStateFlow()
+
     init {
         viewModelScope.launch {
             while (true) {
@@ -78,6 +83,10 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setBlockedOnly(enabled: Boolean) {
         _blockedOnly.value = enabled
+    }
+
+    fun setSortBy(s: AppSortBy) {
+        _sortBy.value = s
     }
 
     private suspend fun refresh() {

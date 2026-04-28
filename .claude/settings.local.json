@@ -13,7 +13,16 @@
       "mcp__ide__getDiagnostics",
       "Bash(python3 *)",
       "Bash(xargs grep *)",
-      "Bash(./gradlew compileDebugKotlin)"
+      "Bash(./gradlew compileDebugKotlin)",
+      "Bash(sort find *)",
+      "Bash(git -C C:/Users/ooo77/AndroidStudioProjects/privacyguard diff --stat HEAD)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(xargs head *)",
+      "Bash(./gradlew :app:compileDebugKotlin --no-daemon)",
+      "Bash(./gradlew :app:compileConsumerDebugKotlin --no-daemon)",
+      "Bash(./gradlew :app:compileEnterpriseDebugKotlin --no-daemon)",
+      "Bash(./gradlew :app:compileConsumerDebugKotlin :app:compileEnterpriseDebugKotlin --no-daemon)"
     ]
   }
 }

@@ -36,9 +36,10 @@ interface TlsAlertDao {
     @Query("SELECT COUNT(*) FROM tls_alerts WHERE alertType = 'WEAK_CIPHER'")
     suspend fun countWeakCipher(): Int
 
-    @Query("SELECT COUNT(*) FROM tls_alerts WHERE severity >= :minSeverity ORDER BY timestamp DESC LIMIT :limit")
+    @Query("SELECT * FROM tls_alerts WHERE severity >= :minSeverity ORDER BY timestamp DESC LIMIT :limit")
     suspend fun recentHighSeverity(minSeverity: Int, limit: Int): List<TlsAlertEntity>
 
     @Query("DELETE FROM tls_alerts WHERE timestamp < :before")
     suspend fun pruneOld(before: Long)
 }
+

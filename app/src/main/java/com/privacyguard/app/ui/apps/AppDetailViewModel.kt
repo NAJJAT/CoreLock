@@ -29,6 +29,9 @@ import java.util.Locale
 data class DomainRow(
     val domain: String,
     val count: Int,
+    val backgroundCount: Int,
+    val bytesSent: Long,
+    val bytesReceived: Long,
     val trackerName: String?,
     val company: String,
 )
@@ -176,6 +179,9 @@ class AppDetailViewModel(
                         DomainRow(
                             domain = domain,
                             count = connections.size,
+                            backgroundCount = connections.count { it.wasBackground },
+                            bytesSent = connections.sumOf { it.bytesSent },
+                            bytesReceived = connections.sumOf { it.bytesReceived },
                             trackerName = tracker?.name,
                             company = tracker?.company ?: TrackerDatabase.companyForDomain(domain),
                         )
@@ -502,3 +508,6 @@ class AppDetailViewModel(
             wasBackground = false,
         )
 }
+
+
+

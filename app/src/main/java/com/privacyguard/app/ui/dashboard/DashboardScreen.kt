@@ -76,6 +76,7 @@ import java.io.File
 fun DashboardScreen(
     onRequestVpn: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
+    onOpenAlerts: () -> Unit = {},
     viewModel: DashboardViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -107,8 +108,8 @@ fun DashboardScreen(
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings", tint = PgTextMuted)
                     }
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = PgTextMuted)
+                    IconButton(onClick = onOpenAlerts) {
+                        Icon(Icons.Default.Notifications, contentDescription = "Alerts", tint = PgTextMuted)
                     }
                 }
 
@@ -255,7 +256,9 @@ fun DashboardScreen(
 
         if (uiState.anomalies.isEmpty()) {
             item {
-                PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                PanelCard(
+                    modifier = Modifier.padding(horizontal = 16.dp).clickable(onClick = onOpenAlerts),
+                ) {
                     Text("No alerts yet", style = MaterialTheme.typography.titleMedium, color = PgText)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text("Once traffic starts flowing, recent anomalies and blocks will appear here.", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
@@ -265,7 +268,7 @@ fun DashboardScreen(
             items(uiState.anomalies) { anomaly ->
                 val tint = if (anomaly.severity >= 8) PgDanger else PgWarning
                 val bg = if (anomaly.severity >= 8) PgDangerDim else PgWarningDim
-                PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                PanelCard(modifier = Modifier.padding(horizontal = 16.dp).clickable(onClick = onOpenAlerts)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier

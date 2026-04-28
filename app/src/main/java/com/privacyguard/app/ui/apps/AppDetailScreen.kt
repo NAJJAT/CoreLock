@@ -41,11 +41,21 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.platform.LocalContext
+import com.privacyguard.app.BuildConfig
+import com.privacyguard.app.data.db.AppDatabase
+import com.privacyguard.app.data.db.PayloadLogEntity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -60,10 +70,12 @@ import com.privacyguard.app.core.detection.MismatchSeverity
 import com.privacyguard.app.core.detection.PermissionMismatchFinding
 import com.privacyguard.app.core.tracker.TrackerCategory
 import com.privacyguard.app.core.tracker.TrackerEntry
+import com.privacyguard.app.ui.components.AppIconImage
 import com.privacyguard.app.ui.components.PanelCard
 import com.privacyguard.app.ui.components.ScreenScaffold
 import com.privacyguard.app.ui.components.SectionLabel
 import com.privacyguard.app.ui.components.StatusPill
+import com.privacyguard.app.ui.components.formatBytes
 import com.privacyguard.app.ui.theme.PgAccent
 import com.privacyguard.app.ui.theme.PgAccentDim
 import com.privacyguard.app.ui.theme.PgBackgroundAlt
@@ -88,6 +100,7 @@ fun AppDetailScreen(
 ) {
     val state by vm.state.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
+    var domainSort by remember { mutableStateOf(DomainSort.COUNT) }
 
     LazyColumn(
         modifier = Modifier
@@ -106,8 +119,11 @@ fun AppDetailScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PgTextMuted)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PgTextMuted)
+                        }
+                        AppIconImage(packageName = state.packageName.ifBlank { packageName }, size = 32.dp, cornerRadius = 8.dp)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         StatusPill(
@@ -157,15 +173,19 @@ fun AppDetailScreen(
                     DetailTab("Connections", selectedTab == 1) { selectedTab = 1 }
                     DetailTab("Topology", selectedTab == 2) { selectedTab = 2 }
                     DetailTab("SDKs", selectedTab == 3) { selectedTab = 3 }
+                    if (BuildConfig.MITM_AVAILABLE) {
+                        DetailTab("Payload", selectedTab == 4) { selectedTab = 4 }
+                    }
                 }
             }
         }
 
         when (selectedTab) {
             0 -> mismatchTab(state)
-            1 -> connectionsTab(state)
+            1 -> connectionsTab(state, domainSort) { domainSort = it }
             2 -> topologyTab(state)
             3 -> sdkTab(state)
+            4 -> if (BuildConfig.MITM_AVAILABLE) item { PayloadTabContent(state.packageName) }
         }
 
         item { Spacer(modifier = Modifier.height(8.dp)) }
@@ -209,7 +229,25 @@ private fun LazyListScope.mismatchTab(state: AppDetailState) {
     }
 }
 
-private fun LazyListScope.connectionsTab(state: AppDetailState) {
+private enum class DomainSort { COUNT, DATA, BACKGROUND }
+
+private fun LazyListScope.connectionsTab(
+    state: AppDetailState,
+    sort: DomainSort,
+    onSortChange: (DomainSort) -> Unit,
+) {
+    item {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            DomainSortChip("Count",      sort == DomainSort.COUNT)      { onSortChange(DomainSort.COUNT) }
+            DomainSortChip("Data",       sort == DomainSort.DATA)       { onSortChange(DomainSort.DATA) }
+            DomainSortChip("Background", sort == DomainSort.BACKGROUND) { onSortChange(DomainSort.BACKGROUND) }
+        }
+    }
     when {
         state.isLoadingDomains -> {
             item { LoadingCard("Loading connection history...") }
@@ -228,9 +266,12 @@ private fun LazyListScope.connectionsTab(state: AppDetailState) {
             }
         }
         else -> {
-            items(state.domains) { row ->
-                DomainCard(row)
+            val sorted = when (sort) {
+                DomainSort.COUNT      -> state.domains.sortedByDescending { it.count }
+                DomainSort.DATA       -> state.domains.sortedByDescending { it.bytesSent + it.bytesReceived }
+                DomainSort.BACKGROUND -> state.domains.sortedByDescending { it.backgroundCount }
             }
+            items(sorted) { row -> DomainCard(row) }
         }
     }
 }
@@ -630,6 +671,25 @@ private fun LoadingCard(message: String) {
 }
 
 @Composable
+private fun DomainSortChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .background(
+                if (selected) PgAccentDim else PgBackgroundAlt,
+                RoundedCornerShape(20.dp),
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 5.dp),
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (selected) PgAccent else PgTextMuted,
+        )
+    }
+}
+
+@Composable
 private fun DomainCard(row: DomainRow) {
     PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -658,7 +718,30 @@ private fun DomainCard(row: DomainRow) {
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Text("${row.count}x", style = MaterialTheme.typography.titleMedium, color = if (row.trackerName != null) PgDanger else PgTextFaint)
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    "${row.count}x",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (row.trackerName != null) PgDanger else PgTextFaint,
+                )
+                if (row.backgroundCount > 0) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        "${row.backgroundCount} bg",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = PgWarning,
+                    )
+                }
+                val totalBytes = row.bytesSent + row.bytesReceived
+                if (totalBytes > 0) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        formatBytes(totalBytes),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = PgTextFaint,
+                    )
+                }
+            }
         }
     }
 }
@@ -751,3 +834,86 @@ private fun countryFlag(countryCode: String): String {
     val offset = 0x1F1E6 - 'A'.code
     return countryCode.uppercase().map { Character.toChars(it.code + offset).concatToString() }.joinToString("")
 }
+
+@Composable
+private fun PayloadTabContent(packageName: String) {
+    val context = LocalContext.current
+    var logs by remember { mutableStateOf<List<PayloadLogEntity>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(packageName) {
+        loading = true
+        logs = withContext(Dispatchers.IO) {
+            AppDatabase.getInstance(context).payloadLogDao().logsForPackage(packageName, 100)
+        }
+        loading = false
+    }
+
+    if (loading) {
+        LoadingCard("Loading intercepted payloads...")
+        return
+    }
+
+    if (logs.isEmpty()) {
+        PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+            Text("No payloads captured yet", style = MaterialTheme.typography.titleMedium, color = PgText)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "Enable MITM inspection in Settings → Payload Inspector and run the VPN with this app open.",
+                style = MaterialTheme.typography.bodySmall,
+                color = PgTextMuted,
+            )
+        }
+        return
+    }
+
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        logs.forEach { log ->
+            PanelCard {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "${log.method ?: log.direction} ${log.sniHostname ?: log.destinationIp}${log.urlPath?.let { " $it" } ?: ""}",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = PgText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            "${log.sizeBytes}B · ${log.protocol}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = PgTextMuted,
+                        )
+                    }
+                    if (log.piiRedacted) {
+                        StatusPill("PII", PgDangerDim, PgDanger)
+                    } else {
+                        StatusPill(log.direction, PgAccentDim, PgAccent)
+                    }
+                }
+                if (!log.body.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        log.body.take(200),
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        ),
+                        color = PgTextFaint,
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+

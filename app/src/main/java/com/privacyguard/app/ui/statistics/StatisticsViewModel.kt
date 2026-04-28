@@ -54,6 +54,8 @@ data class ThreatTimelineItem(
 
 data class SunburstOrgSlice(val org: String, val count: Int)
 
+data class AppDataStat(val appName: String, val packageName: String, val totalBytes: Long)
+
 // 7×24 connection count grid [dayOfWeek Mon=0][hour]
 typealias HeatmapGrid = Array<IntArray>
 
@@ -87,6 +89,9 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _sunburstOrgs = MutableStateFlow<List<SunburstOrgSlice>>(emptyList())
     val sunburstOrgs: StateFlow<List<SunburstOrgSlice>> = _sunburstOrgs.asStateFlow()
+
+    private val _topAppsByData = MutableStateFlow<List<AppDataStat>>(emptyList())
+    val topAppsByData: StateFlow<List<AppDataStat>> = _topAppsByData.asStateFlow()
 
     @Volatile private var cachedProfiles: List<com.privacyguard.core.metadata.ConnectionProfile> = emptyList()
     @Volatile private var cachedBehaviorSummaries: List<com.privacyguard.app.core.behavior.AppBehaviorSummary> = emptyList()
@@ -144,6 +149,19 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
             .getTopBlockedDomains(since, 5)
             .map { BlockedDomainStat(it.domain, it.count) }
         _highSeverityAnomalies.value = db.dnsAnomalyDao().countHighSeverity()
+
+        _topAppsByData.value = recentConnections
+            .groupBy { it.packageName.ifBlank { it.appName } }
+            .map { (pkg, conns) ->
+                AppDataStat(
+                    appName = conns.firstOrNull { it.appName.isNotBlank() }?.appName ?: pkg.substringAfterLast('.'),
+                    packageName = pkg,
+                    totalBytes = conns.sumOf { it.bytesSent + it.bytesReceived },
+                )
+            }
+            .filter { it.totalBytes > 0 }
+            .sortedByDescending { it.totalBytes }
+            .take(6)
 
         _topCountries.value = recentConnections
             .mapNotNull { GeoIpResolver.lookup(it.destinationIp) }

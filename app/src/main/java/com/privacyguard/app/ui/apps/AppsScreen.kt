@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.OutlinedTextField
@@ -33,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.privacyguard.app.ui.components.AppIconImage
 import com.privacyguard.app.ui.components.PanelCard
 import com.privacyguard.app.ui.components.ScreenScaffold
 import com.privacyguard.app.ui.components.StatusPill
@@ -44,6 +44,7 @@ import com.privacyguard.app.ui.theme.PgBackgroundAlt
 import com.privacyguard.app.ui.theme.PgDanger
 import com.privacyguard.app.ui.theme.PgDangerDim
 import com.privacyguard.app.ui.theme.PgInfo
+import com.privacyguard.app.ui.theme.PgInfoDim
 import com.privacyguard.app.ui.theme.PgPanelMuted
 import com.privacyguard.app.ui.theme.PgPanelRaised
 import com.privacyguard.app.ui.theme.PgText
@@ -61,15 +62,25 @@ fun AppsScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val highRiskOnly by viewModel.highRiskOnly.collectAsState()
     val blockedOnly by viewModel.blockedOnly.collectAsState()
+    val sortBy by viewModel.sortBy.collectAsState()
 
-    val filteredApps = apps.filter { app ->
-        val matchesQuery = searchQuery.isBlank() ||
-            app.appName.contains(searchQuery, true) ||
-            app.packageName.contains(searchQuery, true)
-        val matchesRisk = !highRiskOnly || app.maxRiskScore >= 70
-        val matchesBlocked = !blockedOnly || app.isBlocked
-        matchesQuery && matchesRisk && matchesBlocked
-    }
+    val filteredApps = apps
+        .filter { app ->
+            val matchesQuery = searchQuery.isBlank() ||
+                app.appName.contains(searchQuery, true) ||
+                app.packageName.contains(searchQuery, true)
+            val matchesRisk = !highRiskOnly || app.maxRiskScore >= 70
+            val matchesBlocked = !blockedOnly || app.isBlocked
+            matchesQuery && matchesRisk && matchesBlocked
+        }
+        .let { list ->
+            when (sortBy) {
+                AppSortBy.RISK        -> list.sortedByDescending { it.maxRiskScore }
+                AppSortBy.DATA        -> list.sortedByDescending { it.totalBytesOut }
+                AppSortBy.CONNECTIONS -> list.sortedByDescending { it.totalDestinations }
+                AppSortBy.BACKGROUND  -> list.sortedByDescending { it.backgroundCount }
+            }
+        }
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -109,6 +120,13 @@ fun AppsScreen(
                         viewModel.setBlockedOnly(!blockedOnly)
                     }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip("Risk",        sortBy == AppSortBy.RISK,        PgDanger,  PgDangerDim)  { viewModel.setSortBy(AppSortBy.RISK) }
+                    FilterChip("Data",        sortBy == AppSortBy.DATA,        PgAccent,  PgAccentDim)  { viewModel.setSortBy(AppSortBy.DATA) }
+                    FilterChip("Connections", sortBy == AppSortBy.CONNECTIONS, PgInfo,    PgInfoDim)    { viewModel.setSortBy(AppSortBy.CONNECTIONS) }
+                    FilterChip("Background",  sortBy == AppSortBy.BACKGROUND,  PgWarning, PgWarningDim) { viewModel.setSortBy(AppSortBy.BACKGROUND) }
+                }
             }
         }
 
@@ -125,14 +143,7 @@ fun AppsScreen(
                     .clickable { onAppClick(app.packageName, app.appName) }
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(PgPanelMuted, RoundedCornerShape(12.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.Android, contentDescription = null, tint = PgInfo, modifier = Modifier.size(22.dp))
-                    }
+                    AppIconImage(packageName = app.packageName)
                     Spacer(modifier = Modifier.size(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Row(

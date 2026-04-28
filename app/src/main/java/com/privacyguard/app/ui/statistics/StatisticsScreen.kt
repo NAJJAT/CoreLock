@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,7 +43,9 @@ import com.privacyguard.app.ui.components.SunburstSlice
 import com.privacyguard.app.ui.components.TemporalHeatmap
 import com.privacyguard.app.ui.security.rememberProtectedActionRunner
 import com.privacyguard.app.ui.components.formatAgo
+import com.privacyguard.app.ui.components.formatBytes
 import com.privacyguard.app.ui.theme.PgAccent
+import com.privacyguard.app.ui.theme.PgBackgroundAlt
 import com.privacyguard.app.ui.theme.PgAccentDim
 import com.privacyguard.app.ui.theme.PgDanger
 import com.privacyguard.app.ui.theme.PgDangerDim
@@ -68,6 +72,7 @@ fun StatisticsScreen(
     val csvExportPath by viewModel.csvExportPath.collectAsState()
     val heatmap by viewModel.heatmap.collectAsState()
     val sunburstOrgs by viewModel.sunburstOrgs.collectAsState()
+    val topAppsByData by viewModel.topAppsByData.collectAsState()
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -433,7 +438,68 @@ fun StatisticsScreen(
             }
         }
 
+        if (topAppsByData.isNotEmpty()) {
+            item {
+                PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SectionLabel("Top apps by data (24h)")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    val maxBytes = topAppsByData.first().totalBytes.coerceAtLeast(1L)
+                    topAppsByData.forEachIndexed { index, app ->
+                        AppDataRow(app, app.totalBytes.toFloat() / maxBytes.toFloat())
+                        if (index != topAppsByData.lastIndex) Spacer(modifier = Modifier.height(10.dp))
+                    }
+                }
+            }
+        }
+
         item { Spacer(modifier = Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+private fun AppDataRow(app: AppDataStat, fraction: Float) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        com.privacyguard.app.ui.components.AppIconImage(
+            packageName = app.packageName,
+            size = 32.dp,
+            cornerRadius = 8.dp,
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    app.appName,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = PgText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    formatBytes(app.totalBytes),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = PgAccent,
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .background(PgBackgroundAlt, RoundedCornerShape(999.dp))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(fraction.coerceAtLeast(0.03f))
+                        .height(3.dp)
+                        .background(PgAccent, RoundedCornerShape(999.dp))
+                )
+            }
+        }
     }
 }
 

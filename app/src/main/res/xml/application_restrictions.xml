@@ -15,26 +15,21 @@
     <restriction
         android:key="mitm_enabled"
         android:title="Enable HTTPS Payload Inspection"
-        android:description="Turn on MITM traffic interception for all managed apps."
+        android:description="@string/restriction_mitm_enabled_desc"
         android:restrictionType="bool"
         android:defaultValue="false" />
 
     <restriction
         android:key="mitm_consent_given"
         android:title="Enterprise Legal Consent Pre-confirmed"
-        android:description="Set to true to confirm that the organisation has obtained
-            the necessary legal consent to monitor employee HTTPS traffic on this device.
-            When true the app skips the in-app consent dialog."
+        android:description="@string/restriction_mitm_consent_desc"
         android:restrictionType="bool"
         android:defaultValue="false" />
 
     <restriction
         android:key="ca_install_automatic"
         android:title="Install CA Certificate Automatically"
-        android:description="When true and the app is Device Owner or Profile Owner,
-            the PrivacyGuard CA is installed into the system trust store silently
-            without any user prompt. All apps on the device (or work profile) will
-            then trust certificates signed by PrivacyGuard."
+        android:description="@string/restriction_ca_install_automatic_desc"
         android:restrictionType="bool"
         android:defaultValue="false" />
 
@@ -43,17 +38,14 @@
     <restriction
         android:key="mitm_redact_pii"
         android:title="Redact PII from Payloads"
-        android:description="Automatically redact personally identifiable information
-            (emails, phone numbers, credit cards, passwords) before storing or
-            shipping payloads."
+        android:description="@string/restriction_mitm_redact_pii_desc"
         android:restrictionType="bool"
         android:defaultValue="true" />
 
     <restriction
         android:key="mitm_retention_days"
         android:title="Payload Log Retention (days)"
-        android:description="Number of days to keep intercepted payload logs on device.
-            Allowed range: 1–90."
+        android:description="@string/restriction_mitm_retention_days_desc"
         android:restrictionType="integer"
         android:defaultValue="7" />
 
@@ -62,25 +54,23 @@
     <restriction
         android:key="mitm_ship_to_siem"
         android:title="Ship Payloads to SIEM"
-        android:description="Enable forwarding of intercepted payloads to the
-            configured SIEM endpoint."
+        android:description="@string/restriction_mitm_ship_to_siem_desc"
         android:restrictionType="bool"
         android:defaultValue="false" />
 
     <restriction
         android:key="mitm_siem_endpoint"
         android:title="SIEM Endpoint URL"
-        android:description="HTTPS URL of the log aggregation / SIEM server
-            (e.g. https://siem.corp.example.com/api/events)."
+        android:description="@string/restriction_mitm_siem_endpoint_desc"
         android:restrictionType="string"
         android:defaultValue="" />
 
     <restriction
         android:key="mitm_siem_api_key"
         android:title="SIEM API Key"
-        android:description="Bearer token or API key used to authenticate requests
-            to the SIEM endpoint."
+        android:description="@string/restriction_mitm_siem_api_key_desc"
         android:restrictionType="string"
         android:defaultValue="" />
 
 </restrictions>
+
