@@ -50,7 +50,8 @@ object KillSwitch {
             }
         }
 
-        connectivityManager?.registerNetworkCallback(request, networkCallback!!)
+        val cb = networkCallback ?: return
+        connectivityManager?.registerNetworkCallback(request, cb)
     }
 
     fun stopMonitoring() {

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -358,7 +359,7 @@ fun StatisticsScreen(
                         modifier = Modifier
                             .fillMaxWidth(
                                 if (topBlockedDomains.isEmpty()) 0f
-                                else item.count.toFloat() / topBlockedDomains.first().count.toFloat()
+                                else item.count.toFloat() / topBlockedDomains.first().count.coerceAtLeast(1).toFloat()
                             )
                             .height(6.dp)
                             .background(PgDanger, RoundedCornerShape(999.dp))
@@ -406,7 +407,7 @@ fun StatisticsScreen(
                                 modifier = Modifier
                                     .fillMaxWidth(
                                         item.connectionCount.toFloat() /
-                                            topCountries.first().connectionCount.toFloat()
+                                            topCountries.first().connectionCount.coerceAtLeast(1).toFloat()
                                     )
                                     .height(4.dp)
                                     .background(PgInfo, RoundedCornerShape(999.dp))
@@ -507,7 +508,7 @@ fun StatisticsScreen(
                 PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                     SectionLabel("Top apps by data (24h)")
                     Spacer(modifier = Modifier.height(12.dp))
-                    val maxBytes = topAppsByData.first().totalBytes.coerceAtLeast(1L)
+                    val maxBytes = topAppsByData.firstOrNull()?.totalBytes?.coerceAtLeast(1L) ?: 1L
                     topAppsByData.forEachIndexed { index, app ->
                         AppDataRow(app, app.totalBytes.toFloat() / maxBytes.toFloat())
                         if (index != topAppsByData.lastIndex) Spacer(modifier = Modifier.height(10.dp))
@@ -613,7 +614,7 @@ private fun ScoreBreakdown(stats: StatisticsData) {
                     style = MaterialTheme.typography.labelSmall,
                     color = f.color,
                     modifier = Modifier.width(80.dp),
-                    textAlign = TextOverflow.Companion.let { androidx.compose.ui.text.style.TextAlign.End },
+                    textAlign = TextAlign.End,
                 )
             }
         }

@@ -675,7 +675,8 @@ private fun LoadingCard(message: String) {
 
 @Composable
 private fun HourlyActivityChart(hourly: List<Int>) {
-    val peak = hourly.max().coerceAtLeast(1)
+    if (hourly.isEmpty()) return
+    val peak = (hourly.maxOrNull() ?: 1).coerceAtLeast(1)
     PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
         Text("Activity by hour (24h)", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
         Spacer(modifier = Modifier.height(8.dp))

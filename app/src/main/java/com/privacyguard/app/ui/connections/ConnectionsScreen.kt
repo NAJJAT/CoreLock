@@ -135,7 +135,7 @@ fun ConnectionsScreen(
             }
         }
 
-        items(connections) { connection ->
+        items(connections, key = { it.id }) { connection ->
             PanelCard(
                 modifier = Modifier
                     .padding(horizontal = 16.dp)

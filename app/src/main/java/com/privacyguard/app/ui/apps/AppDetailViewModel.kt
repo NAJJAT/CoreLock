@@ -193,7 +193,7 @@ class AppDetailViewModel(
                 mergedConnections.forEach { c ->
                     val hour = java.util.Calendar.getInstance()
                         .apply { timeInMillis = c.timestamp }.get(java.util.Calendar.HOUR_OF_DAY)
-                    hourly[hour]++
+                    if (hour in 0..23) hourly[hour]++
                 }
                 _state.value = _state.value.copy(
                     domains = domainRows,

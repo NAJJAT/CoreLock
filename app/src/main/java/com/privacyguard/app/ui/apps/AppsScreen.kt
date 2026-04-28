@@ -130,7 +130,7 @@ fun AppsScreen(
             }
         }
 
-        items(filteredApps) { app ->
+        items(filteredApps, key = { it.packageName }) { app ->
             val (riskLabel, tint, bg) = when {
                 app.stalkerwareScore >= 70 -> Triple("STALKER", PgDanger, PgDangerDim)
                 app.maxRiskScore >= 70 -> Triple("HIGH", PgDanger, PgDangerDim)

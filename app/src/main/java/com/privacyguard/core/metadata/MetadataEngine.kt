@@ -70,7 +70,7 @@ class MetadataEngine {
         // Hourly distribution
         val hourly = existing?.hourlyDistribution?.copyOf() ?: IntArray(24)
         val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-        hourly[hour]++
+        if (hour in 0..23) hourly[hour]++
 
         // Risk scoring
         val signals = mutableListOf<RiskSignal>()

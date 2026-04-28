@@ -305,7 +305,7 @@ fun DashboardScreen(
                 }
             }
         } else {
-            items(uiState.anomalies) { anomaly ->
+            items(uiState.anomalies, key = { it.id }) { anomaly ->
                 val tint = if (anomaly.severity >= 8) PgDanger else PgWarning
                 val bg = if (anomaly.severity >= 8) PgDangerDim else PgWarningDim
                 PanelCard(modifier = Modifier.padding(horizontal = 16.dp).clickable(onClick = onOpenAlerts)) {
