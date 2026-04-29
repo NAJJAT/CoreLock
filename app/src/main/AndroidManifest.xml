@@ -55,6 +55,18 @@
         </activity>
 
         <activity
+            android:name=".FlutterMainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Privacyguard"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/Theme.Privacyguard" />
+        </activity>
+
+        <activity
             android:name=".vpn.mitm.PayloadInspectorActivity"
             android:exported="false"
             android:theme="@style/Theme.Privacyguard" />

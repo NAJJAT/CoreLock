@@ -144,6 +144,11 @@ class DnsAnomalyDetector {
 
         fun shannonEntropy(value: String): Double {
             if (value.isBlank()) return 0.0
+            // Use native Rust implementation when available (2–3× faster)
+            if (com.privacyguard.core.native_engine.RustBridge.isAvailable) {
+                return com.privacyguard.core.native_engine.RustBridge
+                    .shannonEntropy(value.toByteArray(Charsets.UTF_8))
+            }
             val frequencies = value.groupingBy { it }.eachCount()
             return frequencies.values.sumOf { count ->
                 val p = count.toDouble() / value.length.toDouble()

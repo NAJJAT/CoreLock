@@ -74,6 +74,7 @@ class PrivacyVpnService : VpnService() {
     private lateinit var tunWriter: TunWriter
     private lateinit var tcpForwarder: TcpForwarder
     private lateinit var udpForwarder: UdpForwarder
+    private lateinit var ipv6Proxy: com.privacyguard.vpn.forwarder.Ipv6Proxy
     private lateinit var connectionRepo: ConnectionRepo
     private lateinit var rulesRepo: RulesRepo
     private lateinit var blocklistRepo: BlocklistRepo
@@ -314,6 +315,13 @@ class PrivacyVpnService : VpnService() {
 
         udpForwarder = UdpForwarder(sessionTable, tunWriter, ::protect).also { it.start() }
 
+        ipv6Proxy = com.privacyguard.vpn.forwarder.Ipv6Proxy(
+            tunWriter          = tunWriter,
+            protectSocket      = { sock -> protect(sock) },
+            protectUdpSocket   = { sock -> protect(sock) },
+            scope              = scope,
+        )
+
         tunReader = TunReader(tunInterface).also {
             it.addHandler { ip -> onPacket(ip) }
             it.addIpv6Handler { raw -> onIpv6Packet(raw) }
@@ -352,10 +360,38 @@ class PrivacyVpnService : VpnService() {
     }
 
     private fun onIpv6Packet(raw: ByteArray) {
-        StatsManager.recordIpv6Blocked(raw.size.toLong())
-        if (raw.size >= 40) {
-            val destination = ipv6ToString(raw, 24)
-            Log.d(TAG, "IPv6 packet captured and blocked to prevent leak: $destination len=${raw.size}")
+        val ipv6 = com.privacyguard.core.packet.Ipv6Packet.parse(raw)
+        if (ipv6 == null) {
+            StatsManager.recordIpv6Blocked(raw.size.toLong())
+            return
+        }
+
+        // Filter: check IP against blocklist rules before proxying
+        val dstIp  = ipv6.destinationIp
+        val dstPort = when (ipv6.nextHeader) {
+            com.privacyguard.core.packet.Ipv6Packet.PROTO_TCP,
+            com.privacyguard.core.packet.Ipv6Packet.PROTO_UDP -> {
+                val off = com.privacyguard.core.packet.Ipv6Packet.HEADER_LEN
+                if (raw.size >= off + 4)
+                    ((raw[off + 2].toInt() and 0xFF) shl 8) or (raw[off + 3].toInt() and 0xFF)
+                else 0
+            }
+            else -> 0
+        }
+
+        val decision = filterEngine.evaluate(
+            uid = -1, pkg = null, domain = null,
+            ip = dstIp, port = dstPort, protocol = ipv6.nextHeader,
+        )
+        if (decision.isBlocked) {
+            recordBlock()
+            return
+        }
+
+        when (ipv6.nextHeader) {
+            com.privacyguard.core.packet.Ipv6Packet.PROTO_TCP,
+            com.privacyguard.core.packet.Ipv6Packet.PROTO_UDP -> ipv6Proxy.handle(ipv6)
+            else -> StatsManager.recordIpv6Blocked(raw.size.toLong())
         }
     }
 
@@ -466,11 +502,17 @@ class PrivacyVpnService : VpnService() {
     }
 
     private fun inspectTlsClientHello(data: ByteArray, pkg: String?) {
+        // Fast path: use Rust native JA3 computation when available
+        val ja3Hash: String? = if (com.privacyguard.core.native_engine.RustBridge.isAvailable) {
+            com.privacyguard.core.native_engine.RustBridge.computeJa3(data)
+        } else null
+
         val hello = ClientHelloParser.parse(data) ?: return
         val db = buildDatabase()
 
-        // JA3 threat check
-        val ja3Alert = Ja3Fingerprinter.inspect(hello, pkg)
+        // JA3 threat check — prefer native hash, fall back to Kotlin-computed hash
+        val effectiveHash = ja3Hash ?: hello.ja3Hash()
+        val ja3Alert = Ja3Fingerprinter.inspectHash(effectiveHash, hello, pkg)
         if (ja3Alert != null) {
             scope.launch {
                 db.tlsAlertDao().insert(TlsAlertEntity(

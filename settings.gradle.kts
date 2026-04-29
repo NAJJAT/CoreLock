@@ -24,3 +24,11 @@ dependencyResolutionManagement {
 
 rootProject.name = "privacyguard"
 include(":app")
+
+// Flutter add-to-app module.
+// Enable by running: cd flutter && flutter pub get
+// This generates flutter/.android/include_flutter.groovy and wires the :flutter project in.
+val flutterInclude = file("flutter/.android/include_flutter.groovy")
+if (flutterInclude.exists()) {
+    apply(from = flutterInclude)
+}

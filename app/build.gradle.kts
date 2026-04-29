@@ -47,6 +47,56 @@ configurations.configureEach {
     exclude(group = "androidx.legacy", module = "legacy-preference-v14")
 }
 
+// ── Rust NDK Build ─────────────────────────────────────────────────────────────
+// Requires:
+//   rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+//   cargo install cargo-ndk
+//
+// The task is optional: if cargo-ndk is not on PATH the build proceeds without
+// the native .so and the Kotlin JA3/bloom fallback is used automatically.
+
+val rustDir = rootProject.projectDir.resolve("rust")
+val jniLibsDir = project.projectDir.resolve("src/main/jniLibs")
+
+val buildRust by tasks.registering(Exec::class) {
+    group = "build"
+    description = "Compile Rust core to Android shared libraries via cargo-ndk"
+
+    workingDir = rustDir
+    isIgnoreExitValue = true   // don't fail if cargo-ndk is absent
+
+    val targets = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+    val targetFlags = targets.flatMap { listOf("-t", it) }
+
+    commandLine = listOf("cargo", "ndk") +
+        targetFlags +
+        listOf("--android-platform", "24", "--output-dir", jniLibsDir.absolutePath, "build", "--release")
+
+    doFirst {
+        // Only run if cargo-ndk is available
+        val cargoNdk = try {
+            ProcessBuilder("cargo", "ndk", "--version")
+                .start().waitFor() == 0
+        } catch (_: Exception) { false }
+        if (!cargoNdk) {
+            logger.warn("⚠️  cargo-ndk not found — skipping Rust build. Kotlin fallback active.")
+            commandLine = if (org.gradle.internal.os.OperatingSystem.current().isWindows) {
+                listOf("cmd", "/c", "exit", "0")
+            } else {
+                listOf("true")
+            }   // no-op command
+        }
+    }
+}
+
+tasks.named("preBuild") { dependsOn(buildRust) }
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    if (!rootProject.file("flutter/.android").exists()) {
+        exclude("**/FlutterMainActivity.kt")
+        exclude("**/FlutterBridge.kt")
+    }
+}
+
 android {
     namespace = "com.privacyguard.app"
     flavorDimensions += "distribution"
@@ -137,6 +187,9 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
+    // Exclude Flutter-dependent sources until `cd flutter && flutter pub get` is run.
+    // Once the Flutter module is set up, these files compile as part of :flutter dependency.
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -183,6 +236,11 @@ dependencies {
 
     // ==================== END MITM DEPENDENCIES ====================
 
+    // Flutter UI module — active once `cd flutter && flutter pub get` has been run
+    if (rootProject.file("flutter/.android/include_flutter.groovy").exists()) {
+        implementation(project(":flutter"))
+    }
+
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
@@ -191,3 +249,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
+
+
+
+

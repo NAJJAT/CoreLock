@@ -1,0 +1,20 @@
+[package]
+name    = "privacyguard-windows"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "privacyguard"
+
+[dependencies]
+privacyguard-core = { path = "../privacyguard-core", default-features = false }
+windivert         = { version = "0.2" }
+tokio             = { version = "1", features = ["full"] }
+clap              = { version = "4", features = ["derive"] }
+tracing           = "0.1"
+tracing-subscriber = "0.3"
+windows           = { version = "0.52", features = [
+    "Win32_System_Services",
+    "Win32_Security",
+    "Win32_Foundation",
+] }

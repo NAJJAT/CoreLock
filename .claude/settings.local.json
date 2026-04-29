@@ -24,7 +24,11 @@
       "Bash(./gradlew :app:compileEnterpriseDebugKotlin --no-daemon)",
       "Bash(./gradlew :app:compileConsumerDebugKotlin :app:compileEnterpriseDebugKotlin --no-daemon)",
       "Bash(grep -v \"//\\\\|toIntOrNull\\\\|\\\\\\\\.toLong\\\\b\\\\|String\\\\b\")",
-      "Bash(grep -v \"//\")"
+      "Bash(grep -v \"//\")",
+      "Bash(xargs cat *)",
+      "Bash(./gradlew :app:compileConsumerDebugKotlin)",
+      "Bash(./gradlew :app:compileEnterpriseDebugKotlin :app:testConsumerDebugUnitTest)",
+      "Bash(./gradlew :app:testConsumerDebugUnitTest --rerun-tasks)"
     ]
   }
 }

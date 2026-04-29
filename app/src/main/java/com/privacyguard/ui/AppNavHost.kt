@@ -1,5 +1,6 @@
 package com.privacyguard.ui
 
+import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -225,6 +226,15 @@ fun AppNavHost(
             }
 
             composable("settings") {
+                val settingsContext = LocalContext.current
+                val flutterLauncher: (() -> Unit)? = remember(settingsContext) {
+                    try {
+                        val flutterActivityClass = Class.forName("com.privacyguard.app.FlutterMainActivity")
+                        ({ settingsContext.startActivity(Intent(settingsContext, flutterActivityClass)) })
+                    } catch (_: ClassNotFoundException) {
+                        null
+                    }
+                }
                 SettingsScreen(
                     onLanguageChanged = {},
                     onOpenSecurityAnalysis = { navController.navigate("crypto") },
@@ -232,6 +242,7 @@ fun AppNavHost(
                     onOpenPayloads = if (BuildConfig.MITM_AVAILABLE) {
                         { navController.navigate("payloads") }
                     } else null,
+                    onOpenFlutterUi = flutterLauncher,
                 )
             }
 

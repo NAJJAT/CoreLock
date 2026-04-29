@@ -1,0 +1,28 @@
+[package]
+name    = "privacyguard-ebpf"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "privacyguard-ebpf"
+
+# ── Userspace (loads and controls eBPF programs) ──────────────────────────────
+[dependencies]
+privacyguard-core = { path = "../privacyguard-core", default-features = false }
+
+# aya: Rust eBPF framework — userspace loader
+aya = { version = "0.12", features = ["async_tokio"] }
+# aya-log: structured logging from eBPF programs
+aya-log = "0.2"
+
+tokio       = { workspace = true }
+tracing     = { workspace = true }
+tracing-subscriber = { workspace = true }
+clap        = { workspace = true }
+anyhow      = "1"
+bytes       = "1"
+
+# ── eBPF programs (compiled to BPF bytecode, not x86) ────────────────────────
+# The programs live in src/bpf/*.rs and are compiled separately with
+#   cargo xtask build-ebpf  (or manually: cargo build --target bpf-unknown-unknown)
+# The compiled .o files are embedded at build time.

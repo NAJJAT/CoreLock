@@ -67,6 +67,21 @@ object Ja3Fingerprinter {
         )
     }
 
+    /** Accept a pre-computed hash (e.g. from native Rust) and skip re-computing it. */
+    fun inspectHash(hash: String, hello: ClientHello, packageName: String?): Ja3Alert? {
+        val (name, category, severity) = THREATS[hash] ?: return null
+        return Ja3Alert(
+            hash = hash,
+            ja3String = hello.ja3String(),
+            malwareName = name,
+            category = category,
+            severity = severity,
+            sni = hello.sni,
+            packageName = packageName,
+            timestamp = System.currentTimeMillis(),
+        )
+    }
+
     fun hashOf(hello: ClientHello): String = hello.ja3Hash()
 
     fun isThreat(hash: String): Boolean = THREATS.containsKey(hash)

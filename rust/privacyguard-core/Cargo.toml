@@ -1,0 +1,25 @@
+[package]
+name    = "privacyguard-core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name       = "privacyguard_core"
+# cdylib  = Android .so / Linux .so
+# staticlib = iOS .a / macOS .a (linked into the host app)
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+jni = { version = "0.21", default-features = false, optional = true }
+
+[features]
+default   = ["android"]
+android   = ["dep:jni"]   # JNI exports — only compiled for Android targets
+
+
+[profile.release]
+opt-level  = 3
+lto        = true
+codegen-units = 1
+panic      = "abort"
+strip      = "symbols"

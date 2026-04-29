@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
@@ -72,6 +73,7 @@ fun SettingsScreen(
     onOpenSecurityAnalysis: () -> Unit = {},
     onOpenAds: () -> Unit = {},
     onOpenPayloads: (() -> Unit)? = null,
+    onOpenFlutterUi: (() -> Unit)? = null,
     settingsViewModel: SettingsViewModel = viewModel(),
 ) {
     val context = LocalContext.current
@@ -387,6 +389,10 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     NavRow("Payload Inspector", "Intercepted HTTPS traffic logs", Icons.Default.Search, PgInfo, onOpenPayloads)
                 }
+                if (onOpenFlutterUi != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    NavRow("Flutter UI (Preview)", "Cross-platform UI — tap to launch", Icons.Default.PhoneAndroid, PgAccent, onOpenFlutterUi)
+                }
             }
         }
 
@@ -631,3 +637,4 @@ private fun providerLabel(provider: String): String = when (provider) {
     SettingsPreferences.DOH_QUAD9 -> "Quad9"
     else -> "Cloudflare"
 }
+
