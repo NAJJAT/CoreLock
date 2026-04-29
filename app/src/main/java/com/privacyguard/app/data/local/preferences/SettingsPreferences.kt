@@ -27,6 +27,8 @@ class SettingsPreferences private constructor(context: Context) {
         private const val KEY_RETENTION_DAYS             = "retention_days"
         private const val KEY_UPSTREAM_DNS               = "upstream_dns"
         private const val KEY_ONBOARDING_COMPLETED       = "onboarding_completed"
+        private const val KEY_VPN_CONSENT_TS             = "vpn_consent_ts"
+        private const val KEY_TLS_CONSENT_TS             = "tls_consent_ts"
         private const val KEY_PROTECTION_LEVEL           = "protection_level"
         private const val KEY_ENTERPRISE_INSPECTION_ENABLED = "enterprise_inspection_enabled"
         private const val KEY_ENTERPRISE_CONSENT_TS         = "enterprise_consent_ts"
@@ -109,6 +111,12 @@ class SettingsPreferences private constructor(context: Context) {
 
     private val _onboardingCompleted = MutableStateFlow(prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false))
     val onboardingCompleted: StateFlow<Boolean> = _onboardingCompleted.asStateFlow()
+
+    private val _vpnConsentTimestampMs = MutableStateFlow(prefs.getLong(KEY_VPN_CONSENT_TS, 0L))
+    val vpnConsentTimestampMs: StateFlow<Long> = _vpnConsentTimestampMs.asStateFlow()
+
+    private val _tlsConsentTimestampMs = MutableStateFlow(prefs.getLong(KEY_TLS_CONSENT_TS, 0L))
+    val tlsConsentTimestampMs: StateFlow<Long> = _tlsConsentTimestampMs.asStateFlow()
 
     private val _protectionLevel = MutableStateFlow(
         prefs.getString(KEY_PROTECTION_LEVEL, FilterEngine.BlockLevel.STANDARD.name)
@@ -268,6 +276,21 @@ class SettingsPreferences private constructor(context: Context) {
         prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, completed).apply()
         _onboardingCompleted.value = completed
     }
+
+    fun recordVpnConsent() {
+        val ts = System.currentTimeMillis()
+        prefs.edit().putLong(KEY_VPN_CONSENT_TS, ts).apply()
+        _vpnConsentTimestampMs.value = ts
+    }
+
+    fun recordTlsConsent() {
+        val ts = System.currentTimeMillis()
+        prefs.edit().putLong(KEY_TLS_CONSENT_TS, ts).apply()
+        _tlsConsentTimestampMs.value = ts
+    }
+
+    val hasVpnConsent: Boolean get() = _vpnConsentTimestampMs.value > 0L
+    val hasTlsConsent: Boolean get() = _tlsConsentTimestampMs.value > 0L
 
     fun setProtectionLevel(level: String) {
         prefs.edit().putString(KEY_PROTECTION_LEVEL, level).apply()

@@ -81,89 +81,62 @@ class TunReader(
     )
 
     override fun run() {
-        Log.i(TAG, "🔥 TunReader thread started — waiting for packets 🔥")
-        var packetCount = 0
+        Log.i(TAG, "TunReader started")
+
+        // Single allocation for the entire session lifetime — reused every packet.
+        val buf = ByteArray(tunInterface.mtu)
 
         while (running.get() && tunInterface.isOpen) {
-            val raw = tunInterface.readPacket()
+            val n = tunInterface.readInto(buf)
 
-            if (raw == null) {
-                if (!running.get() || !tunInterface.isOpen) {
-                    break
-                }
-
-                val count = emptyReads.incrementAndGet()
-                if (count <= 3 || count % 100 == 0L) {
-                    Log.w(TAG, "readPacket() returned null — retrying while interface is open")
-                }
-
-                try {
-                    Thread.sleep(25)
-                } catch (_: InterruptedException) {
-                    break
-                }
+            if (n <= 0) {
+                if (!running.get() || !tunInterface.isOpen) break
+                emptyReads.incrementAndGet()
+                try { Thread.sleep(5) } catch (_: InterruptedException) { break }
                 continue
             }
 
-            packetCount++
-            totalBytesRead.addAndGet(raw.size.toLong())
+            totalBytesRead.addAndGet(n.toLong())
 
-            // 🔥 Debug: Log first 10 packets and every 50th packet
-            if (packetCount <= 10 || packetCount % 50 == 0) {
-                val version = (raw[0].toInt() ushr 4) and 0xF
-                Log.d(TAG, "📦 Packet #$packetCount: size=${raw.size}, version=$version")
-            }
-
-            if (raw.size < TunInterface.MIN_PACKET_SIZE) {
+            if (n < TunInterface.MIN_PACKET_SIZE) {
                 droppedShort.incrementAndGet()
                 continue
             }
 
+            // IpPacket.parse() copies the bytes it needs — safe to reuse buf after this call.
+            val raw = buf.copyOf(n)
+
             if (PcapWriter.isCapturing()) PcapWriter.write(raw)
 
-            val version = (raw[0].toInt() ushr 4) and 0xF
+            val version = (buf[0].toInt() ushr 4) and 0xF
             when (version) {
                 4 -> {
                     val packet = IpPacket.parse(raw)
-                    if (packet == null) {
-                        droppedMalformed.incrementAndGet()
-                        continue
-                    }
+                    if (packet == null) { droppedMalformed.incrementAndGet(); continue }
                     totalPacketsRead.incrementAndGet()
                     for (handler in handlers) {
-                        try {
-                            handler.onPacket(packet)
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Handler exception: ${e.message}")
+                        try { handler.onPacket(packet) }
+                        catch (e: Exception) {
+                            Log.e(TAG, "handler error: ${e.message}")
                             handlerExceptions.incrementAndGet()
                         }
                     }
                 }
                 6 -> {
                     totalPacketsRead.incrementAndGet()
-                    if (ipv6Handlers.isEmpty()) {
-                        if (packetCount <= 10 || packetCount % 50 == 0) {
-                            Log.d(TAG, "IPv6 packet received and ignored; IPv6 forwarding is not enabled")
-                        }
-                    } else {
-                        for (handler in ipv6Handlers) {
-                            try {
-                                handler.onIpv6Packet(raw)
-                            } catch (e: Exception) {
-                                Log.e(TAG, "IPv6 handler exception: ${e.message}")
-                                handlerExceptions.incrementAndGet()
-                            }
+                    for (handler in ipv6Handlers) {
+                        try { handler.onIpv6Packet(raw) }
+                        catch (e: Exception) {
+                            Log.e(TAG, "ipv6 handler error: ${e.message}")
+                            handlerExceptions.incrementAndGet()
                         }
                     }
                 }
-                else -> {
-                    droppedUnsupported.incrementAndGet()
-                    Log.w(TAG, "Unsupported IP version: $version")
-                }
+                else -> droppedUnsupported.incrementAndGet()
             }
         }
 
         running.set(false)
-        Log.i(TAG, "TunReader thread exited — total packets=$totalPacketsRead, total bytes=$totalBytesRead")
+        Log.i(TAG, "TunReader stopped — packets=${totalPacketsRead.get()} bytes=${totalBytesRead.get()}")
     }
 }

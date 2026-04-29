@@ -210,6 +210,53 @@ class TcpForwarder(
             session.encryptionClassified = true
             if (result.sniHostname != null) session.tlsSni = result.sniHostname
 
+            // ── MITM redirect ─────────────────────────────────────────────────
+            // First TLS ClientHello on port 443: redirect the session to the local
+            // MITM SSL server instead of the real destination. The MITM engine
+            // completes TLS with the device using a forged cert and opens the real
+            // upstream connection itself, passing plaintext to bufferAndCapture.
+            if (BuildConfig.MITM_AVAILABLE &&
+                mitmConfig.isEnabled &&
+                mitmConfig.isConsentValid() &&
+                result.sniHostname != null &&
+                key.destinationPort == 443 &&
+                !session.isMitmIntercepted &&
+                !pinningDetector.isPinned(session.ownerPackage, result.sniHostname)) {
+
+                val clientHello = tcp.data.copyOf()
+                val mitmPort = mitmEngine.intercept(session) { dir, bytes, sess ->
+                    bufferAndCapture(dir, bytes, sess)
+                }
+
+                if (mitmPort > 0) {
+                    session.pendingMitmData = clientHello
+                    session.isMitmIntercepted = true
+
+                    // Close the existing upstream channel (no TLS data exchanged yet —
+                    // only the TCP handshake), then reconnect to the local MITM port.
+                    session.selectionKey?.cancel()
+                    runCatching { session.tcpChannel?.close() }
+
+                    try {
+                        val mitmChannel = SocketChannel.open()
+                        mitmChannel.configureBlocking(false)
+                        // 127.0.0.1 is local — do NOT protect() this socket.
+                        mitmChannel.connect(InetSocketAddress("127.0.0.1", mitmPort))
+                        session.tcpChannel = mitmChannel
+                        selector.wakeup()
+                        session.selectionKey = mitmChannel.register(selector, SelectionKey.OP_CONNECT, session)
+                        connectingCount.incrementAndGet()
+                    } catch (e: Exception) {
+                        Log.w(TAG, "MITM redirect failed for ${result.sniHostname}: ${e.message}")
+                        session.isMitmIntercepted = false
+                        session.pendingMitmData = null
+                        pinningDetector.markAsPinned(result.sniHostname)
+                    }
+                    return  // Do NOT forward raw ClientHello to original upstream
+                }
+            }
+            // ─────────────────────────────────────────────────────────────────
+
             if (result.encryptionStatus == EncryptionStatus.CLEARTEXT ||
                 result.encryptionStatus == EncryptionStatus.WEAK_TLS) {
                 val decision = filterEngine.evaluate(

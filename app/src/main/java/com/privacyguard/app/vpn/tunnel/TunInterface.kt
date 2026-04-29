@@ -66,12 +66,25 @@ class TunInterface(
             val n = inputStream.read(buf)
             if (n <= 0) null else buf.copyOf(n)
         } catch (e: IOException) {
-            if (!closed) {
-                // Log the unexpected error but don't crash — the caller will
-                // detect the null return and shut down gracefully.
-                System.err.println("[TunInterface] read error: ${e.message}")
-            }
+            if (!closed) System.err.println("[TunInterface] read error: ${e.message}")
             null
+        }
+    }
+
+    /**
+     * Reads one IP packet into a caller-provided buffer.
+     * No allocation — the caller must pre-allocate [buf] once per session.
+     *
+     * @return number of bytes read, 0 if the interface is idle/non-blocking,
+     *         or -1 on shutdown / error.
+     */
+    fun readInto(buf: ByteArray): Int {
+        if (closed) return -1
+        return try {
+            inputStream.read(buf)
+        } catch (e: IOException) {
+            if (!closed) System.err.println("[TunInterface] read error: ${e.message}")
+            -1
         }
     }
 

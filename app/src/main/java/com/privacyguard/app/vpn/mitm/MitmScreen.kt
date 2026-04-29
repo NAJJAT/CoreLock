@@ -19,12 +19,39 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MitmScreen(
-    viewModel: MitmViewModel = viewModel() // FIXED: hiltViewModel() → viewModel() (Hilt not configured in this project)
+    viewModel: MitmViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
     var showConsentDialog by remember { mutableStateOf(false) }
     var selectedPayload by remember { mutableStateOf<PayloadLogEntity?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // CaManager must be initialised before any install attempt.
+    // We share the same instance that the VPN service uses so getCaCert() is
+    // guaranteed non-null after the LaunchedEffect below completes.
+    val caManager = remember(context) {
+        com.privacyguard.vpn.mitm.CaManager(context.applicationContext)
+    }
+    val caHelper = remember(caManager) {
+        com.privacyguard.app.ui.mitm.CaInstallHelper(context.applicationContext, caManager)
+    }
+    var caReady by remember { mutableStateOf(caManager.getCaCert() != null) }
+
+    // Initialise on first composition — safe to call multiple times (idempotent).
+    LaunchedEffect(caManager) {
+        caReady = caManager.initialize()
+        android.util.Log.d("MitmScreen", "CaManager.initialize() returned $caReady " +
+            "cert=${caManager.getCaCert()?.encoded?.size}B")
+    }
+
+    val isCaTrusted = remember { mutableStateOf(false) }
+    // Recheck on every composition so it reflects a just-completed install.
+    isCaTrusted.value = if (caReady) caHelper.isCaTrustedByDevice() else false
+
+    val installLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { isCaTrusted.value = caHelper.isCaTrustedByDevice() }
 
     // Show consent dialog if needed
     LaunchedEffect(uiState.isEnabled, uiState.isConsentValid) {
@@ -99,6 +126,51 @@ fun MitmScreen(
                             }
                         }
                     )
+                }
+            }
+
+            // ── CA certificate status banner ──────────────────────────────────
+            if (uiState.isEnabled && !isCaTrusted.value) {
+                androidx.compose.material3.Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                        containerColor = androidx.compose.ui.graphics.Color(0xFF2A1500)
+                    ),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Default.Warning, contentDescription = null,
+                            tint = androidx.compose.ui.graphics.Color(0xFFFFB300),
+                            modifier = Modifier.size(20.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("CA certificate not installed",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = androidx.compose.ui.graphics.Color(0xFFFFB300))
+                            Text(
+                                "HTTPS payloads will show as encrypted until you install " +
+                                "the PrivacyGuard CA on this device. Tap to install.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = androidx.compose.ui.graphics.Color(0xFFAA8800))
+                        }
+                        TextButton(
+                            enabled = caReady,
+                            onClick = {
+                                val intent = caHelper.getKeyChainInstallIntent()
+                                if (intent != null) {
+                                    installLauncher.launch(intent)
+                                } else {
+                                    android.util.Log.e("MitmScreen",
+                                        "Install tapped but getKeyChainInstallIntent() returned null — " +
+                                        "caReady=$caReady cert=${caManager.getCaCert()?.encoded?.size}B")
+                                }
+                            }
+                        ) { Text(if (caReady) "Install" else "…") }
+                    }
                 }
             }
 
@@ -272,13 +344,34 @@ fun PayloadListItem(
                 )
             }
 
-            payload.body?.let {
+            if (!payload.isMitmSuccess) {
+                // Show exactly WHY there is no payload instead of just leaving it blank
+                val reason = when {
+                    payload.ownerPackage != null &&
+                    com.privacyguard.vpn.mitm.PinningDetector.PINNED_PACKAGES
+                        .contains(payload.ownerPackage) ->
+                        "Certificate pinning — ${payload.ownerPackage?.substringAfterLast('.')} " +
+                        "rejects MITM. Metadata only."
+                    payload.protocol.contains("TLS", ignoreCase = true) ||
+                    payload.destinationPort == 443 ->
+                        "Encrypted (HTTPS). Install the PrivacyGuard CA to decrypt."
+                    else ->
+                        "Payload not captured."
+                }
                 Text(
-                    text = it.take(80),
+                    text = reason,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2
+                    color = androidx.compose.ui.graphics.Color(0xFFAA8800),
                 )
+            } else {
+                payload.body?.let {
+                    Text(
+                        text = it.take(120),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                    )
+                }
             }
         }
     }

@@ -19,16 +19,42 @@ class PinningDetector {
     companion object {
         private const val TAG = "PinningDetector"
 
-        // No hard-coded package blocks — let MITM attempt every app and detect
-        // pinning dynamically from SSLHandshakeException failures at runtime.
-        private val PINNED_PACKAGES = emptySet<String>()
+        // Apps that use certificate pinning AND/OR end-to-end encryption at the
+        // application layer. MITM on these will always fail — attempting it causes
+        // connection errors visible to the user, so we skip them outright and show
+        // an informative "pinned" badge in the Payload Inspector instead.
+        val PINNED_PACKAGES: Set<String> = setOf(
+            // Messaging — cert pinning + app-level E2E (Signal protocol)
+            "com.whatsapp",
+            "com.whatsapp.w4b",
+            "org.telegram.messenger",
+            "org.telegram.messenger.web",
+            "org.signal.android",
+            // Google — strict cert pinning across all services
+            "com.google.android.gm",
+            "com.google.android.apps.messaging",
+            "com.google.android.youtube",
+            // Meta
+            "com.instagram.android",
+            "com.facebook.katana",
+            "com.facebook.orca",
+            // Banking / payments — will refuse MITM and may trigger fraud alerts
+            "com.paypal.android.p2pmobile",
+            "com.google.android.apps.walletnfcrel",
+        )
 
-        // Only block domains where MITM will always fail AND cause user-visible
-        // breakage (push/notification servers, payment backends, bank APIs).
-        private val PINNED_DOMAINS = setOf(
+        // Domains that are always pinned regardless of the app.
+        // Attempting MITM here causes SSL errors and user-visible breakage.
+        val PINNED_DOMAINS: Set<String> = setOf(
+            // Apple push — unrelated to Android but sometimes appears in split-tunnel
             "push.apple.com",
             "gateway.push.apple.com",
-            "courier.push.apple.com"
+            // Google QUIC/h3 endpoints — these bypass TCP entirely
+            "clients1.google.com",
+            "clients2.google.com",
+            // WhatsApp backend
+            "e2e.whatsapp.com",
+            "e2e-keys.whatsapp.com",
         )
     }
 

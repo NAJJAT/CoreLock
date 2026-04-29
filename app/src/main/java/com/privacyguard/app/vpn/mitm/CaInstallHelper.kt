@@ -218,6 +218,20 @@ class CaInstallHelper(
 
     /** True if the CA keypair exists in the AndroidKeyStore. */
     fun isCaGenerated(): Boolean = caManager.getCaCert() != null
+    /** ADDED: verifies whether Android currently trusts this CA certificate. */
+    fun isCaTrustedByDevice(): Boolean {
+        val ourCert = caManager.getCaCert() ?: return false
+        return try {
+            val keyStore = java.security.KeyStore.getInstance("AndroidCAStore").apply { load(null) }
+            keyStore.aliases().asSequence().any { alias ->
+                (keyStore.getCertificate(alias) as? java.security.cert.X509Certificate)
+                    ?.encoded?.contentEquals(ourCert.encoded) == true
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "isCaTrustedByDevice: unable to inspect AndroidCAStore: ${e.message}")
+            false
+        }
+    }
 
     /** CA as Base64 DER for embedding in MDM/EMM configuration profiles. */
     fun getCaBase64ForMdm(): String = caManager.getCaCertBase64()

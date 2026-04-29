@@ -165,14 +165,25 @@ fun AppNavHost(
         ) {
             composable("onboarding") {
                 OnboardingScreen(
-                    onEnableVpn = onRequestVpn,
-                    onGetStarted = {
+                    onEnableVpn = { tlsAccepted ->
+                        settingsPreferences.recordVpnConsent()
+                        if (tlsAccepted) settingsPreferences.recordTlsConsent()
                         settingsPreferences.setOnboardingCompleted(true)
                         navController.navigate("dashboard") {
                             popUpTo("onboarding") { inclusive = true }
                             launchSingleTop = true
                         }
-                    }
+                        onRequestVpn()
+                    },
+                    onGetStarted = { tlsAccepted ->
+                        settingsPreferences.recordVpnConsent()
+                        if (tlsAccepted) settingsPreferences.recordTlsConsent()
+                        settingsPreferences.setOnboardingCompleted(true)
+                        navController.navigate("dashboard") {
+                            popUpTo("onboarding") { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
                 )
             }
 

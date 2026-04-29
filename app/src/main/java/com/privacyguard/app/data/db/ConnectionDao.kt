@@ -19,6 +19,9 @@ interface ConnectionDao {
      */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(connection: ConnectionEntity)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAll(connections: List<ConnectionEntity>)
     
     /**
      * Gets recent connections (last 24 hours)

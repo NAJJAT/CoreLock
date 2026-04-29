@@ -28,7 +28,15 @@
       "Bash(xargs cat *)",
       "Bash(./gradlew :app:compileConsumerDebugKotlin)",
       "Bash(./gradlew :app:compileEnterpriseDebugKotlin :app:testConsumerDebugUnitTest)",
-      "Bash(./gradlew :app:testConsumerDebugUnitTest --rerun-tasks)"
+      "Bash(./gradlew :app:testConsumerDebugUnitTest --rerun-tasks)",
+      "Bash(sed -n '25,60p' C:/Users/ooo77/AndroidStudioProjects/privacyguard/app/src/main/java/com/privacyguard/app/data/local/preferences/SettingsPreferences.kt)",
+      "Bash(sed -n '105,135p' C:/Users/ooo77/AndroidStudioProjects/privacyguard/app/src/main/java/com/privacyguard/app/data/local/preferences/SettingsPreferences.kt)",
+      "Bash(xargs -I{} sh -c 'echo \"=== {} ===\" && head -80 {}')",
+      "Bash(./gradlew :app:compileEnterpriseDebugKotlin)",
+      "Bash(./gradlew :app:compileConsumerDebugKotlin :app:testConsumerDebugUnitTest)",
+      "Bash(./gradlew :app:compileEnterpriseDebugKotlin :app:compileConsumerDebugKotlin)",
+      "Bash(grep -v \"^$\")",
+      "Bash(grep -v \"^\\\\s*$\")"
     ]
   }
 }

@@ -44,6 +44,7 @@ import com.privacyguard.domain.repository.PayloadLogRepository
 import com.privacyguard.vpn.mitm.MitmConfig
 import com.privacyguard.vpn.mitm.PayloadShipper
 import com.privacyguard.vpn.mitm.CaManager
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -241,13 +242,18 @@ private fun CaptureListScreen(
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 // CA certificate install button
+                val installScope = rememberCoroutineScope()
                 IconButton(onClick = {
-                    val helper = CaInstallHelper(context, caManager)
-                    // Prefer KeyChain (no file write) → file install → share
-                    val intent = helper.getKeyChainInstallIntent()
-                        ?: helper.getFileInstallIntent()
-                        ?: helper.getShareIntent()
-                    intent?.let { context.startActivity(it) }
+                    installScope.launch {
+                        caManager.initialize() // ADDED: generate/load CA before opening installer.
+                        val helper = CaInstallHelper(context, caManager)
+                        // Prefer KeyChain (no file write) → file install → share
+                        val intent = helper.getKeyChainInstallIntent()
+                            ?: helper.getFileInstallIntent()
+                            ?: helper.getShareIntent()
+                            ?: helper.getSecuritySettingsIntent()
+                        context.startActivity(intent)
+                    }
                 }) {
                     Icon(Icons.Default.Lock, null, tint = Ac, modifier = Modifier.size(20.dp))
                 }
@@ -320,14 +326,7 @@ private fun CaptureListScreen(
 
         // CA card — shown only when CA is not yet installed (helper checks quickly).
         if (uiState.isEnabled) {
-            CaInstallCard(context = context, caManager = caManager,
-                onInstall = {
-                    val helper = CaInstallHelper(context, caManager)
-                    val intent = helper.getKeyChainInstallIntent()
-                        ?: helper.getFileInstallIntent()
-                    intent?.let { context.startActivity(it) }
-                }
-            )
+            CaInstallCard(context = context, caManager = caManager)
         }
 
         // List or empty
@@ -355,10 +354,16 @@ private fun CaptureListScreen(
 private fun CaInstallCard(
     context: android.content.Context,
     caManager: CaManager,
-    onInstall: () -> Unit,
 ) {
     val helper = remember(context, caManager) { CaInstallHelper(context, caManager) }
-    val caReady = remember { helper.isCaGenerated() }
+    val installScope = rememberCoroutineScope()
+    var caReady by remember { mutableStateOf(helper.isCaGenerated()) }
+    var caTrusted by remember { mutableStateOf(false) }
+
+    LaunchedEffect(helper) {
+        caReady = caManager.initialize() // ADDED: generate/load CA as soon as the Payload screen opens.
+        caTrusted = helper.isCaTrustedByDevice()
+    }
 
     Surface(
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
@@ -382,16 +387,20 @@ private fun CaInstallCard(
             )
             Column(Modifier.weight(1f)) {
                 Text(
-                    if (caReady) "Install CA to decrypt HTTPS" else "CA not generated",
+                    when {
+                        caTrusted -> "CA installed and trusted"
+                        caReady -> "Install CA to decrypt HTTPS"
+                        else -> "Generating CA certificate..."
+                    },
                     color = if (caReady) Amber else Red,
                     fontSize = 11.sp, fontWeight = FontWeight.Bold
                 )
                 Text(
-                    if (caReady)
-                        "Tap to install the PrivacyGuard CA on this device. " +
-                        "After installing, HTTPS request/response bodies will be visible."
-                    else
-                        "Enable the VPN first — the CA is generated on first start.",
+                    when {
+                        caTrusted -> "The certificate is in Android's trusted store. Apps with certificate pinning or end-to-end encryption may still show metadata only."
+                        caReady -> "Tap Install to open Android's certificate installer. Use CA certificate when Android asks for the certificate type."
+                        else -> "PrivacyGuard is generating the local CA now. This usually takes a few seconds on first run."
+                    },
                     color = TxS, fontSize = 10.sp, lineHeight = 15.sp
                 )
             }
@@ -399,7 +408,17 @@ private fun CaInstallCard(
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     // Primary: KeyChain install (best UX)
                     Surface(
-                        onClick = onInstall,
+                        onClick = {
+                            installScope.launch {
+                                caReady = caManager.initialize() // ADDED: ensure cert exists before install.
+                                caTrusted = helper.isCaTrustedByDevice()
+                                val intent = helper.getKeyChainInstallIntent()
+                                    ?: helper.getFileInstallIntent()
+                                    ?: helper.getShareIntent()
+                                    ?: helper.getSecuritySettingsIntent()
+                                context.startActivity(intent)
+                            }
+                        },
                         color = Amber.copy(alpha = 0.18f),
                         shape = RoundedCornerShape(6.dp),
                         border = BorderStroke(1.dp, Amber.copy(alpha = 0.4f))
@@ -413,11 +432,16 @@ private fun CaInstallCard(
                     // Secondary: save file to Downloads
                     Surface(
                         onClick = {
-                            val result = helper.exportCaToDownloads()
-                            if (result != null) {
-                                // Also try to open it
-                                val intent = helper.getFileInstallIntent()
-                                intent?.let { context.startActivity(it) }
+                            installScope.launch {
+                                caReady = caManager.initialize() // ADDED: ensure cert exists before export.
+                                val result = helper.exportCaToDownloads()
+                                if (result != null) {
+                                    // Also try to open it
+                                    val intent = helper.getFileInstallIntent()
+                                        ?: helper.getShareIntent()
+                                        ?: helper.getSecuritySettingsIntent()
+                                    context.startActivity(intent)
+                                }
                             }
                         },
                         color = Bg3,

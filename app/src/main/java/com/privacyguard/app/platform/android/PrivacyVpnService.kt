@@ -76,6 +76,7 @@ class PrivacyVpnService : VpnService() {
     private lateinit var udpForwarder: UdpForwarder
     private lateinit var ipv6Proxy: com.privacyguard.vpn.forwarder.Ipv6Proxy
     private lateinit var connectionRepo: ConnectionRepo
+    private lateinit var connectionLogger: com.privacyguard.app.data.db.ConnectionLogger
     private lateinit var rulesRepo: RulesRepo
     private lateinit var blocklistRepo: BlocklistRepo
     private lateinit var metadataRepo: MetadataRepo
@@ -151,7 +152,8 @@ class PrivacyVpnService : VpnService() {
         appFilter = AppFilter { uid -> packageManager.getNameForUid(uid) }
         appTracker = AppTracker(this, appFilter)
 
-        connectionRepo = ConnectionRepo(db.connectionDao())
+        connectionRepo   = ConnectionRepo(db.connectionDao())
+        connectionLogger = com.privacyguard.app.data.db.ConnectionLogger(db.connectionDao(), scope)
         rulesRepo = RulesRepo(db.rulesDao(), filterEngine)
         blocklistRepo = BlocklistRepo(db.blocklistDao())
         metadataRepo = MetadataRepo(db.connectionProfileDao())
@@ -290,10 +292,26 @@ class PrivacyVpnService : VpnService() {
         // ==================== MITM INITIALIZATION ====================
         val caManager = CaManager(this)
 
-        // Initialize CA asynchronously — it will be ready before the first TLS handshake.
+        // ADDED: initialize CA before TcpForwarder starts so first HTTPS traffic cannot race ahead of certificate generation.
+        val caReady = runBlocking(Dispatchers.IO) { caManager.initialize() }
+        if (caReady) {
+            val cert = caManager.getCaCert()
+            Log.i(TAG, "CaManager ready before forwarder start — cert=${cert?.encoded?.size}B subject=${cert?.subjectDN}")
+        } else {
+            Log.e(TAG, "CaManager.initialize() failed before forwarder start — MITM payload decryption will be unavailable")
+        }
+
+        // Initialize CA asynchronously — must complete before the first TLS SYN arrives.
         scope.launch {
-            caManager.initialize()
-            Log.d(TAG, "✅ CA Manager initialized successfully")
+            val ok = caManager.initialize()
+            if (ok) {
+                val cert = caManager.getCaCert()
+                Log.i(TAG, "CaManager ready — cert=${cert?.encoded?.size}B " +
+                    "subject=${cert?.subjectDN}")
+            } else {
+                Log.e(TAG, "CaManager.initialize() returned false — " +
+                    "MITM will not work until the CA is regenerated")
+            }
         }
 
         val piiRedactor = PiiRedactor()
@@ -625,7 +643,7 @@ class PrivacyVpnService : VpnService() {
                 val appLabel = resolvedAppLabel(snapshot.ownerUid, resolvedPackage)
                 val dstIp = snapshot.key.destinationIp
                 val isIpv6 = dstIp.contains(':')
-                connectionRepo.save(ConnectionEntity(
+                connectionLogger.log(ConnectionEntity(
                     appUid = snapshot.ownerUid,
                     appName = appLabel,
                     packageName = resolvedPackage,

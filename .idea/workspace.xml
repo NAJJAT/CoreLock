@@ -24,19 +24,19 @@
       <change beforePath="$PROJECT_DIR$/.gradle/9.4.1/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.4.1/fileHashes/fileHashes.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/9.4.1/fileHashes/resourceHashesCache.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.4.1/fileHashes/resourceHashesCache.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/outputFiles.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/outputFiles.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/file-system.probe" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/file-system.probe" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/app/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/data/db/ConnectionDao.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/data/db/ConnectionDao.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/data/local/preferences/SettingsPreferences.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/data/local/preferences/SettingsPreferences.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/platform/android/PrivacyVpnService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/platform/android/PrivacyVpnService.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/settings/SettingsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/settings/SettingsScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/firewall/DomainFilter.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/firewall/DomainFilter.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/core/tls/Ja3Fingerprinter.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/core/tls/Ja3Fingerprinter.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/mitm/CaInstallHelper.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/mitm/CaInstallHelper.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/onboarding/OnboardingScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/onboarding/OnboardingScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/forwarder/TcpForwarder.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/forwarder/TcpForwarder.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/CaManager.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/CaManager.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/MitmScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/MitmScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/PinningDetector.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/PinningDetector.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/tunnel/TunInterface.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/tunnel/TunInterface.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/tunnel/TunReader.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/tunnel/TunReader.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/ui/AppNavHost.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/ui/AppNavHost.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/vpn/inspector/DnsAnomalyDetector.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/vpn/inspector/DnsAnomalyDetector.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/settings.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/settings.gradle.kts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -196,22 +196,22 @@
       <map>
         <entry key="com.privacyguard.app">
           <value>
-            <CheckInfo lastCheckTimestamp="1777238431439" />
+            <CheckInfo lastCheckTimestamp="1777450855165" />
           </value>
         </entry>
         <entry key="com.privacyguard.app.enterprise">
           <value>
-            <CheckInfo lastCheckTimestamp="1777238746662" />
+            <CheckInfo lastCheckTimestamp="1777450855167" />
           </value>
         </entry>
         <entry key="com.privacyguard.app.enterprise.test">
           <value>
-            <CheckInfo lastCheckTimestamp="1777238746660" />
+            <CheckInfo lastCheckTimestamp="1777450855166" />
           </value>
         </entry>
         <entry key="com.privacyguard.app.test">
           <value>
-            <CheckInfo lastCheckTimestamp="1777238431441" />
+            <CheckInfo lastCheckTimestamp="1777450855166" />
           </value>
         </entry>
       </map>

@@ -56,18 +56,37 @@ class CaInstallHelper(
      * certificate pre-loaded. This is the cleanest path — no file write required.
      * The user only needs to confirm the install and give the cert a name.
      *
-     * Returns null if the CA has not been generated yet.
+     * Returns null if [CaManager.initialize] has not been awaited yet.
+     *
+     * IMPORTANT: always call and await [CaManager.initialize] before this method.
+     * The common failure mode is calling this from a Composable whose [CaManager]
+     * instance was freshly constructed inside `remember { }` — that instance is
+     * uninitialised and [CaManager.getCaCert] returns null.
      */
     fun getKeyChainInstallIntent(): Intent? {
         val cert = caManager.getCaCert()
         if (cert == null) {
-            Log.e(TAG, "getKeyChainInstallIntent: CA not yet generated")
+            Log.e(TAG, "getKeyChainInstallIntent: getCaCert() returned null — " +
+                "was CaManager.initialize() awaited before calling this?")
             return null
         }
+
+        val der = cert.encoded
+        Log.d(TAG, "getKeyChainInstallIntent: cert=${der.size}B " +
+            "subject=${cert.subjectDN} issuer=${cert.issuerDN}")
+
+        if (der.isEmpty()) {
+            Log.e(TAG, "getKeyChainInstallIntent: cert.encoded is EMPTY — " +
+                "certificate object is corrupt")
+            return null
+        }
+
         return KeyChain.createInstallIntent().apply {
-            putExtra(KeyChain.EXTRA_CERTIFICATE, cert.encoded)
+            putExtra(KeyChain.EXTRA_CERTIFICATE, der)
             putExtra(KeyChain.EXTRA_NAME, "PrivacyGuard CA")
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }.also {
+            Log.i(TAG, "getKeyChainInstallIntent: intent created with ${der.size}B DER")
         }
     }
 
@@ -236,6 +255,24 @@ class CaInstallHelper(
 
     /** True if the CA key pair exists in the AndroidKeyStore. */
     fun isCaGenerated(): Boolean = caManager.getCaCert() != null
+
+    /**
+     * True if the CA certificate is installed in the device's trusted CA store
+     * (i.e. Android will accept TLS certs signed by our CA).
+     *
+     * This is what controls whether HTTPS interception actually works — the CA
+     * must be in the device trust store, not just in the AndroidKeyStore.
+     */
+    fun isCaTrustedByDevice(): Boolean {
+        val ourCert = caManager.getCaCert() ?: return false
+        return try {
+            val ks = java.security.KeyStore.getInstance("AndroidCAStore").apply { load(null) }
+            ks.aliases().asSequence().any { alias ->
+                (ks.getCertificate(alias) as? java.security.cert.X509Certificate)
+                    ?.encoded?.contentEquals(ourCert.encoded) == true
+            }
+        } catch (_: Exception) { false }
+    }
 
     /** CA as Base64 DER for embedding in MDM/EMM configuration profiles. */
     fun getCaBase64ForMdm(): String = caManager.getCaCertBase64()
