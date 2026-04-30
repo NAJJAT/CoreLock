@@ -125,7 +125,7 @@ fun ConnectionsScreen(
                         Text("No connections yet", style = MaterialTheme.typography.titleMedium, color = PgTextMuted)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "Start the VPN from the Home screen. Connections will appear here once traffic flows.",
+                            "Open another app while the VPN is running. Connections will appear here once non-PrivacyGuard traffic flows.",
                             style = MaterialTheme.typography.bodySmall,
                             color = PgTextMuted,
                         )

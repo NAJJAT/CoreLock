@@ -43,7 +43,12 @@ import com.privacyguard.app.data.repository.PayloadLogRepositoryImpl
 import com.privacyguard.domain.repository.PayloadLogRepository
 import com.privacyguard.vpn.mitm.MitmConfig
 import com.privacyguard.vpn.mitm.PayloadShipper
+import android.content.Intent
+import android.provider.Settings
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.privacyguard.vpn.mitm.CaManager
+import com.privacyguard.ui.mitm.CaInstallHelper
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -158,10 +163,11 @@ fun MitmScreen() {
     // and taps OK. No manual navigation needed.
     LaunchedEffect(Unit) {
         vm.installCaEvent.collect {
-            caManager.initialize()                                  // generates CA if absent
+            caManager.initialize()
             val helper = CaInstallHelper(context, caManager)
-            val intent = helper.getKeyChainInstallIntent()          // system dialog, no file write
-                ?: helper.getFileInstallIntent()                    // fallback: Downloads + ACTION_VIEW
+            val intent = helper.getKeyChainInstallIntent()
+                ?: helper.getDerFileInstallIntent()
+                ?: helper.getSecuritySettingsIntent()
             intent?.let { context.startActivity(it) }
         }
     }
@@ -245,12 +251,10 @@ private fun CaptureListScreen(
                 val installScope = rememberCoroutineScope()
                 IconButton(onClick = {
                     installScope.launch {
-                        caManager.initialize() // ADDED: generate/load CA before opening installer.
+                        caManager.initialize()
                         val helper = CaInstallHelper(context, caManager)
-                        // Prefer KeyChain (no file write) → file install → share
                         val intent = helper.getKeyChainInstallIntent()
-                            ?: helper.getFileInstallIntent()
-                            ?: helper.getShareIntent()
+                            ?: helper.getDerFileInstallIntent()
                             ?: helper.getSecuritySettingsIntent()
                         context.startActivity(intent)
                     }
@@ -327,6 +331,7 @@ private fun CaptureListScreen(
         // CA card — shown only when CA is not yet installed (helper checks quickly).
         if (uiState.isEnabled) {
             CaInstallCard(context = context, caManager = caManager)
+            QuicBlockRow(blockQuic = uiState.blockQuic, onToggle = { vm.setBlockQuic(it) })
         }
 
         // List or empty
@@ -334,8 +339,15 @@ private fun CaptureListScreen(
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(Icons.Default.NetworkCheck, null, tint = TxM, modifier = Modifier.size(56.dp))
-                    Text(if (uiState.isEnabled) "No traffic captured yet" else "MITM interception disabled", color = TxS, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    Text(if (uiState.isEnabled) "Browse HTTPS sites to see payloads" else "Toggle the switch above to enable", color = TxM, fontSize = 12.sp)
+                    Text(if (uiState.isEnabled) "No payloads captured yet" else "MITM interception disabled", color = TxS, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        if (uiState.isEnabled)
+                            "Install the CA, then test with a browser. Apps using pinning, QUIC/UDP, or end-to-end encryption may show metadata only."
+                        else
+                            "Toggle the switch above to enable",
+                        color = TxM, fontSize = 12.sp, textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
                 }
             }
         } else {
@@ -349,30 +361,82 @@ private fun CaptureListScreen(
     }
 }
 
+// ── QUIC BLOCK ROW ────────────────────────────────────────────────────────────
+@Composable
+private fun QuicBlockRow(blockQuic: Boolean, onToggle: (Boolean) -> Unit) {
+    Surface(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        color = if (blockQuic) Blue.copy(alpha = 0.08f) else Bg2,
+        shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(1.dp, if (blockQuic) Blue.copy(alpha = 0.35f) else LineCol)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(Icons.Default.Block, null, tint = if (blockQuic) Blue else TxM, modifier = Modifier.size(18.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "Block QUIC / HTTP3",
+                    color = if (blockQuic) Blue else TxS,
+                    fontSize = 11.sp, fontWeight = FontWeight.Bold
+                )
+                Text(
+                    if (blockQuic)
+                        "UDP/443 is being dropped. Chrome, YouTube, and WhatsApp will fall back to TLS/TCP and become interceptable."
+                    else
+                        "Enable to drop UDP/443 (QUIC), forcing apps to retry on TLS/TCP. Required to inspect Chrome and YouTube traffic.",
+                    color = TxM, fontSize = 10.sp, lineHeight = 15.sp
+                )
+            }
+            Switch(
+                checked = blockQuic,
+                onCheckedChange = onToggle,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Bg, checkedTrackColor = Blue,
+                    uncheckedThumbColor = TxM, uncheckedTrackColor = Bg3
+                )
+            )
+        }
+    }
+}
+
 // ── CA INSTALL CARD ───────────────────────────────────────────────────────────
 @Composable
 private fun CaInstallCard(
     context: android.content.Context,
     caManager: CaManager,
 ) {
-    val helper = remember(context, caManager) { CaInstallHelper(context, caManager) }
+    val helper       = remember(context, caManager) { CaInstallHelper(context, caManager) }
     val installScope = rememberCoroutineScope()
-    var caReady by remember { mutableStateOf(helper.isCaGenerated()) }
-    var caTrusted by remember { mutableStateOf(false) }
+    var caReady      by remember { mutableStateOf(false) }
+    var caFailed     by remember { mutableStateOf(false) }
+    var caTrusted    by remember { mutableStateOf(false) }
+    var noScreenLock by remember { mutableStateOf(false) }
+    var showScreenLockDialog by remember { mutableStateOf(false) }
 
+    // Initialise the CA on first composition so the card reflects real state immediately.
     LaunchedEffect(helper) {
-        caReady = caManager.initialize() // ADDED: generate/load CA as soon as the Payload screen opens.
-        caTrusted = helper.isCaTrustedByDevice()
+        val ok = caManager.initialize()
+        caReady   = ok
+        caFailed  = !ok
+        caTrusted = ok && helper.isCaTrustedByDevice()
     }
+
+    // Re-check trust when the user returns to the app (e.g. after the CA install dialog).
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (caReady) caTrusted = helper.isCaTrustedByDevice()
+    }
+
+    val cardColor  = when { caTrusted -> Ac; caReady -> Amber; caFailed -> Red; else -> Red }
+    val cardBg     = cardColor.copy(alpha = 0.08f)
+    val cardBorder = cardColor.copy(alpha = 0.35f)
 
     Surface(
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-        color = if (caReady) Amber.copy(alpha = 0.08f) else Red.copy(alpha = 0.08f),
-        shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(
-            1.dp,
-            if (caReady) Amber.copy(alpha = 0.35f) else Red.copy(alpha = 0.35f)
-        )
+        color = cardBg, shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(1.dp, cardBorder)
     ) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
@@ -380,43 +444,83 @@ private fun CaInstallCard(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Icon(
-                Icons.Default.Lock,
+                if (caTrusted) Icons.Default.VerifiedUser else Icons.Default.Lock,
                 contentDescription = null,
-                tint = if (caReady) Amber else Red,
-                modifier = Modifier.size(18.dp)
+                tint = cardColor, modifier = Modifier.size(18.dp)
             )
             Column(Modifier.weight(1f)) {
                 Text(
                     when {
-                        caTrusted -> "CA installed and trusted"
-                        caReady -> "Install CA to decrypt HTTPS"
-                        else -> "Generating CA certificate..."
+                        caTrusted -> "CA installed — HTTPS decryption active"
+                        caFailed  -> "CA generation failed"
+                        caReady   -> "Install CA certificate to decrypt HTTPS"
+                        else      -> "Generating CA certificate…"
                     },
-                    color = if (caReady) Amber else Red,
-                    fontSize = 11.sp, fontWeight = FontWeight.Bold
+                    color = cardColor, fontSize = 11.sp, fontWeight = FontWeight.Bold
                 )
                 Text(
                     when {
-                        caTrusted -> "The certificate is in Android's trusted store. Apps with certificate pinning or end-to-end encryption may still show metadata only."
-                        caReady -> "Tap Install to open Android's certificate installer. Use CA certificate when Android asks for the certificate type."
-                        else -> "PrivacyGuard is generating the local CA now. This usually takes a few seconds on first run."
+                        caTrusted ->
+                            "HTTPS payloads are now visible. Apps with certificate pinning " +
+                            "(WhatsApp, Instagram) still show metadata only — that's expected."
+                        caFailed  ->
+                            "Tap Regenerate to try again. If the problem persists, clear the " +
+                            "app's storage in Android Settings and reopen the app."
+                        caReady   ->
+                            "Tap Install. Android will ask you to name the certificate — " +
+                            "type anything (e.g. PrivacyGuard) and tap OK. " +
+                            "If you see 'Can't install unknown': go to Android Settings → " +
+                            "Security → Set a screen lock first."
+                        else      ->
+                            "Generating CA for the first time. This takes a few seconds."
                     },
                     color = TxS, fontSize = 10.sp, lineHeight = 15.sp
                 )
             }
-            if (caReady) {
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    // Primary: KeyChain install (best UX)
+
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (caFailed) {
+                    // Regenerate button
                     Surface(
                         onClick = {
                             installScope.launch {
-                                caReady = caManager.initialize() // ADDED: ensure cert exists before install.
-                                caTrusted = helper.isCaTrustedByDevice()
+                                caFailed = false
+                                caManager.reset()
+                                val ok = caManager.initialize()
+                                caReady  = ok
+                                caFailed = !ok
+                            }
+                        },
+                        color = Red.copy(alpha = 0.18f),
+                        shape = RoundedCornerShape(6.dp),
+                        border = BorderStroke(1.dp, Red.copy(alpha = 0.4f))
+                    ) {
+                        Text(
+                            "Regenerate",
+                            Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            color = Red, fontSize = 10.sp, fontWeight = FontWeight.Bold
+                        )
+                    }
+                } else if (caReady && !caTrusted) {
+                    // Primary: KeyChain install (cleanest UX, works on stock Android)
+                    Surface(
+                        onClick = {
+                            installScope.launch {
+                                noScreenLock = !helper.isScreenLockSet()
+                                if (noScreenLock) {
+                                    showScreenLockDialog = true
+                                    return@launch
+                                }
+                                // Try 3 approaches in order of reliability:
+                                // 1. KeyChain (system dialog, no file needed)
+                                // 2. DER binary file (more OEM-compatible)
+                                // 3. Security settings (manual fallback)
                                 val intent = helper.getKeyChainInstallIntent()
-                                    ?: helper.getFileInstallIntent()
-                                    ?: helper.getShareIntent()
+                                    ?: helper.getDerFileInstallIntent()
                                     ?: helper.getSecuritySettingsIntent()
                                 context.startActivity(intent)
+                                // Re-check trust after returning
+                                caTrusted = helper.isCaTrustedByDevice()
                             }
                         },
                         color = Amber.copy(alpha = 0.18f),
@@ -429,16 +533,16 @@ private fun CaInstallCard(
                             color = Amber, fontSize = 10.sp, fontWeight = FontWeight.Bold
                         )
                     }
-                    // Secondary: save file to Downloads
+                    // Secondary: save DER file to Downloads (Samsung / MIUI users)
                     Surface(
                         onClick = {
                             installScope.launch {
-                                caReady = caManager.initialize() // ADDED: ensure cert exists before export.
+                                noScreenLock = !helper.isScreenLockSet()
+                                if (noScreenLock) { showScreenLockDialog = true; return@launch }
                                 val result = helper.exportCaToDownloads()
                                 if (result != null) {
-                                    // Also try to open it
-                                    val intent = helper.getFileInstallIntent()
-                                        ?: helper.getShareIntent()
+                                    val intent = helper.getDerFileInstallIntent()
+                                        ?: helper.getFileInstallIntent()
                                         ?: helper.getSecuritySettingsIntent()
                                     context.startActivity(intent)
                                 }
@@ -457,6 +561,38 @@ private fun CaInstallCard(
                 }
             }
         }
+    }
+
+    // Screen lock required dialog
+    if (showScreenLockDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showScreenLockDialog = false },
+            containerColor = Bg2,
+            icon = { Icon(Icons.Default.Lock, null, tint = Amber) },
+            title = { Text("Screen Lock Required", color = Amber, fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "Android requires a screen lock (PIN, pattern, or password) before " +
+                    "installing CA certificates.\n\n" +
+                    "Go to:\nSettings → Security → Screen Lock\n\n" +
+                    "Set a PIN or password, then come back and tap Install.",
+                    color = TxS, fontSize = 13.sp, lineHeight = 18.sp
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showScreenLockDialog = false
+                    context.startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    })
+                }) { Text("Open Settings", color = Amber, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showScreenLockDialog = false }) {
+                    Text("Cancel", color = TxS)
+                }
+            }
+        )
     }
 }
 

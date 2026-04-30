@@ -61,17 +61,59 @@ class CaInstallHelper(
      *
      * Returns null if the CA has not been generated yet (call CaManager.initialize() first).
      */
+    /**
+     * Returns true if the device has a screen lock (PIN / pattern / password).
+     * Android refuses to install CA certificates without one.
+     */
+    fun isScreenLockSet(): Boolean {
+        val km = context.getSystemService(android.app.KeyguardManager::class.java)
+        return km?.isDeviceSecure == true
+    }
+
     fun getKeyChainInstallIntent(): Intent? {
         val cert = caManager.getCaCert()
         if (cert == null) {
-            Log.e(TAG, "getKeyChainInstallIntent: CA not generated yet")
+            Log.e(TAG, "getKeyChainInstallIntent: getCaCert() null — initialize() not yet awaited?")
             return null
         }
-        Log.d(TAG, "getKeyChainInstallIntent: building KeyChain install intent")
+        val der = cert.encoded
+        Log.d(TAG, "getKeyChainInstallIntent: cert ${der.size}B subject=${cert.subjectDN}")
+        if (der.isEmpty()) {
+            Log.e(TAG, "getKeyChainInstallIntent: DER is empty — certificate object corrupt")
+            return null
+        }
         return KeyChain.createInstallIntent().apply {
-            putExtra(KeyChain.EXTRA_CERTIFICATE, cert.encoded)
+            putExtra(KeyChain.EXTRA_CERTIFICATE, der)
             putExtra(KeyChain.EXTRA_NAME, "PrivacyGuard CA")
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+    }
+
+    /**
+     * Writes the CA cert as a DER binary file to app-private cache, then opens it
+     * via ACTION_VIEW with the x-x509-ca-cert MIME type.
+     *
+     * More reliable than KeyChain on Samsung/MIUI devices.
+     * DER binary is more universally recognised than PEM text.
+     */
+    fun getDerFileInstallIntent(): Intent? {
+        val cert = caManager.getCaCert() ?: return null
+        return try {
+            val cacheDir = File(context.cacheDir, "certs").also { it.mkdirs() }
+            val derFile  = File(cacheDir, "privacyguard_ca.der")
+            derFile.writeBytes(cert.encoded)
+            Log.d(TAG, "getDerFileInstallIntent: wrote ${cert.encoded.size}B DER to ${derFile.absolutePath}")
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                context, "${context.packageName}.fileprovider", derFile
+            )
+            Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, CA_MIME)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "getDerFileInstallIntent: failed — ${e.message}", e)
+            null
         }
     }
 

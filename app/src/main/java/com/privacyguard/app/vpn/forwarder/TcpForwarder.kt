@@ -280,7 +280,7 @@ class TcpForwarder(
         }
 
         // ── PAYLOAD CAPTURE (fully async — never touches the forwarding path) ──
-        if (BuildConfig.MITM_AVAILABLE && mitmConfig.isEnabled) {
+        if (BuildConfig.MITM_AVAILABLE && mitmConfig.isEnabled && !isPrivacyGuardTraffic(session.ownerPackage)) {
             val snap = tcp.data.copyOf()          // snapshot before forwarding
             val sni  = session.tlsSni
             val port = session.key.destinationPort
@@ -404,6 +404,8 @@ class TcpForwarder(
     // ── Payload parse + save ─────────────────────────────────────────────────
     private fun processPayload(direction: String, bytes: ByteArray, session: Session) {
         try {
+            if (isPrivacyGuardTraffic(session.ownerPackage)) return
+
             val parsed = payloadParser.parse(bytes, direction, session)
 
             // FIXED: Proper JSON serialization for headers map
@@ -450,6 +452,11 @@ class TcpForwarder(
         } catch (e: Exception) {
             Log.e(TAG, "Failed to process MITM payload", e)
         }
+    }
+
+    private fun isPrivacyGuardTraffic(ownerPackage: String?): Boolean {
+        return ownerPackage == BuildConfig.APPLICATION_ID ||
+                ownerPackage?.startsWith("com.privacyguard.app") == true
     }
 
     private fun handleFin(ip: IpPacket, tcp: TcpPacket, key: SessionKey) {

@@ -16,10 +16,10 @@ object UidMapper {
     private data class Key(val protocol: Int, val srcPort: Int)
     private val cache = ConcurrentHashMap<Key, Int>(64)
 
-    fun uidForSrcPort(srcPort: Int, protocol: Int): Int {
+    fun uidForSrcPort(srcPort: Int, protocol: Int, ignoredUid: Int? = null): Int {
         val key = Key(protocol, srcPort)
-        cache[key]?.let { return it }
-        val uid = lookupProc(srcPort, protocol)
+        cache[key]?.let { if (it != ignoredUid) return it }
+        val uid = lookupProc(srcPort, protocol, ignoredUid)
         if (uid >= 0) cache[key] = uid
         return uid
     }
@@ -30,20 +30,20 @@ object UidMapper {
 
     // ─── /proc/net parsing ────────────────────────────────────────────────────
 
-    private fun lookupProc(srcPort: Int, protocol: Int): Int {
+    private fun lookupProc(srcPort: Int, protocol: Int, ignoredUid: Int?): Int {
         val files = if (protocol == 6) {
             arrayOf("/proc/net/tcp", "/proc/net/tcp6")
         } else {
             arrayOf("/proc/net/udp", "/proc/net/udp6")
         }
         for (path in files) {
-            val uid = scanProcFile(File(path), srcPort)
+            val uid = scanProcFile(File(path), srcPort, ignoredUid)
             if (uid >= 0) return uid
         }
         return -1
     }
 
-    private fun scanProcFile(file: File, srcPort: Int): Int {
+    private fun scanProcFile(file: File, srcPort: Int, ignoredUid: Int?): Int {
         if (!file.exists() || !file.canRead()) return -1
         val portHex = "%04X".format(srcPort)
         try {
@@ -58,7 +58,8 @@ object UidMapper {
                     val local = parts[1]
                     val colonIdx = local.lastIndexOf(':')
                     if (colonIdx >= 0 && local.substring(colonIdx + 1).equals(portHex, ignoreCase = true)) {
-                        return parts.getOrNull(7)?.toIntOrNull() ?: -1
+                        val uid = parts.getOrNull(7)?.toIntOrNull() ?: -1
+                        if (uid >= 0 && uid != ignoredUid) return uid
                     }
                     line = reader.readLine()
                 }

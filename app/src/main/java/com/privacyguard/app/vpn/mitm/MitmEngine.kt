@@ -10,6 +10,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.net.SocketTimeoutException
 import java.security.Principal
 import java.security.PrivateKey
 import java.security.SecureRandom
@@ -73,6 +74,14 @@ class MitmEngine(
     ): Int {
         val domain = session.tlsSni ?: return -1
 
+        // Guard: CA must be ready before we can forge leaf certs.
+        // CaManager.initialize() runs async at VPN start; the first TLS connection
+        // could theoretically arrive before it completes on slow devices.
+        if (caManager.getCaCert() == null || caManager.getCaKey() == null) {
+            Log.w(TAG, "intercept: CA not ready yet — skipping MITM for $domain")
+            return -1
+        }
+
         // Check if we should skip due to pinning
         if (pinningDetector.isPinned(session.ownerPackage, domain)) {
             Log.d(TAG, "Skipping MITM for pinned domain: $domain")
@@ -110,14 +119,18 @@ class MitmEngine(
                     timestamp = System.currentTimeMillis(),
                 )
                 performInterception(session, domain, serverSocket, onPayload)
+            } catch (e: SSLHandshakeException) {
+                handleHandshakeFailure(session, domain, e)
+                serverSocket.runCatching { close() }
+            } catch (e: SocketTimeoutException) {
+                Log.w(TAG, "MITM device connection timed out for $domain")
                 _statusFlow.value = MitmRuntimeStatus(
-                    state = "ACTIVE",
-                    message = "Interception active",
+                    state = "TIMEOUT",
+                    message = "Timed out waiting for the app to connect to the local MITM socket",
                     domain = domain,
                     timestamp = System.currentTimeMillis(),
                 )
-            } catch (e: SSLHandshakeException) {
-                handleHandshakeFailure(session, domain, e)
+                session.isMitmIntercepted = false
                 serverSocket.runCatching { close() }
             } catch (e: Exception) {
                 Log.e(TAG, "MITM interception failed for ${session.key}", e)
@@ -143,21 +156,35 @@ class MitmEngine(
     ) = withContext(Dispatchers.IO) {
 
         serverSocket.use {
-            // Setup real server-side SSL socket, protected from the VPN tunnel so it
-            // reaches the internet directly without looping back through TcpForwarder.
+            // 1. Accept the device connection FIRST — TcpForwarder connects to this port
+            //    immediately after intercept() returns, so this returns within milliseconds.
+            //    Doing the real-server handshake first would block here for 200–500ms and
+            //    could race with the device's connection attempt timing out.
+            val deviceSocket = it.accept() as SSLSocket
+
+            // 2. Now connect to the real server (protected socket bypasses our VPN tunnel).
             val clientSslContext = createClientSslContext()
             val clientSocket = clientSslContext.socketFactory.createSocket() as SSLSocket
             protectSocket(clientSocket)
-            clientSocket.connect(InetSocketAddress(domain, 443))
 
-            // Set SNI for real connection
-            val params = clientSocket.sslParameters
+            // Set SNI before connecting so the real server gets the correct ServerName.
+            val params = SSLParameters()
             params.serverNames = listOf(SNIHostName(domain))
             clientSocket.sslParameters = params
-            clientSocket.startHandshake()
 
-            // Accept device connection (TcpForwarder redirected the session channel here)
-            val deviceSocket = it.accept()
+            clientSocket.connect(InetSocketAddress(domain, 443), 15_000)
+            clientSocket.startHandshake()   // validates real server cert normally
+
+            // 3. Explicitly complete TLS handshake with the device now that we know the
+            //    real server is up. Device sent its ClientHello; we present the forged cert.
+            deviceSocket.startHandshake()
+
+            _statusFlow.value = MitmRuntimeStatus(
+                state = "ACTIVE",
+                message = "Interception active",
+                domain = domain,
+                timestamp = System.currentTimeMillis(),
+            )
 
             // Relay data both ways with interception
             val deviceToServer = async {
@@ -182,6 +209,12 @@ class MitmEngine(
 
             // Wait for either direction to complete
             awaitAll(deviceToServer, serverToDevice)
+            _statusFlow.value = MitmRuntimeStatus(
+                state = "IDLE",
+                message = "MITM idle",
+                domain = domain,
+                timestamp = System.currentTimeMillis(),
+            )
         }
     }
 
@@ -248,7 +281,11 @@ class MitmEngine(
             }
 
             override fun getCertificateChain(alias: String?): Array<X509Certificate> {
-                return arrayOf(cert)
+                // Include the CA cert so Android can build the full trust chain:
+                // leaf → CA. Without the CA here, Android's TLS path builder fails
+                // even when the CA is installed in the device trust store.
+                val caCert = caManager.getCaCert()
+                return if (caCert != null) arrayOf(cert, caCert) else arrayOf(cert)
             }
 
             override fun getPrivateKey(alias: String?): PrivateKey? {

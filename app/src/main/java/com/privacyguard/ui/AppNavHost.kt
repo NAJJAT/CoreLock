@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ManageSearch
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Home
@@ -63,13 +64,16 @@ fun AppNavHost(
     val settingsPreferences = remember(context) { SettingsPreferences.getInstance(context) }
 
     val tabs = remember {
-        listOf(
-            NavTab("dashboard", "Home",    Icons.Default.Home),
-            NavTab("apps",      "Apps",    Icons.Default.Apps),
-            NavTab("connections","Traffic", Icons.Default.Wifi),
-            NavTab("statistics","Stats",   Icons.Default.BarChart),
-            NavTab("settings",  "Settings",Icons.Default.Settings),
-        )
+        buildList {
+            add(NavTab("dashboard", "Home",    Icons.Default.Home))
+            add(NavTab("apps",      "Apps",    Icons.Default.Apps))
+            add(NavTab("connections","Traffic", Icons.Default.Wifi))
+            add(NavTab("statistics","Stats",   Icons.Default.BarChart))
+            if (BuildConfig.MITM_AVAILABLE) {
+                add(NavTab("payloads",  "Payload", Icons.AutoMirrored.Filled.ManageSearch))
+            }
+            add(NavTab("settings",  "Settings",Icons.Default.Settings))
+        }
     }
 
     val topLevelRoutes = remember(tabs) { tabs.map { it.route }.toSet() }

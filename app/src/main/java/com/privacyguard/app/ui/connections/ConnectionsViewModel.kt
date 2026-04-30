@@ -3,6 +3,7 @@ package com.privacyguard.app.ui.connections
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.privacyguard.app.BuildConfig
 import com.privacyguard.app.core.geoip.GeoIpResolver
 import com.privacyguard.app.core.geoip.GeoResult
 import com.privacyguard.app.core.stats.StatsManager
@@ -77,7 +78,9 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
 
     val connections: StateFlow<List<Connection>> = StatsManager.snapshot
         .map { snapshot ->
-            snapshot.activeConnections.map {
+            snapshot.activeConnections.filterNot {
+                isPrivacyGuardPackage(it.packageName)
+            }.map {
                 Connection(
                     id = it.id,
                     appName = displayAppName(
@@ -123,7 +126,9 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
             while (true) {
                 try {
                 val since = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
-                _recentConnections.value = db.connectionDao().getRecentConnections(since, 100).map {
+                _recentConnections.value = db.connectionDao().getRecentConnections(since, 100).filterNot {
+                    isPrivacyGuardPackage(it.packageName)
+                }.map {
                     Connection(
                         id = it.id.toString(),
                         appName = displayAppName(
@@ -141,7 +146,8 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
                         dataRate = formatRate(it.bytesSent + it.bytesReceived),
                         bytesSent = it.bytesSent,
                         bytesReceived = it.bytesReceived,
-                        hostName = it.sniHostname ?: it.domain,
+                        hostName = it.sniHostname ?: it.domain
+                            ?: orgHintForIp(it.destinationIp),
                         securityInfo = it.encryptionStatus,
                         encryptionInfo = it.tlsVersion ?: "",
                         payloadPreview = null,
@@ -157,6 +163,17 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
 
     val dataRate: String
         get() = formatRate(connections.value.sumOf { it.bytesSent })
+
+    /**
+     * Returns a human-readable hint when neither SNI nor DNS domain is available.
+     * WhatsApp over QUIC (UDP) and Telegram never populate sniHostname or domain
+     * because the UDP forwarder doesn't parse TLS. GeoIpResolver maps the IP to
+     * an org name so the user sees "Meta" or "Telegram" instead of a bare IP.
+     */
+    private fun orgHintForIp(ip: String): String? {
+        val geo = com.privacyguard.app.core.geoip.GeoIpResolver.lookup(ip) ?: return null
+        return if (geo.org == "Unknown") null else geo.org
+    }
 
     private fun displayAppName(appName: String, packageName: String): String {
         val resolvedPackage = packageName.takeIf { it.isNotBlank() && it != "Unknown" }
@@ -179,6 +196,11 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
             .replaceFirstChar { ch ->
                 if (ch.isLowerCase()) ch.titlecase(Locale.getDefault()) else ch.toString()
             }
+    }
+
+    private fun isPrivacyGuardPackage(packageName: String?): Boolean {
+        return packageName == BuildConfig.APPLICATION_ID ||
+                packageName?.startsWith("com.privacyguard.app") == true
     }
 
     fun setFilter(filter: ConnectionFilter) {

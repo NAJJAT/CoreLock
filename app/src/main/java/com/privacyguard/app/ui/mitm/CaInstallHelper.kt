@@ -52,16 +52,50 @@ class CaInstallHelper(
     // ── Primary install path ──────────────────────────────────────────────────
 
     /**
+     * Returns true if the device has a screen lock (PIN / pattern / password).
+     * Android blocks CA certificate installation when no screen lock is configured.
+     * Always check this before launching any install intent.
+     */
+    fun isScreenLockSet(): Boolean {
+        val km = context.getSystemService(android.app.KeyguardManager::class.java)
+        return km?.isDeviceSecure == true
+    }
+
+    /**
+     * Writes the CA cert as a DER binary file to app-private cache and opens it
+     * via ACTION_VIEW. More reliable than KeyChain on Samsung/MIUI devices.
+     * Use this as the FIRST fallback after [getKeyChainInstallIntent] fails.
+     */
+    fun getDerFileInstallIntent(): Intent? {
+        val cert = caManager.getCaCert() ?: run {
+            Log.e(TAG, "getDerFileInstallIntent: getCaCert() null")
+            return null
+        }
+        return try {
+            val cacheDir = java.io.File(context.cacheDir, "certs").also { it.mkdirs() }
+            val derFile  = java.io.File(cacheDir, CA_FILENAME.replace(".crt", ".der"))
+            derFile.writeBytes(cert.encoded)
+            Log.d(TAG, "getDerFileInstallIntent: wrote ${cert.encoded.size}B DER")
+            val uri = FileProvider.getUriForFile(
+                context, "${context.packageName}.fileprovider", derFile
+            )
+            Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, CA_MIME)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "getDerFileInstallIntent: ${e.message}", e)
+            null
+        }
+    }
+
+    /**
      * Returns an intent that opens the system credential installer with the CA
      * certificate pre-loaded. This is the cleanest path — no file write required.
-     * The user only needs to confirm the install and give the cert a name.
      *
-     * Returns null if [CaManager.initialize] has not been awaited yet.
-     *
-     * IMPORTANT: always call and await [CaManager.initialize] before this method.
-     * The common failure mode is calling this from a Composable whose [CaManager]
-     * instance was freshly constructed inside `remember { }` — that instance is
-     * uninitialised and [CaManager.getCaCert] returns null.
+     * Returns null if [CaManager.initialize] has not been awaited yet, or if
+     * the certificate object is empty/corrupt.
      */
     fun getKeyChainInstallIntent(): Intent? {
         val cert = caManager.getCaCert()

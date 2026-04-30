@@ -2,7 +2,7 @@ package com.privacyguard.ui.mitm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.privacyguard.data.db.PayloadLogEntity
+import com.privacyguard.app.data.db.PayloadLogEntity
 import com.privacyguard.domain.repository.PayloadLogRepository
 import com.privacyguard.vpn.mitm.MitmEngine
 import com.privacyguard.vpn.mitm.MitmConfig
@@ -24,6 +24,7 @@ data class MitmUiState(
     val mitmStatusDomain: String? = null,
     val methodFilter: String? = null,
     val showFlaggedOnly: Boolean = false,
+    val blockQuic: Boolean = false,
 )
 
 class MitmViewModel(
@@ -34,6 +35,7 @@ class MitmViewModel(
 
     private val _uiState = MutableStateFlow(MitmUiState())
     val uiState: StateFlow<MitmUiState> = _uiState.asStateFlow()
+    private var latestLogs: List<PayloadLogEntity> = emptyList()
 
     // One-shot event: fires after the user accepts consent so the Screen can
     // immediately launch the system CA certificate install dialog.
@@ -65,12 +67,19 @@ class MitmViewModel(
                 }
             }
         }
+        viewModelScope.launch {
+            mitmConfig.blockQuicWhenMitmFlow.collect { block ->
+                _uiState.update { it.copy(blockQuic = block) }
+            }
+        }
+        _uiState.update { it.copy(blockQuic = mitmConfig.blockQuicWhenMitm) }
     }
 
     private fun observeLogs() {
         viewModelScope.launch {
             payloadLogRepository.recentLogs(200).collect { logs ->
-                val filtered = applyFilters(logs)
+                latestLogs = logs
+                val filtered = applyFilters(latestLogs)
                 _uiState.update { it.copy(recentLogs = filtered, isLoading = false) }
             }
         }
@@ -110,31 +119,43 @@ class MitmViewModel(
 
     fun setFilterDirection(direction: String?) {
         _uiState.update { it.copy(filterDirection = direction) }
-        observeLogs()
+        applyCurrentFilters()
     }
 
     fun setFilterHasBody(hasBody: Boolean) {
         _uiState.update { it.copy(filterHasBody = hasBody) }
-        observeLogs()
+        applyCurrentFilters()
     }
 
     fun setSearchQuery(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
-        observeLogs()
+        applyCurrentFilters()
     }
 
     fun setMethodFilter(method: String?) {
         _uiState.update { it.copy(methodFilter = method) }
-        observeLogs()
+        applyCurrentFilters()
     }
 
     fun setShowFlaggedOnly(flagged: Boolean) {
         _uiState.update { it.copy(showFlaggedOnly = flagged) }
-        observeLogs()
+        applyCurrentFilters()
+    }
+
+    fun setBlockQuic(block: Boolean) {
+        mitmConfig.setBlockQuicWhenMitm(block)
+    }
+
+    private fun applyCurrentFilters() {
+        _uiState.update { it.copy(recentLogs = applyFilters(latestLogs), isLoading = false) }
     }
 
     private fun applyFilters(logs: List<PayloadLogEntity>): List<PayloadLogEntity> {
-        var filtered = logs
+        // FIXED: hide PrivacyGuard's own internal network traffic from the Payload screen.
+        // Otherwise stale/self rows make the inspector look like every request belongs to the app itself.
+        var filtered = logs.filterNot { log ->
+            log.ownerPackage?.startsWith("com.privacyguard.app") == true
+        }
 
         _uiState.value.filterDirection?.let { direction ->
             filtered = filtered.filter { it.direction == direction }
@@ -170,6 +191,6 @@ class MitmViewModel(
     }
 
     fun refresh() {
-        observeLogs()
+        applyCurrentFilters()
     }
 }

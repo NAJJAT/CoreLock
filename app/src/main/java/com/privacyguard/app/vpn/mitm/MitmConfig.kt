@@ -34,6 +34,9 @@ class MitmConfig(
     private val _shipToSiem = MutableStateFlow(prefs.getBoolean("mitm_ship_to_siem", false))
     val shipToSiemFlow: Flow<Boolean> = _shipToSiem.asStateFlow()
 
+    private val _blockQuicWhenMitm = MutableStateFlow(prefs.getBoolean("mitm_block_quic", false))
+    val blockQuicWhenMitmFlow: Flow<Boolean> = _blockQuicWhenMitm.asStateFlow()
+
     /**
      * Get current enabled state (synchronous, for use in VPN packet processing)
      */
@@ -66,6 +69,14 @@ class MitmConfig(
 
     val consentTimestamp: Long
         get() = prefs.getLong("mitm_consent_timestamp", 0L)
+
+    val blockQuicWhenMitm: Boolean
+        get() = prefs.getBoolean("mitm_block_quic", false)
+
+    fun setBlockQuicWhenMitm(block: Boolean) {
+        prefs.edit().putBoolean("mitm_block_quic", block).apply()
+        _blockQuicWhenMitm.value = block
+    }
 
     fun setEnabled(enabled: Boolean) {
         prefs.edit().putBoolean("mitm_enabled", enabled).apply()

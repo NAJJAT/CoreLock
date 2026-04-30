@@ -81,6 +81,7 @@ class PrivacyVpnService : VpnService() {
     private lateinit var blocklistRepo: BlocklistRepo
     private lateinit var metadataRepo: MetadataRepo
     private lateinit var dnsAnomalyRepo: DnsAnomalyRepo
+    private lateinit var mitmConfig: MitmConfig
 
     private var tunFd: ParcelFileDescriptor? = null
     private val totalBlocked = AtomicLong(0)
@@ -316,7 +317,7 @@ class PrivacyVpnService : VpnService() {
 
         val piiRedactor = PiiRedactor()
         val pinningDetector = PinningDetector()
-        val mitmConfig = MitmConfig(this)
+        mitmConfig = MitmConfig(this)
         val payloadParser = PayloadParser(piiRedactor)
         val payloadShipper = PayloadShipper(mitmConfig)
         val certForger = CertForger(caManager)
@@ -437,7 +438,7 @@ class PrivacyVpnService : VpnService() {
             IpPacket.PROTO_UDP -> {
                 val udp = UdpPacket.parse(ip) ?: return
                 val uid = resolveOwnerUid(
-                    fallbackUid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(udp.sourcePort, 17),
+                    fallbackUid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(udp.sourcePort, 17, applicationInfo.uid),
                     protocol = OsConstants.IPPROTO_UDP,
                     sourceIp = ip.sourceIp,
                     sourcePort = udp.sourcePort,
@@ -465,6 +466,11 @@ class PrivacyVpnService : VpnService() {
                     }
                     return
                 }
+                // Drop QUIC (UDP/443) when MITM is active and the block-QUIC option is on.
+                // Silently dropping forces QUIC-capable apps (Chrome, WhatsApp, YouTube) to
+                // retry on TCP/TLS, where MITM interception is possible.
+                if (udp.destinationPort == 443 && mitmConfig.isEnabled && mitmConfig.blockQuicWhenMitm) return
+
                 val udpKey = com.privacyguard.core.session.SessionKey.of(
                     ip.sourceIp, udp.sourcePort, ip.destinationIp, udp.destinationPort, IpPacket.PROTO_UDP)
                 val isNewUdpSession = sessionTable.get(udpKey) == null
@@ -476,7 +482,7 @@ class PrivacyVpnService : VpnService() {
             IpPacket.PROTO_TCP -> {
                 val tcp = TcpPacket.parse(ip) ?: return
                 val uid = resolveOwnerUid(
-                    fallbackUid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(tcp.sourcePort, 6),
+                    fallbackUid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(tcp.sourcePort, 6, applicationInfo.uid),
                     protocol = OsConstants.IPPROTO_TCP,
                     sourceIp = ip.sourceIp,
                     sourcePort = tcp.sourcePort,
@@ -740,17 +746,22 @@ class PrivacyVpnService : VpnService() {
         destinationIp: String,
         destinationPort: Int,
     ): Int {
-        if (fallbackUid >= 0) return fallbackUid
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return fallbackUid
+        // FIXED: ask Android's endpoint-aware owner API before trusting the port-only /proc fallback.
+        // The /proc fallback can accidentally match PrivacyGuard's own protected upstream socket,
+        // which made external app traffic appear as com.privacyguard.app.enterprise.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val ownerUid = runCatching {
+                val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+                cm?.getConnectionOwnerUid(
+                    protocol,
+                    InetSocketAddress(sourceIp, sourcePort),
+                    InetSocketAddress(destinationIp, destinationPort),
+                ) ?: -1
+            }.getOrDefault(-1)
+            if (ownerUid >= 0) return ownerUid
+        }
 
-        return runCatching {
-            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-            cm?.getConnectionOwnerUid(
-                protocol,
-                InetSocketAddress(sourceIp, sourcePort),
-                InetSocketAddress(destinationIp, destinationPort),
-            ) ?: fallbackUid
-        }.getOrDefault(fallbackUid)
+        return fallbackUid
     }
 
     private fun stopVpn() {
