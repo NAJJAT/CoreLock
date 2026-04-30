@@ -148,7 +148,7 @@ class DomainFilter {
 
         // Bloom filter fast-path: if native says no, skip trie entirely (~5x faster)
         if (com.privacyguard.core.native_engine.RustBridge.isAvailable &&
-            !com.privacyguard.core.native_engine.RustBridge.bloomCheck(d)) {
+            !mightBeInNativeBloom(d)) {
             return false
         }
 
@@ -190,6 +190,16 @@ class DomainFilter {
             if (traverseTrie(exactChild, labels, index + 1, allowSubdomainInheritance)) return true
         }
 
+        return false
+    }
+
+    private fun mightBeInNativeBloom(domain: String): Boolean {
+        val labels = domain.split('.')
+        for (index in labels.indices) {
+            val suffix = labels.drop(index).joinToString(".")
+            if (com.privacyguard.core.native_engine.RustBridge.bloomCheck(suffix)) return true
+            if (index > 0 && com.privacyguard.core.native_engine.RustBridge.bloomCheck("*.$suffix")) return true
+        }
         return false
     }
 

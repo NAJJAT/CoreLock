@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -56,6 +57,7 @@ import com.privacyguard.app.ui.components.PanelCard
 import com.privacyguard.app.ui.components.ScreenScaffold
 import com.privacyguard.app.ui.components.SectionLabel
 import com.privacyguard.app.ui.components.StatTile
+import com.privacyguard.app.ui.components.StatusPill
 import com.privacyguard.app.ui.components.formatAgo
 import com.privacyguard.app.ui.components.formatBytes
 import com.privacyguard.app.ui.security.rememberProtectedActionRunner
@@ -82,6 +84,7 @@ fun DashboardScreen(
     onOpenAlerts: () -> Unit = {},
     onOpenConnections: () -> Unit = {},
     onOpenApps: () -> Unit = {},
+    onOpenSleepReport: () -> Unit = {},
     viewModel: DashboardViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -227,6 +230,12 @@ fun DashboardScreen(
                 }
 
                 Spacer(modifier = Modifier.height(18.dp))
+                SleepActivityCard(
+                    summary = uiState.sleepActivity,
+                    onClick = onOpenSleepReport,
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
                 SectionLabel("Protection level")
                 Spacer(modifier = Modifier.height(8.dp))
                 ProtectionLevelPicker(
@@ -345,6 +354,43 @@ fun DashboardScreen(
         }
 
         item { Spacer(modifier = Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+private fun SleepActivityCard(
+    summary: SleepActivitySummary,
+    onClick: () -> Unit,
+) {
+    PanelCard(modifier = Modifier.clickable(onClick = onClick)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(PgInfoDim),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Default.Bedtime, contentDescription = null, tint = PgInfo, modifier = Modifier.size(20.dp))
+                }
+                Spacer(modifier = Modifier.size(12.dp))
+                Column {
+                    Text("While You Were Sleeping", style = MaterialTheme.typography.titleMedium, color = PgText)
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Text(
+                        "${summary.activeApps} apps active · ${summary.dnsQueries} DNS queries",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PgTextMuted,
+                    )
+                }
+            }
+            StatusPill("${summary.trackingDomains} tracking", PgWarningDim, PgWarning)
+        }
     }
 }
 

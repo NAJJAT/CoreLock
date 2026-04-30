@@ -1,399 +1,329 @@
 # PrivacyGuard
 
-**Zero-knowledge network privacy for Android — blocks trackers, encrypts DNS, and gives you full visibility into every connection your apps make.**
+A privacy and security VPN app for Android. Runs a local VPN that inspects every network connection on the device — no traffic leaves the device unmonitored, no cloud backend required.
 
-No root required. No external servers. Every computation happens on-device.
-
----
-
-## Screenshots
-
-> Dashboard · Connections · App Detail · Rules · Statistics · Settings
-
----
-
-## What It Does
-
-PrivacyGuard runs a local VPN on your device and intercepts every network packet before it leaves. It applies four layers of protection in real time:
-
-| Layer | What it does |
-|---|---|
-| **DNS Shield** | Blocks tracker domains at the DNS level (NXDOMAIN before any connection is made). Supports DNS over HTTPS (Cloudflare / Google / Quad9). Detects DNS tunneling and DGA beacons. |
-| **Tracker Blocking** | Matches connections against 300+ known tracker signatures (advertising, analytics, fingerprinting, crash reporting, social). Powered by a local copy of the Exodus Privacy database. |
-| **Encryption Enforcement** | Inspects TLS ClientHello handshakes without decrypting payload. Classifies every session as CLEARTEXT / WEAK_TLS / TLS / TLS_1.3. Can block all HTTP (cleartext) connections. |
-| **Custom Rules** | Per-domain and per-app block/allow rules. Whitelist an app to bypass VPN entirely (useful for banking apps). |
-
-**Zero data ever leaves your device.** No analytics, no telemetry, no account required.
+- **No root required**
+- **No external servers** — every computation happens on-device
+- **Two flavors**: consumer (monitoring + blocking) and enterprise (adds HTTPS payload inspection)
 
 ---
 
 ## Features
 
-### Protection
-- Local VPN — no root, no kernel module, uses Android `VpnService` API
-- Three blocking modes: **Minimal**, **Standard**, **Strict**
-- Block by domain, IP/CIDR, app UID, port, or encryption status
-- DNS over HTTPS (RFC 8484) — Cloudflare, Google, Quad9
-- Kill switch — posts a notification and attempts auto-restart if VPN drops unexpectedly
-- Blocklist auto-update from StevenBlack, EasyList, EasyPrivacy, OISD, Hagezi
+### Core — Consumer build
 
-### Visibility
-- **Live connections** — every open TCP/UDP session with app name, destination, protocol, encryption status
-- **App Detail** — per-app connection history + APK tracker SDK scan (finds embedded SDKs even if they haven't phoned home yet)
-- **Statistics** — blocked count, data saved, top trackers by company, top apps by activity
-- **Recent activity feed** — last 50 events on the dashboard
-- **GeoIP** — identifies the organisation behind each IP (Google, Cloudflare, AWS, Meta, Akamai, etc.)
+| Category | What it does |
+|---|---|
+| **VPN engine** | Local TUN interface intercepts all IPv4 and IPv6 traffic (TCP + UDP). Kill switch blocks all network access if the VPN drops. |
+| **Filter rules** | Block by domain, IP/CIDR, app package, or globally. Three protection levels: Minimal / Standard / Strict. Rules take effect instantly — no VPN restart. |
+| **Domain blocklist** | Downloads and parses hosts files, EasyList, and domain-list formats. Trie lookup with optional Rust bloom-filter fast path (~5× speedup). |
+| **DNS over HTTPS** | RFC 8484 DoH with Cloudflare, Google, and Quad9. Falls back to system DNS automatically. |
+| **TLS inspection** | Parses every TLS ClientHello without decrypting payload. Extracts SNI, cipher suites, supported groups, ALPN, and version for every HTTPS connection. |
+| **JA3 fingerprinting** | Computes JA3 hash from ClientHello; checks against 35+ known-bad hashes (Cobalt Strike, Emotet, TrickBot, RATs, C2 frameworks). Fires a notification on match. |
+| **Cipher suite analysis** | Detects NULL, EXPORT (FREAK/LOGJAM), RC4, DES/3DES (SWEET32), and anonymous ciphers. Risk levels: SAFE → MEDIUM → HIGH → CRITICAL. |
+| **Certificate Transparency** | Polls crt.sh every 6 hours for new certificates issued for observed SNI domains. Fires a per-domain notification on new issuance. |
+| **DNS anomaly detection** | DGA detection (Shannon entropy + n-gram scoring), DNS tunneling detection (high-entropy labels, TXT record abuse), NXDOMAIN flood detection. |
+| **Tracker identification** | Database of 55+ tracker SDKs (company, category, domain patterns). APK scanner does DEX string scan to identify embedded trackers without running the app. |
+| **GeoIP / org lookup** | Hardcoded IP range table for major providers (Google, Cloudflare, AWS, Meta, Akamai, etc.). Shown as org hint when SNI is absent (e.g. QUIC traffic). |
+| **Background detection** | Tags every session as foreground or background via `ActivityManager`. Supports "block background only" rules per app. |
+| **Behavior DNA** | Per-app behavioral fingerprinting: domain diversity, background ratio, cleartext ratio, night-hour activity. Scores and alerts on suspicious patterns. |
+| **Privacy grade A–F** | Composite score per app (risk score + cleartext + background + stalkerware). Shown as a colored badge in the Apps screen. |
+| **PCAP export** | Writes real PCAP files (LINKTYPE_RAW) for offline analysis in Wireshark or tcpdump. |
+| **CSV export** | 7-day connection export with app, domain, IP, bytes, TLS version, background flag, and block status. |
+| **IT report** | PDF + JSON compliance report with background/cleartext ratios, TLS version breakdown, and tracker SDK findings. |
+| **Weekly report** | WorkManager job generates a weekly summary of blocked connections and top threats. |
+| **Quick Settings tile** | VPN toggle directly from the Android pull-down shade. Updates in real time when VPN state changes from any source. |
+| **Boot autostart** | Restarts VPN after device reboot if it was running before shutdown. |
+| **Dual VPN** | SOCKS5-chained two-hop proxy for additional anonymity. Each hop configured independently in Settings. |
+| **MDM / AppConfig** | Full Device Admin + managed configuration support (Intune, Workspace ONE, Jamf). Policy deployed via `RestrictionsManager`. |
 
-### Advanced
-- PCAP export — capture raw packets to `.pcap` for Wireshark analysis
-- Per-app rules — block a tracker in App A but allow it in App B
-- Exodus tracker database — automatically refreshed weekly from `exodus-privacy.eu.org`
-- TLS anomaly detection — flags unencrypted background connections, beacon patterns, DGA domains
+### Enterprise build — additional features
+
+| Feature | Description |
+|---|---|
+| **HTTPS payload inspection (MITM)** | Local CA + per-domain leaf cert forgery. Intercepts and logs HTTP request/response payloads. Consent-gated with a full onboarding wizard. |
+| **QUIC block** | Drops UDP/443 to force Chrome, YouTube, and WhatsApp to fall back to TCP TLS, making them interceptable. Toggle in the Payload screen. |
+| **PII redactor** | Strips emails, credit cards, phone numbers, JWTs, Bearer tokens, and sensitive JSON fields from logged payloads before storage. |
+| **SIEM shipping** | Forwards payload events to a configurable HTTPS endpoint (Splunk, Elastic, etc.) with API-key auth. |
+| **Pinning bypass detection** | Skips MITM for apps that use certificate pinning (WhatsApp, Instagram) to avoid breaking their connectivity. |
+| **Payload Inspector** | Full-screen chronological list of intercepted payloads. Filter by method, direction, body presence, or flagged status. Risk-scored per entry. |
+
+---
+
+## Screens
+
+| Screen | Description |
+|---|---|
+| **Home** | VPN toggle, protection level picker (Minimal/Standard/Strict), live throughput tiles, security cards, alert badge |
+| **Apps** | All installed apps sorted by risk / data usage / connections / background ratio. Privacy grade A–F badge. Quick block/unblock. |
+| **App Detail** | Per-app connection list, domain data usage, hourly activity bar chart, tracker SDK tab, payload tab (enterprise) |
+| **Traffic** | Live and 24-hour connection list. App icon with security dot badge (green/amber/red). Filter by app, domain, or security status. |
+| **Statistics** | Encryption health gauge, real-time world map, traffic sunburst chart, 7-day × 24h activity heatmap, weekly connection trend, top apps by data |
+| **Settings** | All toggles, DoH provider, kill switch, dual VPN config, data retention, diagnostics (external IP, DNS privacy check) |
+| **Alert Inbox** | Aggregated DNS anomalies, JA3 threats, weak cipher events, and CT certificate alerts in one chronological list |
+| **Security Analysis** | JA3 threat list, cipher alert list, CT events, Rust engine status |
+| **Rules** | Full CRUD for domain / IP / CIDR / package rules. Rule hit counters. Suggested rules based on observed behavior. Search bar. |
+| **Ads & Trackers** | Top tracker apps by 24h connection volume. Tracker category breakdown. |
+| **Onboarding** | First-run consent wizard (3 info pages + required/optional consent checkboxes) |
+| **Payload Inspector** | Enterprise only — HTTPS payload capture and search |
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  UI Layer  (Jetpack Compose / Material3)                 │
-│  Dashboard · Connections · Apps · Statistics · Rules     │
-│  Settings · App Detail                                   │
-└────────────────────────┬────────────────────────────────┘
-                         │ StateFlow / collectAsState
-┌────────────────────────▼────────────────────────────────┐
-│  Engine Layer  (Kotlin)                                  │
-│                                                          │
-│  PrivacyVpnService  ──►  SessionTable                    │
-│       │                       │                          │
-│       ▼                       ▼                          │
-│  PacketPipeline          StatsManager  ──► UI            │
-│  ├─ IpFilter (CIDR)                                      │
-│  ├─ DomainFilter (trie)                                  │
-│  ├─ AppFilter (UID)                                      │
-│  ├─ FilterEngine (rules)                                 │
-│  ├─ DnsHandler (DoH / plain UDP)                         │
-│  ├─ EncryptionEnforcer (TLS ClientHello)                 │
-│  ├─ DnsAnomalyDetector (DGA / tunneling)                 │
-│  └─ MetadataEngine (behavioural profiles)                │
-│                                                          │
-│  TrackerDatabase  ◄──  ExodusUpdater (weekly refresh)   │
-│  GeoIpResolver (hardcoded major provider ranges)         │
-│  ApkScanner (DEX string scan)                            │
-│  PcapWriter (libpcap format)                             │
-└────────────────────────┬────────────────────────────────┘
-                         │ Room
-┌────────────────────────▼────────────────────────────────┐
-│  Data Layer                                              │
-│  AppDatabase (Room/SQLite)                               │
-│  ConnectionEntity · RuleEntity · BlocklistEntity         │
-│  ConnectionProfileEntity · DnsAnomalyEntity              │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                        Android App                           │
+│                                                              │
+│   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
+│   │  Compose UI  │◄───│  ViewModels  │◄───│  Room DB     │  │
+│   │  (5 tabs)    │    │  + StateFlow │    │  (8 tables)  │  │
+│   └──────────────┘    └──────────────┘    └──────────────┘  │
+│                              │                               │
+│   ┌──────────────────────────────────────────────────────┐  │
+│   │                 PrivacyVpnService                     │  │
+│   │                                                       │  │
+│   │   TUN read → parse → filter → forward → TUN write    │  │
+│   │                                                       │  │
+│   │   IPv4:  TcpForwarder    UdpForwarder                 │  │
+│   │   IPv6:  Ipv6Proxy (TCP relay + self-expiring UDP)    │  │
+│   │   DNS:   DnsHandler → DoH (RFC 8484)                  │  │
+│   │   TLS:   ClientHelloParser → JA3 → CipherAnalysis     │  │
+│   │   MITM:  MitmEngine (enterprise, consent-gated)       │  │
+│   └──────────────────────────────────────────────────────┘  │
+│                              │                               │
+│   ┌──────────────────────────────────────┐                  │
+│   │          Rust native engine           │  (optional)      │
+│   │  JNI via RustBridge.kt               │                  │
+│   │  • processIpv4Packet                 │                  │
+│   │  • computeJa3                        │                  │
+│   │  • bloomCheck / bloomRebuild         │                  │
+│   │  • shannonEntropy                    │                  │
+│   └──────────────────────────────────────┘                  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Key design decisions
+### Key data flows
 
-- **Single process** — VPN service, packet processing, and UI all in one Android process. No IPC overhead.
-- **Zero decryption** — TLS inspection reads only the plaintext ClientHello record-layer bytes. No MITM, no certificate pinning bypass, no key access.
-- **Lock-free hot path** — `SessionTable` uses `ConcurrentHashMap`; `FilterEngine` uses `CopyOnWriteArrayList`. The packet thread never blocks on UI updates.
-- **Reactive UI** — `StatsManager` is a `StateFlow` singleton. The UI collects it; the VPN engine writes to it. No polling.
-- **Trie-based domain matching** — O(L) insert and lookup where L = number of domain labels. Atomic trie swap on blocklist rebuild so the hot path never sees a partial update.
+| Flow | Path |
+|---|---|
+| **Packet** | TUN → `IpPacket.parse()` → `FilterEngine.evaluate()` → `TcpForwarder` / `UdpForwarder` → real socket → TUN |
+| **Rule reload** | UI → `RulesRepo` → `RuleSyncBus` (SharedFlow) → `PrivacyVpnService` reloads inline (no restart needed) |
+| **Live stats** | `StatsManager` (in-memory) → `StateFlow` → ViewModels → Compose recompose |
+| **DB writes** | `ConnectionLogger` → Room (background thread) → `Flow<List<...>>` → ViewModels |
+| **Alerts** | VPN detects threat → `NotificationHelper.post*()` → `EXTRA_NAV_ROUTE` deep-link → navigates to Alert Inbox |
 
 ---
 
-## Project Structure
-
-```
-app/src/main/java/
-├── com/privacyguard/
-│   ├── app/
-│   │   ├── core/
-│   │   │   ├── apk/           ApkScanner — DEX tracker SDK detection
-│   │   │   ├── blocklist/     BlocklistManager, BlocklistSource, ExodusUpdater
-│   │   │   ├── filter/        FilterEngine, FilterRule
-│   │   │   ├── geoip/         GeoIpResolver — offline IP→org lookup
-│   │   │   ├── packet/        IpPacket, TcpPacket, UdpPacket, DnsPacket
-│   │   │   ├── pcap/          PcapWriter — real libpcap format
-│   │   │   ├── session/       SessionTable, Session, SessionKey
-│   │   │   ├── stats/         StatsManager — reactive stats singleton
-│   │   │   ├── tracker/       TrackerDatabase — 55+ built-in trackers
-│   │   │   └── utils/         ByteUtils, Checksum
-│   │   │
-│   │   ├── data/
-│   │   │   ├── db/            Room entities + DAOs
-│   │   │   ├── local/         SettingsPreferences (DoH, kill switch, etc.)
-│   │   │   ├── remote/        BlocklistDownloader
-│   │   │   └── repository/    ConnectionRepo, RulesRepo, BlocklistRepo, …
-│   │   │
-│   │   ├── platform/android/  PrivacyVpnService, AppTracker, NotificationHelper
-│   │   │
-│   │   ├── ui/
-│   │   │   ├── apps/          AppsScreen, AppDetailScreen + ViewModels
-│   │   │   ├── connections/   ConnectionsScreen + ViewModel
-│   │   │   ├── dashboard/     DashboardScreen + ViewModel
-│   │   │   ├── rules/         RulesScreen + ViewModel
-│   │   │   ├── settings/      SettingsScreen
-│   │   │   └── statistics/    StatisticsScreen + ViewModel
-│   │   │
-│   │   ├── vpn/
-│   │   │   ├── firewall/      IpFilter, DomainFilter, AppFilter
-│   │   │   ├── forwarder/     TcpForwarder, UdpForwarder, DnsHandler
-│   │   │   ├── tunnel/        TunInterface, TunReader, TunWriter
-│   │   │   ├── KillSwitch.kt
-│   │   │   └── UidMapper.kt
-│   │   │
-│   │   └── workers/           BlocklistUpdateWorker, WeeklyReportWorker
-│   │
-│   ├── core/metadata/         MetadataEngine, ConnectionProfile, EncryptionStatus
-│   └── vpn/inspector/         EncryptionEnforcer, DnsAnomalyDetector
-```
-
----
-
-## Getting Started
+## Build
 
 ### Requirements
 
-| Tool | Version |
-|---|---|
-| Android Studio | Hedgehog or newer |
-| Android SDK | API 36 (compiles to API 24+) |
-| Kotlin | 2.x |
-| Gradle | 9.4 |
+- Android Studio Meerkat (or later)
+- JDK 17+
+- Android SDK — API 36 (compile), API 24 (minimum)
+
+### Debug
+
+```bash
+./gradlew assembleConsumerDebug        # consumer flavor — no MITM
+./gradlew assembleEnterpriseDebug      # enterprise flavor — MITM enabled
+```
+
+### Release
+
+**Step 1 — Generate a keystore** (one-time):
+
+```bash
+keytool -genkey -v \
+  -keystore privacyguard-release.jks \
+  -alias privacyguard \
+  -keyalg RSA -keysize 4096 \
+  -validity 10000 \
+  -dname "CN=PrivacyGuard, OU=Mobile, O=YourOrg, L=City, S=State, C=US"
+```
+
+**Step 2 — Get the SHA-256 fingerprint** (used by BuildConfig for cert pinning):
+
+```bash
+keytool -list -v \
+  -keystore privacyguard-release.jks -alias privacyguard \
+  | grep "SHA256:" | awk '{print $2}' | tr -d ':'
+```
+
+**Step 3 — Create `release-signing.local.properties`** (gitignored):
+
+```bash
+cp release-signing.template.properties release-signing.local.properties
+# Fill in all five values
+```
+
+**Step 4 — Build**:
+
+```bash
+./gradlew assembleConsumerRelease      # signed APK
+./gradlew bundleConsumerRelease        # AAB for Play Store
+./gradlew assembleEnterpriseRelease    # enterprise APK
+```
+
+R8 (code shrinking + obfuscation) runs automatically on all release builds. Rules are in `app/proguard-rules.pro`.
+
+---
+
+## Optional: Rust native engine
+
+The Rust engine provides faster JA3 hashing, bloom-filter domain lookup, and Shannon entropy. Fully optional — Kotlin fallbacks are used automatically when the `.so` is absent.
+
+### Requirements
+
+```bash
+rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
+cargo install cargo-ndk
+# Install NDK r25+ via Android Studio → SDK Manager → SDK Tools
+```
 
 ### Build
 
 ```bash
-# Clone
-git clone https://github.com/ammarnajjar00/privacyguard.git
-cd privacyguard
-
-# Debug build
-./gradlew assembleDebug
-
-# Release build
-./gradlew assembleRelease
-
-# Install on connected device
-./gradlew installDebug
+cd rust
+cargo ndk \
+  -t armeabi-v7a -t arm64-v8a -t x86_64 \
+  -o ../app/src/main/jniLibs \
+  build --release
 ```
 
-### First run
+Alternatively, the `buildRust` Gradle task runs `cargo ndk` automatically and silently skips if the toolchain is not installed.
 
-1. Open the app
-2. Tap **START VPN** on the dashboard
-3. Accept the Android VPN permission dialog
-4. The shield turns green — all traffic is now routed through PrivacyGuard
+See `rust/BUILD.md` for detailed instructions including cross-compilation notes.
 
 ---
 
-## Screens
+## Optional: Flutter UI
 
-### Dashboard
-Shows the VPN on/off toggle, real-time blocked count, data saved, active apps, privacy score (0–100), and a live recent-activity feed.
+A Flutter module in `flutter/` provides an alternative cross-platform UI. The native Kotlin/Compose UI is the default and always available.
 
-### Network (Connections)
-Live list of every open TCP/UDP session. Each row shows the app name, destination IP + port, protocol badge (TCP/UDP/DNS), encryption status, and the organisation behind the IP (Google, Cloudflare, AWS, etc.).
+```bash
+cd flutter && flutter pub get
+```
 
-### App Detail
-Tap any app to see:
-- **Connections tab** — every domain/IP this app has contacted, with tracker name, company, and hit count
-- **SDKs tab** — embedded tracker SDKs detected by scanning the APK's compiled bytecode (finds trackers even before they phone home)
-
-### Statistics
-Blocked count, estimated data saved, and top blocked trackers — today, this week, and all time.
-
-### Rules
-Full CRUD for custom firewall rules:
-- Block or allow any domain (wildcard-aware)
-- Block or allow any app package
-- Enable/disable individual rules without deleting them
-
-### Settings
-- **Blocking mode** — Minimal / Standard / Strict
-- **DNS over HTTPS** — toggle on/off; choose Cloudflare, Google, or Quad9
-- **Kill switch** — alert + auto-restart if VPN drops unexpectedly
-- **Blocklist update** — manual trigger or automatic weekly update on Wi-Fi
-- **PCAP capture** — start/stop packet capture; export `.pcap` to share with Wireshark
-- **Language** — English / Arabic
+This generates `flutter/.android/` and enables the `:flutter` Gradle project. A **"Flutter UI (Preview)"** option then appears in Settings. The app degrades gracefully — `Class.forName` is used so the APK works whether or not Flutter is compiled in.
 
 ---
 
-## Blocking Modes
+## Project structure
 
-| Mode | What gets blocked |
+```
+app/src/main/java/
+├── com/privacyguard/
+│   ├── core/
+│   │   ├── filter/       FilterEngine, FilterRule, DomainFilter (trie), IpFilter (CIDR)
+│   │   ├── packet/       IpPacket, TcpPacket, UdpPacket, Ipv6Packet
+│   │   ├── session/      Session, SessionKey, SessionTable (with reaper)
+│   │   ├── tls/          ClientHelloParser, CipherSuiteAnalyzer, Ja3Fingerprinter, CtMonitor
+│   │   └── utils/        Checksum (RFC 1071), ByteUtils
+│   ├── vpn/
+│   │   ├── firewall/     DomainFilter (bloom + trie), IpFilter
+│   │   ├── forwarder/    TcpForwarder, UdpForwarder, Ipv6Proxy
+│   │   ├── inspector/    EncryptionEnforcer, DnsAnomalyDetector
+│   │   ├── mitm/         CaManager, CertForger, MitmEngine, PiiRedactor, PayloadParser
+│   │   └── tunnel/       TunInterface, TunReader, TunWriter
+│   └── platform/android/ PrivacyVpnService
+└── com/privacyguard/app/
+    ├── data/db/          Room entities + DAOs (connections, rules, alerts, payloads, …)
+    ├── data/local/       SettingsPreferences (all user settings as StateFlow)
+    ├── tile/             PrivacyGuardTileService (Quick Settings)
+    ├── ui/
+    │   ├── dashboard/    Home screen + DashboardViewModel
+    │   ├── apps/         AppsScreen, AppDetailScreen
+    │   ├── connections/  ConnectionsScreen
+    │   ├── statistics/   StatisticsScreen (map, sunburst, heatmap, trend)
+    │   ├── alerts/       AlertInboxScreen
+    │   ├── mitm/         MitmScreen, PayloadInspectorActivity (enterprise)
+    │   ├── onboarding/   OnboardingScreen (3-page consent wizard)
+    │   └── settings/     SettingsScreen
+    └── vpn/              VpnManager, KillSwitch, UidMapper, BootReceiver
+
+rust/
+├── privacyguard-core/    JA3, bloom filter, Shannon entropy, packet classifier (JNI + C FFI)
+├── privacyguard-linux/   TUN daemon (tokio async)
+├── privacyguard-windows/ WinDivert packet-interception service
+└── privacyguard-ebpf/    TC egress/ingress + cgroup_skb programs (aya loader)
+
+flutter/lib/
+├── main.dart             5-tab StatefulShellRoute app
+├── services/             MethodChannel + EventChannel VPN bridge
+└── screens/              Home, Apps, Connections, Stats, Settings, Alerts, AppDetail
+```
+
+> **Package naming note**: file paths under `com/privacyguard/app/` sometimes declare `package com.privacyguard.*` (without `.app.`). The Kotlin compiler uses the declared package, not the directory. ProGuard rules cover both naming forms.
+
+---
+
+## Database schema (Room v3)
+
+| Table | Purpose |
 |---|---|
-| **Minimal** | Known-malicious and fingerprinting domains only. Safe for banking apps. |
-| **Standard** *(default)* | All advertising and analytics trackers. May occasionally break app features. |
-| **Strict** | Everything in the blocklist + all tracker categories. Some apps may break. |
-
----
-
-## DNS over HTTPS
-
-When enabled, all DNS queries are sent as HTTPS POST requests (RFC 8484) to the chosen provider instead of plain UDP. This prevents your ISP from logging which domains you visit.
-
-Providers:
-| Provider | URL |
-|---|---|
-| Cloudflare | `https://cloudflare-dns.com/dns-query` |
-| Google | `https://dns.google/dns-query` |
-| Quad9 | `https://dns.quad9.net/dns-query` |
-
-If DoH fails (no internet, provider down), PrivacyGuard automatically falls back to plain UDP DNS so connections are never silently broken.
-
----
-
-## Blocklists
-
-PrivacyGuard downloads and merges blocklists from:
-
-| Source | Format | Entries |
-|---|---|---|
-| StevenBlack Unified Hosts | Hosts file | ~100k domains |
-| EasyList | AdBlock ABP | ~70k domains |
-| EasyPrivacy | AdBlock ABP | ~15k tracker domains |
-| OISD Basic | Domain list | ~50k domains |
-| OISD Full | Domain list | ~250k domains |
-| Hagezi Light | Domain list | ~30k domains |
-
-Updates run automatically once a week on Wi-Fi in the background via WorkManager. You can also trigger a manual update from Settings.
-
----
-
-## Tracker Database
-
-Built-in signatures for 55+ major tracker SDKs, plus live sync from the Exodus Privacy API (300+ trackers). Each tracker has:
-
-- **Name** — e.g. "Google Firebase Analytics"
-- **Company** — e.g. "Google LLC"
-- **Category** — Advertising / Analytics / Crash Reporting / Fingerprinting / Social / Profiling
-- **Domains** — list of network domains to block
-- **Class patterns** — Android class name prefixes used by the APK scanner
-
----
-
-## PCAP Export
-
-Enable PCAP capture in Settings to record raw packets to a `.pcap` file in the app's private storage. Tap **Export PCAP** to share the file with Wireshark, tcpdump, or any compatible analysis tool.
-
-Note: captured TLS traffic is encrypted. To decrypt it you would need the `SSLKEYLOGFILE` (not supported — PrivacyGuard deliberately does not perform MITM).
-
----
-
-## Privacy & Security
-
-- **No account required** — the app works fully offline after first blocklist download
-- **No analytics** — zero telemetry, no crash reporting to external servers
-- **No payload decryption** — TLS inspection reads only the plaintext ClientHello header (SNI hostname + TLS version). PrivacyGuard never holds private keys or certificates
-- **Local database only** — all connection history, rules, and stats are stored in a Room/SQLite database on your device
-- **GPL v3** — the source code is public; anyone can verify it does exactly what it claims
+| `connections` | Every proxied session — app, domain, IP, ports, bytes, TLS version, background flag, block status |
+| `connection_profiles` | Per-app per-domain behavioral summary aggregated over all sessions |
+| `rules` | User filter rules with hit counters and optional background-only flag |
+| `dns_anomalies` | DGA / tunneling / NXDOMAIN flood events |
+| `tls_alerts` | JA3 threat matches, weak cipher detections, and CT new-certificate events |
+| `payload_logs` | Intercepted HTTPS payloads (enterprise, MITM-only, PII-redacted) |
+| `blocklists` | Downloaded blocklist metadata (URL, last-updated, entry count) |
+| `app_stats` | Aggregated per-app traffic counters |
+| `network_trust` | Trust level per Wi-Fi SSID |
 
 ---
 
 ## Permissions
 
-| Permission | Why |
+| Permission | Reason |
 |---|---|
-| `BIND_VPN_SERVICE` | Required to create a VPN tunnel via Android VpnService API |
-| `FOREGROUND_SERVICE` | Keeps the VPN alive when the app is in the background |
-| `RECEIVE_BOOT_COMPLETED` | Auto-start VPN on device boot (optional, toggle in Settings) |
-| `INTERNET` | Needed to forward allowed traffic to the real internet and to download blocklist updates |
-| `POST_NOTIFICATIONS` | Show the persistent VPN notification and kill-switch alerts (Android 13+) |
-
-PrivacyGuard does **not** request: `READ_CONTACTS`, `ACCESS_FINE_LOCATION`, `READ_CALL_LOG`, `CAMERA`, or any other sensitive permission.
-
----
-
-## Phase 2 — Flutter + Rust (Cross-Platform)
-
-The `privacyguard_flutter/` directory contains the cross-platform rewrite targeting Android, iOS, Windows, macOS, and Linux.
-
-**Stack:** Flutter (Dart) for UI · Rust for the entire engine · `flutter_rust_bridge` for type-safe FFI
-
-| Platform | Adapter |
-|---|---|
-| Android | Kotlin `VpnService` → Rust JNI |
-| iOS / macOS | Swift `NEPacketTunnelProvider` → Rust FFI |
-| Windows | Rust `WinDivert` (user-mode, no driver install) |
-| Linux | Rust TUN interface (`CAP_NET_ADMIN`) |
-
-See [`privacyguard_flutter/BUILD.md`](privacyguard_flutter/BUILD.md) for build instructions.
+| `BIND_VPN_SERVICE` | Create the TUN interface |
+| `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_SPECIAL_USE` | VPN runs as a persistent foreground service |
+| `QUERY_ALL_PACKAGES` | Resolve app names for all intercepted connections |
+| `PACKAGE_USAGE_STATS` | Detect foreground vs. background app state per connection |
+| `RECEIVE_BOOT_COMPLETED` | Restart VPN after device reboot |
+| `POST_NOTIFICATIONS` | JA3 threat, CT cert, cleartext, and background-block alerts |
+| `INTERNET` + `ACCESS_NETWORK_STATE` | DoH queries, CT Monitor polling, SIEM shipping |
+| `WRITE_EXTERNAL_STORAGE` (API ≤ 28) | PCAP / CSV export to Downloads |
 
 ---
 
-## Roadmap
+## Build variants
 
-- [x] Android VPN pipeline (TCP/UDP/DNS)
-- [x] Domain, IP, app, and port filtering
-- [x] TLS ClientHello inspection (zero-decrypt)
-- [x] DNS anomaly detection (DGA / DNS tunneling)
-- [x] DNS over HTTPS (RFC 8484)
-- [x] Kill switch
-- [x] Blocklist auto-update (6 sources)
-- [x] Tracker database (Exodus Privacy integration)
-- [x] APK scanner (embedded SDK detection)
-- [x] GeoIP (offline provider lookup)
-- [x] PCAP export (libpcap format)
-- [x] Live connections UI
-- [x] App Detail screen (connections + SDK scan)
-- [x] Rules screen (full CRUD)
-- [ ] IPv6 TCP/UDP session proxying (FR-VPN-16)
-- [ ] IPv6 CIDR blocking (FR-VPN-17)
-- [ ] Flutter + Rust cross-platform rewrite
-- [ ] iOS / macOS (NEPacketTunnelProvider)
-- [ ] Windows (WinDivert)
-- [ ] Linux (TUN/nfqueue)
-- [ ] Google Play Store release
+| Variant | Application ID | MITM | Notes |
+|---|---|---|---|
+| `consumerDebug` | `com.privacyguard.app` | ✗ | Debug certificate, all logging enabled |
+| `consumerRelease` | `com.privacyguard.app` | ✗ | R8 + ProGuard, release keystore |
+| `enterpriseDebug` | `com.privacyguard.app.enterprise` | ✓ | MITM and payload screens visible |
+| `enterpriseRelease` | `com.privacyguard.app.enterprise` | ✓ | R8 + ProGuard, release keystore |
 
 ---
 
-## Contributing
-
-Pull requests are welcome. For major changes, open an issue first to discuss what you'd like to change.
+## Testing
 
 ```bash
-# Run lint
-./gradlew lint
-
-# Run unit tests
-./gradlew test
-
-# Check for dependency updates
-./gradlew dependencyUpdates
+./gradlew :app:testConsumerDebugUnitTest
 ```
 
-Code style: Kotlin official style guide. No trailing whitespace. LF line endings (enforced by `.gitattributes`).
+147 unit tests across 21 classes — no Android emulator required:
+
+| Area | Tests |
+|---|---|
+| Packet parsing — `IpPacket`, `TcpPacket`, `UdpPacket` | 36 |
+| Checksum (RFC 1071 IP / TCP / UDP) | 14 |
+| TLS — `ClientHelloParser`, `Ja3Fingerprinter` | 17+ |
+| Cipher suite analysis (NULL / EXPORT / RC4 / DES / ANON) | 16 |
+| PII redaction (email, card, JWT, bearer, JSON fields) | 23 |
+| Session — `SessionKey`, `SessionTable` (reaper, listeners) | 41 |
+| Filter engine (rules, priority, CIDR, background) | — |
+| DNS anomaly detection | — |
+| Domain filter (trie + bloom) | — |
+| Behavior DNA, stalkerware, permission mismatch | — |
 
 ---
 
 ## License
 
-```
-PrivacyGuard — Zero-knowledge network privacy for Android
-Copyright (C) 2026  AMMAR NAJJAR
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
-```
-
----
-
-## Acknowledgements
-
-- [StevenBlack/hosts](https://github.com/StevenBlack/hosts) — unified ad/tracker hosts blocklist
-- [Exodus Privacy](https://exodus-privacy.eu.org) — Android tracker database
-- [EasyList](https://easylist.to) — ad/tracker domain lists
-- [OISD](https://oisd.nl) — domain blocklist
-- [Hagezi DNS Blocklists](https://github.com/hagezi/dns-blocklists)
-- [MaxMind GeoLite2](https://www.maxmind.com) — IP geolocation (optional asset)
+Private / proprietary. All rights reserved.

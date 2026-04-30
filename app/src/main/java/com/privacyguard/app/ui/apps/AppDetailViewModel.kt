@@ -15,6 +15,7 @@ import com.privacyguard.app.core.tracker.TrackerDatabase
 import com.privacyguard.app.core.tracker.TrackerEntry
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.db.ConnectionEntity
+import com.privacyguard.app.data.db.DnsDomainSummary
 import com.privacyguard.app.data.repository.MetadataRepo
 import com.privacyguard.app.data.repository.RulesRepo
 import com.privacyguard.app.data.repository.RuleSyncBus
@@ -65,6 +66,21 @@ data class TopologyRouteSummary(
     val encryptionLabel: String,
 )
 
+data class ActivityHourRow(
+    val hour: Int,
+    val allowed: Int,
+    val blocked: Int,
+    val suspicious: Int,
+)
+
+data class RecentActivityRow(
+    val timestamp: Long,
+    val label: String,
+    val detail: String,
+    val blocked: Boolean,
+    val idle: Boolean,
+)
+
 enum class TopologyState {
     SAFE,
     RESOLVER,
@@ -89,6 +105,13 @@ data class AppDetailState(
     val isBlocked: Boolean = false,
     val isBackgroundBlocked: Boolean = false,
     val hourlyActivity: List<Int> = List(24) { 0 },
+    val activityTimeline: List<ActivityHourRow> = List(24) { ActivityHourRow(it, 0, 0, 0) },
+    val dnsQueryCount: Int = 0,
+    val idleDnsQueryCount: Int = 0,
+    val connectionCount: Int = 0,
+    val idleConnectionCount: Int = 0,
+    val dnsDomains: List<DnsDomainSummary> = emptyList(),
+    val recentActivity: List<RecentActivityRow> = emptyList(),
 )
 
 class AppDetailViewModel(
@@ -214,10 +237,38 @@ class AppDetailViewModel(
                     .sortedByDescending { it.count }
 
                 val hourly = IntArray(24)
+                val allowedByHour = IntArray(24)
+                val blockedByHour = IntArray(24)
+                val suspiciousByHour = IntArray(24)
                 mergedConnections.forEach { c ->
                     val hour = java.util.Calendar.getInstance()
                         .apply { timeInMillis = c.timestamp }.get(java.util.Calendar.HOUR_OF_DAY)
-                    if (hour in 0..23) hourly[hour]++
+                    if (hour in 0..23) {
+                        hourly[hour]++
+                        when {
+                            c.wasBlocked -> blockedByHour[hour]++
+                            c.wasBackground -> suspiciousByHour[hour]++
+                            else -> allowedByHour[hour]++
+                        }
+                    }
+                }
+                val dnsDomains = db.dnsQueryDao().topDomainsForApp(packageName, since, 10)
+                val dnsHourly = db.dnsQueryDao().hourlyForApp(packageName, since)
+                dnsHourly.forEach { bucket ->
+                    if (bucket.hour in 0..23) {
+                        suspiciousByHour[bucket.hour] += bucket.idleQueries
+                        blockedByHour[bucket.hour] += bucket.blockedQueries
+                        allowedByHour[bucket.hour] += (bucket.totalQueries - bucket.idleQueries - bucket.blockedQueries).coerceAtLeast(0)
+                    }
+                }
+                val recentActivity = mergedConnections.take(12).map {
+                    RecentActivityRow(
+                        timestamp = it.timestamp,
+                        label = it.domain ?: it.sniHostname ?: it.destinationIp,
+                        detail = "${it.protocol} ${it.destinationPort}",
+                        blocked = it.wasBlocked,
+                        idle = it.wasBackground,
+                    )
                 }
                 _state.value = _state.value.copy(
                     domains = domainRows,
@@ -226,6 +277,20 @@ class AppDetailViewModel(
                     topologyQueryLog = buildQueryLog(domainRows),
                     isLoadingDomains = false,
                     hourlyActivity = hourly.toList(),
+                    activityTimeline = (0..23).map { hour ->
+                        ActivityHourRow(
+                            hour = hour,
+                            allowed = allowedByHour[hour],
+                            blocked = blockedByHour[hour],
+                            suspicious = suspiciousByHour[hour],
+                        )
+                    },
+                    dnsQueryCount = db.dnsQueryDao().countForApp(packageName, since),
+                    idleDnsQueryCount = db.dnsQueryDao().idleCountForApp(packageName, since),
+                    connectionCount = mergedConnections.size,
+                    idleConnectionCount = mergedConnections.count { it.wasBackground },
+                    dnsDomains = dnsDomains,
+                    recentActivity = recentActivity,
                 )
                 refreshMismatchFindings(observedDomains = domainRows.map { it.domain })
             }

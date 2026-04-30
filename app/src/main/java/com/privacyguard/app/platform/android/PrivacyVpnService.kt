@@ -11,6 +11,7 @@ import android.net.ConnectivityManager
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
+import android.os.PowerManager
 import android.system.OsConstants
 import com.privacyguard.core.filter.FilterEngine
 import com.privacyguard.core.metadata.EncryptionStatus
@@ -50,6 +51,7 @@ import com.privacyguard.vpn.mitm.PayloadShipper
 import com.privacyguard.vpn.mitm.PiiRedactor
 import com.privacyguard.vpn.mitm.PinningDetector
 import com.privacyguard.data.repository.PayloadLogRepositoryImpl
+import com.privacyguard.app.core.blocklist.CuratedAdDomains
 import com.privacyguard.core.tls.CipherRisk
 import com.privacyguard.core.tls.CipherSuiteAnalyzer
 import com.privacyguard.core.tls.ClientHelloParser
@@ -187,8 +189,9 @@ class PrivacyVpnService : VpnService() {
         scope.launch {
             rulesRepo.loadIntoEngine()
             val allDomains = blocklistRepo.allDomains()
-            domainFilter.rebuild(allDomains)
-            metadataEngine.knownTrackers = allDomains.toSet()
+            val effectiveDomains = allDomains + CuratedAdDomains.all
+            domainFilter.rebuild(effectiveDomains)
+            metadataEngine.knownTrackers = effectiveDomains.toSet()
             appTracker.preloadInstalledApps()
             com.privacyguard.app.core.tracker.ExodusUpdater.initialize(applicationContext)
             com.privacyguard.app.core.tracker.ExodusUpdater.refresh(applicationContext)
@@ -208,8 +211,9 @@ class PrivacyVpnService : VpnService() {
         scope.launch {
             BlocklistSyncBus.version.collect {
                 val allDomains = blocklistRepo.allDomains()
-                domainFilter.rebuild(allDomains)
-                metadataEngine.knownTrackers = allDomains.toSet()
+                val effectiveDomains = allDomains + CuratedAdDomains.all
+                domainFilter.rebuild(effectiveDomains)
+                metadataEngine.knownTrackers = effectiveDomains.toSet()
             }
         }
 
@@ -248,6 +252,7 @@ class PrivacyVpnService : VpnService() {
             dohProvider = settings.dohProvider.value,
             protectSocket = { sock -> protect(sock) },
             protectTcpSocket = { sock -> protect(sock) },
+            domainFilter = domainFilter,
         ).also { h ->
             h.resolvedListener = DnsHandler.ResolvedListener { ip, hostname ->
                 sessionTable.allSessions()
@@ -262,6 +267,24 @@ class PrivacyVpnService : VpnService() {
                 }
             }
             h.anomalyListener = DnsHandler.AnomalyListener { /* handled in dnsAnomalyDetector */ }
+            h.queryListener = DnsHandler.QueryListener { ownerPackage, domain, wasBlocked ->
+                val pkg = ownerPackage?.takeIf { it.isNotBlank() } ?: "Unknown"
+                val appName = if (pkg != "Unknown") {
+                    appTracker.labelForPackage(pkg) ?: pkg.substringAfterLast('.')
+                } else {
+                    "Unknown"
+                }
+                scope.launch {
+                    db.dnsQueryDao().insert(DnsQueryEntity(
+                        timestamp = System.currentTimeMillis(),
+                        appPackage = pkg,
+                        appName = appName,
+                        domain = domain,
+                        wasBlocked = wasBlocked,
+                        phoneWasIdle = isPhoneIdle(),
+                    ))
+                }
+            }
         }
 
         filterEngine.blockLevel = runCatching {
@@ -374,8 +397,10 @@ class PrivacyVpnService : VpnService() {
                 val retentionDays = com.privacyguard.app.data.local.preferences.SettingsPreferences
                     .getInstance(applicationContext).retentionDays.value
                 val cutoff = System.currentTimeMillis() - retentionDays.toLong() * 86_400_000L
-                buildDatabase().tlsAlertDao().pruneOld(cutoff)
-                Log.d(TAG, "Periodic tls_alerts prune complete (cutoff=$retentionDays days)")
+                val db = buildDatabase()
+                db.tlsAlertDao().pruneOld(cutoff)
+                db.dnsQueryDao().pruneOld(cutoff)
+                Log.d(TAG, "Periodic prune complete (cutoff=$retentionDays days)")
                 kotlinx.coroutines.delay(dayMs)
             }
         }
@@ -747,6 +772,11 @@ class PrivacyVpnService : VpnService() {
             ?: appTracker.packageForUid(uid)
             ?: ""
 
+    private fun isPhoneIdle(): Boolean {
+        val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
+        return powerManager?.isInteractive == false
+    }
+
     private fun resolvedAppLabel(uid: Int, packageName: String?): String {
         val resolvedPackage = resolvedPackageName(uid, packageName)
         return when {
@@ -818,6 +848,7 @@ class PrivacyVpnService : VpnService() {
             dnsAnomalyRepo.pruneOld(retentionDays)
             val tlsCutoff = System.currentTimeMillis() - retentionDays.toLong() * 86_400_000L
             buildDatabase().tlsAlertDao().pruneOld(tlsCutoff)
+            buildDatabase().dnsQueryDao().pruneOld(tlsCutoff)
         }
 
         com.privacyguard.app.vpn.KillSwitch.stopMonitoring()

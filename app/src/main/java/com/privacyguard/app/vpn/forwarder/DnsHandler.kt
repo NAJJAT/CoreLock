@@ -6,6 +6,7 @@ import com.privacyguard.core.packet.IpPacket
 import com.privacyguard.core.packet.UdpPacket
 import com.privacyguard.core.session.Session
 import com.privacyguard.core.utils.Checksum
+import com.privacyguard.vpn.firewall.DomainFilter
 import com.privacyguard.vpn.inspector.DnsAnomalyDetector
 import com.privacyguard.vpn.tunnel.TunWriter
 import java.net.DatagramPacket
@@ -45,6 +46,7 @@ class DnsHandler(
     // re-intercepted by the VPN and loop infinitely instead of reaching the upstream.
     private val protectSocket:     ((DatagramSocket) -> Boolean)? = null,
     private val protectTcpSocket:  ((Socket) -> Boolean)? = null,
+    private val domainFilter:      DomainFilter? = null,
 ) {
     // ─────────────────────────────────────────────────────────────────────────
     // Listeners
@@ -60,8 +62,14 @@ class DnsHandler(
         fun onAnomaly(anomaly: DnsAnomalyDetector.Anomaly)
     }
 
+    /** Notified for every client DNS query after the block decision is known. */
+    fun interface QueryListener {
+        fun onQuery(ownerPackage: String?, domain: String, wasBlocked: Boolean)
+    }
+
     @Volatile var resolvedListener: ResolvedListener? = null
     @Volatile var anomalyListener:  AnomalyListener?  = null
+    @Volatile var queryListener:    QueryListener?    = null
 
     // ─────────────────────────────────────────────────────────────────────────
     // Entry Point
@@ -96,7 +104,10 @@ class DnsHandler(
         anomalies.forEach { anomalyListener?.onAnomaly(it) }
 
         // ── Layer 1: Blocklist ───────────────────────────────────────────────
-        if (filterEngine.isDomainBlocked(queryName)) {
+        val isBlockedByDomainFilter = domainFilter?.isBlocked(queryName) == true
+        val isBlockedByRuleEngine = filterEngine.isDomainBlocked(queryName)
+        if (isBlockedByDomainFilter || isBlockedByRuleEngine) {
+            queryListener?.onQuery(ownerPackage, queryName, true)
             blockedCount.incrementAndGet()
             val nxdomain = DnsPacket.buildBlockedResponse(dns)
             val response = buildUdpResponse(
@@ -111,6 +122,7 @@ class DnsHandler(
         }
 
         // ── Forward to upstream DNS (plain UDP or DoH) ───────────────────────
+        queryListener?.onQuery(ownerPackage, queryName, false)
         forwardCount.incrementAndGet()
         val label = "dns-fwd-${dns.id}"
         if (dohEnabled) {

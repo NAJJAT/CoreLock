@@ -191,6 +191,12 @@ android {
     // Exclude Flutter-dependent sources until `cd flutter && flutter pub get` is run.
     // Once the Flutter module is set up, these files compile as part of :flutter dependency.
 
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -251,7 +257,5 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
-
-
 
 

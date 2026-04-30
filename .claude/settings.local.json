@@ -41,7 +41,9 @@
       "Bash(xargs sed *)",
       "Bash(./gradlew :app:compileDebugKotlin)",
       "Bash(./gradlew :app:testConsumerDebugUnitTest --tests \"com.privacyguard.core.packet.*\" --no-daemon)",
-      "Bash(./gradlew :app:testConsumerDebugUnitTest --tests \"com.privacyguard.core.packet.*\" --no-daemon --rerun-tasks)"
+      "Bash(./gradlew :app:testConsumerDebugUnitTest --tests \"com.privacyguard.core.packet.*\" --no-daemon --rerun-tasks)",
+      "Bash(awk -F'package ' '{print $2}')",
+      "Bash(./gradlew :app:assembleConsumerRelease --no-daemon)"
     ]
   }
 }

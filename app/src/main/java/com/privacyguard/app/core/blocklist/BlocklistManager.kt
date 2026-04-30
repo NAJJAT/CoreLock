@@ -202,7 +202,7 @@ object BlocklistManager {
                 "yieldmo.com",
                 "adsafeprotected.com",
                 "serving-sys.com",
-            ),
+            ) + CuratedAdDomains.snapchatAds,
             BlocklistRepo.CAT_TRACKERS to listOf(
                 "analytics.google.com",
                 "google-analytics.com",
@@ -229,7 +229,7 @@ object BlocklistManager {
                 "sdk.iad-05.braze.com",
                 "braze.com",
                 "api2.branch.io",
-            ),
+            ) + CuratedAdDomains.snapchatTrackers,
             BlocklistRepo.CAT_MALWARE to listOf(
                 "malware.testcategory.com",
                 "phishing.testcategory.com",

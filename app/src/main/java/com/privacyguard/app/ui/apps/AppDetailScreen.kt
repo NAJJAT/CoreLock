@@ -92,6 +92,9 @@ import com.privacyguard.app.ui.theme.PgTextFaint
 import com.privacyguard.app.ui.theme.PgTextMuted
 import com.privacyguard.app.ui.theme.PgWarning
 import com.privacyguard.app.ui.theme.PgWarningDim
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun AppDetailScreen(
@@ -204,8 +207,9 @@ fun AppDetailScreen(
                     DetailTab("Connections", selectedTab == 1) { selectedTab = 1 }
                     DetailTab("Topology", selectedTab == 2) { selectedTab = 2 }
                     DetailTab("SDKs", selectedTab == 3) { selectedTab = 3 }
+                    DetailTab("Activity", selectedTab == 4) { selectedTab = 4 }
                     if (BuildConfig.MITM_AVAILABLE) {
-                        DetailTab("Payload", selectedTab == 4) { selectedTab = 4 }
+                        DetailTab("Payload", selectedTab == 5) { selectedTab = 5 }
                     }
                 }
             }
@@ -216,10 +220,154 @@ fun AppDetailScreen(
             1 -> connectionsTab(state, domainSort) { domainSort = it }
             2 -> topologyTab(state)
             3 -> sdkTab(state)
-            4 -> if (BuildConfig.MITM_AVAILABLE) item { PayloadTabContent(state.packageName) }
+            4 -> activityTab(state)
+            5 -> if (BuildConfig.MITM_AVAILABLE) item { PayloadTabContent(state.packageName) }
         }
 
         item { Spacer(modifier = Modifier.height(8.dp)) }
+    }
+}
+
+private fun LazyListScope.activityTab(state: AppDetailState) {
+    item {
+        PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+            SectionLabel("Activity summary")
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ActivityStat("DNS", state.dnsQueryCount.toString(), "${state.idleDnsQueryCount} idle", PgInfo, Modifier.weight(1f))
+                ActivityStat("Connections", state.connectionCount.toString(), "${state.idleConnectionCount} bg", PgAccent, Modifier.weight(1f))
+            }
+        }
+    }
+    item { ActivityTimelineChart(state.activityTimeline) }
+    item {
+        PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+            SectionLabel("Top DNS domains")
+            Spacer(modifier = Modifier.height(10.dp))
+            if (state.dnsDomains.isEmpty()) {
+                Text("No DNS queries recorded for this app yet.", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+            } else {
+                state.dnsDomains.take(8).forEachIndexed { index, row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(row.domain, style = MaterialTheme.typography.bodySmall, color = PgText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            if (row.idleQueries > 0) {
+                                Text("${row.idleQueries} while idle", style = MaterialTheme.typography.labelSmall, color = PgWarning)
+                            }
+                        }
+                        StatusPill(
+                            "${row.totalQueries}x",
+                            if (row.blockedQueries > 0) PgDangerDim else PgInfoDim,
+                            if (row.blockedQueries > 0) PgDanger else PgInfo,
+                        )
+                    }
+                    if (index != state.dnsDomains.take(8).lastIndex) Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+    item {
+        PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+            SectionLabel("Recent activity")
+            Spacer(modifier = Modifier.height(10.dp))
+            if (state.recentActivity.isEmpty()) {
+                Text("No recent app activity recorded yet.", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+            } else {
+                state.recentActivity.forEachIndexed { index, row ->
+                    RecentActivityItem(row)
+                    if (index != state.recentActivity.lastIndex) Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActivityStat(
+    label: String,
+    value: String,
+    sub: String,
+    tint: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .background(PgBackgroundAlt, RoundedCornerShape(14.dp))
+            .padding(12.dp),
+    ) {
+        Text(value, style = MaterialTheme.typography.titleLarge, color = tint, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(label, style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(sub, style = MaterialTheme.typography.labelSmall, color = PgTextFaint)
+    }
+}
+
+@Composable
+private fun ActivityTimelineChart(rows: List<ActivityHourRow>) {
+    val peak = rows.maxOfOrNull { it.allowed + it.blocked + it.suspicious }?.coerceAtLeast(1) ?: 1
+    PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+        SectionLabel("24h timeline")
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            rows.forEach { row ->
+                val total = row.allowed + row.blocked + row.suspicious
+                val frac = total.toFloat() / peak.toFloat()
+                val color = when {
+                    row.blocked > 0 -> PgDanger
+                    row.suspicious > 0 -> PgWarning
+                    total > 0 -> PgAccent
+                    else -> PgTextFaint.copy(alpha = 0.18f)
+                }
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height((44f * frac.coerceAtLeast(if (total > 0) 0.08f else 0.02f)).dp)
+                            .background(color, RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp)),
+                    )
+                    if (row.hour % 6 == 0) {
+                        Text("${row.hour}h", style = MaterialTheme.typography.labelSmall, color = PgTextFaint)
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Text("Green allowed · Yellow idle/background · Red blocked", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+    }
+}
+
+@Composable
+private fun RecentActivityItem(row: RecentActivityRow) {
+    val tint = when {
+        row.blocked -> PgDanger
+        row.idle -> PgWarning
+        else -> PgAccent
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .background(tint, CircleShape),
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(row.label, style = MaterialTheme.typography.bodySmall, color = PgText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(row.detail, style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+        }
+        Text(
+            SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(row.timestamp)),
+            style = MaterialTheme.typography.labelSmall,
+            color = PgTextFaint,
+        )
     }
 }
 
@@ -1028,5 +1176,4 @@ private fun PayloadTabContent(packageName: String) {
         }
     }
 }
-
 

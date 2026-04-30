@@ -46,6 +46,7 @@ import com.privacyguard.app.ui.dashboard.DashboardScreen
 import com.privacyguard.app.ui.onboarding.OnboardingScreen
 import com.privacyguard.app.ui.security.SecurityAnalysisScreen
 import com.privacyguard.app.ui.settings.SettingsScreen
+import com.privacyguard.app.ui.sleep.SleepReportScreen
 import com.privacyguard.app.ui.statistics.StatisticsScreen
 import com.privacyguard.app.ui.theme.PgBackgroundAlt
 import com.privacyguard.app.ui.theme.PgBorder
@@ -198,11 +199,16 @@ fun AppNavHost(
                     onOpenAlerts = { navController.navigate("alerts") },
                     onOpenConnections = { navController.navigate("connections") },
                     onOpenApps = { navController.navigate("apps") },
+                    onOpenSleepReport = { navController.navigate("sleepReport") },
                 )
             }
 
             composable("alerts") {
                 AlertInboxScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable("sleepReport") {
+                SleepReportScreen(onBack = { navController.popBackStack() })
             }
 
             composable("connections") {

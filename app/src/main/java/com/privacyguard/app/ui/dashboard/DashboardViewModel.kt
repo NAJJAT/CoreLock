@@ -44,6 +44,13 @@ data class DashboardUiState(
     val activeConnectionCount: Int = 0,
     val alertBadgeCount: Int = 0,
     val protectionLevel: String = "STANDARD",
+    val sleepActivity: SleepActivitySummary = SleepActivitySummary(),
+)
+
+data class SleepActivitySummary(
+    val activeApps: Int = 0,
+    val dnsQueries: Int = 0,
+    val trackingDomains: Int = 0,
 )
 
 data class SecurityCardState(
@@ -83,6 +90,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     @Volatile private var cachedBehaviorAlerts: Int = 0
     @Volatile private var cachedWeeklyConnections: List<ConnectionEntity> = emptyList()
     @Volatile private var cachedTlsAlertCount: Int = 0
+    @Volatile private var cachedSleepActivity: SleepActivitySummary = SleepActivitySummary()
     @Volatile private var slowCacheReady: Boolean = false
     @Volatile private var prevActiveBytesTotal: Long = 0L
 
@@ -150,6 +158,11 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         cachedBehaviorAlerts = summaries.sumOf { it.findings.size }
         cachedWeeklyConnections = db.connectionDao().getRecentConnections(weekSince, 2_000)
         cachedTlsAlertCount = db.tlsAlertDao().countJa3Threats() + db.tlsAlertDao().countWeakCipher()
+        cachedSleepActivity = SleepActivitySummary(
+            activeApps = db.dnsQueryDao().countIdleAppsSince(weekSince),
+            dnsQueries = db.dnsQueryDao().countIdleSince(weekSince),
+            trackingDomains = db.dnsQueryDao().countIdleBlockedDomainsSince(weekSince),
+        )
         slowCacheReady = true
 
         // Notify once per HIGH-severity behavior finding per VPN session
@@ -236,6 +249,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             activeConnectionCount = snapshot.activeConnections.size,
             alertBadgeCount = recentAnomalies.size + cachedTlsAlertCount,
             protectionLevel = prefs.protectionLevel.value,
+            sleepActivity = cachedSleepActivity,
         )
     }
 
@@ -457,6 +471,4 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         const val LARGE_UPLOAD_BYTES = 5L * 1024L * 1024L
     }
 }
-
-
 
