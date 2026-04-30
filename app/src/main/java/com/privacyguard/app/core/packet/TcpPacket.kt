@@ -137,7 +137,7 @@ data class TcpPacket(
         ByteUtils.writeUInt32(buf, 4, sequenceNumber)
         ByteUtils.writeUInt32(buf, 8, acknowledgmentNumber)
 
-        val dataOffset = (headerLength / 4) shl 4
+        val dataOffset = (headerLength / 4) shl 12
         val flags = dataOffset or
                 (if (flagNs)  0x0100 else 0) or
                 (if (flagCwr) 0x0080 else 0) or

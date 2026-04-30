@@ -4,6 +4,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import android.net.ConnectivityManager
 import android.net.VpnService
 import android.os.Build
@@ -96,6 +99,9 @@ class PrivacyVpnService : VpnService() {
     companion object {
         private const val TAG = "PrivacyVpnService"
         const val ACTION_STOP = "com.privacyguard.action.STOP_VPN"
+
+        private val _isRunningFlow = MutableStateFlow(false)
+        val isRunningFlow: StateFlow<Boolean> = _isRunningFlow.asStateFlow()
 
         @Volatile var isRunning = false
             private set
@@ -375,6 +381,7 @@ class PrivacyVpnService : VpnService() {
         }
 
         isRunning = true
+        _isRunningFlow.value = true
         Log.i(TAG, "VPN fully started — all pillars active")
     }
 
@@ -767,6 +774,7 @@ class PrivacyVpnService : VpnService() {
     private fun stopVpn() {
         if (!isRunning) return
         isRunning = false
+        _isRunningFlow.value = false
         com.privacyguard.app.vpn.BootReceiver.markVpnStopped(this)
         runCatching { unregisterReceiver(stopReceiver) }
 
