@@ -260,7 +260,7 @@ private class UdpRelay(
                 ))
             }
         } catch (_: java.net.SocketTimeoutException) {
-            Log.d(TAG, "UDP relay $srcIp:$srcPort→$dstIp:$dstPort idle timeout, closing")
+            Log.d("Ipv6Proxy", "UDP relay $srcIp:$srcPort→$dstIp:$dstPort idle timeout, closing")
         } catch (_: Exception) {
             // socket closed externally or I/O error — normal teardown
         } finally {
