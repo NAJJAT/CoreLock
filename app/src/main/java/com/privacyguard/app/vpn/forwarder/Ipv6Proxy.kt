@@ -11,10 +11,8 @@ import java.net.DatagramSocket
 import java.net.Inet6Address
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
-import java.nio.channels.Selector
 import java.nio.channels.SocketChannel
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -141,16 +139,25 @@ class Ipv6Proxy(
 
     private fun handleUdp(ipv6: Ipv6Packet, srcPort: Int, dstPort: Int, data: ByteArray) {
         val relayKey = "${ipv6.sourceIp}:$srcPort→${ipv6.destinationIp}:$dstPort"
+
+        // Evict relay whose socket was closed by the soTimeout in startReceiveLoop.
+        val existing = udpRelays[relayKey]
+        if (existing?.socket?.isClosed == true) udpRelays.remove(relayKey, existing)
+
         val relay = udpRelays.getOrPut(relayKey) {
-            val socket = DatagramSocket()
+            val socket = DatagramSocket().apply {
+                soTimeout = RELAY_TIMEOUT_MS.toInt()   // self-expire idle relays
+            }
             protectUdpSocket(socket)
             val r = UdpRelay(
-                socket  = socket,
-                srcIp   = ipv6.sourceIp,
-                srcPort = srcPort,
-                dstIp   = ipv6.destinationIp,
-                dstPort = dstPort,
+                socket    = socket,
+                srcIp     = ipv6.sourceIp,
+                srcPort   = srcPort,
+                dstIp     = ipv6.destinationIp,
+                dstPort   = dstPort,
                 tunWriter = tunWriter,
+                relayKey  = relayKey,
+                relays    = udpRelays,
             )
             scope.launch(Dispatchers.IO) { r.startReceiveLoop() }
             r
@@ -223,12 +230,14 @@ private class TcpRelaySession(
 // ── UDP relay ─────────────────────────────────────────────────────────────────
 
 private class UdpRelay(
-    private val socket:    DatagramSocket,
+    val socket:            DatagramSocket,
     private val srcIp:     String,
     private val srcPort:   Int,
     private val dstIp:     String,
     private val dstPort:   Int,
     private val tunWriter: TunWriter,
+    private val relayKey:  String,
+    private val relays:    ConcurrentHashMap<String, UdpRelay>,
 ) {
     fun send(data: ByteArray, host: String, port: Int) {
         runCatching {
@@ -239,16 +248,24 @@ private class UdpRelay(
 
     fun startReceiveLoop() {
         val buf = ByteArray(65_535)
-        while (!socket.isClosed) {
-            val dp = DatagramPacket(buf, buf.size)
-            runCatching { socket.receive(dp) }.onFailure { break }
-            val data = dp.data.copyOf(dp.length)
-            val pkt  = Ipv6Packet.buildUdp(
-                srcAddr = dstIp, srcPort = dstPort,
-                dstAddr = srcIp, dstPort = srcPort,
-                data    = data,
-            )
-            tunWriter.enqueue(pkt)
+        try {
+            while (!socket.isClosed) {
+                val dp = DatagramPacket(buf, buf.size)
+                socket.receive(dp)   // throws SocketTimeoutException when soTimeout fires
+                val data = dp.data.copyOf(dp.length)
+                tunWriter.enqueue(Ipv6Packet.buildUdp(
+                    srcAddr = dstIp, srcPort = dstPort,
+                    dstAddr = srcIp, dstPort = srcPort,
+                    data    = data,
+                ))
+            }
+        } catch (_: java.net.SocketTimeoutException) {
+            Log.d(TAG, "UDP relay $srcIp:$srcPort→$dstIp:$dstPort idle timeout, closing")
+        } catch (_: Exception) {
+            // socket closed externally or I/O error — normal teardown
+        } finally {
+            socket.close()
+            relays.remove(relayKey, this)
         }
     }
 }

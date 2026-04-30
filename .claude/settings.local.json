@@ -36,7 +36,12 @@
       "Bash(./gradlew :app:compileConsumerDebugKotlin :app:testConsumerDebugUnitTest)",
       "Bash(./gradlew :app:compileEnterpriseDebugKotlin :app:compileConsumerDebugKotlin)",
       "Bash(grep -v \"^$\")",
-      "Bash(grep -v \"^\\\\s*$\")"
+      "Bash(grep -v \"^\\\\s*$\")",
+      "Bash(./gradlew :app:compileEnterpriseDebugKotlin :app:compileConsumerDebugKotlin :app:testConsumerDebugUnitTest)",
+      "Bash(xargs sed *)",
+      "Bash(./gradlew :app:compileDebugKotlin)",
+      "Bash(./gradlew :app:testConsumerDebugUnitTest --tests \"com.privacyguard.core.packet.*\" --no-daemon)",
+      "Bash(./gradlew :app:testConsumerDebugUnitTest --tests \"com.privacyguard.core.packet.*\" --no-daemon --rerun-tasks)"
     ]
   }
 }
