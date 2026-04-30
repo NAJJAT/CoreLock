@@ -392,27 +392,56 @@ class PrivacyVpnService : VpnService() {
             return
         }
 
-        // Filter: check IP against blocklist rules before proxying
-        val dstIp  = ipv6.destinationIp
-        val dstPort = when (ipv6.nextHeader) {
-            com.privacyguard.core.packet.Ipv6Packet.PROTO_TCP,
-            com.privacyguard.core.packet.Ipv6Packet.PROTO_UDP -> {
-                val off = com.privacyguard.core.packet.Ipv6Packet.HEADER_LEN
-                if (raw.size >= off + 4)
-                    ((raw[off + 2].toInt() and 0xFF) shl 8) or (raw[off + 3].toInt() and 0xFF)
-                else 0
-            }
-            else -> 0
+        val off = com.privacyguard.core.packet.Ipv6Packet.HEADER_LEN
+        val isTransport = ipv6.nextHeader == com.privacyguard.core.packet.Ipv6Packet.PROTO_TCP ||
+                          ipv6.nextHeader == com.privacyguard.core.packet.Ipv6Packet.PROTO_UDP
+
+        // Extract src/dst ports — needed for UID lookup and QUIC detection
+        val srcPort: Int
+        val dstPort: Int
+        if (isTransport && raw.size >= off + 4) {
+            srcPort = ((raw[off].toInt() and 0xFF) shl 8) or (raw[off + 1].toInt() and 0xFF)
+            dstPort = ((raw[off + 2].toInt() and 0xFF) shl 8) or (raw[off + 3].toInt() and 0xFF)
+        } else {
+            srcPort = 0; dstPort = 0
         }
 
+        // Resolve owner UID and package — /proc/net/tcp6 and /proc/net/udp6 are read the same way
+        val uid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(
+            srcPort, ipv6.nextHeader, applicationInfo.uid
+        )
+        val pkg          = appTracker.packageForUid(uid)
+        val isBackground = if (pkg != null) !appTracker.isInForeground(pkg) else false
+
+        // Register in live connection list
+        if (pkg != null) {
+            val sessionId = com.privacyguard.core.session.SessionKey.of(
+                ipv6.sourceIp, srcPort, ipv6.destinationIp, dstPort, ipv6.nextHeader
+            ).toString()
+            updateActiveConnectionIdentity(sessionId, resolvedAppLabel(uid, pkg), pkg)
+        }
+
+        // Apply filter rules (uid, package, background flag — same as IPv4 path)
         val decision = filterEngine.evaluate(
-            uid = -1, pkg = null, domain = null,
-            ip = dstIp, port = dstPort, protocol = ipv6.nextHeader,
+            uid = uid, pkg = pkg, domain = null,
+            ip = ipv6.destinationIp, port = dstPort, protocol = ipv6.nextHeader,
+            isBackground = isBackground,
         )
         if (decision.isBlocked) {
             recordBlock()
+            decision.matchedRule?.id?.let { id ->
+                scope.launch { buildDatabase().rulesDao().incrementHitCount(id) }
+            }
+            if (decision.matchedRule?.matchBackground == true && !pkg.isNullOrBlank()
+                && backgroundBlockNotifiedPackages.add(pkg)) {
+                notifHelper.postBackgroundBlockAlert(pkg, ipv6.destinationIp, getMainActivityClass())
+            }
             return
         }
+
+        // Drop QUIC (UDP/443) for IPv6 when MITM block-QUIC is active
+        if (ipv6.nextHeader == com.privacyguard.core.packet.Ipv6Packet.PROTO_UDP
+            && dstPort == 443 && mitmConfig.isEnabled && mitmConfig.blockQuicWhenMitm) return
 
         when (ipv6.nextHeader) {
             com.privacyguard.core.packet.Ipv6Packet.PROTO_TCP,

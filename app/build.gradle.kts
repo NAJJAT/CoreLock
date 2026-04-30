@@ -144,7 +144,8 @@ android {
             buildConfigField("boolean", "MITM_AVAILABLE", "true")
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             isDebuggable = false
             signingConfig = if (releaseSigningConfigured) {
                 signingConfigs.getByName("release")
