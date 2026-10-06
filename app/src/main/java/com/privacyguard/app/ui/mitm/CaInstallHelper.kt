@@ -21,9 +21,12 @@ import java.nio.charset.StandardCharsets
  * Handles CA certificate export and installation on all supported API levels.
  *
  * Strategy:
- *  - Primary path (all APIs): KeyChain.createInstallIntent() — no file write, opens
- *    the system credential installer directly with the cert pre-loaded.
- *  - Secondary path (file export): writes to Downloads for manual install via Settings.
+ *  - Android 10 and below: [getInAppInstallIntent] opens the system credential
+ *    installer directly with the cert pre-loaded.
+ *  - Android 11+: apps can no longer start a CA install ("Can't install CA
+ *    certificates … must be installed in Settings"). Export to Downloads and send
+ *    the user to [getSecuritySettingsIntent] → "Install a certificate".
+ *  - File export: writes to Downloads for manual install via Settings.
  *      API ≤ 28  →  direct FileOutputStream + FileProvider URI
  *      API 29+   →  MediaStore insertion (scoped storage, no extra permission needed)
  */
@@ -60,6 +63,20 @@ class CaInstallHelper(
         val km = context.getSystemService(android.app.KeyguardManager::class.java)
         return km?.isDeviceSecure == true
     }
+
+    /**
+     * False on Android 11+ (API 30), where CA certificates can only be installed
+     * from the Settings app — any installer intent an app starts is rejected.
+     */
+    val canInstallFromApp: Boolean
+        get() = Build.VERSION.SDK_INT < Build.VERSION_CODES.R
+
+    /**
+     * Installer intent for Android 10 and below, or null on Android 11+ (use
+     * [exportCaToDownloads] + [getSecuritySettingsIntent] there instead).
+     */
+    fun getInAppInstallIntent(): Intent? =
+        if (canInstallFromApp) getKeyChainInstallIntent() ?: getDerFileInstallIntent() else null
 
     /**
      * Writes the CA cert as a DER binary file to app-private cache and opens it

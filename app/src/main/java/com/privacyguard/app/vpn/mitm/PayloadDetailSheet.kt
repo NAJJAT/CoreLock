@@ -74,7 +74,7 @@ fun PayloadDetailSheet(
                 if (payload.piiRedacted) {
                     AssistChip(
                         onClick = { },
-                        label = { Text("PII Redacted") },
+                        label = { Text("Personal data sent") },
                         colors = AssistChipDefaults.assistChipColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer
                         )

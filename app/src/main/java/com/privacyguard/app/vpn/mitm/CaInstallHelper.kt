@@ -19,12 +19,13 @@ import java.nio.charset.StandardCharsets
 /**
  * Handles CA certificate export and installation on all supported API levels.
  *
- * Install strategy (try in order):
- *  1. [getKeyChainInstallIntent] — uses Android KeyChain API, no file write needed.
- *     Opens the system credential installer with the cert pre-loaded.
- *  2. [getFileInstallIntent] — exports to Downloads then opens via ACTION_VIEW.
- *  3. [getShareIntent] — share sheet fallback if the device's installer won't open.
- *  4. [getSecuritySettingsIntent] — opens Security settings for manual install.
+ * Install strategy:
+ *  - Android 10 and below: [getInAppInstallIntent] opens the system credential
+ *    installer with the cert pre-loaded.
+ *  - Android 11+: apps can no longer start a CA install at all — the installer
+ *    answers "Can't install CA certificates … must be installed in Settings".
+ *    Export with [exportCaToDownloads], then send the user to
+ *    [getSecuritySettingsIntent] to pick the file under "Install a certificate".
  *
  * Export (Downloads) strategy by API level:
  *  API ≤ 28  →  direct FileOutputStream (WRITE_EXTERNAL_STORAGE capped at maxSdkVersion 28)
@@ -56,12 +57,6 @@ class CaInstallHelper(
     // ── Primary path: KeyChain (no file write required) ───────────────────────
 
     /**
-     * Returns an Intent that opens the system credential installer with the
-     * PrivacyGuard CA pre-loaded. This is the recommended install path.
-     *
-     * Returns null if the CA has not been generated yet (call CaManager.initialize() first).
-     */
-    /**
      * Returns true if the device has a screen lock (PIN / pattern / password).
      * Android refuses to install CA certificates without one.
      */
@@ -70,6 +65,26 @@ class CaInstallHelper(
         return km?.isDeviceSecure == true
     }
 
+    /**
+     * False on Android 11+ (API 30), where CA certificates can only be installed
+     * from the Settings app — any installer intent an app starts is rejected.
+     */
+    val canInstallFromApp: Boolean
+        get() = Build.VERSION.SDK_INT < Build.VERSION_CODES.R
+
+    /**
+     * Installer intent for Android 10 and below, or null on Android 11+ (use
+     * [exportCaToDownloads] + [getSecuritySettingsIntent] there instead).
+     */
+    fun getInAppInstallIntent(): Intent? =
+        if (canInstallFromApp) getKeyChainInstallIntent() ?: getDerFileInstallIntent() else null
+
+    /**
+     * Returns an Intent that opens the system credential installer with the
+     * PrivacyGuard CA pre-loaded. Only works for CA certs on Android 10 and below.
+     *
+     * Returns null if the CA has not been generated yet (call CaManager.initialize() first).
+     */
     fun getKeyChainInstallIntent(): Intent? {
         val cert = caManager.getCaCert()
         if (cert == null) {

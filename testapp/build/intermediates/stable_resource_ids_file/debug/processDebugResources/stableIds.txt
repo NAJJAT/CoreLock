@@ -1,0 +1,2 @@
+com.privacyguard.testapp:xml/network_security_config = 0x7f020000
+com.privacyguard.testapp:string/app_name = 0x7f010000

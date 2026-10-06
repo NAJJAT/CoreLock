@@ -1,0 +1,50 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.privacyguard.testapp"
+4    android:versionCode="1"
+5    android:versionName="1.0" >
+6
+7    <uses-sdk
+7-->INJECTED
+8        android:minSdkVersion="24"
+8-->INJECTED
+9        android:targetSdkVersion="36" />
+9-->INJECTED
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:4:5-67
+11-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:4:22-64
+12
+13    <application
+13-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:6:5-20:19
+14        android:allowBackup="false"
+14-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:7:9-36
+15        android:debuggable="true"
+16        android:extractNativeLibs="false"
+16-->INJECTED
+17        android:label="PG Test App"
+17-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:8:9-36
+18        android:networkSecurityConfig="@xml/network_security_config"
+18-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:9:9-69
+19        android:theme="@android:style/Theme.Material.Light" >
+19-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:10:9-60
+20        <activity
+20-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:12:9-19:20
+21            android:name="com.privacyguard.testapp.MainActivity"
+21-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:13:13-41
+22            android:exported="true" >
+22-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:14:13-36
+23            <intent-filter>
+23-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:15:13-18:29
+24                <action android:name="android.intent.action.MAIN" />
+24-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:16:17-69
+24-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:16:25-66
+25
+26                <category android:name="android.intent.category.LAUNCHER" />
+26-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:17:17-77
+26-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:17:27-74
+27            </intent-filter>
+28        </activity>
+29    </application>
+30
+31</manifest>

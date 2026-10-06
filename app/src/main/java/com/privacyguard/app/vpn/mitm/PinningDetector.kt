@@ -56,6 +56,45 @@ class PinningDetector {
             "e2e.whatsapp.com",
             "e2e-keys.whatsapp.com",
         )
+
+        // Domains we must NOT intercept because doing so breaks the whole device,
+        // not just one app. Matched by exact host or as a parent suffix.
+        //
+        //  - DNS-over-HTTPS resolvers: the browser/OS rejects a user CA here and,
+        //    because ALL name resolution rides these, intercepting them means the
+        //    device can no longer resolve ANY domain. Bypassing them is what lets
+        //    real app requests (the ones worth inspecting) resolve and appear.
+        //  - Google/Samsung sign-in and update infrastructure: hard-pinned, so
+        //    interception only ever fails and can lock the user out of services.
+        val BYPASS_DOMAINS: Set<String> = setOf(
+            // DNS-over-HTTPS resolvers
+            "dns.google",
+            "cloudflare-dns.com",           // chrome/mozilla.cloudflare-dns.com
+            "one.one.one.one",
+            "dns.quad9.net",
+            "dns9.quad9.net",
+            "dns11.quad9.net",
+            "doh.opendns.com",
+            "dns.adguard.com",
+            "dns.adguard-dns.com",
+            "doh.cleanbrowsing.org",
+            "dns.nextdns.io",
+            // Google hard-pinned infrastructure (sign-in, updates, safety)
+            "accounts.google.com",
+            "googleapis.com",               // *-pa.googleapis.com, play etc.
+            "gstatic.com",
+            "clients3.google.com",
+            "clients4.google.com",
+            "clients5.google.com",
+            "clients6.google.com",
+            "update.googleapis.com",
+            "safebrowsing.googleapis.com",
+            // Samsung infrastructure
+            "samsungcloud.com",
+            "samsungdm.com",
+            "samsungapps.com",
+            "ospserver.net",
+        )
     }
 
     // Runtime detected pinned domains (from SSLHandshakeExceptions)
@@ -72,6 +111,7 @@ class PinningDetector {
         if (domain == null) return false
 
         val result = when {
+            isBypassDomain(domain) -> true
             PINNED_DOMAINS.any { domain.equals(it, ignoreCase = true) } -> true
             PINNED_DOMAINS.any { domain.endsWith(".$it", ignoreCase = true) } -> true
             packageName != null && PINNED_PACKAGES.contains(packageName) -> true
@@ -85,6 +125,13 @@ class PinningDetector {
 
         return result
     }
+
+    /**
+     * True if [domain] is on the never-intercept [BYPASS_DOMAINS] list (exact host
+     * or a subdomain of a listed parent). Intercepting these breaks connectivity.
+     */
+    fun isBypassDomain(domain: String): Boolean =
+        BYPASS_DOMAINS.any { domain.equals(it, ignoreCase = true) || domain.endsWith(".$it", ignoreCase = true) }
 
     /**
      * Mark a domain as dynamically pinned after an SSL handshake failure

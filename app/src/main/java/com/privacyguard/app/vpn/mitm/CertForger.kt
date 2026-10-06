@@ -64,9 +64,12 @@ class CertForger(
         return cert to keyPair.private
     }
 
+    // EC P-256 leaf keys: generated in ~1 ms versus hundreds of ms for RSA-2048,
+    // which matters because the first connection to each domain forges on the
+    // TUN-reader thread. The leaf is still signed by the RSA CA.
     private fun generateKeyPair(): KeyPair {
-        val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
-        keyPairGenerator.initialize(2048)
+        val keyPairGenerator = KeyPairGenerator.getInstance("EC")
+        keyPairGenerator.initialize(java.security.spec.ECGenParameterSpec("secp256r1"))
         return keyPairGenerator.generateKeyPair()
     }
 
@@ -76,7 +79,10 @@ class CertForger(
         caCert: X509Certificate,
         caKey: PrivateKey
     ): X509Certificate {
-        val issuer = X500Name(caCert.subjectX500Principal.name)
+        // Copy the CA subject's DER encoding verbatim. Parsing the RFC 2253 string
+        // (X500Name(principal.name)) reverses the RDN order, so the leaf's issuer
+        // would not match the installed CA and Android could never build a chain.
+        val issuer = X500Name.getInstance(caCert.subjectX500Principal.encoded)
         val subject = X500Name("CN=$domain, OU=MITM Proxy, O=PrivacyGuard")
         val serialNumber = BigInteger(64, SecureRandom())
         val notBefore = Date(System.currentTimeMillis() - 86400000)
@@ -105,7 +111,7 @@ class CertForger(
         certBuilder.addExtension(
             Extension.keyUsage,
             true,
-            KeyUsage(KeyUsage.digitalSignature or KeyUsage.keyEncipherment)
+            KeyUsage(KeyUsage.digitalSignature)   // EC keys sign; keyEncipherment is RSA-only
         )
 
         // Extended Key Usage - Server Authentication

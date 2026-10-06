@@ -10,7 +10,11 @@ import java.util.concurrent.atomic.AtomicLong
  * Builds a [ConnectionProfile] per (app × destination) from closed session
  * snapshots. No payload decryption — all analysis is on observable metadata.
  */
-class MetadataEngine {
+class
+
+
+
+MetadataEngine {
 
     /** Set of known tracker hostnames used for risk scoring. */
     @Volatile var knownTrackers: Set<String> = emptySet()

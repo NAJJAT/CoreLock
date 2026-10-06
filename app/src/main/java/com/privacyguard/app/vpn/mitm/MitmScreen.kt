@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel // FIXED: replaced hiltViewModel (Hilt not configured); viewModel() is the correct factory here
 import com.privacyguard.app.data.db.PayloadLogEntity // FIXED: was com.privacyguard.data.local.database.entity.PayloadLogEntity
+import com.privacyguard.app.data.db.notDecryptedReason
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -160,13 +161,22 @@ fun MitmScreen(
                         TextButton(
                             enabled = caReady,
                             onClick = {
-                                val intent = caHelper.getKeyChainInstallIntent()
+                                val intent = caHelper.getInAppInstallIntent()
                                 if (intent != null) {
                                     installLauncher.launch(intent)
-                                } else {
-                                    android.util.Log.e("MitmScreen",
-                                        "Install tapped but getKeyChainInstallIntent() returned null — " +
-                                        "caReady=$caReady cert=${caManager.getCaCert()?.encoded?.size}B")
+                                } else scope.launch {
+                                    // Android 11+: CA certs can only be installed from Settings.
+                                    val saved = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                        caHelper.exportCaToDownloads()
+                                    } != null
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        if (saved) "Saved ${com.privacyguard.app.ui.mitm.CaInstallHelper.CA_FILENAME} to Downloads. " +
+                                            "In Settings, search \"CA certificate\" and pick that file."
+                                        else "Couldn't save the certificate to Downloads",
+                                        android.widget.Toast.LENGTH_LONG,
+                                    ).show()
+                                    if (saved) installLauncher.launch(caHelper.getSecuritySettingsIntent())
                                 }
                             }
                         ) { Text(if (caReady) "Install" else "…") }
@@ -346,20 +356,8 @@ fun PayloadListItem(
 
             if (!payload.isMitmSuccess) {
                 // Show exactly WHY there is no payload instead of just leaving it blank
-                val reason = when {
-                    payload.ownerPackage != null &&
-                    com.privacyguard.vpn.mitm.PinningDetector.PINNED_PACKAGES
-                        .contains(payload.ownerPackage) ->
-                        "Certificate pinning — ${payload.ownerPackage?.substringAfterLast('.')} " +
-                        "rejects MITM. Metadata only."
-                    payload.protocol.contains("TLS", ignoreCase = true) ||
-                    payload.destinationPort == 443 ->
-                        "Encrypted (HTTPS). Install the PrivacyGuard CA to decrypt."
-                    else ->
-                        "Payload not captured."
-                }
                 Text(
-                    text = reason,
+                    text = payload.notDecryptedReason() ?: "Payload not captured.",
                     style = MaterialTheme.typography.bodySmall,
                     color = androidx.compose.ui.graphics.Color(0xFFAA8800),
                 )

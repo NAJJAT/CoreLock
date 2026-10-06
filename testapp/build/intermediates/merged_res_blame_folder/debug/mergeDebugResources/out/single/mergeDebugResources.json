@@ -1,0 +1,6 @@
+[
+    {
+        "merged": "com.privacyguard.testapp-debug-3:/xml_network_security_config.xml.flat",
+        "source": "com.privacyguard.testapp-main-5:/xml/network_security_config.xml"
+    }
+]

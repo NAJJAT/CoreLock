@@ -1,0 +1,3 @@
+com.privacyguard.testapp
+string app_name
+xml network_security_config

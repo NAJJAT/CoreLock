@@ -11,6 +11,7 @@ import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.SocketTimeoutException
+import java.nio.channels.SocketChannel
 import java.security.Principal
 import java.security.PrivateKey
 import java.security.SecureRandom
@@ -119,7 +120,7 @@ class MitmEngine(
                     timestamp = System.currentTimeMillis(),
                 )
                 performInterception(session, domain, serverSocket, onPayload)
-            } catch (e: SSLHandshakeException) {
+            } catch (e: MitmHandshakeException) {
                 handleHandshakeFailure(session, domain, e)
                 serverSocket.runCatching { close() }
             } catch (e: SocketTimeoutException) {
@@ -162,59 +163,95 @@ class MitmEngine(
             //    could race with the device's connection attempt timing out.
             val deviceSocket = it.accept() as SSLSocket
 
-            // 2. Now connect to the real server (protected socket bypasses our VPN tunnel).
+            // 2. Now connect to the real server.
+            // VpnService.protect() only works on a plain socket that already owns a
+            // file descriptor — protecting an SSLSocket silently fails, which sends
+            // our upstream traffic back through the tunnel and hangs the handshake.
+            // So protect a plain socket, connect it, THEN layer TLS over it.
             val clientSslContext = createClientSslContext()
-            val clientSocket = clientSslContext.socketFactory.createSocket() as SSLSocket
-            protectSocket(clientSocket)
-
-            // Set SNI before connecting so the real server gets the correct ServerName.
-            val params = SSLParameters()
-            params.serverNames = listOf(SNIHostName(domain))
-            clientSocket.sslParameters = params
-
-            clientSocket.connect(InetSocketAddress(domain, 443), 15_000)
-            clientSocket.startHandshake()   // validates real server cert normally
-
-            // 3. Explicitly complete TLS handshake with the device now that we know the
-            //    real server is up. Device sent its ClientHello; we present the forged cert.
-            deviceSocket.startHandshake()
-
-            _statusFlow.value = MitmRuntimeStatus(
-                state = "ACTIVE",
-                message = "Interception active",
-                domain = domain,
-                timestamp = System.currentTimeMillis(),
-            )
-
-            // Relay data both ways with interception
-            val deviceToServer = async {
-                relayWithInterception(
-                    deviceSocket.inputStream,
-                    clientSocket.outputStream,
-                    "OUTBOUND",
-                    session,
-                    onPayload
+            // SocketChannel.open() allocates the native fd eagerly, so protect()
+            // can exclude it from the tunnel. A bare Socket() has no fd until it
+            // connects, and protecting it there silently fails (the bug that made
+            // every upstream handshake loop back through the tunnel and hang).
+            val plainSocket = SocketChannel.open().socket()
+            // Close both ends on any failure below; otherwise the app's connection
+            // hangs until its own timeout instead of failing fast.
+            try {
+                if (!protectSocket(plainSocket)) {
+                    Log.w(TAG, "protect() failed for upstream socket to $domain — traffic may loop through the tunnel")
+                }
+                // Connect to the IP the app actually dialled rather than resolving the
+                // SNI again — avoids a DNS round-trip through our own tunnel and keeps
+                // the app on the same server it chose.
+                val upstream = InetSocketAddress(
+                    java.net.InetAddress.getByName(session.key.destinationIp), 443
                 )
-            }
+                plainSocket.connect(upstream, 15_000)
 
-            val serverToDevice = async {
-                relayWithInterception(
-                    clientSocket.inputStream,
-                    deviceSocket.outputStream,
-                    "INBOUND",
-                    session,
-                    onPayload
+                // Wrap TLS over the protected, already-connected socket. Passing the
+                // SNI hostname makes SNI and HTTPS hostname verification use the name,
+                // not the bare IP.
+                val clientSocket = clientSslContext.socketFactory
+                    .createSocket(plainSocket, domain, 443, true) as SSLSocket
+                val params = clientSocket.sslParameters
+                params.serverNames = listOf(SNIHostName(domain))
+                params.endpointIdentificationAlgorithm = "HTTPS"
+                clientSocket.sslParameters = params
+
+                try {
+                    clientSocket.startHandshake()   // validates real server cert normally
+                } catch (e: SSLException) {
+                    throw MitmHandshakeException(deviceSide = false, cause = e)
+                }
+
+                // 3. Explicitly complete TLS handshake with the device now that we know the
+                //    real server is up. Device sent its ClientHello; we present the forged cert.
+                try {
+                    deviceSocket.startHandshake()
+                } catch (e: SSLException) {
+                    throw MitmHandshakeException(deviceSide = true, cause = e)
+                }
+
+                _statusFlow.value = MitmRuntimeStatus(
+                    state = "ACTIVE",
+                    message = "Interception active",
+                    domain = domain,
+                    timestamp = System.currentTimeMillis(),
                 )
-            }
 
-            // Wait for either direction to complete
-            awaitAll(deviceToServer, serverToDevice)
-            _statusFlow.value = MitmRuntimeStatus(
-                state = "IDLE",
-                message = "MITM idle",
-                domain = domain,
-                timestamp = System.currentTimeMillis(),
-            )
+                // Relay data both ways with interception
+                val deviceToServer = async {
+                    relayWithInterception(
+                        deviceSocket.inputStream,
+                        clientSocket.outputStream,
+                        "OUTBOUND",
+                        session,
+                        onPayload
+                    )
+                }
+
+                val serverToDevice = async {
+                    relayWithInterception(
+                        clientSocket.inputStream,
+                        deviceSocket.outputStream,
+                        "INBOUND",
+                        session,
+                        onPayload
+                    )
+                }
+
+                // Wait for either direction to complete
+                awaitAll(deviceToServer, serverToDevice)
+                _statusFlow.value = MitmRuntimeStatus(
+                    state = "IDLE",
+                    message = "MITM idle",
+                    domain = domain,
+                    timestamp = System.currentTimeMillis(),
+                )
+            } finally {
+                plainSocket.runCatching { close() }
+                deviceSocket.runCatching { close() }
+            }
         }
     }
 
@@ -232,13 +269,16 @@ class MitmEngine(
                 val bytesRead = from.read(buffer)
                 if (bytesRead <= 0) break
 
-                val payload = buffer.copyOf(bytesRead)
+                var payload = buffer.copyOf(bytesRead)
+                // Ask servers for gzip/deflate instead of br/zstd so captured
+                // response bodies can be decoded and shown.
+                if (direction == "OUTBOUND") payload = HttpCodec.rewriteAcceptEncoding(payload)
 
                 // Call payload callback for inspection
                 onPayload(direction, payload, session)
 
                 // Forward to destination
-                to.write(payload, 0, bytesRead)
+                to.write(payload, 0, payload.size)
                 to.flush()
             }
         } catch (e: Exception) {
@@ -312,16 +352,30 @@ class MitmEngine(
         return sslContext
     }
 
-    private fun handleHandshakeFailure(session: Session, domain: String, e: SSLHandshakeException) {
-        if (e.message?.contains("certificate_unknown") == true ||
-            e.message?.contains("bad_certificate") == true) {
-            pinningDetector.markAsPinned(domain)
-            Log.w(TAG, "Handshake failure likely due to pinning for $domain")
-        }
-        // ADDED
+    /**
+     * A TLS handshake failed on one side of the MITM. [deviceSide] = the app rejected our
+     * forged certificate (pinning, or it does not trust user CAs); otherwise the real
+     * server could not be reached over TLS.
+     */
+    private class MitmHandshakeException(val deviceSide: Boolean, cause: SSLException) :
+        Exception(cause.message, cause)
+
+    private fun handleHandshakeFailure(session: Session, domain: String, e: MitmHandshakeException) {
+        // Whichever side failed, retrying MITM for this host fails the same way every time:
+        // the app retries, gets intercepted again, and never connects. BoringSSL messages
+        // ("Read error: ssl=0x…: Failure in SSL library, usually a protocol error" +
+        // "…SSLV3_ALERT_CERTIFICATE_UNKNOWN") vary too much to match reliably, so pass the
+        // host through from now on regardless of the exact alert.
+        pinningDetector.markAsPinned(domain)
+        val who = if (e.deviceSide) "${session.ownerPackage ?: "app"} rejected the PrivacyGuard certificate"
+                  else "upstream TLS to $domain failed"
+        Log.w(TAG, "MITM handshake failed for $domain ($who) — passing this host through: ${e.cause?.message}")
         _statusFlow.value = MitmRuntimeStatus(
             state = "HANDSHAKE_FAILED",
-            message = e.message ?: "SSL handshake failed",
+            message = if (e.deviceSide)
+                "$who (certificate pinning or user CAs not trusted) — $domain will be passed through without decryption"
+            else
+                "$who — $domain will be passed through without decryption",
             domain = domain,
             timestamp = System.currentTimeMillis(),
         )

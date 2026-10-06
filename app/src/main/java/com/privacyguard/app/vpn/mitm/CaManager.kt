@@ -62,12 +62,18 @@ class CaManager(private val context: Context) {
         private const val PREFS_NAME        = "ca_manager_prefs"
         private const val PREFS_KEY_CERT    = "ca_cert_der_b64"
         private const val PREFS_KEY_SERIAL  = "ca_cert_serial"
+
+        // Process-wide: the VPN service and every UI screen construct their own
+        // CaManager. With per-instance state, two instances initialising at once
+        // could each generate a key under the same alias (or one could delete the
+        // other's fresh key in the "key exists, cert missing" branch), leaving the
+        // installed CA out of sync with the key that signs leaf certificates.
+        private val initMutex = Mutex()
+        private val _caCertFlow = MutableStateFlow<X509Certificate?>(null)
     }
 
     // ── State ─────────────────────────────────────────────────────────────────
 
-    private val initMutex = Mutex()
-    private val _caCertFlow = MutableStateFlow<X509Certificate?>(null)
     val caCertFlow: Flow<X509Certificate?> = _caCertFlow.asStateFlow()
 
     private val keystore: KeyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
@@ -164,7 +170,9 @@ class CaManager(private val context: Context) {
             Log.w(TAG, "getCaCertPem: cert is null — was initialize() awaited?")
             return ""
         }
-        val b64 = Base64.encodeToString(cert.encoded, Base64.DEFAULT)
+        // NO_WRAP: DEFAULT already inserts newlines every 76 chars, and chunking that
+        // produced ragged lines that strict PEM parsers (and some installers) reject.
+        val b64 = Base64.encodeToString(cert.encoded, Base64.NO_WRAP)
         val lines = b64.chunked(64).joinToString("\n")
         return "-----BEGIN CERTIFICATE-----\n$lines\n-----END CERTIFICATE-----"
     }
@@ -283,7 +291,8 @@ class CaManager(private val context: Context) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
             .putString(PREFS_KEY_CERT,   b64)
             .putString(PREFS_KEY_SERIAL, cert.serialNumber.toString())
-            .apply()
+            .commit()   // synchronous: losing the cert while the key survives forces a new CA
+
         Log.d(TAG, "persistCert: saved ${cert.encoded.size}B to SharedPreferences")
     }
 

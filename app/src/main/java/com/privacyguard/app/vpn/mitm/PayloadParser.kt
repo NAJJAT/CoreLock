@@ -68,7 +68,7 @@ class PayloadParser(
 ) {
     companion object {
         private const val TAG = "PayloadParser"
-        private const val MAX_BODY_SIZE = 8192
+        private const val MAX_BODY_SIZE = 65_536
 
         private val HTTP_METHODS = setOf(
             "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH", "CONNECT", "TRACE"
@@ -130,41 +130,53 @@ class PayloadParser(
         return bytes.sliceArray(0 until HTTP2_PREFACE.size).contentEquals(HTTP2_PREFACE)
     }
 
+    /**
+     * Parses one complete HTTP/1.x message. Bodies are de-chunked and
+     * decompressed so they are readable. Nothing is redacted here: the local
+     * inspector shows exactly what left the phone. Use [redactForExport] before
+     * sending a payload anywhere else.
+     *
+     * `piiRedacted` is set when [LeakDetector] finds personal data; the leak
+     * types are stored under the [LeakDetector.LEAKS_HEADER] pseudo-header.
+     */
     private fun parseHttp1(bytes: ByteArray, direction: String, session: Session): ParsedPayload {
-        val raw = String(bytes, StandardCharsets.UTF_8)
-        val lines = raw.split("\r\n").ifEmpty { raw.split("\n") }
+        val head = HttpCodec.parseHead(bytes)
+            ?: return ParsedPayload(
+                raw = bytes, timestamp = System.currentTimeMillis(), direction = direction,
+                protocol = Protocol.HTTP1, method = null, urlPath = null, headers = emptyMap(),
+                body = String(bytes, StandardCharsets.ISO_8859_1).take(MAX_BODY_SIZE),
+                bodyEncoding = "UTF-8", sizeBytes = bytes.size, piiRedacted = false,
+            )
 
-        // Parse request/response line
-        val firstLine = lines.firstOrNull() ?: ""
-        val parts = firstLine.split(" ")
+        val parts = head.startLine.split(" ")
         val method = parts.getOrNull(0)?.takeIf { it in HTTP_METHODS }
-        val urlPath = parts.getOrNull(1)
+        val urlPath = if (method != null) parts.getOrNull(1) else null
 
-        // Parse headers
-        val headers = mutableMapOf<String, String>()
-        var bodyStartIndex = lines.size
-        for (i in 1 until lines.size) {
-            val line = lines[i]
-            if (line.isBlank()) {
-                bodyStartIndex = i + 1
-                break
-            }
-            val colonIdx = line.indexOf(':')
-            if (colonIdx > 0) {
-                headers[line.substring(0, colonIdx).trim()] = line.substring(colonIdx + 1).trim()
-            }
+        // Body: strip chunked framing, then undo Content-Encoding.
+        var bodyBytes = bytes.copyOfRange(minOf(head.bodyOffset, bytes.size), bytes.size)
+        if (HttpCodec.isChunked(head)) bodyBytes = HttpCodec.dechunk(bodyBytes)
+        val contentEncoding = head.header("Content-Encoding")
+        val decoded = if (bodyBytes.isEmpty()) bodyBytes
+            else HttpCodec.decompress(bodyBytes, contentEncoding)
+
+        val (body, bodyEncoding) = when {
+            bodyBytes.isEmpty() -> null to "none"
+            decoded == null ->
+                "[${contentEncoding ?: "unknown"}-compressed body, ${bodyBytes.size} bytes — not decodable]" to
+                    "compressed:${contentEncoding ?: "unknown"}"
+            HttpCodec.looksLikeText(decoded, head.header("Content-Type")) ->
+                String(decoded, StandardCharsets.UTF_8).take(MAX_BODY_SIZE) to "UTF-8"
+            else ->
+                kotlin.io.encoding.Base64.encode(decoded.copyOf(minOf(decoded.size, MAX_BODY_SIZE))) to "base64"
         }
 
-        // Parse body
-        var rawBody: String? = null
-        if (bodyStartIndex < lines.size) {
-            rawBody = lines.drop(bodyStartIndex).joinToString("\n").take(MAX_BODY_SIZE)
-        }
+        val textBody = body?.takeIf { bodyEncoding == "UTF-8" }
+        val leaks = if (direction == "OUTBOUND")
+            LeakDetector.detect(urlPath?.let { decodeUrl(it) }, head.headers, textBody?.let { decodeUrl(it) })
+        else emptySet()
 
-        // Redact PII
-        val redactedHeaders = piiRedactor.redactHeaders(headers)
-        val redactedBody = rawBody?.let { piiRedactor.redact(it) }
-        val piiRedacted = redactedHeaders != headers || redactedBody != rawBody
+        val headers = if (leaks.isEmpty()) head.headers
+            else head.headers + (LeakDetector.LEAKS_HEADER to LeakDetector.encode(leaks))
 
         return ParsedPayload(
             raw = bytes,
@@ -173,13 +185,22 @@ class PayloadParser(
             protocol = Protocol.HTTP1,
             method = method,
             urlPath = urlPath,
-            headers = redactedHeaders,
-            body = redactedBody,
-            bodyEncoding = "UTF-8",
+            headers = headers,
+            body = body,
+            bodyEncoding = bodyEncoding,
             sizeBytes = bytes.size,
-            piiRedacted = piiRedacted,
+            piiRedacted = leaks.isNotEmpty(),
         )
     }
+
+    /** Copy with credentials and personal data masked, for shipping off-device. */
+    fun redactForExport(payload: ParsedPayload): ParsedPayload = payload.copy(
+        headers = piiRedactor.redactHeaders(payload.headers),
+        body = payload.body?.let { if (payload.bodyEncoding == "UTF-8") piiRedactor.redact(it) else it },
+    )
+
+    private fun decodeUrl(text: String): String =
+        runCatching { java.net.URLDecoder.decode(text, "UTF-8") }.getOrDefault(text)
 
     private fun parseHttp2(bytes: ByteArray, direction: String, session: Session): ParsedPayload {
         val hexPreview = bytes.take(100).joinToString(" ") { "%02x".format(it) }

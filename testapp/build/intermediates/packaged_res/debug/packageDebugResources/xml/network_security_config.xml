@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Makes THIS app trust user-installed CA certificates, so the PrivacyGuard CA
+    (installed in the user store) is accepted during the TLS handshake and the
+    payload can be decrypted. This is the whole point of the test app: we own it,
+    so we opt it in. Real third-party apps do not do this, which is why they stay
+    opaque without root.
+
+    base-config applies to every build type (debug and release) so decryption works
+    regardless of how it is installed. system is kept so normal (non-intercepted)
+    TLS still validates correctly.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

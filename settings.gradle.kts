@@ -25,6 +25,10 @@ dependencyResolutionManagement {
 rootProject.name = "privacyguard"
 include(":app")
 
+// Standalone debug test app to validate the interception chain. Not shipped, not
+// referenced by :app. Safe to delete; remove this include and the testapp/ folder.
+include(":testapp")
+
 // Flutter add-to-app module.
 // Enable by running: cd flutter && flutter pub get
 // This generates flutter/.android/include_flutter.groovy and wires the :flutter project in.

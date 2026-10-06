@@ -39,8 +39,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.db.PayloadLogEntity
+import com.privacyguard.app.data.db.notDecryptedReason
 import com.privacyguard.app.data.repository.PayloadLogRepositoryImpl
 import com.privacyguard.domain.repository.PayloadLogRepository
+import com.privacyguard.vpn.mitm.LeakDetector
 import com.privacyguard.vpn.mitm.MitmConfig
 import com.privacyguard.vpn.mitm.PayloadShipper
 import android.content.Intent
@@ -49,7 +51,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.privacyguard.vpn.mitm.CaManager
 import com.privacyguard.ui.mitm.CaInstallHelper
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -83,6 +87,10 @@ internal fun computeRiskScore(log: PayloadLogEntity): Int {
     if (!log.body.isNullOrBlank() && log.body.length > 500) score += 5
     return score.coerceIn(0, 99)
 }
+
+/** Personal data types [com.privacyguard.vpn.mitm.LeakDetector] found in this request. */
+internal fun leaksOf(log: PayloadLogEntity): Set<LeakDetector.LeakType> =
+    LeakDetector.decode(parseHeadersMap(log.headers)[LeakDetector.LEAKS_HEADER])
 
 private fun isLogFlagged(log: PayloadLogEntity): Boolean =
     log.piiRedacted || computeRiskScore(log) >= 60
@@ -156,26 +164,45 @@ fun MitmScreen() {
         if (uiState.isEnabled && !uiState.isConsentValid) showConsentDialog = true
     }
 
-    // After the user accepts consent the ViewModel emits one installCaEvent.
-    // We initialize the CA (generates it if this is the first run) and immediately
-    // launch the system certificate installer — the user just sees:
-    //   "Name the certificate: PrivacyGuard CA  [OK]"
-    // and taps OK. No manual navigation needed.
-    LaunchedEffect(Unit) {
-        vm.installCaEvent.collect {
-            caManager.initialize()
-            val helper = CaInstallHelper(context, caManager)
-            val intent = helper.getKeyChainInstallIntent()
-                ?: helper.getDerFileInstallIntent()
-                ?: helper.getSecuritySettingsIntent()
-            intent?.let { context.startActivity(it) }
+    val caHelper     = remember { CaInstallHelper(context, caManager) }
+    val installScope = rememberCoroutineScope()
+    var showScreenLockDialog by remember { mutableStateOf(false) }
+    // null = hidden; true = cert saved to Downloads; false = saving failed
+    var settingsInstallSaved by remember { mutableStateOf<Boolean?>(null) }
+
+    // Exports the cert to Downloads and shows the "install it from Settings" steps.
+    val saveCaForSettings: () -> Unit = {
+        installScope.launch {
+            if (!caManager.initialize()) { settingsInstallSaved = false; return@launch }
+            val saved = withContext(Dispatchers.IO) { caHelper.exportCaToDownloads() } != null
+            settingsInstallSaved = saved
         }
+    }
+
+    // Android 10 and below: open the system installer directly.
+    // Android 11+: the system rejects app-started CA installs, so go via Settings.
+    val startCaInstall: () -> Unit = {
+        installScope.launch {
+            if (!caManager.initialize()) { settingsInstallSaved = false; return@launch }
+            if (!caHelper.isScreenLockSet()) { showScreenLockDialog = true; return@launch }
+            val intent = caHelper.getInAppInstallIntent()
+            val launched = intent != null &&
+                runCatching { context.startActivity(intent) }.isSuccess
+            if (!launched) saveCaForSettings()
+        }
+    }
+
+    // After the user accepts consent the ViewModel emits one installCaEvent.
+    LaunchedEffect(Unit) {
+        vm.installCaEvent.collect { startCaInstall() }
     }
 
     Box(Modifier.fillMaxSize().background(Bg)) {
         when (val s = screen) {
             is PScreen.List -> CaptureListScreen(
                 uiState = uiState, vm = vm, caManager = caManager,
+                onInstallCa = startCaInstall,
+                onSaveCa = saveCaForSettings,
                 onItemClick = { log -> screen = PScreen.Detail(log) },
                 onStatsClick = { screen = PScreen.Analytics }
             )
@@ -216,7 +243,116 @@ fun MitmScreen() {
                 }
             )
         }
+
+        if (showScreenLockDialog) {
+            ScreenLockRequiredDialog(
+                onOpenSettings = {
+                    showScreenLockDialog = false
+                    openSettings(context, caHelper.getSecuritySettingsIntent())
+                },
+                onDismiss = { showScreenLockDialog = false },
+            )
+        }
+
+        settingsInstallSaved?.let { saved ->
+            SettingsInstallDialog(
+                saved = saved,
+                onOpenSettings = {
+                    settingsInstallSaved = null
+                    openSettings(context, caHelper.getSecuritySettingsIntent())
+                },
+                onDismiss = { settingsInstallSaved = null },
+            )
+        }
     }
+}
+
+/** Starts [intent], falling back to the top-level Settings app if the OEM lacks that screen. */
+private fun openSettings(context: android.content.Context, intent: Intent) {
+    runCatching { context.startActivity(intent) }.onFailure {
+        context.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+}
+
+@Composable
+private fun ScreenLockRequiredDialog(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Bg2,
+        icon = { Icon(Icons.Default.Lock, null, tint = Amber) },
+        title = { Text("Screen Lock Required", color = Amber, fontWeight = FontWeight.Bold) },
+        text = {
+            Text(
+                "Android requires a screen lock (PIN, pattern, or password) before " +
+                "installing CA certificates.\n\n" +
+                "Go to:\nSettings → Security → Screen Lock\n\n" +
+                "Set a PIN or password, then come back and tap Install.",
+                color = TxS, fontSize = 13.sp, lineHeight = 18.sp
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onOpenSettings) {
+                Text("Open Settings", color = Amber, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel", color = TxS) }
+        }
+    )
+}
+
+/**
+ * Android 11+ only lets the Settings app install CA certificates, so we save the
+ * cert to Downloads and walk the user through picking it there.
+ */
+@Composable
+private fun SettingsInstallDialog(saved: Boolean, onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Bg2,
+        icon = { Icon(if (saved) Icons.Default.Download else Icons.Default.ErrorOutline, null,
+            tint = if (saved) Ac else Red) },
+        title = {
+            Text(
+                if (saved) "Install from Settings" else "Couldn't save certificate",
+                color = if (saved) Ac else Red, fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Text(
+                if (saved)
+                    "Android 11 and newer only allow CA certificates to be installed from " +
+                    "the Settings app, not from inside other apps.\n\n" +
+                    "The certificate was saved to Downloads as " +
+                    "${CaInstallHelper.CA_FILENAME}.\n\n" +
+                    "1. Tap Open Settings\n" +
+                    "2. Search for \"CA certificate\" in the Settings search bar\n" +
+                    "   (Pixel: Security & privacy → More security settings → " +
+                    "Encryption & credentials → Install a certificate.\n" +
+                    "   Samsung: Security and privacy → More security settings → " +
+                    "Install from device storage)\n" +
+                    "3. Choose CA certificate → Install anyway\n" +
+                    "4. Pick ${CaInstallHelper.CA_FILENAME} from Downloads (the newest one)\n\n" +
+                    "Come back here afterwards — the card turns green once Android trusts it."
+                else
+                    "The certificate could not be written to Downloads. Check free storage " +
+                    "and try again; details are in logcat under the CaInstallHelper tag.",
+                color = TxS, fontSize = 13.sp, lineHeight = 18.sp
+            )
+        },
+        confirmButton = {
+            if (saved) {
+                TextButton(onClick = onOpenSettings) {
+                    Text("Open Settings", color = Ac, fontWeight = FontWeight.Bold)
+                }
+            } else {
+                TextButton(onClick = onDismiss) { Text("OK", color = TxS) }
+            }
+        },
+        dismissButton = if (saved) {
+            { TextButton(onClick = onDismiss) { Text("Later", color = TxS) } }
+        } else null
+    )
 }
 
 // ── CAPTURE LIST SCREEN ──────────────────────────────────────────────────────
@@ -226,6 +362,8 @@ private fun CaptureListScreen(
     uiState: MitmUiState,
     vm: MitmViewModel,
     caManager: CaManager,
+    onInstallCa: () -> Unit,
+    onSaveCa: () -> Unit,
     onItemClick: (PayloadLogEntity) -> Unit,
     onStatsClick: () -> Unit,
 ) {
@@ -248,17 +386,7 @@ private fun CaptureListScreen(
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 // CA certificate install button
-                val installScope = rememberCoroutineScope()
-                IconButton(onClick = {
-                    installScope.launch {
-                        caManager.initialize()
-                        val helper = CaInstallHelper(context, caManager)
-                        val intent = helper.getKeyChainInstallIntent()
-                            ?: helper.getDerFileInstallIntent()
-                            ?: helper.getSecuritySettingsIntent()
-                        context.startActivity(intent)
-                    }
-                }) {
+                IconButton(onClick = onInstallCa) {
                     Icon(Icons.Default.Lock, null, tint = Ac, modifier = Modifier.size(20.dp))
                 }
 
@@ -330,7 +458,10 @@ private fun CaptureListScreen(
 
         // CA card — shown only when CA is not yet installed (helper checks quickly).
         if (uiState.isEnabled) {
-            CaInstallCard(context = context, caManager = caManager)
+            CaInstallCard(
+                context = context, caManager = caManager,
+                onInstall = onInstallCa, onSaveFile = onSaveCa,
+            )
             QuicBlockRow(blockQuic = uiState.blockQuic, onToggle = { vm.setBlockQuic(it) })
         }
 
@@ -407,14 +538,14 @@ private fun QuicBlockRow(blockQuic: Boolean, onToggle: (Boolean) -> Unit) {
 private fun CaInstallCard(
     context: android.content.Context,
     caManager: CaManager,
+    onInstall: () -> Unit,
+    onSaveFile: () -> Unit,
 ) {
     val helper       = remember(context, caManager) { CaInstallHelper(context, caManager) }
     val installScope = rememberCoroutineScope()
     var caReady      by remember { mutableStateOf(false) }
     var caFailed     by remember { mutableStateOf(false) }
     var caTrusted    by remember { mutableStateOf(false) }
-    var noScreenLock by remember { mutableStateOf(false) }
-    var showScreenLockDialog by remember { mutableStateOf(false) }
 
     // Initialise the CA on first composition so the card reflects real state immediately.
     LaunchedEffect(helper) {
@@ -461,16 +592,20 @@ private fun CaInstallCard(
                 Text(
                     when {
                         caTrusted ->
-                            "HTTPS payloads are now visible. Apps with certificate pinning " +
-                            "(WhatsApp, Instagram) still show metadata only — that's expected."
+                            "Browsers that trust user certificates (Chrome, Edge, Brave) now " +
+                            "show full payloads. Most other apps ignore user-installed CAs " +
+                            "since Android 7, and pinned apps (WhatsApp, Instagram, banking) " +
+                            "always show metadata only — that's an Android limit, not a bug."
                         caFailed  ->
                             "Tap Regenerate to try again. If the problem persists, clear the " +
                             "app's storage in Android Settings and reopen the app."
-                        caReady   ->
+                        caReady && helper.canInstallFromApp ->
                             "Tap Install. Android will ask you to name the certificate — " +
-                            "type anything (e.g. PrivacyGuard) and tap OK. " +
-                            "If you see 'Can't install unknown': go to Android Settings → " +
-                            "Security → Set a screen lock first."
+                            "type anything (e.g. PrivacyGuard) and tap OK."
+                        caReady   ->
+                            "Android 11+ only installs CA certificates from Settings. Tap " +
+                            "Install: the certificate is saved to Downloads and you'll get " +
+                            "step-by-step instructions."
                         else      ->
                             "Generating CA for the first time. This takes a few seconds."
                     },
@@ -502,27 +637,10 @@ private fun CaInstallCard(
                         )
                     }
                 } else if (caReady && !caTrusted) {
-                    // Primary: KeyChain install (cleanest UX, works on stock Android)
+                    // In-app installer on Android ≤ 10, Settings walkthrough on 11+.
+                    // Trust is re-checked by the ON_RESUME effect when the user returns.
                     Surface(
-                        onClick = {
-                            installScope.launch {
-                                noScreenLock = !helper.isScreenLockSet()
-                                if (noScreenLock) {
-                                    showScreenLockDialog = true
-                                    return@launch
-                                }
-                                // Try 3 approaches in order of reliability:
-                                // 1. KeyChain (system dialog, no file needed)
-                                // 2. DER binary file (more OEM-compatible)
-                                // 3. Security settings (manual fallback)
-                                val intent = helper.getKeyChainInstallIntent()
-                                    ?: helper.getDerFileInstallIntent()
-                                    ?: helper.getSecuritySettingsIntent()
-                                context.startActivity(intent)
-                                // Re-check trust after returning
-                                caTrusted = helper.isCaTrustedByDevice()
-                            }
-                        },
+                        onClick = onInstall,
                         color = Amber.copy(alpha = 0.18f),
                         shape = RoundedCornerShape(6.dp),
                         border = BorderStroke(1.dp, Amber.copy(alpha = 0.4f))
@@ -533,21 +651,11 @@ private fun CaInstallCard(
                             color = Amber, fontSize = 10.sp, fontWeight = FontWeight.Bold
                         )
                     }
-                    // Secondary: save DER file to Downloads (Samsung / MIUI users)
-                    Surface(
-                        onClick = {
-                            installScope.launch {
-                                noScreenLock = !helper.isScreenLockSet()
-                                if (noScreenLock) { showScreenLockDialog = true; return@launch }
-                                val result = helper.exportCaToDownloads()
-                                if (result != null) {
-                                    val intent = helper.getDerFileInstallIntent()
-                                        ?: helper.getFileInstallIntent()
-                                        ?: helper.getSecuritySettingsIntent()
-                                    context.startActivity(intent)
-                                }
-                            }
-                        },
+                    // Secondary on Android ≤ 10: save to Downloads and install from Settings
+                    // (for OEM installers that reject the in-app flow). On 11+ Install
+                    // already does exactly this, so the button would be redundant.
+                    if (helper.canInstallFromApp) Surface(
+                        onClick = onSaveFile,
                         color = Bg3,
                         shape = RoundedCornerShape(6.dp),
                         border = BorderStroke(1.dp, LineCol)
@@ -561,38 +669,6 @@ private fun CaInstallCard(
                 }
             }
         }
-    }
-
-    // Screen lock required dialog
-    if (showScreenLockDialog) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showScreenLockDialog = false },
-            containerColor = Bg2,
-            icon = { Icon(Icons.Default.Lock, null, tint = Amber) },
-            title = { Text("Screen Lock Required", color = Amber, fontWeight = FontWeight.Bold) },
-            text = {
-                Text(
-                    "Android requires a screen lock (PIN, pattern, or password) before " +
-                    "installing CA certificates.\n\n" +
-                    "Go to:\nSettings → Security → Screen Lock\n\n" +
-                    "Set a PIN or password, then come back and tap Install.",
-                    color = TxS, fontSize = 13.sp, lineHeight = 18.sp
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showScreenLockDialog = false
-                    context.startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    })
-                }) { Text("Open Settings", color = Amber, fontWeight = FontWeight.Bold) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showScreenLockDialog = false }) {
-                    Text("Cancel", color = TxS)
-                }
-            }
-        )
     }
 }
 
@@ -649,6 +725,14 @@ private fun PayloadListItem(log: PayloadLogEntity, onClick: () -> Unit) {
                 "${log.sniHostname ?: log.destinationIp}${log.urlPath?.take(32) ?: ""}",
                 color = TxS, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
             )
+            val leaks = remember(log.id) { leaksOf(log) }
+            if (leaks.isNotEmpty()) {
+                Text(
+                    "Sends: " + leaks.joinToString(" · ") { it.label },
+                    color = Red, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                )
+            }
         }
 
         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -854,14 +938,14 @@ private fun MetaCell(modifier: Modifier, label: String, value: String, valueColo
 @Composable
 private fun PayloadTab(log: PayloadLogEntity) {
     var fmt by remember { mutableStateOf("json") }
-    val isHttps = log.destinationPort == 443
     val hasBody = !log.body.isNullOrBlank()
+    val notDecryptedReason = remember(log) { log.notDecryptedReason() }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp)) {
         SectionLabel(if (log.direction == "OUTBOUND") "Request Body" else "Response Body")
 
-        // HTTPS with no body → explain why (encryption)
-        if (isHttps && !hasBody) {
+        // HTTPS that was NOT decrypted → explain why
+        if (notDecryptedReason != null) {
             Surface(
                 Modifier.fillMaxWidth().padding(bottom = 12.dp),
                 color = Blue.copy(alpha = 0.09f),
@@ -871,13 +955,11 @@ private fun PayloadTab(log: PayloadLogEntity) {
                 Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(Icons.Default.Lock, null, tint = Blue, modifier = Modifier.size(18.dp))
                     Column {
-                        Text("TLS Encrypted — body not visible", color = Blue,
+                        Text("Not decrypted — metadata only", color = Blue,
                             fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "This connection uses HTTPS. The payload is encrypted end-to-end " +
-                                    "and cannot be read without the PrivacyGuard CA certificate installed " +
-                                    "on this device as a trusted authority.\n\n" +
+                            "$notDecryptedReason\n\n" +
                                     "App: ${log.ownerPackage ?: "unknown"}\n" +
                                     "Host: ${log.sniHostname ?: log.destinationIp}\n" +
                                     "Sent: ${fmtBytes(log.sizeBytes)}",
@@ -899,9 +981,13 @@ private fun PayloadTab(log: PayloadLogEntity) {
 
         // Body box
         val body = log.body
-        val displayText = remember(body, fmt) {
+        val displayText = remember(body, fmt, notDecryptedReason) {
             when {
-                body.isNullOrBlank() -> if (isHttps) "(encrypted — see notice above)" else "(no body)"
+                body.isNullOrBlank() -> when {
+                    notDecryptedReason != null -> "(not decrypted — see notice above)"
+                    log.method != null -> "(no body — ${log.method} request; data is in the URL and headers)"
+                    else -> "(no body)"
+                }
                 fmt == "hex" -> toHexDump(body)
                 fmt == "raw" -> body
                 else -> tryPrettyJson(body)
@@ -1096,8 +1182,8 @@ private fun RiskTab(log: PayloadLogEntity, riskScore: Int, flagged: Boolean) {
 
 private fun buildRisks(log: PayloadLogEntity, riskScore: Int): List<Triple<String, String, String>> {
     val risks = mutableListOf<Triple<String, String, String>>()
-    if (log.piiRedacted)
-        risks += Triple("crit", "PII Detected & Redacted", "Personal identifiable information found and redacted before logging.")
+    for (leak in leaksOf(log))
+        risks += Triple("crit", "${leak.label} sent", leak.description)
     val headers = parseHeadersMap(log.headers)
     val hKeys = headers.keys.map { it.lowercase() }
     if (hKeys.any { it.contains("authorization") })
@@ -1112,8 +1198,9 @@ private fun buildRisks(log: PayloadLogEntity, riskScore: Int): List<Triple<Strin
         risks += Triple("info", "${log.method} Request", "Data is being submitted to ${log.sniHostname ?: log.destinationIp}.")
     if (log.protocol == "HTTP1" && log.destinationPort != 443)
         risks += Triple("crit", "Unencrypted HTTP Traffic", "Data transmitted over plain HTTP without TLS encryption.")
-    if (!log.isMitmSuccess)
-        risks += Triple("warn", "Partial Capture", "MITM interception did not fully succeed — payload may be incomplete.")
+    log.notDecryptedReason()?.let {
+        risks += Triple("info", "Not Decrypted", it)
+    }
     if (risks.isEmpty())
         risks += Triple("info", "No anomalies detected", "This request appears clean based on available metadata.")
     return risks
@@ -1163,7 +1250,8 @@ private fun FieldsTab(log: PayloadLogEntity) {
             add(Triple("direction", log.direction, if (log.direction == "OUTBOUND") Amber else Ac))
             add(Triple("size_bytes", "${log.sizeBytes} (${fmtBytes(log.sizeBytes)})", TxP))
             add(Triple("body_encoding", log.bodyEncoding, TxS))
-            add(Triple("pii_redacted", "${log.piiRedacted}", if (log.piiRedacted) Red else Ac))
+            add(Triple("personal_data", leaksOf(log).joinToString { it.label }.ifEmpty { "none found" },
+                if (log.piiRedacted) Red else Ac))
             add(Triple("mitm_success", "${log.isMitmSuccess}", if (log.isMitmSuccess) Ac else Red))
             add(Triple("session_id", log.sessionId.take(36), TxM))
             add(Triple("timestamp", SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(log.timestamp)), TxS))

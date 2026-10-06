@@ -9,9 +9,11 @@ import com.privacyguard.core.session.Session
 import com.privacyguard.core.session.SessionKey
 import com.privacyguard.core.session.SessionTable
 import com.privacyguard.core.utils.Checksum
+import com.privacyguard.app.data.db.NOT_DECRYPTED_PREFIX
 import com.privacyguard.app.data.db.PayloadLogEntity
 import com.privacyguard.domain.repository.PayloadLogRepository
 import com.privacyguard.vpn.inspector.EncryptionEnforcer
+import com.privacyguard.vpn.mitm.HttpCodec
 import com.privacyguard.vpn.mitm.MitmConfig
 import com.privacyguard.vpn.mitm.MitmEngine
 import com.privacyguard.vpn.mitm.PayloadParser
@@ -55,6 +57,8 @@ class TcpForwarder(
     companion object {
         private const val TAG = "TcpForwarder"
         private const val BUFFER_SIZE = 32_767
+        // Max TCP payload per injected segment: TUN MTU (1500) − 20 IP − 20 TCP.
+        private const val MSS = 1460
     }
 
     private val selector = Selector.open()
@@ -203,12 +207,60 @@ class TcpForwarder(
         }
         if (!tcp.hasData) return
 
+        // MITM sessions: drop retransmits of bytes we already ACKed (compare modulo
+        // 2^32) so the TLS stream to the local MITM server never sees duplicates.
+        if (session.isMitmIntercepted) {
+            val end = (tcp.sequenceNumber + tcp.data.size) and 0xFFFFFFFFL
+            val behind = (session.lastAckToDevice - end) and 0xFFFFFFFFL
+            if (behind < 0x80000000L) {
+                Log.d(TAG, "Dropping retransmitted ${tcp.data.size}B for MITM session $key")
+                tunWriter.enqueueWithChecksums(
+                    buildTcp(
+                        srcIp = ip.destinationIp,
+                        srcPort = tcp.destinationPort,
+                        dstIp = ip.sourceIp,
+                        dstPort = tcp.sourcePort,
+                        seqNum = session.sendSeq,
+                        ackNum = session.lastAckToDevice,
+                        ack = true,
+                    )
+                )
+                return
+            }
+        }
+
         if (!session.encryptionClassified) {
+            // ── Buffer a multi-segment ClientHello before classifying ──────────
+            // Chrome's post-quantum ClientHello (~1.6 KB) spans several TCP
+            // segments, and the SNI hostname lives past the first segment. Judging
+            // on the first segment alone misses the hostname, so MITM never fires
+            // and the connection slips through unintercepted. Accumulate the first
+            // TLS record, then classify and route on the whole thing.
+            var clientHelloBytes = tcp.data
+            if (key.destinationPort == 443 && !session.isMitmIntercepted &&
+                tcp.data.isNotEmpty() &&
+                (session.httpOutBytes.isNotEmpty() || (tcp.data[0].toInt() and 0xFF) == 0x16)) {
+                val buffered = session.httpOutBytes + tcp.data
+                val recordLen = if (buffered.size >= 5)
+                    5 + (((buffered[3].toInt() and 0xFF) shl 8) or (buffered[4].toInt() and 0xFF))
+                    else Int.MAX_VALUE
+                if (buffered.size < recordLen && buffered.size < 16_384) {
+                    session.httpOutBytes = buffered            // keep buffering, ACK, wait
+                    sendAckToDevice(ip, tcp, session)
+                    return
+                }
+                clientHelloBytes = buffered
+                session.httpOutBytes = ByteArray(0)
+            }
+
             val result = encEnforcer.inspect(ip, tcp)
+            // SNI from the FULL record (the first segment's parse may have missed it).
+            val sni = result.sniHostname
+                ?: com.privacyguard.core.tls.ClientHelloParser.parse(clientHelloBytes)?.sni
             session.encryptionStatus = result.encryptionStatus
             session.tlsVersion = result.tlsVersion
             session.encryptionClassified = true
-            if (result.sniHostname != null) session.tlsSni = result.sniHostname
+            if (sni != null) session.tlsSni = sni
 
             // ── MITM redirect ─────────────────────────────────────────────────
             // First TLS ClientHello on port 443: redirect the session to the local
@@ -218,12 +270,12 @@ class TcpForwarder(
             if (BuildConfig.MITM_AVAILABLE &&
                 mitmConfig.isEnabled &&
                 mitmConfig.isConsentValid() &&
-                result.sniHostname != null &&
+                sni != null &&
                 key.destinationPort == 443 &&
                 !session.isMitmIntercepted &&
-                !pinningDetector.isPinned(session.ownerPackage, result.sniHostname)) {
+                !pinningDetector.isPinned(session.ownerPackage, sni)) {
 
-                val clientHello = tcp.data.copyOf()
+                val clientHello = clientHelloBytes.copyOf()
                 val mitmPort = mitmEngine.intercept(session) { dir, bytes, sess ->
                     bufferAndCapture(dir, bytes, sess)
                 }
@@ -247,11 +299,15 @@ class TcpForwarder(
                         session.selectionKey = mitmChannel.register(selector, SelectionKey.OP_CONNECT, session)
                         connectingCount.incrementAndGet()
                     } catch (e: Exception) {
-                        Log.w(TAG, "MITM redirect failed for ${result.sniHostname}: ${e.message}")
+                        Log.w(TAG, "MITM redirect failed for $sni: ${e.message}")
                         session.isMitmIntercepted = false
                         session.pendingMitmData = null
-                        pinningDetector.markAsPinned(result.sniHostname)
+                        pinningDetector.markAsPinned(sni)
                     }
+                    // ACK the ClientHello now: it will be replayed to the MITM socket.
+                    // Without this the device retransmits it and the MITM server
+                    // receives a second ClientHello mid-handshake.
+                    sendAckToDevice(ip, tcp, session)
                     return  // Do NOT forward raw ClientHello to original upstream
                 }
             }
@@ -277,6 +333,28 @@ class TcpForwarder(
                     return
                 }
             }
+
+            // If a multi-segment ClientHello was buffered but NOT sent to MITM
+            // (pinned, MITM off, or intercept failed), forward the whole buffer to
+            // the real server — the generic path below would send only the last
+            // segment and drop the earlier bytes.
+            if (clientHelloBytes.size != tcp.data.size) {
+                val channel = session.tcpChannel
+                if (channel != null) {
+                    try {
+                        val bb = ByteBuffer.wrap(clientHelloBytes)
+                        while (bb.hasRemaining()) { if (channel.write(bb) <= 0) break }
+                        session.recordOutbound(clientHelloBytes.size)
+                        forwardedBytesOut.addAndGet(clientHelloBytes.size.toLong())
+                        sendAckToDevice(ip, tcp, session)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Forward buffered ClientHello failed for $key: ${e.message}")
+                        sessionTable.remove(key)
+                        sendRstToDevice(ip, tcp)
+                    }
+                }
+                return
+            }
         }
 
         // ── PAYLOAD CAPTURE (fully async — never touches the forwarding path) ──
@@ -285,8 +363,17 @@ class TcpForwarder(
             val sni  = session.tlsSni
             val port = session.key.destinationPort
             val enc  = session.encryptionStatus
-            val needStub = port == 443 && sni != null && !session.metadataLogged
+            // Metadata-only stub for TLS sessions we are NOT decrypting. MITM'd sessions
+            // log real decrypted entries via bufferAndCapture — a stub there would show
+            // up as a bogus "encrypted" entry next to the plaintext.
+            val needStub = port == 443 && sni != null && !session.metadataLogged && !session.isMitmIntercepted
             if (needStub) session.metadataLogged = true   // set flag on capture thread
+            val stubEncoding = if (!needStub) "" else NOT_DECRYPTED_PREFIX + when {
+                !mitmConfig.isConsentValid() -> "mitm-off"
+                pinningDetector.isBypassDomain(sni!!) -> "bypass"
+                pinningDetector.isPinned(session.ownerPackage, sni) -> "pinned"
+                else -> "failed"
+            }
 
             coroutineScope.launch {
                 try {
@@ -302,7 +389,7 @@ class TcpForwarder(
                             protocol     = enc.name,
                             method = null, urlPath = null,
                             headers = "{}", body = null,
-                            bodyEncoding = "binary",
+                            bodyEncoding = stubEncoding,
                             sizeBytes    = snap.size,
                             piiRedacted  = false,
                             isMitmSuccess = false
@@ -354,8 +441,7 @@ class TcpForwarder(
             session.httpInBytes + newBytes
         }
 
-        val headerEnd = findHttpHeaderEnd(combined)
-        if (headerEnd < 0) {
+        if (HttpCodec.headerEnd(combined) < 0) {
             // Haven't received complete headers yet — keep buffering (cap at 64 KB).
             if (combined.size <= 65_536) {
                 if (direction == "OUTBOUND") session.httpOutBytes = combined
@@ -364,16 +450,15 @@ class TcpForwarder(
             return
         }
 
-        val contentLength = extractContentLength(combined, headerEnd)
-        val bodyStart = headerEnd + 4  // length of "\r\n\r\n"
-        val totalExpected = bodyStart + contentLength
-
-        if (contentLength > 0 && combined.size < totalExpected && combined.size <= 262_144) {
+        // Content-Length or chunked framing decides where the message ends.
+        val messageLength = HttpCodec.messageLength(combined)
+        if (messageLength == null && combined.size <= 2_097_152) {
             // Body is still arriving in later segments — keep buffering.
             if (direction == "OUTBOUND") session.httpOutBytes = combined
             else session.httpInBytes = combined
             return
         }
+        val totalExpected = messageLength ?: combined.size   // over the cap: parse what we have
 
         // Complete message — parse it.
         val toParse = if (combined.size >= totalExpected) combined.copyOfRange(0, totalExpected) else combined
@@ -385,20 +470,6 @@ class TcpForwarder(
             combined.copyOfRange(totalExpected, combined.size) else ByteArray(0)
         if (direction == "OUTBOUND") session.httpOutBytes = leftover
         else session.httpInBytes = leftover
-    }
-
-    private fun findHttpHeaderEnd(data: ByteArray): Int {
-        for (i in 0..data.size - 4) {
-            if (data[i]     == '\r'.code.toByte() && data[i + 1] == '\n'.code.toByte() &&
-                data[i + 2] == '\r'.code.toByte() && data[i + 3] == '\n'.code.toByte()) return i
-        }
-        return -1
-    }
-
-    private fun extractContentLength(data: ByteArray, headerEnd: Int): Int {
-        val headers = String(data.copyOfRange(0, headerEnd), Charsets.ISO_8859_1)
-        return Regex("Content-Length:\\s*(\\d+)", RegexOption.IGNORE_CASE)
-            .find(headers)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 0
     }
 
     // ── Payload parse + save ─────────────────────────────────────────────────
@@ -438,8 +509,9 @@ class TcpForwarder(
                 payloadLogRepository.saveLog(entity)
             }
 
+            // The local log keeps the full payload; anything leaving the device is redacted.
             payloadShipper.enqueue(
-                parsed,
+                payloadParser.redactForExport(parsed),
                 session.key.toString(),
                 session.key.destinationIp,
                 session.key.destinationPort,
@@ -596,20 +668,31 @@ class TcpForwarder(
     }
 
     private fun injectDataToDevice(session: Session, data: ByteArray) {
-        tunWriter.enqueueWithChecksums(
-            buildTcp(
-                srcIp = session.key.destinationIp,
-                srcPort = session.key.destinationPort,
-                dstIp = session.key.sourceIp,
-                dstPort = session.key.sourcePort,
-                seqNum = session.sendSeq,
-                ackNum = session.lastAckToDevice,
-                ack = true,
-                psh = true,
-                data = data,
+        // The TUN MTU is 1500, so a single injected IP packet must stay within it
+        // (1500 - 20 IP - 20 TCP = 1460 bytes of payload). A larger server flight —
+        // e.g. a TLS ServerHello carrying the certificate — must be split into
+        // MSS-sized TCP segments, or the device silently drops the oversized packet
+        // and keeps retransmitting, so the TLS handshake never completes.
+        var offset = 0
+        while (offset < data.size) {
+            val end = minOf(offset + MSS, data.size)
+            val chunk = data.copyOfRange(offset, end)
+            tunWriter.enqueueWithChecksums(
+                buildTcp(
+                    srcIp = session.key.destinationIp,
+                    srcPort = session.key.destinationPort,
+                    dstIp = session.key.sourceIp,
+                    dstPort = session.key.sourcePort,
+                    seqNum = session.sendSeq,
+                    ackNum = session.lastAckToDevice,
+                    ack = true,
+                    psh = end == data.size,   // PSH only on the final segment
+                    data = chunk,
+                )
             )
-        )
-        session.sendSeq += data.size
+            session.sendSeq += chunk.size
+            offset = end
+        }
     }
 
     private fun sendFinAckToDevice(ip: IpPacket, tcp: TcpPacket, session: Session) {

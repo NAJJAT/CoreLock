@@ -94,7 +94,7 @@ fun PayloadDetailSheet(
                 if (payload.piiRedacted) {
                     AssistChip(
                         onClick = { },
-                        label = { Text("🔒 PII Redacted") },
+                        label = { Text("⚠ Personal data sent") },
                         colors = AssistChipDefaults.assistChipColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer
                         )
@@ -260,7 +260,7 @@ fun InfoTab(payload: PayloadLogEntity) {
             InfoRow("Timestamp", formatTimestamp(payload.timestamp))
             InfoRow("Size", formatBytes(payload.sizeBytes))
             InfoRow("Encoding", payload.bodyEncoding)
-            InfoRow("PII Redacted", if (payload.piiRedacted) "Yes" else "No")
+            InfoRow("Personal data sent", if (payload.piiRedacted) "Yes" else "No")
             InfoRow("MITM Success", if (payload.isMitmSuccess) "Yes" else "No")
         }
     }
