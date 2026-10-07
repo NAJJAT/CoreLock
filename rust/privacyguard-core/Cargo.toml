@@ -10,7 +10,7 @@ name       = "privacyguard_core"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
-jni = { version = "0.21", default-features = false, optional = true }
+jni = { version = "0.22", default-features = false, optional = true }
 
 [features]
 default   = ["android"]
