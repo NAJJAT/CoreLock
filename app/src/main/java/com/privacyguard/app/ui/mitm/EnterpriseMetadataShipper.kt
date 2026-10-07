@@ -2,10 +2,13 @@ package com.privacyguard.app.ui.mitm
 
 import android.content.Context
 import com.privacyguard.vpn.mitm.MitmConfig
+import com.privacyguard.vpn.mitm.SiemEndpoint
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
-import java.net.URL
+import java.net.URI
 import java.nio.charset.StandardCharsets
-import javax.net.ssl.HttpsURLConnection
 
 /**
  * Represents a single metadata item for payload inspection
@@ -98,29 +101,28 @@ class EnterpriseMetadataShipper(
         }
 
         val payload = buildJson(items)
-        // FIXED: Remove .value access - use direct property access
-        val endpoint = config.siemEndpoint.trim()
+        val endpoint = SiemEndpoint.validate(config.siemEndpoint)
         val apiKey = config.siemApiKey.trim()
+        // Fail closed: a malformed pin must not quietly fall back to unpinned TLS.
+        val pin = SiemEndpoint.parsePin(config.siemPinSha256)
 
-        // FIXED: Remove .value access - use direct boolean property
-        if (config.shipToSiem && com.privacyguard.vpn.mitm.SiemEndpoint.validate(endpoint) != null && apiKey.isNotBlank()) {
-            val current = sendBatch(endpoint, apiKey, payload)
+        if (config.shipToSiem && endpoint != null && apiKey.isNotBlank() && pin !is SiemEndpoint.Pin.Invalid) {
+            val current = sendBatch(endpoint, apiKey, pin, payload)
             if (current.success) {
-                flushPending(endpoint, apiKey)
+                flushPending(endpoint, apiKey, pin)
                 return current.copy(message = "Shipped ${items.size} metadata events.")
             }
         }
 
-        // FIXED: Remove .value access - use direct boolean property
         return if (config.writeLocalLog) {
-            persistPending(items.size, payload)
+            persistPending(items.size, payload, endpoint?.let(SiemEndpoint::tag) ?: UNBOUND_TAG)
             ShipResult(
                 success = false,
                 shippedCount = 0,
-                message = if (config.shipToSiem) {
-                    "SIEM shipping unavailable. Metadata saved locally."
-                } else {
-                    "SIEM shipping is off. Metadata saved locally."
+                message = when {
+                    !config.shipToSiem -> "SIEM shipping is off. Metadata saved locally."
+                    pin is SiemEndpoint.Pin.Invalid -> "SIEM certificate pin is invalid. Metadata saved locally."
+                    else -> "SIEM shipping unavailable. Metadata saved locally."
                 },
             )
         } else {
@@ -132,58 +134,64 @@ class EnterpriseMetadataShipper(
         }
     }
 
-    private fun flushPending(endpoint: String, apiKey: String) {
+    /**
+     * Sends queued batches, but only those queued for this same endpoint. A batch
+     * saved for one SIEM must not leak to a different one after a config change;
+     * unbound and legacy (untagged) batches stay local for export or clearing.
+     */
+    private fun flushPending(endpoint: URI, apiKey: String, pin: SiemEndpoint.Pin) {
+        val tag = SiemEndpoint.tag(endpoint)
         queueDir.listFiles()
             .orEmpty()
+            .filter { parseTagFromFileName(it.name) == tag }
             .sortedBy { it.lastModified() }
             .forEach { file ->
                 val batch = runCatching { file.readText(StandardCharsets.UTF_8) }.getOrNull() ?: return@forEach
-                val result = sendBatch(endpoint, apiKey, batch)
+                val result = sendBatch(endpoint, apiKey, pin, batch)
                 if (result.success) {
                     file.delete()
                 }
             }
     }
 
-    private fun sendBatch(endpoint: String, apiKey: String, payload: String): ShipResult {
-        val connection = runCatching {
-            URL(endpoint.trimEnd('/') + "/api/v1/events").openConnection() as HttpsURLConnection
-        }.getOrElse {
-            return ShipResult(false, 0, "Invalid SIEM endpoint.")
-        }
-
+    private fun sendBatch(endpoint: URI, apiKey: String, pin: SiemEndpoint.Pin, payload: String): ShipResult {
         return runCatching {
-            connection.requestMethod = "POST"
-            connection.connectTimeout = 7_000
-            connection.readTimeout = 10_000
-            connection.doOutput = true
-            connection.instanceFollowRedirects = false
-            connection.setRequestProperty("Content-Type", "application/json")
-            connection.setRequestProperty("Authorization", "Bearer $apiKey")
-            // Signed only with the separate signing key; HMAC under the bearer token adds nothing.
-            com.privacyguard.vpn.mitm.SiemEndpoint.signature(payload, config.siemSigningKey, apiKey)?.let {
-                connection.setRequestProperty(com.privacyguard.vpn.mitm.SiemEndpoint.SIGNATURE_HEADER, it)
-            }
-            connection.outputStream.use { stream ->
-                stream.write(payload.toByteArray(StandardCharsets.UTF_8))
-            }
-            val code = connection.responseCode
-            if (code in 200..299) {
-                ShipResult(true, parseCountFromPayload(payload), "Shipped successfully.")
-            } else {
-                ShipResult(false, 0, "SIEM returned HTTP $code.")
-            }
+            val request = Request.Builder()
+                .url(endpoint.toString().trimEnd('/') + "/api/v1/events")
+                .post(payload.toRequestBody("application/json".toMediaType()))
+                .header("Authorization", "Bearer $apiKey")
+                .apply {
+                    // Signed only with the separate signing key; HMAC under the bearer token adds nothing.
+                    SiemEndpoint.signature(payload, config.siemSigningKey, apiKey)?.let {
+                        header(SiemEndpoint.SIGNATURE_HEADER, it)
+                    }
+                }
+                .build()
+            SiemEndpoint.client(endpoint.host, pin, CONNECT_TIMEOUT_SECONDS, READ_TIMEOUT_SECONDS)
+                .newCall(request)
+                .execute()
+                .use { response ->
+                    if (response.isSuccessful) {
+                        ShipResult(true, parseCountFromPayload(payload), "Shipped successfully.")
+                    } else {
+                        ShipResult(false, 0, "SIEM returned HTTP ${response.code}.")
+                    }
+                }
         }.getOrElse { error ->
             ShipResult(false, 0, error.message ?: "SIEM request failed.")
-        }.also {
-            connection.disconnect()
         }
     }
 
-    private fun persistPending(count: Int, payload: String) {
+    private fun persistPending(count: Int, payload: String, endpointTag: String) {
         val safeCount = count.coerceAtLeast(1)
-        val file = File(queueDir, "batch_${System.currentTimeMillis()}_${safeCount}.json")
+        val file = File(queueDir, "batch_${System.currentTimeMillis()}_${endpointTag}_${safeCount}.json")
         file.writeText(payload, StandardCharsets.UTF_8)
+    }
+
+    /** Endpoint tag from "batch_<ts>_<tag>_<count>.json"; null for legacy "batch_<ts>_<count>.json". */
+    private fun parseTagFromFileName(fileName: String): String? {
+        val parts = fileName.removeSuffix(".json").split('_')
+        return if (parts.size == 4) parts[2] else null
     }
 
     private fun buildJson(items: List<PayloadMetadataItem>): String {
@@ -221,12 +229,14 @@ class EnterpriseMetadataShipper(
     }
 
 
-    private fun escapeJson(input: String): String =
-        input
-            .replace("\\", "\\\\")
-            .replace("\"", "\\\"")
-            .replace("\n", "\\n")
-            .replace("\r", "\\r")
+    private fun escapeJson(input: String): String = SiemEndpoint.escapeJson(input)
+
+    private companion object {
+        /** Tag for batches saved with no valid endpoint; these are never auto-flushed. */
+        const val UNBOUND_TAG = "none"
+        const val CONNECT_TIMEOUT_SECONDS = 7L
+        const val READ_TIMEOUT_SECONDS = 10L
+    }
 }
 
 data class ShipResult(

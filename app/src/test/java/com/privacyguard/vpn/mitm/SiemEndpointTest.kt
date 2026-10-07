@@ -1,8 +1,10 @@
 package com.privacyguard.vpn.mitm
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SiemEndpointTest {
@@ -40,6 +42,16 @@ class SiemEndpointTest {
         assertEquals(SiemEndpoint.Pin.Invalid, SiemEndpoint.parsePin("sha1/AAAAAAAAAAAAAAAAAAAAAAAAAAA="))
         assertEquals(SiemEndpoint.Pin.Invalid, SiemEndpoint.parsePin("sha256/not base64!"))
         assertEquals(SiemEndpoint.Pin.Invalid, SiemEndpoint.parsePin("sha256/AAAA"))
+    }
+
+    @Test fun tagsEndpointsStably() {
+        fun tag(s: String) = SiemEndpoint.tag(SiemEndpoint.validate(s)!!)
+        assertEquals(tag("https://siem.example.com/api"), tag("HTTPS://SIEM.example.com/api/"))
+        assertNotEquals(tag("https://siem.example.com/api"), tag("https://other.example.com/api"))
+        assertNotEquals(tag("https://siem.example.com/api"), tag("https://siem.example.com:8443/api"))
+        assertNotEquals(tag("https://siem.example.com/api"), tag("https://siem.example.com/other"))
+        // The tag sits inside "batch_<ts>_<tag>_<count>.json", so it must not contain '_'.
+        assertTrue(tag("https://siem.example.com/api").matches(Regex("[0-9a-f]{16}")))
     }
 
     @Test fun escapesControlCharacters() {

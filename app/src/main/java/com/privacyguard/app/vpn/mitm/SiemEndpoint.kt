@@ -2,9 +2,13 @@ package com.privacyguard.vpn.mitm
 
 import java.net.URI
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
+import okhttp3.CertificatePinner
+import okhttp3.OkHttpClient
 import okio.ByteString.Companion.decodeBase64
 
 /**
@@ -46,6 +50,37 @@ object SiemEndpoint {
         if (!trimmed.startsWith("sha256/")) return Pin.Invalid
         val hash = trimmed.removePrefix("sha256/").decodeBase64() ?: return Pin.Invalid
         return if (hash.size == 32) Pin.Valid(trimmed) else Pin.Invalid
+    }
+
+    /**
+     * HTTP client for one SIEM upload: no redirects (they could move the bearer
+     * token to another host or to http://), and the pin applied when one is set.
+     */
+    fun client(host: String, pin: Pin, connectTimeoutSeconds: Long, readTimeoutSeconds: Long): OkHttpClient {
+        val builder = OkHttpClient.Builder()
+            .connectTimeout(connectTimeoutSeconds, TimeUnit.SECONDS)
+            .readTimeout(readTimeoutSeconds, TimeUnit.SECONDS)
+            .followRedirects(false)
+            .followSslRedirects(false)
+        if (pin is Pin.Valid) {
+            builder.certificatePinner(CertificatePinner.Builder().add(host, pin.value).build())
+        }
+        return builder.build()
+    }
+
+    /**
+     * Short stable tag for an endpoint, so locally queued batches are only ever
+     * flushed to the endpoint they were queued for.
+     */
+    fun tag(endpoint: URI): String {
+        val normalized = URI(
+            endpoint.scheme.lowercase(Locale.US), null, endpoint.host.lowercase(Locale.US),
+            endpoint.port, endpoint.path.orEmpty().trimEnd('/'), null, null,
+        ).toString()
+        return MessageDigest.getInstance("SHA-256")
+            .digest(normalized.toByteArray(StandardCharsets.UTF_8))
+            .take(8)
+            .joinToString("") { String.format(Locale.US, "%02x", it) }
     }
 
     /** Hex HMAC-SHA256 of [body] under [signingKey], or null when no separate key is set. */

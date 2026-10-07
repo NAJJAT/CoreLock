@@ -4,13 +4,10 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import okhttp3.CertificatePinner
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit
 
 // FIXED: Queued event model for SIEM shipping with all required fields
 data class ShipEvent(
@@ -50,18 +47,6 @@ class PayloadShipper(
     }
 
     private val queue = LinkedBlockingQueue<ShipEvent>(MAX_QUEUE_SIZE)
-    private fun httpClientFor(host: String, pin: SiemEndpoint.Pin): OkHttpClient {
-        val builder = OkHttpClient.Builder()
-            .connectTimeout(HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .readTimeout(HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            // A redirect could move the bearer token to another host or to http://.
-            .followRedirects(false)
-            .followSslRedirects(false)
-        if (pin is SiemEndpoint.Pin.Valid) {
-            builder.certificatePinner(CertificatePinner.Builder().add(host, pin.value).build())
-        }
-        return builder.build()
-    }
     private val scope = CoroutineScope(Dispatchers.IO)
 
     /**
@@ -139,7 +124,7 @@ class PayloadShipper(
                     requestBuilder.header(SiemEndpoint.SIGNATURE_HEADER, it)
                 }
 
-                val response = httpClientFor(endpoint.host, pin).newCall(requestBuilder.build()).execute()
+                val response = SiemEndpoint.client(endpoint.host, pin, HTTP_TIMEOUT_SECONDS, HTTP_TIMEOUT_SECONDS).newCall(requestBuilder.build()).execute()
                 if (response.isSuccessful) {
                     Log.i(TAG, "Shipped ${events.size} events — HTTP ${response.code}")
                 } else {
