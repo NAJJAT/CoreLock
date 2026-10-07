@@ -266,7 +266,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // Kotlinx Serialization (JSON serialization for MITM payloads)
-    "enterpriseImplementation"("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    "enterpriseImplementation"("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 
     // ==================== END MITM DEPENDENCIES ====================
 
