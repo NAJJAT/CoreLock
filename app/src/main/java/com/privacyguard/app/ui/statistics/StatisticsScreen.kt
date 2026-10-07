@@ -334,7 +334,7 @@ fun StatisticsScreen(
             }
         }
 
-        itemsIndexed(topBlockedDomains) { index, item ->
+        itemsIndexed(topBlockedDomains, key = { _, it -> "blocked:${it.domain}" }) { index, item ->
             PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Row {

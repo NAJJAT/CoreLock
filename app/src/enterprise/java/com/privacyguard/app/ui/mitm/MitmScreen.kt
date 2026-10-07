@@ -1135,7 +1135,7 @@ private fun HeadersTab(log: PayloadLogEntity) {
         if (headers.isEmpty()) {
             item { Text("No headers captured", color = TxM, fontSize = 12.sp) }
         }
-        items(headers.entries.toList()) { (key, value) ->
+        items(headers.entries.toList(), key = { "header:${it.key}" }) { (key, value) ->
             val kl = key.lowercase()
             val severity = when {
                 sensitiveKeys.any { kl.contains(it) } -> "bad"

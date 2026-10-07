@@ -401,7 +401,7 @@ private fun LazyListScope.mismatchTab(state: AppDetailState) {
                     )
                 }
             }
-            items(state.mismatchFindings) { finding ->
+            items(state.mismatchFindings, key = { "finding:${it.id}" }) { finding ->
                 MismatchCard(finding)
             }
         }
@@ -453,7 +453,7 @@ private fun LazyListScope.connectionsTab(
                 DomainSort.DATA       -> state.domains.sortedByDescending { it.bytesSent + it.bytesReceived }
                 DomainSort.BACKGROUND -> state.domains.sortedByDescending { it.backgroundCount }
             }
-            items(sorted) { row -> DomainCard(row) }
+            items(sorted, key = { "domain:${it.domain}" }) { row -> DomainCard(row) }
         }
     }
 }
