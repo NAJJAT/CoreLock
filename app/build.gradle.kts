@@ -255,6 +255,10 @@ dependencies {
     implementation("androidx.enterprise:enterprise-feedback:1.1.0")
     ksp(libs.androidx.room.compiler)
     androidTestImplementation(libs.androidx.room.testing)
+    // kotlinx-serialization-core reaches the app transitively (lifecycle) at 1.7.3, and
+    // the test APK is pinned to the app's versions. room-testing's schema serializers are
+    // built against 1.8.x and fail with AbstractMethodError on 1.7.3, so align via the BOM.
+    implementation(platform(libs.kotlinx.serialization.bom))
 
     // ==================== MITM DEPENDENCIES ====================
     // MITM code lives in src/enterprise, so its libraries are enterprise-only.
@@ -268,7 +272,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // Kotlinx Serialization (JSON serialization for MITM payloads)
-    "enterpriseImplementation"("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    "enterpriseImplementation"(libs.kotlinx.serialization.json)
 
     // ==================== END MITM DEPENDENCIES ====================
 

@@ -6,7 +6,9 @@ import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import android.util.Log
 import java.nio.charset.StandardCharsets
+import java.security.GeneralSecurityException
 import java.security.KeyStore
 import java.security.SecureRandom
 import javax.crypto.Cipher
@@ -41,12 +43,21 @@ class SecureSecretStore private constructor(
         }
     }
 
+    /**
+     * Creates the master key and installation secret. Runs from Application.onCreate,
+     * which can happen while the device is locked (always-on VPN, WorkManager), when
+     * the unlocked-only master key is unusable, so it checks presence without
+     * decrypting and leaves a locked-device failure for the next launch.
+     */
     fun bootstrap() {
-        ensureKey()
-        if (getString(KEY_INSTALLATION_SECRET) == null) {
-            val seed = ByteArray(32)
+        if (prefs.contains(KEY_INSTALLATION_SECRET)) return
+        val seed = ByteArray(32)
+        try {
             SecureRandom().nextBytes(seed)
             putBytes(KEY_INSTALLATION_SECRET, seed)
+        } catch (e: GeneralSecurityException) {
+            Log.w("SecureSecretStore", "Deferring bootstrap: keystore unavailable (device locked?)", e)
+        } finally {
             seed.fill(0)
         }
     }

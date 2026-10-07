@@ -12,8 +12,7 @@
             Device Admin activation silently fails.
 
             Only DEVICE_ADMIN_ENABLED goes here; APPLICATION_RESTRICTIONS_CHANGED
-            is handled by the separate MdmConfigReceiver below (different permission
-            requirement — the OS sends that broadcast without BIND_DEVICE_ADMIN).
+            is handled by MdmConfigReceiver, registered at runtime in FlavorStartup.
         -->
         <receiver
             android:name="com.privacyguard.mdm.DeviceAdminReceiver"
@@ -28,18 +27,10 @@
         </receiver>
 
         <!--
-            Separate receiver for managed-configuration changes.
-            The OS sends APPLICATION_RESTRICTIONS_CHANGED without the
-            BIND_DEVICE_ADMIN permission, so this receiver must NOT carry
-            that permission restriction.
+            APPLICATION_RESTRICTIONS_CHANGED is only delivered to receivers
+            registered at runtime, so MdmConfigReceiver is registered in
+            FlavorStartup instead of being declared here.
         -->
-        <receiver
-            android:name="com.privacyguard.mdm.MdmConfigReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.APPLICATION_RESTRICTIONS_CHANGED" />
-            </intent-filter>
-        </receiver>
 
         <!-- ── MDM / AppConfig metadata ───────────────────────────────────── -->
 

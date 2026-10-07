@@ -17,7 +17,7 @@ import com.privacyguard.vpn.mitm.MitmConfig
  *
  * Call [apply] once at startup and whenever the system broadcasts
  * [android.content.Intent.ACTION_APPLICATION_RESTRICTIONS_CHANGED].
- * [DeviceAdminReceiver] handles the broadcast automatically.
+ * FlavorStartup does both: it applies at startup and registers [MdmConfigReceiver].
  *
  * Supported keys (all optional — missing keys leave the current setting unchanged):
  *

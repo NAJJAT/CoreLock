@@ -13,5 +13,6 @@ class PrivacyGuardApplication : Application() {
         AppSecurityMonitor.refresh(this)
         NotificationHelper.createNotificationChannels(this)
         BlocklistManager.initialize(this)
+        FlavorStartup.onCreate(this)
     }
 }

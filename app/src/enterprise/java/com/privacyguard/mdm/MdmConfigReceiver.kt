@@ -18,6 +18,9 @@ import kotlinx.coroutines.launch
  * If that action were registered on the Device Admin receiver (which requires
  * BIND_DEVICE_ADMIN to send broadcasts to it), the OS would be silently blocked
  * and policy changes would never be applied.
+ *
+ * The OS only delivers this broadcast to receivers registered at runtime, so
+ * this is registered in FlavorStartup, not declared in the manifest.
  */
 class MdmConfigReceiver : BroadcastReceiver() {
 
