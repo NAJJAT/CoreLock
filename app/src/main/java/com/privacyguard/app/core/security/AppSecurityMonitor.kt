@@ -143,7 +143,8 @@ object AppSecurityMonitor {
         }
         if (signatures.isEmpty()) return false
         val expected = BuildConfig.APP_SIGNATURE_SHA256
-        if (expected.isBlank()) return true
+        // Only debug builds may skip the check; release always carries the real hash.
+        if (expected.isBlank()) return BuildConfig.DEBUG
         val normalized = signatures.map { bytes ->
             MessageDigest.getInstance("SHA-256")
                 .digest(bytes)

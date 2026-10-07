@@ -2,6 +2,7 @@ package com.privacyguard.app.data.local.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.privacyguard.app.core.security.SecureSecretStore
 import com.privacyguard.app.domain.model.NotificationType
 import com.privacyguard.core.filter.FilterEngine
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +24,9 @@ class SettingsPreferences private constructor(context: Context) {
         private const val KEY_KILL_SWITCH_NOTIFICATIONS  = "kill_switch_notifications"
         private const val KEY_KILL_SWITCH_ENABLED        = "kill_switch_enabled"
         private const val KEY_DOH_ENABLED                = "doh_enabled"
+        // Features that send data to a third party are opt-in (README: no external servers).
+        private const val KEY_CT_MONITORING_ENABLED      = "ct_monitoring_enabled"
+        private const val KEY_EXTERNAL_IP_CHECK_ENABLED  = "external_ip_check_enabled"
         private const val KEY_DOH_PROVIDER               = "doh_provider"
         private const val KEY_RETENTION_DAYS             = "retention_days"
         private const val KEY_UPSTREAM_DNS               = "upstream_dns"
@@ -74,6 +78,19 @@ class SettingsPreferences private constructor(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    // API keys and VPN passwords live in SecureSecretStore (Keystore-wrapped), never
+    // in these plain prefs. Values written by older versions are moved on first load.
+    private val secrets = SecureSecretStore.getInstance(context).also { store ->
+        listOf(
+            KEY_ENTERPRISE_SIEM_API_KEY, KEY_MITM_SIEM_API_KEY,
+            KEY_DUAL_VPN_HOP1_PASS, KEY_DUAL_VPN_HOP2_PASS,
+        ).forEach { key -> store.migratePlaintext(prefs, key, secretName(key)) }
+    }
+
+    private fun secretName(prefKey: String) = "settings.$prefKey"
+    private fun readSecret(prefKey: String) = secrets.getBackgroundSecret(secretName(prefKey)) ?: ""
+    private fun writeSecret(prefKey: String, value: String) = secrets.putBackgroundSecret(secretName(prefKey), value)
+
     // ==================== EXISTING FLOWS ====================
 
     private val _notificationsEnabled = MutableStateFlow(prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true))
@@ -99,6 +116,14 @@ class SettingsPreferences private constructor(context: Context) {
 
     private val _dohEnabled = MutableStateFlow(prefs.getBoolean(KEY_DOH_ENABLED, false))
     val dohEnabled: StateFlow<Boolean> = _dohEnabled.asStateFlow()
+
+    /** Sends the registrable domain of each TLS server the device contacts to crt.sh. */
+    private val _ctMonitoringEnabled = MutableStateFlow(prefs.getBoolean(KEY_CT_MONITORING_ENABLED, false))
+    val ctMonitoringEnabled: StateFlow<Boolean> = _ctMonitoringEnabled.asStateFlow()
+
+    /** Diagnostics asks api.ipify.org for the public IP. */
+    private val _externalIpCheckEnabled = MutableStateFlow(prefs.getBoolean(KEY_EXTERNAL_IP_CHECK_ENABLED, false))
+    val externalIpCheckEnabled: StateFlow<Boolean> = _externalIpCheckEnabled.asStateFlow()
 
     private val _dohProvider = MutableStateFlow(prefs.getString(KEY_DOH_PROVIDER, DOH_CLOUDFLARE) ?: DOH_CLOUDFLARE)
     val dohProvider: StateFlow<String> = _dohProvider.asStateFlow()
@@ -140,7 +165,7 @@ class SettingsPreferences private constructor(context: Context) {
     val enterpriseSiemEndpoint: StateFlow<String> = _enterpriseSiemEndpoint.asStateFlow()
 
     private val _enterpriseSiemApiKey = MutableStateFlow(
-        prefs.getString(KEY_ENTERPRISE_SIEM_API_KEY, "") ?: ""
+        readSecret(KEY_ENTERPRISE_SIEM_API_KEY)
     )
     val enterpriseSiemApiKey: StateFlow<String> = _enterpriseSiemApiKey.asStateFlow()
 
@@ -168,7 +193,7 @@ class SettingsPreferences private constructor(context: Context) {
     private val _mitmSiemEndpoint = MutableStateFlow(prefs.getString(KEY_MITM_SIEM_ENDPOINT, "") ?: "")
     val mitmSiemEndpoint: StateFlow<String> = _mitmSiemEndpoint.asStateFlow()
 
-    private val _mitmSiemApiKey = MutableStateFlow(prefs.getString(KEY_MITM_SIEM_API_KEY, "") ?: "")
+    private val _mitmSiemApiKey = MutableStateFlow(readSecret(KEY_MITM_SIEM_API_KEY))
     val mitmSiemApiKey: StateFlow<String> = _mitmSiemApiKey.asStateFlow()
 
     private val _mitmMaxPayloadSize = MutableStateFlow(prefs.getInt(KEY_MITM_MAX_PAYLOAD_SIZE, 32768))
@@ -200,7 +225,7 @@ class SettingsPreferences private constructor(context: Context) {
     private val _dualVpnHop1User = MutableStateFlow(prefs.getString(KEY_DUAL_VPN_HOP1_USER, "") ?: "")
     val dualVpnHop1User: StateFlow<String> = _dualVpnHop1User.asStateFlow()
 
-    private val _dualVpnHop1Pass = MutableStateFlow(prefs.getString(KEY_DUAL_VPN_HOP1_PASS, "") ?: "")
+    private val _dualVpnHop1Pass = MutableStateFlow(readSecret(KEY_DUAL_VPN_HOP1_PASS))
     val dualVpnHop1Pass: StateFlow<String> = _dualVpnHop1Pass.asStateFlow()
 
     private val _dualVpnHop2Host = MutableStateFlow(prefs.getString(KEY_DUAL_VPN_HOP2_HOST, "") ?: "")
@@ -212,7 +237,7 @@ class SettingsPreferences private constructor(context: Context) {
     private val _dualVpnHop2User = MutableStateFlow(prefs.getString(KEY_DUAL_VPN_HOP2_USER, "") ?: "")
     val dualVpnHop2User: StateFlow<String> = _dualVpnHop2User.asStateFlow()
 
-    private val _dualVpnHop2Pass = MutableStateFlow(prefs.getString(KEY_DUAL_VPN_HOP2_PASS, "") ?: "")
+    private val _dualVpnHop2Pass = MutableStateFlow(readSecret(KEY_DUAL_VPN_HOP2_PASS))
     val dualVpnHop2Pass: StateFlow<String> = _dualVpnHop2Pass.asStateFlow()
 
     // ==================== EXISTING SETTERS ====================
@@ -250,6 +275,16 @@ class SettingsPreferences private constructor(context: Context) {
     fun setKillSwitchEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_KILL_SWITCH_ENABLED, enabled).apply()
         _killSwitchEnabled.value = enabled
+    }
+
+    fun setCtMonitoringEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_CT_MONITORING_ENABLED, enabled).apply()
+        _ctMonitoringEnabled.value = enabled
+    }
+
+    fun setExternalIpCheckEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_EXTERNAL_IP_CHECK_ENABLED, enabled).apply()
+        _externalIpCheckEnabled.value = enabled
     }
 
     fun setDohEnabled(enabled: Boolean) {
@@ -313,7 +348,7 @@ class SettingsPreferences private constructor(context: Context) {
     }
 
     fun setEnterpriseSiemApiKey(apiKey: String) {
-        prefs.edit().putString(KEY_ENTERPRISE_SIEM_API_KEY, apiKey).apply()
+        writeSecret(KEY_ENTERPRISE_SIEM_API_KEY, apiKey)
         _enterpriseSiemApiKey.value = apiKey
     }
 
@@ -350,7 +385,7 @@ class SettingsPreferences private constructor(context: Context) {
     }
 
     fun setMitmSiemApiKey(apiKey: String) {
-        prefs.edit().putString(KEY_MITM_SIEM_API_KEY, apiKey).apply()
+        writeSecret(KEY_MITM_SIEM_API_KEY, apiKey)
         _mitmSiemApiKey.value = apiKey
     }
 
@@ -390,11 +425,11 @@ class SettingsPreferences private constructor(context: Context) {
     fun setDualVpnHop1Host(host: String) { prefs.edit().putString(KEY_DUAL_VPN_HOP1_HOST, host).apply(); _dualVpnHop1Host.value = host }
     fun setDualVpnHop1Port(port: Int)    { prefs.edit().putInt(KEY_DUAL_VPN_HOP1_PORT, port).apply();    _dualVpnHop1Port.value = port }
     fun setDualVpnHop1User(user: String) { prefs.edit().putString(KEY_DUAL_VPN_HOP1_USER, user).apply(); _dualVpnHop1User.value = user }
-    fun setDualVpnHop1Pass(pass: String) { prefs.edit().putString(KEY_DUAL_VPN_HOP1_PASS, pass).apply(); _dualVpnHop1Pass.value = pass }
+    fun setDualVpnHop1Pass(pass: String) { writeSecret(KEY_DUAL_VPN_HOP1_PASS, pass); _dualVpnHop1Pass.value = pass }
     fun setDualVpnHop2Host(host: String) { prefs.edit().putString(KEY_DUAL_VPN_HOP2_HOST, host).apply(); _dualVpnHop2Host.value = host }
     fun setDualVpnHop2Port(port: Int)    { prefs.edit().putInt(KEY_DUAL_VPN_HOP2_PORT, port).apply();    _dualVpnHop2Port.value = port }
     fun setDualVpnHop2User(user: String) { prefs.edit().putString(KEY_DUAL_VPN_HOP2_USER, user).apply(); _dualVpnHop2User.value = user }
-    fun setDualVpnHop2Pass(pass: String) { prefs.edit().putString(KEY_DUAL_VPN_HOP2_PASS, pass).apply(); _dualVpnHop2Pass.value = pass }
+    fun setDualVpnHop2Pass(pass: String) { writeSecret(KEY_DUAL_VPN_HOP2_PASS, pass); _dualVpnHop2Pass.value = pass }
 
     fun getDualVpnConfig(): com.privacyguard.vpn.dualvpn.DualVpnConfig =
         com.privacyguard.vpn.dualvpn.DualVpnConfig(

@@ -1,25 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Share only dedicated folders. The database, shared prefs, payload logs and the
+    rest of files/ and cache/ must never be reachable through a content:// URI.
+-->
 <paths>
-    <!-- Existing paths -->
+    <!-- PCAP captures, IT reports and CSV exports (files/exports/{pcap,reports,csv}) -->
     <files-path
-        name="captures"
-        path="." />
-    <external-files-path
-        name="downloads"
-        path="Download/PrivacyGuard/" />
+        name="exports"
+        path="exports/" />
 
-    <!-- MITM: CA certificate export — covers API ≤ 28 (getExternalStorageDirectory()/Download/) -->
+    <!-- MITM: CA certificate handed to the system installer -->
+    <cache-path
+        name="ca_cert"
+        path="certs/" />
+
+    <!-- MITM: CA certificate export on API <= 28 (public Download/PrivacyGuard/) -->
     <external-path
         name="ca_downloads"
-        path="Download/" />
-
-    <!-- MITM: For local encrypted payload logs -->
-    <files-path
-        name="mitm_logs"
-        path="payload_logs/" />
-
-    <!-- MITM: For temporary files during export -->
-    <cache-path
-        name="mitm_cache"
-        path="/" />
+        path="Download/PrivacyGuard/" />
 </paths>

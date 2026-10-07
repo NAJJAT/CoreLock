@@ -308,9 +308,14 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             ),
             SecurityCardState(
                 title = "Kill Switch",
-                subtitle = "Blocks traffic if VPN drops",
-                status = if (prefs.killSwitchEnabled.value) "Armed" else "Off",
-                severity = if (prefs.killSwitchEnabled.value) CardSeverity.GOOD else CardSeverity.WARNING,
+                subtitle = if (KillSwitch.lockdownActive) "Android blocks traffic if the VPN drops"
+                    else "Turn on Always-on VPN and Block connections without VPN",
+                status = when {
+                    KillSwitch.lockdownActive -> "Blocking"
+                    prefs.killSwitchEnabled.value -> "Alert only"
+                    else -> "Off"
+                },
+                severity = if (KillSwitch.lockdownActive) CardSeverity.GOOD else CardSeverity.WARNING,
                 value = if (PrivacyVpnService.isRunning) "VPN live" else "VPN off",
             ),
             SecurityCardState(

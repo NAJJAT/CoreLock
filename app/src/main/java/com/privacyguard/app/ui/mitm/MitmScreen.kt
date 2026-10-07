@@ -368,6 +368,31 @@ private fun CaptureListScreen(
     onStatsClick: () -> Unit,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var showRemoveCaPrompt by remember { mutableStateOf(false) }
+
+    if (showRemoveCaPrompt) {
+        AlertDialog(
+            onDismissRequest = { showRemoveCaPrompt = false },
+            title = { Text("Remove the PrivacyGuard certificate") },
+            text = {
+                Text(
+                    "Inspection is off and the signing key has been deleted, but Android still trusts " +
+                        "the installed PrivacyGuard CA. Remove it in Settings → Security → " +
+                        "Encryption & credentials → User credentials."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRemoveCaPrompt = false
+                    runCatching {
+                        context.startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                }) { Text("Open settings") }
+            },
+            dismissButton = { TextButton(onClick = { showRemoveCaPrompt = false }) { Text("Later") } },
+        )
+    }
 
     Column(Modifier.fillMaxSize().background(Bg)) {
         // Top bar
@@ -392,7 +417,17 @@ private fun CaptureListScreen(
 
                 Switch(
                     checked = uiState.isEnabled,
-                    onCheckedChange = { on -> if (on) vm.enableMitm() else vm.disableMitm() },
+                    onCheckedChange = { on ->
+                        if (on) {
+                            vm.enableMitm()
+                        } else {
+                            vm.disableMitm()
+                            // Turning inspection off retires the CA: delete its key so it can
+                            // never sign again, then ask the user to untrust the installed copy.
+                            scope.launch { caManager.reset() }
+                            showRemoveCaPrompt = true
+                        }
+                    },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Bg, checkedTrackColor = Ac,
                         uncheckedThumbColor = TxM, uncheckedTrackColor = Bg3

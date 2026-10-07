@@ -29,6 +29,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.SelectionKey
@@ -262,6 +263,16 @@ class TcpForwarder(
             session.encryptionClassified = true
             if (sni != null) session.tlsSni = sni
 
+            // DoH endpoints carry DNS past the blocklist; reset so the app falls back
+            // to plain DNS through the tunnel.
+            if (com.privacyguard.vpn.firewall.DnsBypassGuard.isDohHost(sni)) {
+                encryptionBlocked.incrementAndGet()
+                sendRstToDevice(ip, tcp)
+                runCatching { session.tcpChannel?.close() }
+                sessionTable.remove(key)
+                return
+            }
+
             // ── MITM redirect ─────────────────────────────────────────────────
             // First TLS ClientHello on port 443: redirect the session to the local
             // MITM SSL server instead of the real destination. The MITM engine
@@ -276,11 +287,23 @@ class TcpForwarder(
                 !pinningDetector.isPinned(session.ownerPackage, sni)) {
 
                 val clientHello = clientHelloBytes.copyOf()
-                val mitmPort = mitmEngine.intercept(session) { dir, bytes, sess ->
+                // Bind the loopback client socket first so MitmEngine can accept
+                // exactly this peer and reject any other local app that finds the port.
+                val mitmChannel = try {
+                    SocketChannel.open().apply {
+                        bind(InetSocketAddress(InetAddress.getLoopbackAddress(), 0))
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "MITM loopback bind failed: ${e.message}")
+                    null
+                }
+                val clientPort = (mitmChannel?.localAddress as? InetSocketAddress)?.port ?: -1
+                val mitmPort = if (mitmChannel == null) -1 else mitmEngine.intercept(session, clientPort) { dir, bytes, sess ->
                     bufferAndCapture(dir, bytes, sess)
                 }
+                if (mitmPort <= 0) runCatching { mitmChannel?.close() }
 
-                if (mitmPort > 0) {
+                if (mitmPort > 0 && mitmChannel != null) {
                     session.pendingMitmData = clientHello
                     session.isMitmIntercepted = true
 
@@ -290,16 +313,16 @@ class TcpForwarder(
                     runCatching { session.tcpChannel?.close() }
 
                     try {
-                        val mitmChannel = SocketChannel.open()
                         mitmChannel.configureBlocking(false)
-                        // 127.0.0.1 is local — do NOT protect() this socket.
-                        mitmChannel.connect(InetSocketAddress("127.0.0.1", mitmPort))
+                        // Loopback is local — do NOT protect() this socket.
+                        mitmChannel.connect(InetSocketAddress(InetAddress.getLoopbackAddress(), mitmPort))
                         session.tcpChannel = mitmChannel
                         selector.wakeup()
                         session.selectionKey = mitmChannel.register(selector, SelectionKey.OP_CONNECT, session)
                         connectingCount.incrementAndGet()
                     } catch (e: Exception) {
                         Log.w(TAG, "MITM redirect failed for $sni: ${e.message}")
+                        runCatching { mitmChannel.close() }
                         session.isMitmIntercepted = false
                         session.pendingMitmData = null
                         pinningDetector.markAsPinned(sni)

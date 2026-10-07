@@ -1,5 +1,6 @@
 package com.privacyguard.vpn.forwarder
 
+import com.privacyguard.app.core.utils.readBytesCapped
 import com.privacyguard.core.filter.FilterEngine
 import com.privacyguard.core.packet.DnsPacket
 import com.privacyguard.core.packet.IpPacket
@@ -277,7 +278,8 @@ class DnsHandler(
                 out.write(queryBytes)
                 out.flush()
 
-                val rawResponse = secureSocket.getInputStream().readBytes()
+                // A DNS message is at most 64 KB; allow for HTTP headers.
+                val rawResponse = secureSocket.getInputStream().readBytesCapped(80L * 1024)
                 val headerEnd = rawResponse.findHeaderEnd() ?: return null
                 val headerText = rawResponse.copyOfRange(0, headerEnd).toString(Charsets.ISO_8859_1)
                 if (!headerText.startsWith("HTTP/1.1 2") && !headerText.startsWith("HTTP/1.0 2")) return null

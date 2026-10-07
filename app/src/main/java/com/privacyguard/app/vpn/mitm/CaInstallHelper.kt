@@ -215,8 +215,10 @@ class CaInstallHelper(
     private fun exportViaFilesystem(certPem: String): ExportResult? {
         Log.d(TAG, "exportViaFilesystem: writing to public Downloads")
         return try {
-            val downloadsDir = Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_DOWNLOADS
+            // A dedicated subfolder: the FileProvider shares Download/PrivacyGuard/ only.
+            val downloadsDir = File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                "PrivacyGuard",
             )
             if (!downloadsDir.exists()) downloadsDir.mkdirs()
             val caFile = File(downloadsDir, CA_FILENAME)

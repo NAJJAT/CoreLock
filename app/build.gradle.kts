@@ -42,6 +42,27 @@ val releaseSigningConfigured = listOf(
     releaseSignatureSha256,
 ).all { !it.isNullOrBlank() }
 
+// A release artifact must never be signed with the debug key: AppSecurityMonitor's
+// tamper check trusts APP_SIGNATURE_SHA256, so a debug-signed release would vouch
+// for any rebuilt APK. Fail the build instead of silently falling back.
+gradle.taskGraph.whenReady {
+    // Only tasks that produce a signed artifact (assembleXRelease, bundleXRelease,
+    // packageXRelease, signXReleaseBundle); R8, lint and resource tasks still run.
+    val artifactTask = Regex("^(assemble|bundle|package|sign)[A-Za-z]*Release(Bundle)?$")
+    val releaseArtifactTasks = allTasks.filter { task ->
+        task.project == project && artifactTask.matches(task.name)
+    }
+    if (releaseArtifactTasks.isNotEmpty() && !releaseSigningConfigured) {
+        throw GradleException(
+            "Release signing is not configured. Set PRIVACYGUARD_RELEASE_STORE_FILE, " +
+                "PRIVACYGUARD_RELEASE_STORE_PASSWORD, PRIVACYGUARD_RELEASE_KEY_ALIAS, " +
+                "PRIVACYGUARD_RELEASE_KEY_PASSWORD and PRIVACYGUARD_RELEASE_SIGNATURE_SHA256 " +
+                "(Gradle properties, environment, or release-signing.local.properties outside VCS). " +
+                "Blocked tasks: ${releaseArtifactTasks.joinToString { it.path }}"
+        )
+    }
+}
+
 configurations.configureEach {
     // FIXED: legacy-preference-v14 pulls ancient appcompat/vectordrawable 1.0.0 and breaks AGP 9 manifest merge.
     exclude(group = "androidx.legacy", module = "legacy-preference-v14")
@@ -141,28 +162,22 @@ android {
             )
             buildConfigField("boolean", "IS_RELEASE_SIGNING_CONFIGURED", releaseSigningConfigured.toString())
             buildConfigField("String", "APP_SIGNING_MODE", "\"Debug certificate\"")
-            buildConfigField("boolean", "MITM_AVAILABLE", "true")
+            // MITM_AVAILABLE comes from the flavor only: a build-type field would
+            // override it and turn MITM on in consumerDebug.
         }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             isDebuggable = false
-            signingConfig = if (releaseSigningConfigured) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            // No debug fallback: without a release key the artifact tasks fail (see taskGraph check above).
+            if (releaseSigningConfigured) signingConfig = signingConfigs.getByName("release")
             buildConfigField(
                 "String",
                 "APP_SIGNATURE_SHA256",
-                "\"${releaseSignatureSha256 ?: debugSignatureSha256}\""
+                "\"${releaseSignatureSha256.orEmpty()}\""
             )
             buildConfigField("boolean", "IS_RELEASE_SIGNING_CONFIGURED", releaseSigningConfigured.toString())
-            buildConfigField(
-                "String",
-                "APP_SIGNING_MODE",
-                if (releaseSigningConfigured) "\"Configured release keystore\"" else "\"Debug fallback\""
-            )
+            buildConfigField("String", "APP_SIGNING_MODE", "\"Configured release keystore\"")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -201,6 +216,13 @@ android {
         compose = true
         buildConfig = true
     }
+
+    packaging {
+        resources {
+            // Bouncy Castle 1.78+ ships the same license files in bcprov, bcpkix and bcutil.
+            excludes += setOf("META-INF/LICENSE.md", "META-INF/NOTICE.md", "META-INF/versions/9/OSGI-INF/MANIFEST.MF")
+        }
+    }
 }
 
 dependencies {
@@ -220,6 +242,9 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    // SQLCipher: the Room database holds DNS history, connection logs and (enterprise)
+    // decrypted payloads, so it is encrypted at rest (BRD NFR-S-06).
+    implementation("net.zetetic:sqlcipher-android:4.19.1@aar")
     implementation(libs.androidx.startup.runtime)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.kotlinx.coroutines.android)
@@ -232,12 +257,12 @@ dependencies {
     // ==================== MITM DEPENDENCIES ====================
 
     // Bouncy Castle (X.509 certificate generation for MITM)
-    implementation("org.bouncycastle:bcpkix-jdk18on:1.77")
-    implementation("org.bouncycastle:bcprov-jdk18on:1.77")
+    // 1.78+ fixes CVE-2024-29857, CVE-2024-30171 and CVE-2024-30172.
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.86")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.86")
 
     // OkHttp (SIEM shipping for MITM payloads)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     // Kotlinx Serialization (JSON serialization for MITM payloads)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")

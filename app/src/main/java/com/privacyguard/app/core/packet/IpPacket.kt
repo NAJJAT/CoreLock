@@ -192,6 +192,8 @@ data class IpPacket(
 
             val dscp        = ByteUtils.readUInt8(raw, offset + 1)
             val totalLength = ByteUtils.readUInt16(raw, offset + 2)
+            // A total length shorter than the header would give a negative payload length.
+            if (totalLength < ihl) return null
             if (raw.size - offset < totalLength) return null
 
             val identification = ByteUtils.readUInt16(raw, offset + 4)

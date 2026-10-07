@@ -17,3 +17,9 @@ local.properties
 .claude/settings.json
 /release-signing.properties
 /release-signing.local.properties
+
+# Machine- and IDE-specific state (never commit; already untracked)
+/.idea/
+/.kotlin/
+/.claude/
+compile-log.txt

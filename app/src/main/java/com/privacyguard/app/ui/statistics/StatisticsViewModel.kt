@@ -267,7 +267,8 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
             val since = now - 7L * 24L * 60L * 60L * 1000L
             val connections = db.connectionDao().getRecentConnections(since, 5_000)
             val stamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date(now))
-            val file = java.io.File(getApplication<android.app.Application>().filesDir, "connections_$stamp.csv")
+            val exportDir = java.io.File(getApplication<android.app.Application>().filesDir, "exports/csv").apply { mkdirs() }
+            val file = java.io.File(exportDir, "connections_$stamp.csv")
             file.bufferedWriter().use { w ->
                 w.write("timestamp,appName,packageName,domain,destinationIp,destinationPort,protocol,bytesSent,bytesReceived,encryptionStatus,tlsVersion,wasBlocked,wasBackground\n")
                 connections.forEach { c ->

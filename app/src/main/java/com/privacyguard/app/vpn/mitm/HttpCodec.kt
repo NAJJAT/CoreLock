@@ -56,9 +56,12 @@ object HttpCodec {
             val bodyLen = chunkedLength(data, start) ?: return null
             return start + bodyLen
         }
-        val length = head.header("Content-Length")?.trim()?.toIntOrNull()
+        val lengthText = head.header("Content-Length")?.trim()
             ?: return start   // no length and not chunked: treat as header-only
-        return if (data.size >= start + length) start + length else null
+        // Negative, non-numeric or absurd lengths are malformed: take what we have
+        // rather than wait forever or overflow start + length.
+        val length = lengthText.toLongOrNull()?.takeIf { it >= 0 } ?: return data.size
+        return if (data.size.toLong() >= start + length) (start + length).toInt() else null
     }
 
     fun isChunked(head: Head): Boolean =
@@ -72,9 +75,10 @@ object HttpCodec {
             if (lineEnd < 0) return null
             val sizeText = String(data, pos, lineEnd - pos, StandardCharsets.ISO_8859_1)
                 .substringBefore(';').trim()
-            val size = sizeText.toIntOrNull(16) ?: return data.size - from   // malformed: take all
+            val size = sizeText.toLongOrNull(16)?.takeIf { it >= 0 }
+                ?: return data.size - from   // malformed: take all
             pos = lineEnd + 2
-            if (size == 0) {
+            if (size == 0L) {
                 // Skip optional trailers up to the terminating blank line.
                 if (data.size >= pos + 2 && data[pos] == 13.toByte() && data[pos + 1] == 10.toByte()) {
                     return pos + 2 - from
@@ -82,8 +86,9 @@ object HttpCodec {
                 val trailerEnd = indexOf(data, CRLFCRLF, pos - 2)
                 return if (trailerEnd < 0) null else trailerEnd + 4 - from
             }
-            pos += size + 2
-            if (pos > data.size) return null
+            // Long arithmetic: a chunk size near Int.MAX_VALUE must not wrap pos negative.
+            if (pos.toLong() + size + 2 > data.size) return null
+            pos += size.toInt() + 2
         }
     }
 
@@ -95,13 +100,14 @@ object HttpCodec {
             val lineEnd = indexOf(body, byteArrayOf(13, 10), pos)
             if (lineEnd < 0) break
             val size = String(body, pos, lineEnd - pos, StandardCharsets.ISO_8859_1)
-                .substringBefore(';').trim().toIntOrNull(16) ?: break
-            if (size == 0) break
+                .substringBefore(';').trim().toLongOrNull(16)?.takeIf { it >= 0 } ?: break
+            if (size == 0L) break
             val dataStart = lineEnd + 2
-            val n = minOf(size, body.size - dataStart)
+            val n = minOf(size, (body.size - dataStart).toLong()).toInt()
             if (n <= 0) break
             out.write(body, dataStart, n)
-            pos = dataStart + size + 2
+            if (n.toLong() < size) break   // truncated final chunk
+            pos = dataStart + n + 2
         }
         return out.toByteArray()
     }

@@ -1,12 +1,26 @@
 package com.privacyguard.app.vpn
 
 import android.content.Context
+import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.net.VpnService
+import android.os.Build
+import android.provider.Settings
 import com.privacyguard.platform.android.NotificationHelper
 
+/**
+ * Two separate things live here:
+ *
+ * - The VPN drop alert ([enable]/[startMonitoring]): notifies and restarts the
+ *   service when the tunnel goes away. It does NOT block traffic — once our
+ *   tunnel is gone, an app cannot stop other apps from using the network.
+ * - The real kill switch ([lockdownActive]): Android's Always-on VPN with
+ *   "Block connections without VPN". Only the OS can enforce it, so the UI
+ *   reports the kill switch as active only when Android says lockdown is on.
+ */
 object KillSwitch {
 
     @Volatile private var enabled: Boolean = false
@@ -14,6 +28,27 @@ object KillSwitch {
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
     fun isEnabled(): Boolean = enabled
+
+    /** True only when Android itself blocks traffic if the VPN drops (API 29+). */
+    @Volatile var lockdownActive: Boolean = false
+        private set
+
+    /** Call from the running service; isAlwaysOn/isLockdownEnabled only answer for the calling VpnService. */
+    fun updateLockdownState(service: VpnService) {
+        lockdownActive = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            service.isAlwaysOn && service.isLockdownEnabled
+    }
+
+    fun clearLockdownState() {
+        lockdownActive = false
+    }
+
+    /** System VPN settings, where the user turns on Always-on VPN and "Block connections without VPN". */
+    fun openAlwaysOnSettings(context: Context) {
+        runCatching {
+            context.startActivity(Intent(Settings.ACTION_VPN_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+    }
 
     fun enable() {
         enabled = true

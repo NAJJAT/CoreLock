@@ -67,7 +67,8 @@ class PrivacyGuardTileService : TileService() {
                     )
                     startActivityAndCollapse(pi)
                 } else {
-                    @Suppress("DEPRECATION")
+                    // Only reached below API 34, where the Intent overload is the only one.
+                    @Suppress("DEPRECATION", "StartActivityAndCollapseDeprecated")
                     startActivityAndCollapse(intent)
                 }
             }

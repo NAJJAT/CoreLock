@@ -115,6 +115,10 @@
     <string name="restriction_mitm_ship_to_siem_desc" translatable="false">Enable forwarding of intercepted payloads to the configured SIEM endpoint.</string>
     <string name="restriction_mitm_siem_endpoint_desc" translatable="false">HTTPS URL of the log aggregation or SIEM server, for example https://siem.corp.example.com/api/events.</string>
     <string name="restriction_mitm_siem_api_key_desc" translatable="false">Bearer token or API key used to authenticate requests to the SIEM endpoint.</string>
+    <string name="restriction_mitm_siem_signing_key_title" translatable="false">SIEM Signing Key</string>
+    <string name="restriction_mitm_siem_signing_key_desc" translatable="false">Separate HMAC-SHA256 key for the X-PrivacyGuard-Sig body signature. Leave empty to send no signature.</string>
+    <string name="restriction_mitm_siem_pin_title" translatable="false">SIEM Certificate Pin</string>
+    <string name="restriction_mitm_siem_pin_desc" translatable="false">Optional SPKI pin for the SIEM host, in the form sha256/BASE64.</string>
 </resources>
 
 

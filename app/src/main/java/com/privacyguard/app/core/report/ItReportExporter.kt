@@ -26,7 +26,7 @@ object ItReportExporter {
         trackersBlocked: Int,
         blocklistDomains: Int,
     ): ItReportFiles {
-        val outputDir = File(context.filesDir, "reports").apply { mkdirs() }
+        val outputDir = File(context.filesDir, "exports/reports").apply { mkdirs() }
         val stamp = System.currentTimeMillis()
         val jsonFile = File(outputDir, "privacyguard-report-$stamp.json")
         val pdfFile = File(outputDir, "privacyguard-report-$stamp.pdf")

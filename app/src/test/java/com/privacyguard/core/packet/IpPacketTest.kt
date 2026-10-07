@@ -69,6 +69,24 @@ class IpPacketTest {
     }
 
     @Test
+    fun parse_returns_null_when_total_length_shorter_than_header() {
+        val raw = IpPacket.build(IpPacket.PROTO_TCP, "1.2.3.4", "5.6.7.8", ByteArray(20))
+        val bad = raw.copyOf()
+        bad[2] = 0x00
+        bad[3] = 0x0a   // total length 10 < IHL 20
+        assertNull(IpPacket.parse(bad))
+    }
+
+    @Test
+    fun fragments_are_not_unfragmented() {
+        val raw = IpPacket.build(IpPacket.PROTO_UDP, "1.2.3.4", "5.6.7.8", ByteArray(16))
+        val moreFragments = raw.copyOf().also { it[6] = 0x20 }            // MF set
+        val laterFragment = raw.copyOf().also { it[6] = 0x00; it[7] = 0x10 } // offset 16 units
+        assertFalse(IpPacket.parse(moreFragments)!!.isUnfragmented)
+        assertFalse(IpPacket.parse(laterFragment)!!.isUnfragmented)
+    }
+
+    @Test
     fun parse_returns_null_when_total_length_exceeds_array() {
         val raw = IpPacket.build(IpPacket.PROTO_TCP, "1.2.3.4", "5.6.7.8", ByteArray(20))
         // Inflate total length to be larger than the actual byte array

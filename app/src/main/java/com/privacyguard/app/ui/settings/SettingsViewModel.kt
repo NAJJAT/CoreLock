@@ -1,5 +1,6 @@
 package com.privacyguard.app.ui.settings
 
+import com.privacyguard.app.core.utils.readUtf8Capped
 import android.app.Application
 import android.content.pm.PackageManager
 import androidx.lifecycle.AndroidViewModel
@@ -11,6 +12,7 @@ import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
 import com.privacyguard.app.data.repository.RulesRepo
 import com.privacyguard.app.data.repository.RuleSyncBus
+import android.os.Build
 import com.privacyguard.app.vpn.KillSwitch
 import com.privacyguard.platform.android.PrivacyVpnService
 import com.privacyguard.core.filter.FilterEngine
@@ -117,6 +119,34 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Android Private DNS in strict mode sends DNS over TLS (port 853), which the
+     * tunnel drops to keep the blocklist in force; DNS then fails for every app.
+     */
+    private fun privateDnsCheck(): DiagnosticCheck {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            return DiagnosticCheck("Private DNS", DiagnosticStatus.PASS, "Not available before Android 9")
+        }
+        val cm = getApplication<android.app.Application>()
+            .getSystemService(android.net.ConnectivityManager::class.java)
+        // The underlying network, not the VPN, carries the Private DNS setting.
+        val props = cm?.allNetworks
+            ?.filter { cm.getNetworkCapabilities(it)?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN) == false }
+            ?.mapNotNull { cm.getLinkProperties(it) }
+            .orEmpty()
+        val strict = props.firstOrNull { !it.privateDnsServerName.isNullOrBlank() }
+        return when {
+            strict != null -> DiagnosticCheck(
+                "Private DNS", DiagnosticStatus.WARN,
+                "Strict mode (${strict.privateDnsServerName}) bypasses the blocklist and is blocked; set Private DNS to Off or Automatic",
+            )
+            props.any { it.isPrivateDnsActive } -> DiagnosticCheck(
+                "Private DNS", DiagnosticStatus.PASS, "Automatic: falls back to filtered DNS",
+            )
+            else -> DiagnosticCheck("Private DNS", DiagnosticStatus.PASS, "Off")
+        }
+    }
+
     fun toggleKillSwitch(enabled: Boolean) {
         settingsPreferences.setKillSwitchEnabled(enabled)
         if (enabled) {
@@ -198,10 +228,15 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 detail = if (PrivacyVpnService.isRunning) "VPN service reports active" else "VPN is not running",
             ),
             DiagnosticCheck(
-                label = "Kill Switch",
-                status = if (settingsPreferences.killSwitchEnabled.value && KillSwitch.isEnabled()) DiagnosticStatus.PASS else DiagnosticStatus.WARN,
-                detail = if (settingsPreferences.killSwitchEnabled.value) "Enabled by default" else "Disabled",
+                label = "Kill switch",
+                status = if (KillSwitch.lockdownActive) DiagnosticStatus.PASS else DiagnosticStatus.WARN,
+                detail = when {
+                    KillSwitch.lockdownActive -> "Always-on VPN with lockdown is active"
+                    Build.VERSION.SDK_INT < Build.VERSION_CODES.Q -> "Lockdown state cannot be read before Android 10"
+                    else -> "Not blocking: enable Always-on VPN and Block connections without VPN"
+                },
             ),
+            privateDnsCheck(),
             resolveHostCheck("DNS resolution", "google.com"),
             tcpReachabilityCheck("Upstream DNS TCP", settingsPreferences.upstreamDns.value, 53),
             externalIpCheck(),
@@ -249,12 +284,15 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun externalIpCheck(): DiagnosticCheck {
+        if (!settingsPreferences.externalIpCheckEnabled.value) {
+            return DiagnosticCheck("External IP", DiagnosticStatus.PASS, "Skipped: turn on \"External IP check\" to ask api.ipify.org")
+        }
         return runCatching {
             val url = java.net.URL("https://api.ipify.org?format=text")
             val conn = url.openConnection() as java.net.HttpURLConnection
             conn.connectTimeout = 4_000
             conn.readTimeout = 4_000
-            val ip = conn.inputStream.bufferedReader().readText().trim()
+            val ip = conn.inputStream.use { it.readUtf8Capped(256) }.trim()
             conn.disconnect()
             val isPrivate = ip.startsWith("10.") || ip.startsWith("192.168.") ||
                 ip.startsWith("172.16.") || ip.startsWith("172.17.") || ip == "10.0.0.2"

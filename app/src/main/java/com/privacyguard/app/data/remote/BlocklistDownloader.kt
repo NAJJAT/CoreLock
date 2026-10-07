@@ -1,5 +1,6 @@
 package com.privacyguard.app.data.remote
 
+import com.privacyguard.app.core.utils.readUtf8Capped
 import com.privacyguard.app.core.blocklist.BlocklistSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -13,6 +14,8 @@ class BlocklistDownloader {
         private const val CONNECT_TIMEOUT = 30_000
         private const val READ_TIMEOUT = 60_000
         private const val MAX_RETRIES = 3
+        // The largest supported list (OISD full) is ~10 MB; leave headroom, but bound it.
+        private const val MAX_LIST_BYTES = 32L * 1024 * 1024
     }
 
     suspend fun download(source: BlocklistSource): String? = withContext(Dispatchers.IO) {
@@ -34,9 +37,15 @@ class BlocklistDownloader {
                         connection.disconnect()
                         return@withContext null
                     }
-                    return@withContext connection.inputStream.bufferedReader().use { it.readText() }
+                    if (connection.contentLengthLong > MAX_LIST_BYTES) {
+                        connection.disconnect()
+                        return@withContext null
+                    }
+                    return@withContext connection.inputStream.use { it.readUtf8Capped(MAX_LIST_BYTES) }
                 }
                 connection.disconnect()
+            } catch (_: com.privacyguard.app.core.utils.ResponseTooLargeException) {
+                return@withContext null   // retrying will not make it smaller
             } catch (_: Exception) {
             }
             delay(2000L * (attempt + 1))

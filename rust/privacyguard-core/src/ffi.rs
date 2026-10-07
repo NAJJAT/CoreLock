@@ -6,7 +6,7 @@
 /// The C header is generated in `include/privacyguard_core.h`.
 
 use crate::bloom::BloomFilter;
-use crate::{entropy, ja3, packet, BLOOM};
+use crate::{entropy, ja3, packet};
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_double, c_int, c_uchar};
 use std::slice;
@@ -55,7 +55,7 @@ pub extern "C" fn pg_bloom_check(domain: *const c_char) -> c_int {
         return 0;
     }
     let s = unsafe { CStr::from_ptr(domain) }.to_string_lossy();
-    let guard = BLOOM.lock().unwrap();
+    let guard = crate::bloom();
     guard.as_ref().map_or(0, |bf| bf.contains(s.as_ref()) as c_int)
 }
 
@@ -79,7 +79,7 @@ pub extern "C" fn pg_bloom_rebuild(domains: *const *const c_char) {
     for d in &list {
         bf.insert(d);
     }
-    *BLOOM.lock().unwrap() = Some(bf);
+    *crate::bloom() = Some(bf);
 }
 
 /// Compute Shannon entropy of a byte buffer.

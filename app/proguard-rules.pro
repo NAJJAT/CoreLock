@@ -23,7 +23,6 @@
 -keep class com.privacyguard.app.core.utils.NotificationDismissReceiver { *; }
 -keep class com.privacyguard.mdm.DeviceAdminReceiver { *; }
 -keep class com.privacyguard.mdm.MdmConfigReceiver { *; }
--keep class com.privacyguard.app.vpn.mitm.PayloadInspectorActivity { *; }
 
 
 # ── WorkManager workers ───────────────────────────────────────────────────────
@@ -196,3 +195,17 @@
 -dontwarn javax.annotation.**
 -dontwarn org.jetbrains.annotations.**
 -dontwarn com.google.errorprone.**
+
+# ── Strip debug/info/verbose logging from release builds ─────────────────────
+# Many of these calls include hostnames and package names (browsing history).
+# Warnings and errors stay; they must never include hostnames.
+-assumenosideeffects class android.util.Log {
+    public static boolean isLoggable(java.lang.String, int);
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+}
+
+# ── SQLCipher (JNI callbacks into these classes) ─────────────────────────────
+-keep class net.zetetic.database.** { *; }
+-keep interface net.zetetic.database.** { *; }

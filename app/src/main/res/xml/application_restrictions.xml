@@ -72,6 +72,20 @@
         android:restrictionType="string"
         android:defaultValue="" />
 
+    <restriction
+        android:key="mitm_siem_signing_key"
+        android:title="@string/restriction_mitm_siem_signing_key_title"
+        android:description="@string/restriction_mitm_siem_signing_key_desc"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
+    <restriction
+        android:key="mitm_siem_pin_sha256"
+        android:title="@string/restriction_mitm_siem_pin_title"
+        android:description="@string/restriction_mitm_siem_pin_desc"
+        android:restrictionType="string"
+        android:defaultValue="" />
+
 </restrictions>
 
 

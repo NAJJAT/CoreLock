@@ -4,6 +4,7 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import okhttp3.CertificatePinner
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -49,10 +50,19 @@ class PayloadShipper(
     }
 
     private val queue = LinkedBlockingQueue<ShipEvent>(MAX_QUEUE_SIZE)
-    private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .readTimeout(HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .build()
+    private fun httpClientFor(host: String): OkHttpClient {
+        val builder = OkHttpClient.Builder()
+            .connectTimeout(HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            // A redirect could move the bearer token to another host or to http://.
+            .followRedirects(false)
+            .followSslRedirects(false)
+        val pin = config.siemPinSha256
+        if (pin.startsWith("sha256/")) {
+            builder.certificatePinner(CertificatePinner.Builder().add(host, pin).build())
+        }
+        return builder.build()
+    }
     private val scope = CoroutineScope(Dispatchers.IO)
 
     /**
@@ -100,8 +110,11 @@ class PayloadShipper(
      */
     fun shipNow() {
         if (!config.shipToSiem) return
-        val endpoint = config.siemEndpoint
-        if (endpoint.isBlank()) return
+        // HTTPS only: the batch holds decrypted payloads and the request carries the bearer token.
+        val endpoint = SiemEndpoint.validate(config.siemEndpoint) ?: run {
+            if (config.siemEndpoint.isNotBlank()) Log.w(TAG, "SIEM endpoint rejected: must be an https:// URL")
+            return
+        }
 
         val events = mutableListOf<ShipEvent>()
         queue.drainTo(events)
@@ -111,14 +124,17 @@ class PayloadShipper(
             try {
                 val json = buildJsonBatch(events)
                 val body = json.toRequestBody("application/json".toMediaType())
-                val request = Request.Builder()
-                    .url(endpoint)
+                val apiKey = config.siemApiKey
+                val requestBuilder = Request.Builder()
+                    .url(endpoint.toString())
                     .post(body)
-                    .header("Authorization", "Bearer ${config.siemApiKey}")
+                    .header("Authorization", "Bearer $apiKey")
                     .header("Content-Type", "application/json")
-                    .build()
+                SiemEndpoint.signature(json, config.siemSigningKey, apiKey)?.let {
+                    requestBuilder.header(SiemEndpoint.SIGNATURE_HEADER, it)
+                }
 
-                val response = httpClient.newCall(request).execute()
+                val response = httpClientFor(endpoint.host).newCall(requestBuilder.build()).execute()
                 if (response.isSuccessful) {
                     Log.i(TAG, "Shipped ${events.size} events — HTTP ${response.code}")
                 } else {
@@ -172,9 +188,5 @@ class PayloadShipper(
         }
     }
 
-    private fun escapeJson(s: String): String = s
-        .replace("\\", "\\\\")
-        .replace("\"", "\\\"")
-        .replace("\n", "\\n")
-        .replace("\r", "\\r")
+    private fun escapeJson(s: String): String = SiemEndpoint.escapeJson(s)
 }

@@ -17,7 +17,9 @@ object PcapWriter {
 
     fun startCapture(context: Context) {
         if (capturing) return
-        val file = File(context.filesDir, "capture_${System.currentTimeMillis()}.pcap")
+        // files/exports/ is the only app-private folder the FileProvider shares.
+        val dir = File(context.filesDir, "exports/pcap").apply { mkdirs() }
+        val file = File(dir, "capture_${System.currentTimeMillis()}.pcap")
         val os = BufferedOutputStream(FileOutputStream(file))
         os.write(globalHeader())
         os.flush()

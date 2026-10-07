@@ -56,6 +56,8 @@ object ManagedConfigApplier {
 
         applyString(bundle, "mitm_siem_endpoint") { mitmConfig.setSiemEndpoint(it) }
         applyString(bundle, "mitm_siem_api_key")  { mitmConfig.setSiemApiKey(it) }
+        applyString(bundle, "mitm_siem_signing_key") { mitmConfig.setSiemSigningKey(it) }
+        applyString(bundle, "mitm_siem_pin_sha256")  { mitmConfig.setSiemPinSha256(it) }
 
         applyBoolean(bundle, "mitm_redact_pii")  { mitmConfig.setRedactPii(it) }
         applyBoolean(bundle, "mitm_ship_to_siem") { mitmConfig.setShipToSiem(it) }

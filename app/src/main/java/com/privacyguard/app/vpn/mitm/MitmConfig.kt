@@ -18,6 +18,9 @@ class MitmConfig(
 
     companion object {
         private const val PREFS_NAME = "mitm_prefs"
+        private const val SIEM_API_KEY_SECRET = "mitm.siem_api_key"
+        private const val SIEM_SIGNING_KEY_SECRET = "mitm.siem_signing_key"
+        private const val PREF_SIEM_PIN = "mitm_siem_pin_sha256"
 
         // Default values
         private const val DEFAULT_MAX_PAYLOAD_SIZE = 32768 // 32KB
@@ -26,6 +29,11 @@ class MitmConfig(
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    // The SIEM API key is Keystore-wrapped; older versions kept it in plain prefs.
+    private val secrets = com.privacyguard.app.core.security.SecureSecretStore.getInstance(context).also {
+        it.migratePlaintext(prefs, "mitm_siem_api_key", SIEM_API_KEY_SECRET)
+    }
 
     // StateFlows for UI observation
     private val _isEnabled = MutableStateFlow(prefs.getBoolean("mitm_enabled", false))
@@ -53,7 +61,7 @@ class MitmConfig(
         get() = prefs.getString("mitm_siem_endpoint", "") ?: ""
 
     val siemApiKey: String
-        get() = prefs.getString("mitm_siem_api_key", "") ?: ""
+        get() = secrets.getBackgroundSecret(SIEM_API_KEY_SECRET) ?: ""
 
     val maxPayloadSizeBytes: Int
         get() = prefs.getInt("mitm_max_payload_size", DEFAULT_MAX_PAYLOAD_SIZE)
@@ -95,8 +103,24 @@ class MitmConfig(
         prefs.edit().putString("mitm_siem_endpoint", endpoint).apply()
     }
 
+    /** HMAC key for the body signature; separate from the bearer token. */
+    val siemSigningKey: String
+        get() = secrets.getBackgroundSecret(SIEM_SIGNING_KEY_SECRET) ?: ""
+
+    fun setSiemSigningKey(key: String) {
+        secrets.putBackgroundSecret(SIEM_SIGNING_KEY_SECRET, key)
+    }
+
+    /** Optional SPKI pin ("sha256/<base64>") for the SIEM host. */
+    val siemPinSha256: String
+        get() = prefs.getString(PREF_SIEM_PIN, "") ?: ""
+
+    fun setSiemPinSha256(pin: String) {
+        prefs.edit().putString(PREF_SIEM_PIN, pin.trim()).apply()
+    }
+
     fun setSiemApiKey(apiKey: String) {
-        prefs.edit().putString("mitm_siem_api_key", apiKey).apply()
+        secrets.putBackgroundSecret(SIEM_API_KEY_SECRET, apiKey)
     }
 
     fun setMaxPayloadSize(size: Int) {

@@ -17,6 +17,13 @@ use std::sync::Mutex;
 
 static BLOOM: Mutex<Option<BloomFilter>> = Mutex::new(None);
 
+/// Locks the bloom filter without `unwrap()`. The release profile uses
+/// `panic = "abort"`, so a panic here would kill the whole app process; the
+/// filter is only ever replaced wholesale, so a poisoned value is still usable.
+pub(crate) fn bloom() -> std::sync::MutexGuard<'static, Option<BloomFilter>> {
+    BLOOM.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
 // ── JNI exports (Android only) ────────────────────────────────────────────────
 #[cfg(feature = "android")]
 // Package: com.privacyguard.core.native_engine
@@ -77,7 +84,7 @@ pub extern "C" fn Java_com_privacyguard_core_native_1engine_RustBridge_bloomChec
         Ok(s) => s.into(),
         Err(_) => return 0,
     };
-    let guard = BLOOM.lock().unwrap();
+    let guard = bloom();
     guard.as_ref().map_or(0, |bf| bf.contains(&s) as jboolean)
 }
 
@@ -99,7 +106,7 @@ pub extern "C" fn Java_com_privacyguard_core_native_1engine_RustBridge_bloomRebu
             }
         }
     }
-    *BLOOM.lock().unwrap() = Some(bf);
+    *bloom() = Some(bf);
 }
 
 /// Compute Shannon entropy of a byte slice (used for DNS tunneling detection).

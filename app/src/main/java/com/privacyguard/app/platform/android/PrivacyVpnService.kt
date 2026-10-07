@@ -1,5 +1,6 @@
 package com.privacyguard.platform.android
 
+import com.privacyguard.vpn.firewall.DnsBypassGuard
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -100,6 +101,8 @@ class PrivacyVpnService : VpnService() {
 
     companion object {
         private const val TAG = "PrivacyVpnService"
+        /** Virtual resolver inside the tunnel subnet; see DnsHandler. */
+        private const val TUNNEL_DNS_V4 = "10.0.0.1"
         const val ACTION_STOP = "com.privacyguard.action.STOP_VPN"
 
         private val _isRunningFlow = MutableStateFlow(false)
@@ -226,9 +229,10 @@ class PrivacyVpnService : VpnService() {
             .setSession("PrivacyGuard")
             .addAddress("10.0.0.2", 24)
             .addAddress("fd00:1:fd00:1::2", 64)
-            .addDnsServer("8.8.8.8")
-            .addDnsServer("8.8.4.4")
-            .addDnsServer("1.1.1.1")
+            // The tunnel's own address: DnsHandler answers every UDP/53 query and
+            // forwards it to the configured upstream, so apps never learn (or
+            // prefer) a public resolver they could reach around the blocklist.
+            .addDnsServer(TUNNEL_DNS_V4)
             .addRoute("0.0.0.0", 0)
             .addRoute("::", 0)
             .setMtu(1500)
@@ -318,7 +322,8 @@ class PrivacyVpnService : VpnService() {
                 }
             }
         }
-        ctMonitor.startMonitoring()
+        // Opt-in: CT checks send contacted domains to crt.sh.
+        if (com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(this).ctMonitoringEnabled.value) ctMonitor.startMonitoring()
         // ==================== MITM INITIALIZATION ====================
         val caManager = CaManager(this)
 
@@ -385,6 +390,7 @@ class PrivacyVpnService : VpnService() {
             registerReceiver(stopReceiver, IntentFilter(NotificationHelper.ACTION_STOP_VPN))
         }
 
+        com.privacyguard.app.vpn.KillSwitch.updateLockdownState(this)
         if (com.privacyguard.app.vpn.KillSwitch.isEnabled()) {
             com.privacyguard.app.vpn.KillSwitch.startMonitoring(this)
         }
@@ -498,6 +504,12 @@ class PrivacyVpnService : VpnService() {
         when (ip.protocol) {
             IpPacket.PROTO_UDP -> {
                 val udp = UdpPacket.parse(ip) ?: return
+                // DNS over TLS/QUIC and DoH by IP would skip the blocklist.
+                if (DnsBypassGuard.isEncryptedDnsPort(udp.destinationPort) ||
+                    DnsBypassGuard.isDohAddress(ip.destinationIp, udp.destinationPort)) {
+                    recordBlock()
+                    return
+                }
                 val uid = resolveOwnerUid(
                     fallbackUid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(udp.sourcePort, 17, applicationInfo.uid),
                     protocol = OsConstants.IPPROTO_UDP,
@@ -542,6 +554,12 @@ class PrivacyVpnService : VpnService() {
             }
             IpPacket.PROTO_TCP -> {
                 val tcp = TcpPacket.parse(ip) ?: return
+                if (DnsBypassGuard.isEncryptedDnsPort(tcp.destinationPort) ||
+                    DnsBypassGuard.isDohAddress(ip.destinationIp, tcp.destinationPort)) {
+                    // Dropping the SYN makes the app fall back to plain DNS through the tunnel.
+                    recordBlock()
+                    return
+                }
                 val uid = resolveOwnerUid(
                     fallbackUid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(tcp.sourcePort, 6, applicationInfo.uid),
                     protocol = OsConstants.IPPROTO_TCP,
@@ -640,7 +658,9 @@ class PrivacyVpnService : VpnService() {
         }
 
         // Register SNI with CT monitor
-        hello.sni?.let { ctMonitor.addDomain(it) }
+        if (com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(this).ctMonitoringEnabled.value) {
+            hello.sni?.let { ctMonitor.addDomain(it) }
+        }
     }
 
     private fun recordBlock() {
@@ -852,6 +872,7 @@ class PrivacyVpnService : VpnService() {
         }
 
         com.privacyguard.app.vpn.KillSwitch.stopMonitoring()
+        com.privacyguard.app.vpn.KillSwitch.clearLockdownState()
         if (::ctMonitor.isInitialized) ctMonitor.stop()
         tunReader.stop()
         tunWriter.stop()

@@ -5,9 +5,6 @@ import com.privacyguard.vpn.mitm.MitmConfig
 import java.io.File
 import java.net.URL
 import java.nio.charset.StandardCharsets
-import java.util.Locale
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
 import javax.net.ssl.HttpsURLConnection
 
 /**
@@ -106,7 +103,7 @@ class EnterpriseMetadataShipper(
         val apiKey = config.siemApiKey.trim()
 
         // FIXED: Remove .value access - use direct boolean property
-        if (config.shipToSiem && endpoint.startsWith("https://", ignoreCase = true) && apiKey.isNotBlank()) {
+        if (config.shipToSiem && com.privacyguard.vpn.mitm.SiemEndpoint.validate(endpoint) != null && apiKey.isNotBlank()) {
             val current = sendBatch(endpoint, apiKey, payload)
             if (current.success) {
                 flushPending(endpoint, apiKey)
@@ -163,7 +160,10 @@ class EnterpriseMetadataShipper(
             connection.instanceFollowRedirects = false
             connection.setRequestProperty("Content-Type", "application/json")
             connection.setRequestProperty("Authorization", "Bearer $apiKey")
-            connection.setRequestProperty("X-PrivacyGuard-Sig", hmacSha256Hex(payload, apiKey))
+            // Signed only with the separate signing key; HMAC under the bearer token adds nothing.
+            com.privacyguard.vpn.mitm.SiemEndpoint.signature(payload, config.siemSigningKey, apiKey)?.let {
+                connection.setRequestProperty(com.privacyguard.vpn.mitm.SiemEndpoint.SIGNATURE_HEADER, it)
+            }
             connection.outputStream.use { stream ->
                 stream.write(payload.toByteArray(StandardCharsets.UTF_8))
             }
@@ -220,13 +220,6 @@ class EnterpriseMetadataShipper(
         return suffix.toIntOrNull() ?: 0
     }
 
-    private fun hmacSha256Hex(body: String, apiKey: String): String {
-        val mac = Mac.getInstance("HmacSHA256")
-        mac.init(SecretKeySpec(apiKey.toByteArray(StandardCharsets.UTF_8), "HmacSHA256"))
-        return mac.doFinal(body.toByteArray(StandardCharsets.UTF_8)).joinToString("") {
-            String.format(Locale.US, "%02x", it)
-        }
-    }
 
     private fun escapeJson(input: String): String =
         input

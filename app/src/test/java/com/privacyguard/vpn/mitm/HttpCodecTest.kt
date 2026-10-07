@@ -95,4 +95,41 @@ class HttpCodecTest {
         val binary = byteArrayOf(0x16, 0x03, 0x01)
         assertSame(binary, HttpCodec.rewriteAcceptEncoding(binary))
     }
+
+    // ── Hostile framing: must neither overflow nor throw ──────────────────────
+
+    @Test
+    fun `negative content-length is treated as malformed`() {
+        val msg = bytes("HTTP/1.1 200 OK\r\nContent-Length: -1\r\n\r\nabc")
+        assertEquals(msg.size, HttpCodec.messageLength(msg))
+    }
+
+    @Test
+    fun `int max content-length waits instead of overflowing`() {
+        val msg = bytes("HTTP/1.1 200 OK\r\nContent-Length: 2147483647\r\n\r\nabc")
+        assertNull(HttpCodec.messageLength(msg))
+    }
+
+    @Test
+    fun `content-length beyond int range waits`() {
+        val msg = bytes("HTTP/1.1 200 OK\r\nContent-Length: 99999999999\r\n\r\nabc")
+        assertNull(HttpCodec.messageLength(msg))
+    }
+
+    @Test
+    fun `huge chunk size waits instead of overflowing`() {
+        val msg = bytes("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n7FFFFFFF\r\nabc")
+        assertNull(HttpCodec.messageLength(msg))
+        val wider = bytes("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\nFFFFFFFFFF\r\nabc")
+        assertNull(HttpCodec.messageLength(wider))
+    }
+
+    @Test
+    fun `dechunk survives huge chunk sizes`() {
+        assertArrayEquals(bytes("abc"), HttpCodec.dechunk(bytes("7FFFFFFF\r\nabc")))
+        // The declared size swallows everything after it as (truncated) chunk data.
+        val rest = "abc\r\n5\r\nhello\r\n0\r\n\r\n"
+        assertArrayEquals(bytes(rest), HttpCodec.dechunk(bytes("7FFFFFFF\r\n$rest")))
+        assertArrayEquals(ByteArray(0), HttpCodec.dechunk(bytes("-5\r\nabc")))
+    }
 }

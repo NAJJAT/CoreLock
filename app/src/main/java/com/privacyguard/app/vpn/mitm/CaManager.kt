@@ -58,7 +58,10 @@ class CaManager(private val context: Context) {
         private const val CA_CN             = "PrivacyGuard Enterprise CA"
         private const val CA_ORG            = "PrivacyGuard"
         private const val CA_COUNTRY        = "US"
-        private const val CA_VALIDITY_DAYS  = 3650      // 10 years
+        // One year: a CA that can sign for any host should not outlive the need for it.
+        private const val CA_VALIDITY_DAYS  = 365
+        /** CAs from older builds were valid for 10 years; anything longer than this is replaced. */
+        private const val MAX_ACCEPTED_CA_LIFETIME_DAYS = 400L
         private const val PREFS_NAME        = "ca_manager_prefs"
         private const val PREFS_KEY_CERT    = "ca_cert_der_b64"
         private const val PREFS_KEY_SERIAL  = "ca_cert_serial"
@@ -101,6 +104,15 @@ class CaManager(private val context: Context) {
                 Log.d(TAG, "initialize: keyExists=$keyExists certExists=$certExists")
 
                 when {
+                    keyExists && certExists && !meetsPolicy(loadPersistedCert()!!) -> {
+                        // Expired, or issued by an older build (10-year lifetime, no
+                        // path-length limit). Replace it; the user reinstalls the new CA.
+                        Log.w(TAG, "initialize: CA expired or outside policy — regenerating")
+                        deleteKey()
+                        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().clear().apply()
+                        generateAndPersist()
+                    }
+
                     keyExists && certExists -> {
                         // Happy path — both exist, load cert from SharedPreferences.
                         val cert = loadPersistedCert()!!
@@ -212,6 +224,14 @@ class CaManager(private val context: Context) {
         }
     }
 
+    private fun meetsPolicy(cert: X509Certificate): Boolean {
+        val now = System.currentTimeMillis()
+        if (cert.notAfter.time <= now) return false
+        val lifetimeDays = (cert.notAfter.time - cert.notBefore.time) / 86_400_000L
+        if (lifetimeDays > MAX_ACCEPTED_CA_LIFETIME_DAYS) return false
+        return cert.basicConstraints == 0
+    }
+
     // ── Private: key generation ───────────────────────────────────────────────
 
     /**
@@ -262,7 +282,8 @@ class CaManager(private val context: Context) {
             /* subject      */ dn,
             /* publicKey    */ keyPair.public,
         ).apply {
-            addExtension(Extension.basicConstraints, true,  BasicConstraints(true))
+            // pathLenConstraint=0: the CA may sign leaf certificates only, never another CA.
+            addExtension(Extension.basicConstraints, true,  BasicConstraints(0))
             addExtension(Extension.keyUsage,         true,
                 KeyUsage(KeyUsage.keyCertSign or KeyUsage.cRLSign))
         }.build(

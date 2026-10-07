@@ -6,6 +6,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import android.content.Context
+import com.privacyguard.app.core.security.DatabaseEncryption
 
 // ADD THESE IMPORTS
 import com.privacyguard.app.data.db.PayloadLogDao
@@ -78,7 +79,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     DATABASE_NAME
-                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4).fallbackToDestructiveMigration().build().also {
+                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4)
+                    .openHelperFactory(DatabaseEncryption.openHelperFactory(context, DATABASE_NAME))
+                    .fallbackToDestructiveMigration().build().also {
                     INSTANCE = it
                 }
             }

@@ -142,7 +142,7 @@ fun SecurityAnalysisScreen(
                 SectionLabel("Certificate Transparency Monitor")
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "Polls crt.sh every 6 hours for new certificates issued for domains your device contacts.",
+                    "Off by default. When turned on in Settings, polls crt.sh every 6 hours for new certificates issued for domains your device contacts; crt.sh then sees those domains.",
                     style = MaterialTheme.typography.bodySmall,
                     color = PgTextMuted,
                 )

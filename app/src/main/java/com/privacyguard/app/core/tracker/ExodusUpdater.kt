@@ -1,5 +1,6 @@
 package com.privacyguard.app.core.tracker
 
+import com.privacyguard.app.core.utils.readUtf8Capped
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
@@ -48,7 +49,7 @@ object ExodusUpdater {
                     conn.disconnect()
                     return@withContext false
                 }
-                val json = conn.inputStream.bufferedReader().readText()
+                val json = conn.inputStream.use { it.readUtf8Capped(8L * 1024 * 1024) }
                 prefs.edit()
                     .putString(KEY_JSON, json)
                     .putLong(KEY_UPDATED, System.currentTimeMillis())

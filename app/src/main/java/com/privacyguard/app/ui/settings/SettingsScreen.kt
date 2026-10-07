@@ -41,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.privacyguard.app.vpn.KillSwitch
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.privacyguard.app.BuildConfig
@@ -81,6 +82,8 @@ fun SettingsScreen(
     val notificationsEnabled by settingsPreferences.notificationsEnabled.collectAsState()
     val weeklyReport by settingsPreferences.weeklyReport.collectAsState()
     val dohEnabled by settingsPreferences.dohEnabled.collectAsState()
+    val ctMonitoringEnabled by settingsPreferences.ctMonitoringEnabled.collectAsState()
+    val externalIpCheckEnabled by settingsPreferences.externalIpCheckEnabled.collectAsState()
     val dohProvider by settingsPreferences.dohProvider.collectAsState()
     val retentionDays by settingsPreferences.retentionDays.collectAsState()
     val upstreamDns by settingsPreferences.upstreamDns.collectAsState()
@@ -139,7 +142,14 @@ fun SettingsScreen(
                     SettingUiItem("Block Weak TLS", "Deny deprecated TLS 1.0 and 1.1", securityState.blockWeakTls, Icons.Default.Lock, onClick = {
                         settingsViewModel.toggleBlockWeakTls(!securityState.blockWeakTls)
                     }),
-                    SettingUiItem("Kill Switch", "Restart protection if the VPN drops", securityState.killSwitch, Icons.Default.Warning, onClick = {
+                    SettingUiItem(
+                        "Kill switch",
+                        if (KillSwitch.lockdownActive) "Android blocks traffic if the VPN drops"
+                        else "Off: open VPN settings, turn on Always-on and Block connections without VPN",
+                        KillSwitch.lockdownActive, Icons.Default.Lock, onClick = {
+                            KillSwitch.openAlwaysOnSettings(context)
+                        }),
+                    SettingUiItem("VPN drop alert", "Notify and restart protection if the VPN drops (does not block traffic)", securityState.killSwitch, Icons.Default.Warning, onClick = {
                         settingsViewModel.toggleKillSwitch(!securityState.killSwitch)
                     }),
                     SettingUiItem("Notifications", "Alerts and summaries", notificationsEnabled, Icons.Default.Notifications, onClick = {
@@ -156,6 +166,12 @@ fun SettingsScreen(
                     }),
                     SettingUiItem("DNS over HTTPS", "Encrypt DNS queries", dohEnabled, Icons.Default.Lock, onClick = {
                         settingsPreferences.setDohEnabled(!dohEnabled)
+                    }),
+                    SettingUiItem("Certificate Transparency checks", "Sends the domains you visit to crt.sh every 6 hours", ctMonitoringEnabled, Icons.Default.Warning, onClick = {
+                        settingsPreferences.setCtMonitoringEnabled(!ctMonitoringEnabled)
+                    }),
+                    SettingUiItem("External IP check", "Diagnostics asks api.ipify.org for your public IP", externalIpCheckEnabled, Icons.Default.Warning, onClick = {
+                        settingsPreferences.setExternalIpCheckEnabled(!externalIpCheckEnabled)
                     })
                 )
             )

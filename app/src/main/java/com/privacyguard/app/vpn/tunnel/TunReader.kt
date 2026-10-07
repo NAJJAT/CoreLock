@@ -57,6 +57,7 @@ class TunReader(
     val droppedShort = AtomicLong(0)
     val droppedUnsupported = AtomicLong(0)
     val droppedMalformed = AtomicLong(0)
+    val droppedFragments = AtomicLong(0)
     val handlerExceptions = AtomicLong(0)
     val emptyReads = AtomicLong(0)
 
@@ -113,6 +114,11 @@ class TunReader(
                 4 -> {
                     val packet = IpPacket.parse(raw)
                     if (packet == null) { droppedMalformed.incrementAndGet(); continue }
+                    // Fragments are dropped, never parsed: a later fragment has no
+                    // TCP/UDP header, and fragmentation is a classic way past port,
+                    // SNI and DNS filters. The local stack honours PMTU, so apps
+                    // recover by sending smaller packets.
+                    if (!packet.isUnfragmented) { droppedFragments.incrementAndGet(); continue }
                     totalPacketsRead.incrementAndGet()
                     for (handler in handlers) {
                         try { handler.onPacket(packet) }

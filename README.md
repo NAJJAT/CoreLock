@@ -3,8 +3,20 @@
 A privacy and security VPN app for Android. Runs a local VPN that inspects every network connection on the device — no traffic leaves the device unmonitored, no cloud backend required.
 
 - **No root required**
-- **No external servers** — every computation happens on-device
+- **No backend** — every computation happens on-device. The only outbound requests are the ones listed under [Network requests the app makes](#network-requests-the-app-makes)
 - **Two flavors**: consumer (monitoring + blocking) and enterprise (adds HTTPS payload inspection)
+
+---
+
+## Network requests the app makes
+
+| Request | When | What the other side learns |
+|---|---|---|
+| Upstream DNS (default 1.1.1.1, Cloudflare; configurable, optional DoH) | Every DNS lookup by any app | The domain names looked up, from your IP |
+| Blocklists (GitHub raw, easylist.to, oisd.nl) and the Exodus tracker list | Periodic refresh | That the app is installed, from your IP |
+| crt.sh (Certificate Transparency) | Only if turned on in Settings | Registrable domains of TLS servers you contact |
+| api.ipify.org | Only if "External IP check" is turned on, when diagnostics run | Your public IP |
+| SIEM endpoint (enterprise only, set by MDM) | When shipping is enabled by the administrator | Captured payload metadata; HTTPS only |
 
 ---
 
@@ -14,14 +26,14 @@ A privacy and security VPN app for Android. Runs a local VPN that inspects every
 
 | Category | What it does |
 |---|---|
-| **VPN engine** | Local TUN interface intercepts all IPv4 and IPv6 traffic (TCP + UDP). Kill switch blocks all network access if the VPN drops. |
+| **VPN engine** | Local TUN interface intercepts all IPv4 and IPv6 traffic (TCP + UDP). Kill switch = Android's Always-on VPN with "Block connections without VPN" (shown as active only when Android reports lockdown); the in-app VPN drop alert notifies and restarts but cannot block on its own. |
 | **Filter rules** | Block by domain, IP/CIDR, app package, or globally. Three protection levels: Minimal / Standard / Strict. Rules take effect instantly — no VPN restart. |
 | **Domain blocklist** | Downloads and parses hosts files, EasyList, and domain-list formats. Trie lookup with optional Rust bloom-filter fast path (~5× speedup). |
 | **DNS over HTTPS** | RFC 8484 DoH with Cloudflare, Google, and Quad9. Falls back to system DNS automatically. |
 | **TLS inspection** | Parses every TLS ClientHello without decrypting payload. Extracts SNI, cipher suites, supported groups, ALPN, and version for every HTTPS connection. |
 | **JA3 fingerprinting** | Computes JA3 hash from ClientHello; checks against 35+ known-bad hashes (Cobalt Strike, Emotet, TrickBot, RATs, C2 frameworks). Fires a notification on match. |
 | **Cipher suite analysis** | Detects NULL, EXPORT (FREAK/LOGJAM), RC4, DES/3DES (SWEET32), and anonymous ciphers. Risk levels: SAFE → MEDIUM → HIGH → CRITICAL. |
-| **Certificate Transparency** | Polls crt.sh every 6 hours for new certificates issued for observed SNI domains. Fires a per-domain notification on new issuance. |
+| **Certificate Transparency** | Opt-in (off by default). Polls crt.sh every 6 hours for new certificates issued for observed SNI domains, so crt.sh sees those domains. Fires a per-domain notification on new issuance. |
 | **DNS anomaly detection** | DGA detection (Shannon entropy + n-gram scoring), DNS tunneling detection (high-entropy labels, TXT record abuse), NXDOMAIN flood detection. |
 | **Tracker identification** | Database of 55+ tracker SDKs (company, category, domain patterns). APK scanner does DEX string scan to identify embedded trackers without running the app. |
 | **GeoIP / org lookup** | Hardcoded IP range table for major providers (Google, Cloudflare, AWS, Meta, Akamai, etc.). Shown as org hint when SNI is absent (e.g. QUIC traffic). |
@@ -238,7 +250,7 @@ app/src/main/java/
     │   ├── connections/  ConnectionsScreen
     │   ├── statistics/   StatisticsScreen (map, sunburst, heatmap, trend)
     │   ├── alerts/       AlertInboxScreen
-    │   ├── mitm/         MitmScreen, PayloadInspectorActivity (enterprise)
+    │   ├── mitm/         MitmScreen, PayloadDetailSheet (enterprise)
     │   ├── onboarding/   OnboardingScreen (3-page consent wizard)
     │   └── settings/     SettingsScreen
     └── vpn/              VpnManager, KillSwitch, UidMapper, BootReceiver

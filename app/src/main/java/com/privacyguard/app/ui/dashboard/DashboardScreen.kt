@@ -48,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.privacyguard.app.vpn.KillSwitch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -247,8 +248,9 @@ fun DashboardScreen(
                 Spacer(modifier = Modifier.height(10.dp))
                 SecuritySystemsGrid(
                     cards = uiState.securityCards,
-                    killSwitchEnabled = uiState.securityCards.firstOrNull { it.title == "Kill Switch" }?.status == "Armed",
-                    onToggleKillSwitch = { enabled -> viewModel.setKillSwitch(enabled) },
+                    killSwitchEnabled = uiState.securityCards.firstOrNull { it.title == "Kill Switch" }?.status == "Blocking",
+                    // Only Android can block traffic once the tunnel is gone; send the user there.
+                    onToggleKillSwitch = { KillSwitch.openAlwaysOnSettings(context) },
                     onCardClick = { card ->
                         when {
                             card.title.contains("Cleartext", ignoreCase = true) -> onOpenConnections()

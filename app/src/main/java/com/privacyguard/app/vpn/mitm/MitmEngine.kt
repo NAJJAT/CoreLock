@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.SocketTimeoutException
@@ -54,6 +55,10 @@ class MitmEngine(
         private val _statusFlow = MutableStateFlow(MitmRuntimeStatus())
         // ADDED
         val statusFlow: StateFlow<MitmRuntimeStatus> = _statusFlow.asStateFlow()
+
+        /** Only TcpForwarder's own loopback socket, identified by its bound source port. */
+        internal fun isExpectedPeer(address: InetAddress?, port: Int, expectedClientPort: Int): Boolean =
+            address != null && address.isLoopbackAddress && expectedClientPort > 0 && port == expectedClientPort
     }
 
     private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -65,15 +70,23 @@ class MitmEngine(
      * then launches a coroutine to accept the device connection and proxy it to the real server.
      * TcpForwarder must redirect the session's NIO channel to this port after calling intercept().
      *
+     * The server socket listens on loopback only and accepts a single peer: the
+     * loopback socket bound to [expectedClientPort] by TcpForwarder. Any other
+     * local app that finds the port is dropped without consuming the slot.
+     *
      * @param session The VPN session (already classified as TLS)
+     * @param expectedClientPort source port of TcpForwarder's loopback socket
      * @param onPayload Callback for each payload chunk (direction, bytes, session)
      * @return local port the MITM server is listening on, or -1 if interception was skipped/failed
      */
     fun intercept(
         session: Session,
+        expectedClientPort: Int,
         onPayload: (direction: String, bytes: ByteArray, session: Session) -> Unit
     ): Int {
         val domain = session.tlsSni ?: return -1
+        // The SNI is attacker-controlled input that ends up inside a certificate.
+        if (!CertForger.isValidHostname(domain)) return -1
 
         // Guard: CA must be ready before we can forge leaf certs.
         // CaManager.initialize() runs async at VPN start; the first TLS connection
@@ -98,7 +111,7 @@ class MitmEngine(
         // Create server socket NOW (synchronously) so the caller gets the port immediately
         val serverSocket = try {
             val ctx = createServerSslContext(domain)
-            (ctx.serverSocketFactory.createServerSocket(0) as SSLServerSocket).also {
+            (ctx.serverSocketFactory.createServerSocket(0, 1, InetAddress.getLoopbackAddress()) as SSLServerSocket).also {
                 it.soTimeout = 10_000  // 10 s for TcpForwarder to connect back to us
             }
         } catch (e: Exception) {
@@ -119,7 +132,7 @@ class MitmEngine(
                     domain = domain,
                     timestamp = System.currentTimeMillis(),
                 )
-                performInterception(session, domain, serverSocket, onPayload)
+                performInterception(session, domain, serverSocket, expectedClientPort, onPayload)
             } catch (e: MitmHandshakeException) {
                 handleHandshakeFailure(session, domain, e)
                 serverSocket.runCatching { close() }
@@ -153,6 +166,7 @@ class MitmEngine(
         session: Session,
         domain: String,
         serverSocket: SSLServerSocket,
+        expectedClientPort: Int,
         onPayload: (String, ByteArray, Session) -> Unit
     ) = withContext(Dispatchers.IO) {
 
@@ -161,7 +175,7 @@ class MitmEngine(
             //    immediately after intercept() returns, so this returns within milliseconds.
             //    Doing the real-server handshake first would block here for 200–500ms and
             //    could race with the device's connection attempt timing out.
-            val deviceSocket = it.accept() as SSLSocket
+            val deviceSocket = acceptExpectedPeer(it, expectedClientPort)
 
             // 2. Now connect to the real server.
             // VpnService.protect() only works on a plain socket that already owns a
@@ -184,7 +198,7 @@ class MitmEngine(
                 // SNI again — avoids a DNS round-trip through our own tunnel and keeps
                 // the app on the same server it chose.
                 val upstream = InetSocketAddress(
-                    java.net.InetAddress.getByName(session.key.destinationIp), 443
+                    InetAddress.getByName(session.key.destinationIp), session.key.destinationPort
                 )
                 plainSocket.connect(upstream, 15_000)
 
@@ -192,7 +206,7 @@ class MitmEngine(
                 // SNI hostname makes SNI and HTTPS hostname verification use the name,
                 // not the bare IP.
                 val clientSocket = clientSslContext.socketFactory
-                    .createSocket(plainSocket, domain, 443, true) as SSLSocket
+                    .createSocket(plainSocket, domain, session.key.destinationPort, true) as SSLSocket
                 val params = clientSocket.sslParameters
                 params.serverNames = listOf(SNIHostName(domain))
                 params.endpointIdentificationAlgorithm = "HTTPS"
@@ -252,6 +266,22 @@ class MitmEngine(
                 plainSocket.runCatching { close() }
                 deviceSocket.runCatching { close() }
             }
+        }
+    }
+
+    /**
+     * Accepts until the expected TcpForwarder socket connects; anything else is
+     * closed before the TLS handshake. The socket's soTimeout bounds each wait,
+     * and the overall deadline stops a flood of strangers from holding it open.
+     */
+    private fun acceptExpectedPeer(serverSocket: SSLServerSocket, expectedClientPort: Int): SSLSocket {
+        val deadline = System.currentTimeMillis() + serverSocket.soTimeout
+        while (true) {
+            val candidate = serverSocket.accept() as SSLSocket
+            if (isExpectedPeer(candidate.inetAddress, candidate.port, expectedClientPort)) return candidate
+            Log.w(TAG, "MITM: rejected unexpected local connection")
+            candidate.runCatching { close() }
+            if (System.currentTimeMillis() >= deadline) throw SocketTimeoutException("expected peer never connected")
         }
     }
 

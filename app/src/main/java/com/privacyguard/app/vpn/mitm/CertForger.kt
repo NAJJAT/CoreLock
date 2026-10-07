@@ -3,6 +3,8 @@ package com.privacyguard.vpn.mitm
 import android.util.LruCache
 import android.util.Log
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x500.X500NameBuilder
+import org.bouncycastle.asn1.x500.style.BCStyle
 import org.bouncycastle.asn1.x509.*
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
@@ -20,8 +22,25 @@ class CertForger(
 ) {
     companion object {
         private const val TAG = "CertForger"
-        private const val CERT_VALIDITY_DAYS = 365
+        // Leaves live only in the in-memory cache; a short life limits what a leaked one is worth.
+        private const val CERT_VALIDITY_DAYS = 30
         private const val MAX_CACHE_SIZE = 200
+
+        private val LABEL = Regex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")
+
+        /**
+         * True if [sni] is a DNS hostname we may put in a certificate: ASCII
+         * (punycode) labels, at least two of them, no IP literal (RFC 6066 forbids
+         * those in SNI), no wildcard and nothing that could inject into the DN.
+         */
+        fun isValidHostname(sni: String): Boolean {
+            if (sni.isEmpty() || sni.length > 253) return false
+            val host = sni.lowercase(Locale.ROOT)
+            val labels = host.split('.')
+            if (labels.size < 2) return false
+            if (labels.all { label -> label.all { it.isDigit() } }) return false   // IPv4 literal
+            return labels.all { LABEL.matches(it) }
+        }
     }
 
     data class ForgedCert(val certificate: X509Certificate, val privateKey: PrivateKey)
@@ -30,6 +49,7 @@ class CertForger(
     private val lock = ReentrantReadWriteLock()
 
     fun forge(domain: String): Pair<X509Certificate, PrivateKey> {
+        require(isValidHostname(domain)) { "refusing to forge a certificate for an invalid hostname" }
         lock.read {
             cache.get(domain)?.let {
                 Log.d(TAG, "Cache hit for domain: $domain")
@@ -83,7 +103,12 @@ class CertForger(
         // (X500Name(principal.name)) reverses the RDN order, so the leaf's issuer
         // would not match the installed CA and Android could never build a chain.
         val issuer = X500Name.getInstance(caCert.subjectX500Principal.encoded)
-        val subject = X500Name("CN=$domain, OU=MITM Proxy, O=PrivacyGuard")
+        // Built RDN by RDN: string parsing would let a crafted SNI add attributes.
+        val subject = X500NameBuilder(BCStyle.INSTANCE)
+            .addRDN(BCStyle.O, "PrivacyGuard")
+            .addRDN(BCStyle.OU, "MITM Proxy")
+            .addRDN(BCStyle.CN, domain)
+            .build()
         val serialNumber = BigInteger(64, SecureRandom())
         val notBefore = Date(System.currentTimeMillis() - 86400000)
         val notAfter = Date(System.currentTimeMillis() + CERT_VALIDITY_DAYS * 86400000L)
@@ -97,11 +122,9 @@ class CertForger(
             publicKey
         )
 
-        // Subject Alternative Names (required for modern browsers)
-        val sanList = GeneralNames(arrayOf(
-            GeneralName(GeneralName.dNSName, domain),
-            GeneralName(GeneralName.dNSName, "*.$domain")
-        ))
+        // Exactly the requested host: a *.domain SAN would make one forged leaf
+        // valid for every sibling host as well.
+        val sanList = GeneralNames(GeneralName(GeneralName.dNSName, domain))
         certBuilder.addExtension(Extension.subjectAlternativeName, false, sanList)
 
         // Basic Constraints - NOT a CA
