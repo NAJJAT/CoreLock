@@ -6,6 +6,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import android.content.Context
+import com.privacyguard.app.BuildConfig
 import com.privacyguard.app.core.security.DatabaseEncryption
 
 // ADD THESE IMPORTS
@@ -26,7 +27,7 @@ import com.privacyguard.app.data.db.PayloadLogEntity
         DnsQueryEntity::class,
     ],
     version = 5,
-    exportSchema = false,
+    exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
 
@@ -71,13 +72,27 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         // Index names must match what Room generates for ConnectionEntity's indices,
-        // or Room's schema check fails and fallbackToDestructiveMigration wipes history.
+        // or Room's schema check fails (see AppDatabaseMigrationTest).
         internal val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_connections_timestamp` ON `connections` (`timestamp`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_connections_appUid_timestamp` ON `connections` (`appUid`, `timestamp`)")
             }
         }
+
+        /**
+         * Debug builds wipe on any schema mismatch so local iteration never gets stuck.
+         * Release builds only wipe where no migration can exist (version 1, which
+         * predates migrations, and downgrades); a missing migration for any other
+         * version fails loudly instead of silently deleting the user's history.
+         */
+        private fun RoomDatabase.Builder<AppDatabase>.applyFallback() =
+            if (BuildConfig.DEBUG) {
+                fallbackToDestructiveMigration(dropAllTables = true)
+            } else {
+                fallbackToDestructiveMigrationFrom(dropAllTables = true, 1)
+                    .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
+            }
 
         @Volatile
         private var INSTANCE: AppDatabase? = null
@@ -90,7 +105,8 @@ abstract class AppDatabase : RoomDatabase() {
                     DATABASE_NAME
                 ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .openHelperFactory(DatabaseEncryption.openHelperFactory(context, DATABASE_NAME))
-                    .fallbackToDestructiveMigration().build().also {
+                    .applyFallback()
+                    .build().also {
                     INSTANCE = it
                 }
             }

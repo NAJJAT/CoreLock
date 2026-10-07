@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -253,6 +254,7 @@ dependencies {
     implementation("androidx.legacy:legacy-preference-v14:1.0.0")
     implementation("androidx.enterprise:enterprise-feedback:1.1.0")
     ksp(libs.androidx.room.compiler)
+    androidTestImplementation(libs.androidx.room.testing)
 
     // ==================== MITM DEPENDENCIES ====================
     // MITM code lives in src/enterprise, so its libraries are enterprise-only.
@@ -284,4 +286,9 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
 
-
+// Exported Room schemas (committed) let MigrationTestHelper check every
+// migration against the real old schema; the plugin also adds them to
+// androidTest assets.
+room {
+    schemaDirectory("$projectDir/schemas")
+}
