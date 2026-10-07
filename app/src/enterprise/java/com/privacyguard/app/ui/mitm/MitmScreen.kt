@@ -56,6 +56,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 // ── COLORS ──────────────────────────────────────────────────────────────────
 private val Bg       = Color(0xFF080B10)
@@ -155,7 +156,7 @@ fun MitmScreen() {
     val repository: PayloadLogRepository = remember { PayloadLogRepositoryImpl(database.payloadLogDao()) }
     val payloadShipper = remember { PayloadShipper(mitmConfig) }
     val vm: MitmViewModel = viewModel(factory = MitmViewModelFactory(mitmConfig, repository, payloadShipper))
-    val uiState by vm.uiState.collectAsState()
+    val uiState by vm.uiState.collectAsStateWithLifecycle()
     var screen by remember { mutableStateOf<PScreen>(PScreen.List) }
     var showConsentDialog by remember { mutableStateOf(false) }
 

@@ -19,7 +19,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -53,6 +52,7 @@ import com.privacyguard.app.ui.theme.PgBorder
 import com.privacyguard.app.ui.theme.PgTextFaint
 import com.privacyguard.app.ui.theme.PgTextMuted
 import com.privacyguard.ui.flavor.PayloadInspectorUi
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 private data class NavTab(val route: String, val label: String, val icon: ImageVector)
 
@@ -78,9 +78,9 @@ fun AppNavHost(
     }
 
     val topLevelRoutes = remember(tabs) { tabs.map { it.route }.toSet() }
-    val onboardingCompleted by settingsPreferences.onboardingCompleted.collectAsState()
+    val onboardingCompleted by settingsPreferences.onboardingCompleted.collectAsStateWithLifecycle()
     val db = remember(context) { AppDatabase.getInstance(context) }
-    val ja3ThreatCount by db.tlsAlertDao().ja3ThreatCountFlow().collectAsState(initial = 0)
+    val ja3ThreatCount by db.tlsAlertDao().ja3ThreatCountFlow().collectAsStateWithLifecycle(initialValue = 0)
     val navController = rememberNavController()
     val navBackStack by navController.currentBackStackEntryAsState()
     val currentDest = navBackStack?.destination

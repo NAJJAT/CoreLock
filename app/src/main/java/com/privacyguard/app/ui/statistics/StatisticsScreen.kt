@@ -26,7 +26,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
@@ -59,6 +58,7 @@ import com.privacyguard.app.ui.theme.PgText
 import com.privacyguard.app.ui.theme.PgTextFaint
 import com.privacyguard.app.ui.theme.PgTextMuted
 import com.privacyguard.app.ui.theme.PgWarning
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun StatisticsScreen(
@@ -66,18 +66,18 @@ fun StatisticsScreen(
 ) {
     val context = LocalContext.current
     val runProtectedAction = rememberProtectedActionRunner()
-    val stats by viewModel.stats.collectAsState()
-    val topBlockedDomains by viewModel.topBlockedDomains.collectAsState()
-    val highSeverityAnomalies by viewModel.highSeverityAnomalies.collectAsState()
-    val topCountries by viewModel.topCountries.collectAsState()
-    val timeline by viewModel.timeline.collectAsState()
-    val rememberedNetworks by viewModel.rememberedNetworks.collectAsState()
-    val lastItReportPaths by viewModel.lastItReportPaths.collectAsState()
-    val csvExportPath by viewModel.csvExportPath.collectAsState()
-    val heatmap by viewModel.heatmap.collectAsState()
-    val sunburstOrgs by viewModel.sunburstOrgs.collectAsState()
-    val topAppsByData by viewModel.topAppsByData.collectAsState()
-    val weeklyTrend by viewModel.weeklyTrend.collectAsState()
+    val stats by viewModel.stats.collectAsStateWithLifecycle()
+    val topBlockedDomains by viewModel.topBlockedDomains.collectAsStateWithLifecycle()
+    val highSeverityAnomalies by viewModel.highSeverityAnomalies.collectAsStateWithLifecycle()
+    val topCountries by viewModel.topCountries.collectAsStateWithLifecycle()
+    val timeline by viewModel.timeline.collectAsStateWithLifecycle()
+    val rememberedNetworks by viewModel.rememberedNetworks.collectAsStateWithLifecycle()
+    val lastItReportPaths by viewModel.lastItReportPaths.collectAsStateWithLifecycle()
+    val csvExportPath by viewModel.csvExportPath.collectAsStateWithLifecycle()
+    val heatmap by viewModel.heatmap.collectAsStateWithLifecycle()
+    val sunburstOrgs by viewModel.sunburstOrgs.collectAsStateWithLifecycle()
+    val topAppsByData by viewModel.topAppsByData.collectAsStateWithLifecycle()
+    val weeklyTrend by viewModel.weeklyTrend.collectAsStateWithLifecycle()
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {

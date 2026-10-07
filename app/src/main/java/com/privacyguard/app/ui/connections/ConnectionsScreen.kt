@@ -28,7 +28,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,20 +53,21 @@ import com.privacyguard.app.ui.theme.PgTextMuted
 import com.privacyguard.app.ui.theme.PgWarning
 import com.privacyguard.app.ui.theme.PgWarningDim
 import java.util.Locale
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun ConnectionsScreen(
     onAppClick: (packageName: String, appName: String) -> Unit = { _, _ -> },
     viewModel: ConnectionsViewModel = viewModel()
 ) {
-    val liveConnections by viewModel.connections.collectAsState()
-    val storedConnections by viewModel.recentConnections.collectAsState()
+    val liveConnections by viewModel.connections.collectAsStateWithLifecycle()
+    val storedConnections by viewModel.recentConnections.collectAsStateWithLifecycle()
     val connections = viewModel.getFilteredConnections().ifEmpty {
         if (liveConnections.isNotEmpty()) liveConnections else storedConnections
     }
-    val filter by viewModel.filter.collectAsState()
-    val dnsLookup by viewModel.dnsLookup.collectAsState()
-    val selectedConnection by viewModel.selectedConnection.collectAsState()
+    val filter by viewModel.filter.collectAsStateWithLifecycle()
+    val dnsLookup by viewModel.dnsLookup.collectAsStateWithLifecycle()
+    val selectedConnection by viewModel.selectedConnection.collectAsStateWithLifecycle()
 
     selectedConnection?.let {
         ConnectionDetailDialog(

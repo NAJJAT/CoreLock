@@ -25,7 +25,7 @@ import com.privacyguard.app.data.db.PayloadLogEntity
         TlsAlertEntity::class,
         DnsQueryEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -70,6 +70,15 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Index names must match what Room generates for ConnectionEntity's indices,
+        // or Room's schema check fails and fallbackToDestructiveMigration wipes history.
+        internal val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_connections_timestamp` ON `connections` (`timestamp`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_connections_appUid_timestamp` ON `connections` (`appUid`, `timestamp`)")
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -79,7 +88,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     DATABASE_NAME
-                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4)
+                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .openHelperFactory(DatabaseEncryption.openHelperFactory(context, DATABASE_NAME))
                     .fallbackToDestructiveMigration().build().also {
                     INSTANCE = it

@@ -1,9 +1,9 @@
 package com.privacyguard.app.ui.apps
 
 import android.app.Application
-import android.content.pm.PackageManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.privacyguard.app.core.apps.InstalledAppsCache
 import com.privacyguard.app.core.detection.StalkerwareAssessment
 import com.privacyguard.app.core.detection.StalkerwareDetector
 import com.privacyguard.app.core.stats.StatsManager
@@ -14,11 +14,17 @@ import com.privacyguard.app.data.repository.RulesRepo
 import com.privacyguard.core.filter.FilterEngine
 import com.privacyguard.core.metadata.ConnectionProfile
 import com.privacyguard.core.filter.FilterRule
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class AppSortBy { RISK, DATA, CONNECTIONS, BACKGROUND }
 
@@ -61,7 +67,6 @@ data class AppRiskItem(
 
 class AppsViewModel(app: Application) : AndroidViewModel(app) {
     private val db = AppDatabase.getInstance(app)
-    private val packageManager = app.packageManager
     private val metadataRepo = MetadataRepo(db.connectionProfileDao())
     private val rulesRepo = RulesRepo(db.rulesDao(), FilterEngine())
 
@@ -81,13 +86,22 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
     val sortBy: StateFlow<AppSortBy> = _sortBy.asStateFlow()
 
     init {
+        // Refresh live traffic only while the Apps screen is collecting, and reload
+        // right away when an app is installed or removed. The installed-app list
+        // itself comes from InstalledAppsCache, not from PackageManager each time.
         viewModelScope.launch {
-            while (true) {
-                try { refresh() }
-                catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                catch (_: Exception) { }
-                delay(3_000)
-            }
+            _apps.subscriptionCount
+                .map { it > 0 }
+                .distinctUntilChanged()
+                .combine(InstalledAppsCache.version) { visible, _ -> visible }
+                .collectLatest { visible ->
+                    while (visible) {
+                        try { refresh() }
+                        catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                        catch (_: Exception) { }
+                        delay(LIVE_REFRESH_MS)
+                    }
+                }
         }
     }
 
@@ -107,7 +121,7 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
         _sortBy.value = s
     }
 
-    private suspend fun refresh() {
+    private suspend fun refresh() = withContext(Dispatchers.Default) {
         val profiles   = metadataRepo.recent()
         val liveStats  = StatsManager.snapshot.value.appStats
         val since = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
@@ -125,7 +139,9 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
             .mapNotNull { it.matchPackage }
             .toSet()
 
-        val installed = installedNetworkApps(blockedPackages)
+        val installedApps = InstalledAppsCache.networkApps(getApplication())
+        val permissionsByPackage = installedApps.associate { it.packageName to it.requestedPermissions }
+        val installed = installedNetworkApps(installedApps, blockedPackages)
         val installedPackages = installed.map { it.packageName }.toSet()
         val installedNames = installed.associate { it.packageName to it.appName }
         val profileBuckets = profiles.groupBy { canonicalPackageForObserved(it.packageName, installedPackages) }
@@ -139,7 +155,7 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
                     val liveRows = liveBuckets[pkg].orEmpty()
                     val connectionRows = connectionBuckets[pkg].orEmpty()
                     if (rows.isEmpty() && liveRows.isEmpty() && connectionRows.isEmpty()) return@mapNotNull null
-                    val stalkerware = assessStalkerware(pkg, rows)
+                    val stalkerware = assessStalkerware(pkg, permissionsByPackage[pkg].orEmpty(), rows)
                     val fallbackMetrics = connectionMetrics(connectionRows)
                     AppRiskItem(
                         appName           = installedNames[pkg].orEmpty().ifBlank { pkg.substringAfterLast('.') },
@@ -187,32 +203,21 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
             .sortedWith(compareByDescending<AppRiskItem> { it.maxRiskScore }.thenBy { it.appName.lowercase() })
     }
 
-    private fun installedNetworkApps(blockedPackages: Set<String>): List<AppRiskItem> {
-        return runCatching {
-            @Suppress("DEPRECATION")
-            packageManager.getInstalledPackages(PackageManager.GET_PERMISSIONS)
-                .asSequence()
-                .filter { info ->
-                    info.packageName != getApplication<Application>().packageName &&
-                        info.requestedPermissions?.contains(android.Manifest.permission.INTERNET) == true
-                }
-                .map { info ->
-                    val appName = info.applicationInfo?.loadLabel(packageManager)?.toString()
-                        ?: info.packageName.substringAfterLast('.')
-                    AppRiskItem(
-                        appName = appName,
-                        packageName = info.packageName,
-                        totalDestinations = 0,
-                        suspiciousCount = 0,
-                        cleartextCount = 0,
-                        totalBytesOut = 0L,
-                        maxRiskScore = 5,
-                        isBlocked = info.packageName in blockedPackages,
-                        stalkerwareScore = 0,
-                    )
-                }
-                .toList()
-        }.getOrElse { emptyList() }
+    private fun installedNetworkApps(
+        installedApps: List<InstalledAppsCache.InstalledApp>,
+        blockedPackages: Set<String>,
+    ): List<AppRiskItem> = installedApps.map { app ->
+        AppRiskItem(
+            appName = app.appName,
+            packageName = app.packageName,
+            totalDestinations = 0,
+            suspiciousCount = 0,
+            cleartextCount = 0,
+            totalBytesOut = 0L,
+            maxRiskScore = 5,
+            isBlocked = app.packageName in blockedPackages,
+            stalkerwareScore = 0,
+        )
     }
 
     private fun connectionMetrics(rows: List<ConnectionEntity>): ConnectionMetrics {
@@ -273,16 +278,16 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun assessStalkerware(
         packageName: String,
+        requestedPermissions: Set<String>,
         rows: List<ConnectionProfile>,
     ): StalkerwareAssessment {
         return runCatching {
-            @Suppress("DEPRECATION")
-            val info = packageManager.getPackageInfo(packageName, PackageManager.GET_PERMISSIONS)
+            val details = InstalledAppsCache.details(getApplication(), packageName)
             StalkerwareDetector.assess(
-                requestedPermissions = info.requestedPermissions?.toSet().orEmpty(),
+                requestedPermissions = requestedPermissions,
                 profiles = rows,
-                hasLauncherIcon = packageManager.getLaunchIntentForPackage(packageName) != null,
-                installerPackage = runCatching { packageManager.getInstallerPackageName(packageName) }.getOrNull(),
+                hasLauncherIcon = details.hasLauncherIcon,
+                installerPackage = details.installerPackage,
             )
         }.getOrDefault(StalkerwareAssessment(0, emptyList()))
     }
@@ -311,6 +316,9 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     companion object {
+        /** Live traffic refresh while the screen is visible; installed apps are cached. */
+        private const val LIVE_REFRESH_MS = 3_000L
+
         fun packageBlockRuleId(packageName: String) = "pkg:block:$packageName"
     }
 }

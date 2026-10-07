@@ -35,7 +35,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -67,6 +66,7 @@ import com.privacyguard.app.ui.theme.PgWarningDim
 import com.privacyguard.app.workers.BlocklistUpdateWorker
 import com.privacyguard.app.workers.WeeklyReportWorker
 import com.privacyguard.core.filter.FilterEngine
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun SettingsScreen(
@@ -79,30 +79,30 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val settingsPreferences = remember(context) { SettingsPreferences.getInstance(context) }
-    val notificationsEnabled by settingsPreferences.notificationsEnabled.collectAsState()
-    val weeklyReport by settingsPreferences.weeklyReport.collectAsState()
-    val dohEnabled by settingsPreferences.dohEnabled.collectAsState()
-    val ctMonitoringEnabled by settingsPreferences.ctMonitoringEnabled.collectAsState()
-    val externalIpCheckEnabled by settingsPreferences.externalIpCheckEnabled.collectAsState()
-    val dohProvider by settingsPreferences.dohProvider.collectAsState()
-    val retentionDays by settingsPreferences.retentionDays.collectAsState()
-    val upstreamDns by settingsPreferences.upstreamDns.collectAsState()
-    val protectionLevel by settingsPreferences.protectionLevel.collectAsState()
-    val blocklistSize by BlocklistManager.size.collectAsState()
-    val securityState by settingsViewModel.securityState.collectAsState()
-    val diagnosticsState by settingsViewModel.diagnosticsState.collectAsState()
+    val notificationsEnabled by settingsPreferences.notificationsEnabled.collectAsStateWithLifecycle()
+    val weeklyReport by settingsPreferences.weeklyReport.collectAsStateWithLifecycle()
+    val dohEnabled by settingsPreferences.dohEnabled.collectAsStateWithLifecycle()
+    val ctMonitoringEnabled by settingsPreferences.ctMonitoringEnabled.collectAsStateWithLifecycle()
+    val externalIpCheckEnabled by settingsPreferences.externalIpCheckEnabled.collectAsStateWithLifecycle()
+    val dohProvider by settingsPreferences.dohProvider.collectAsStateWithLifecycle()
+    val retentionDays by settingsPreferences.retentionDays.collectAsStateWithLifecycle()
+    val upstreamDns by settingsPreferences.upstreamDns.collectAsStateWithLifecycle()
+    val protectionLevel by settingsPreferences.protectionLevel.collectAsStateWithLifecycle()
+    val blocklistSize by BlocklistManager.size.collectAsStateWithLifecycle()
+    val securityState by settingsViewModel.securityState.collectAsStateWithLifecycle()
+    val diagnosticsState by settingsViewModel.diagnosticsState.collectAsStateWithLifecycle()
     val runProtectedAction = rememberProtectedActionRunner()
 
     // Dual VPN state
-    val dualVpnEnabled by settingsPreferences.dualVpnEnabled.collectAsState()
-    val dualVpnHop1Host by settingsPreferences.dualVpnHop1Host.collectAsState()
-    val dualVpnHop1Port by settingsPreferences.dualVpnHop1Port.collectAsState()
-    val dualVpnHop1User by settingsPreferences.dualVpnHop1User.collectAsState()
-    val dualVpnHop1Pass by settingsPreferences.dualVpnHop1Pass.collectAsState()
-    val dualVpnHop2Host by settingsPreferences.dualVpnHop2Host.collectAsState()
-    val dualVpnHop2Port by settingsPreferences.dualVpnHop2Port.collectAsState()
-    val dualVpnHop2User by settingsPreferences.dualVpnHop2User.collectAsState()
-    val dualVpnHop2Pass by settingsPreferences.dualVpnHop2Pass.collectAsState()
+    val dualVpnEnabled by settingsPreferences.dualVpnEnabled.collectAsStateWithLifecycle()
+    val dualVpnHop1Host by settingsPreferences.dualVpnHop1Host.collectAsStateWithLifecycle()
+    val dualVpnHop1Port by settingsPreferences.dualVpnHop1Port.collectAsStateWithLifecycle()
+    val dualVpnHop1User by settingsPreferences.dualVpnHop1User.collectAsStateWithLifecycle()
+    val dualVpnHop1Pass by settingsPreferences.dualVpnHop1Pass.collectAsStateWithLifecycle()
+    val dualVpnHop2Host by settingsPreferences.dualVpnHop2Host.collectAsStateWithLifecycle()
+    val dualVpnHop2Port by settingsPreferences.dualVpnHop2Port.collectAsStateWithLifecycle()
+    val dualVpnHop2User by settingsPreferences.dualVpnHop2User.collectAsStateWithLifecycle()
+    val dualVpnHop2Pass by settingsPreferences.dualVpnHop2Pass.collectAsStateWithLifecycle()
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {

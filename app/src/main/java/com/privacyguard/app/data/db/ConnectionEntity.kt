@@ -1,13 +1,22 @@
 package com.privacyguard.app.data.db
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
  * Persisted record of a single closed network session.
  * Field definitions follow the BRD §8.1 Connection Entity spec.
  */
-@Entity(tableName = "connections")
+// Nearly every query filters by timestamp; per-app history filters by appUid
+// and sorts by timestamp. Keep in sync with AppDatabase.MIGRATION_4_5.
+@Entity(
+    tableName = "connections",
+    indices = [
+        Index("timestamp"),
+        Index("appUid", "timestamp"),
+    ],
+)
 data class ConnectionEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
 

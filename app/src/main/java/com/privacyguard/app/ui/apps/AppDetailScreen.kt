@@ -44,7 +44,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import android.content.Intent
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -95,6 +94,7 @@ import com.privacyguard.app.ui.theme.PgWarningDim
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun AppDetailScreen(
@@ -103,7 +103,7 @@ fun AppDetailScreen(
     onBack: () -> Unit,
     vm: AppDetailViewModel = viewModel(),
 ) {
-    val state by vm.state.collectAsState()
+    val state by vm.state.collectAsStateWithLifecycle()
     var selectedTab by remember { mutableIntStateOf(0) }
     var domainSort by remember { mutableStateOf(DomainSort.COUNT) }
 

@@ -21,13 +21,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.privacyguard.core.filter.FilterRule
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RulesScreen(vm: RulesViewModel = viewModel()) {
-    val rules by vm.rules.collectAsState()
-    val suggestions by vm.suggestions.collectAsState()
-    val searchQuery by vm.searchQuery.collectAsState()
+    val rules by vm.rules.collectAsStateWithLifecycle()
+    val suggestions by vm.suggestions.collectAsStateWithLifecycle()
+    val searchQuery by vm.searchQuery.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
 
     Scaffold(

@@ -24,7 +24,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,17 +51,18 @@ import com.privacyguard.app.ui.theme.PgTextFaint
 import com.privacyguard.app.ui.theme.PgTextMuted
 import com.privacyguard.app.ui.theme.PgWarning
 import com.privacyguard.app.ui.theme.PgWarningDim
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun AppsScreen(
     onAppClick: (packageName: String, appName: String) -> Unit = { _, _ -> },
     viewModel: AppsViewModel = viewModel()
 ) {
-    val apps by viewModel.apps.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
-    val highRiskOnly by viewModel.highRiskOnly.collectAsState()
-    val blockedOnly by viewModel.blockedOnly.collectAsState()
-    val sortBy by viewModel.sortBy.collectAsState()
+    val apps by viewModel.apps.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val highRiskOnly by viewModel.highRiskOnly.collectAsStateWithLifecycle()
+    val blockedOnly by viewModel.blockedOnly.collectAsStateWithLifecycle()
+    val sortBy by viewModel.sortBy.collectAsStateWithLifecycle()
 
     val filteredApps = apps
         .filter { app ->
