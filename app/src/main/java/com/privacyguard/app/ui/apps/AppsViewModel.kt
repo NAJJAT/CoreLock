@@ -290,6 +290,7 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
                 profiles = rows,
                 hasLauncherIcon = details.hasLauncherIcon,
                 installerPackage = details.installerPackage,
+                isSystemApp = details.isSystemApp,
             )
         }.getOrDefault(StalkerwareAssessment(0, emptyList()))
     }

@@ -77,6 +77,8 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
     val recentConnections: StateFlow<List<Connection>> = _recentConnections.asStateFlow()
 
     private val _blockedRuleKeys = MutableStateFlow<Set<String>>(emptySet())
+    /** Observed by the screen so BLOCK/UNBLOCK redraws as soon as a rule changes. */
+    val blockedRuleKeys: StateFlow<Set<String>> = _blockedRuleKeys.asStateFlow()
 
     val connections: StateFlow<List<Connection>> = StatsManager.snapshot
         .map { snapshot ->
@@ -297,9 +299,11 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         if (_filter.value.showCleartextOnly) {
+            // Live sessions start as UNKNOWN before TLS is seen, so UNKNOWN alone
+            // matched almost every HTTPS connection; only count it on plain-HTTP port 80.
             result = result.filter {
                 it.securityInfo.contains("CLEAR", ignoreCase = true) ||
-                    it.securityInfo.contains("UNKNOWN", ignoreCase = true)
+                    (it.securityInfo.contains("UNKNOWN", ignoreCase = true) && it.destinationPort == 80)
             }
         }
 

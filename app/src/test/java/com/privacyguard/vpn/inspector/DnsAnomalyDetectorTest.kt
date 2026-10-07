@@ -44,4 +44,25 @@ class DnsAnomalyDetectorTest {
 
         assertEquals(false, anomalies.any { it.type == DnsAnomalyDetector.AnomalyType.HIGH_ENTROPY })
     }
+
+    @Test
+    fun sameAnomalyIsReportedOncePerCooldown() {
+        val detector = DnsAnomalyDetector()
+
+        // An A and an AAAA lookup for the same name used to produce two identical alerts.
+        val first = detector.analyze("com.test.app", "x9q2mz8v4pr7ka.example.com")
+        val second = detector.analyze("com.test.app", "x9q2mz8v4pr7ka.example.com")
+
+        assertTrue(first.any { it.type == DnsAnomalyDetector.AnomalyType.HIGH_ENTROPY })
+        assertTrue(second.none { it.type == DnsAnomalyDetector.AnomalyType.HIGH_ENTROPY })
+    }
+
+    @Test
+    fun cdnHostnamesAreNotFlaggedAsGenerated() {
+        val detector = DnsAnomalyDetector()
+
+        val anomalies = detector.analyze("com.honeyboard", "d127n5jiwb3j0b.cloudfront.net")
+
+        assertEquals(false, anomalies.any { it.type == DnsAnomalyDetector.AnomalyType.HIGH_ENTROPY })
+    }
 }

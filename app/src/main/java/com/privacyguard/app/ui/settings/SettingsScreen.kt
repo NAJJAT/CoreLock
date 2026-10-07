@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Notifications
@@ -73,6 +74,7 @@ fun SettingsScreen(
     onLanguageChanged: () -> Unit,
     onOpenSecurityAnalysis: () -> Unit = {},
     onOpenAds: () -> Unit = {},
+    onOpenRules: () -> Unit = {},
     onOpenPayloads: (() -> Unit)? = null,
     onOpenFlutterUi: (() -> Unit)? = null,
     settingsViewModel: SettingsViewModel = viewModel(),
@@ -401,6 +403,8 @@ fun SettingsScreen(
                 NavRow("Security Analysis", "JA3 threats, cipher alerts, certificate transparency", Icons.Default.Security, PgAccent, onOpenSecurityAnalysis)
                 Spacer(modifier = Modifier.height(12.dp))
                 NavRow("Ads & Trackers", "Per-app tracker detection and SDK inventory", Icons.Default.MonetizationOn, PgWarning, onOpenAds)
+                Spacer(modifier = Modifier.height(12.dp))
+                NavRow("Firewall Rules", "View, add, disable and delete all your block and allow rules", Icons.Default.Block, PgDanger, onOpenRules)
                 if (onOpenPayloads != null) {
                     Spacer(modifier = Modifier.height(12.dp))
                     NavRow("Payload Inspector", "Intercepted HTTPS traffic logs", Icons.Default.Search, PgInfo, onOpenPayloads)

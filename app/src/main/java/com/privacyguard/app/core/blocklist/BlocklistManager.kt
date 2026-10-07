@@ -16,6 +16,11 @@ import kotlinx.coroutines.launch
 
 @SuppressLint("StaticFieldLeak")
 object BlocklistManager {
+    // `||host^` with an optional `|` anchor and optional `$options`; no path or wildcard.
+    private val EASYLIST_DOMAIN_RULE = Regex("""^\|\|([A-Za-z0-9._-]+)\^\|?(?:\$(.+))?$""")
+    // Options that still mean "block this whole domain" at the DNS level.
+    private val WHOLE_DOMAIN_OPTIONS = setOf("important", "all", "document", "doc")
+
 
     @Volatile private var context: Context? = null
     @Volatile private var initStarted = false
@@ -39,8 +44,12 @@ object BlocklistManager {
         initScope.launch {
             runCatching {
                 val repo = blocklistRepo(context.applicationContext)
-                if (repo.totalCount() == 0) {
+                // Also re-seeds built-in rows lost before lists stopped overwriting
+                // each other's domains (database version 7).
+                val builtInRows = BUILTIN_SEED.values.sumOf { cats -> cats.values.sumOf { it.distinct().size } }
+                if (repo.countBySourcePrefix(BlocklistRepo.SOURCE_BUILTIN) < builtInRows) {
                     seedBuiltInBlocklists(repo)
+                    com.privacyguard.app.data.repository.BlocklistSyncBus.publish()
                 }
                 _size.value = repo.totalCount()
             }
@@ -62,6 +71,8 @@ object BlocklistManager {
             }
             _size.value = repo.totalCount()
             _lastUpdate.value = System.currentTimeMillis()
+            // The running VPN keeps its own in-memory filter; tell it to reload.
+            com.privacyguard.app.data.repository.BlocklistSyncBus.publish()
             UpdateResult.Success(totalEntries)
         } catch (e: Exception) {
             UpdateResult.Failure(e.message ?: "Unknown error")
@@ -76,6 +87,7 @@ object BlocklistManager {
             val repo = blocklistRepo(ctx)
             val result = updateBlocklistInternal(source, repo)
             _size.value = repo.totalCount()
+            com.privacyguard.app.data.repository.BlocklistSyncBus.publish()
             result
         } catch (e: Exception) {
             UpdateResult.Failure(e.message ?: "Unknown error")
@@ -119,18 +131,20 @@ object BlocklistManager {
         return result
     }
 
-    private fun parseEasyListFormat(raw: String): List<String> {
+    /**
+     * Keeps only EasyList rules that block a whole domain: `||domain^`, optionally
+     * with `$important` / `$all`. A DNS blocker can only block whole names, so rules
+     * scoped to a path (`||google.com/pagead/`), a wildcard, or a context option
+     * (`||github.com^$third-party`) must be skipped. Truncating them to the host
+     * blocked google.com, youtube.com, wikipedia.org, github.com and other sites.
+     */
+    internal fun parseEasyListFormat(raw: String): List<String> {
         val result = mutableListOf<String>()
         for (line in raw.lineSequence()) {
-            val trimmed = line.trim()
-            if (!trimmed.startsWith("||") || trimmed.startsWith("@@||")) continue
-            val without = trimmed.removePrefix("||")
-            val domain = without
-                .substringBefore('^')
-                .substringBefore('$')
-                .substringBefore('/')
-                .substringBefore('*')
-                .lowercase()
+            val match = EASYLIST_DOMAIN_RULE.matchEntire(line.trim()) ?: continue
+            val options = match.groupValues[2].takeIf { it.isNotEmpty() }?.split(',').orEmpty()
+            if (options.any { it !in WHOLE_DOMAIN_OPTIONS }) continue
+            val domain = match.groupValues[1].lowercase()
             if (isValidDomain(domain)) result += domain
         }
         return result

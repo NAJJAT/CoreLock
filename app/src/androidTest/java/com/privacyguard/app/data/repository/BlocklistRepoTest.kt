@@ -59,4 +59,20 @@ class BlocklistRepoTest {
         repo.setAllEnabled(true)
         assertEquals(listOf("a.example", "t.example"), repo.allDomains())
     }
+
+    @Test
+    fun domainOnTwoListsSurvivesRefreshAndSwitchOfEither() = runBlocking {
+        repo.replaceSource("BuiltIn-ads", "ads", listOf("doubleclick.net"))
+        repo.replaceSource("StevenBlack", "ads", listOf("doubleclick.net", "x.example"))
+
+        // Refreshing StevenBlack without the domain must not drop the built-in row.
+        repo.replaceSource("StevenBlack", "ads", listOf("x.example"))
+        assertEquals(listOf("doubleclick.net", "x.example"), repo.allDomains().sorted())
+
+        // Switching off one list keeps the domain blocked through the other.
+        repo.replaceSource("StevenBlack", "ads", listOf("doubleclick.net", "x.example"))
+        repo.setSourceEnabled("StevenBlack", false)
+        assertEquals(listOf("doubleclick.net"), repo.allDomains())
+        assertEquals(1, repo.totalCount())
+    }
 }

@@ -60,11 +60,15 @@ class BlocklistRepo(
     }
 
     suspend fun allDomains(): List<String> = withContext(Dispatchers.IO) {
-        blocklistDao.getAllEntries().map { it.domain }
+        blocklistDao.enabledDomains()
     }
 
     suspend fun domainsForCategory(cat: String): List<String> = withContext(Dispatchers.IO) {
         blocklistDao.getEntriesByCategory(cat).map { it.domain }
+    }
+
+    suspend fun countBySourcePrefix(prefix: String): Int = withContext(Dispatchers.IO) {
+        blocklistDao.countBySourcePrefix(prefix)
     }
 
     suspend fun totalCount(): Int = withContext(Dispatchers.IO) {

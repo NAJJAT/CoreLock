@@ -53,6 +53,9 @@ fun SecurityAnalysisScreen(
     onOpenAlerts: () -> Unit = {},
     viewModel: SecurityAnalysisViewModel = viewModel()
 ) {
+    val ctMonitoringEnabled by com.privacyguard.app.data.local.preferences.SettingsPreferences
+        .getInstance(androidx.compose.ui.platform.LocalContext.current)
+        .ctMonitoringEnabled.collectAsStateWithLifecycle()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -149,7 +152,11 @@ fun SecurityAnalysisScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 if (state.ctAlerts.isEmpty()) {
-                    EmptyBanner("CT monitor is active — new cert events appear here", isGood = false)
+                    EmptyBanner(
+                        if (ctMonitoringEnabled) "CT monitor is on — new certificate events appear here"
+                        else "CT monitor is off — turn it on in Settings → Certificate Transparency checks",
+                        isGood = false,
+                    )
                 } else {
                     state.ctAlerts.forEachIndexed { index, alert ->
                         if (index > 0) Spacer(modifier = Modifier.height(10.dp))

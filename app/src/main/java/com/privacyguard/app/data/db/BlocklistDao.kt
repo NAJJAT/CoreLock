@@ -57,7 +57,7 @@ interface BlocklistDao {
     /**
      * Gets blocklist entry for a domain
      */
-    @Query("SELECT * FROM blocklist WHERE domain = :domain")
+    @Query("SELECT * FROM blocklist WHERE domain = :domain LIMIT 1")
     suspend fun getEntry(domain: String): BlocklistEntity?
     
     /**
@@ -100,8 +100,15 @@ interface BlocklistDao {
     /**
      * Gets blocklist size
      */
-    @Query("SELECT COUNT(*) FROM blocklist WHERE isEnabled = 1")
+    /** Distinct domains currently blocked (a domain on two lists counts once). */
+    @Query("SELECT COUNT(DISTINCT domain) FROM blocklist WHERE isEnabled = 1")
     suspend fun getSize(): Int
+
+    @Query("SELECT DISTINCT domain FROM blocklist WHERE isEnabled = 1 ORDER BY domain")
+    suspend fun enabledDomains(): List<String>
+
+    @Query("SELECT COUNT(*) FROM blocklist WHERE source LIKE :prefix || '%'")
+    suspend fun countBySourcePrefix(prefix: String): Int
     
     /**
      * Gets total count

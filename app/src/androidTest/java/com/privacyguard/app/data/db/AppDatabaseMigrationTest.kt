@@ -57,4 +57,30 @@ class AppDatabaseMigrationTest {
         assertTrue(indexes.containsAll(setOf("index_connections_timestamp", "index_connections_appUid_timestamp")))
         db.close()
     }
+
+    @Test
+    fun migrate6To7_keepsBlocklistRowsAndAllowsSharedDomains() {
+        helper.createDatabase(dbName, 6).use { db ->
+            db.execSQL(
+                "INSERT INTO blocklist (domain, source, category, lastUpdated, isEnabled) VALUES ('ads.example.com', 'EasyList', 'ads', 1, 0)"
+            )
+        }
+
+        // Validates the rebuilt table and its indexes against 7.json.
+        val db = helper.runMigrationsAndValidate(dbName, 7, true, AppDatabase.MIGRATION_6_7)
+
+        db.query("SELECT source, isEnabled FROM blocklist WHERE domain = 'ads.example.com'").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals("EasyList", c.getString(0))
+            assertEquals(0, c.getInt(1))
+        }
+        // A second list may now hold the same domain without replacing the first row.
+        db.execSQL(
+            "INSERT INTO blocklist (domain, source, category, lastUpdated, isEnabled) VALUES ('ads.example.com', 'BuiltIn-ads', 'ads', 2, 1)"
+        )
+        db.query("SELECT COUNT(*) FROM blocklist WHERE domain = 'ads.example.com'").use { c ->
+            c.moveToFirst(); assertEquals(2, c.getInt(0))
+        }
+        db.close()
+    }
 }

@@ -25,6 +25,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -124,6 +126,14 @@ class AppDetailViewModel(
     private val appName: String     = savedState["appName"]     ?: packageName
 
     private val db by lazy { AppDatabase.getInstance(app) }
+    // Declared above init {}, which uses it (properties initialise in order).
+    // Loaded once and awaited by every analysis: the APK scan and domain refreshes can
+    // finish before the permission lookup, and analysing with an empty set reported
+    // "declares no permission" for apps that do (e.g. WhatsApp and contacts).
+    private val permissionsLookup by lazy {
+        viewModelScope.async(Dispatchers.IO) { loadRequestedPermissions(packageName) }
+    }
+
     private val configDb by lazy { ConfigDatabase.getInstance(app) }
     private val metadataRepo by lazy { MetadataRepo(db.connectionProfileDao()) }
     private val rulesRepo by lazy { RulesRepo(configDb.rulesDao(), com.privacyguard.core.filter.FilterEngine()) }
@@ -301,7 +311,7 @@ class AppDetailViewModel(
 
     private fun loadMismatchSignals() {
         viewModelScope.launch {
-            val requestedPermissions = loadRequestedPermissions(packageName)
+            val requestedPermissions = permissionsLookup.await()
             val observedDomains = runCatching {
                 val since = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
                 db.connectionDao().getRecentConnections(since, 400)
@@ -335,7 +345,7 @@ class AppDetailViewModel(
             val findings = PermissionMismatchDetector.analyze(
                 appName = appName,
                 packageName = packageName,
-                requestedPermissions = _state.value.declaredPermissions,
+                requestedPermissions = permissionsLookup.await(),
                 observedDomains = _state.value.domains.map { it.domain },
                 detectedSdks = found,
                 profiles = loadObservedProfiles(),
@@ -353,7 +363,7 @@ class AppDetailViewModel(
         val findings = PermissionMismatchDetector.analyze(
             appName = appName,
             packageName = packageName,
-            requestedPermissions = _state.value.declaredPermissions,
+            requestedPermissions = permissionsLookup.await(),
             observedDomains = observedDomains,
             detectedSdks = _state.value.detectedSdks,
             profiles = loadObservedProfiles(),

@@ -39,8 +39,11 @@ class MitmTlsInterception(
     override val blockQuic: Boolean
         get() = mitmConfig.isEnabled && mitmConfig.blockQuicWhenMitm
 
+    // PrivacyGuard's own requests (blocklist and tracker updates, SIEM shipping)
+    // are never inspected: the app does not trust its own CA, so they would fail.
     override fun shouldIntercept(ownerPackage: String?, sni: String): Boolean =
-        mitmConfig.isEnabled &&
+        ownerPackage != com.privacyguard.app.BuildConfig.APPLICATION_ID &&
+            mitmConfig.isEnabled &&
             mitmConfig.isConsentValid() &&
             !pinningDetector.isPinned(ownerPackage, sni)
 

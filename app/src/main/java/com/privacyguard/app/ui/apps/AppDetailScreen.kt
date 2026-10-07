@@ -373,7 +373,9 @@ private fun RecentActivityItem(row: RecentActivityRow) {
 
 private fun LazyListScope.mismatchTab(state: AppDetailState) {
     when {
-        state.isLoadingMismatch || state.isScanning -> {
+        // Don't wait for the APK scan (tens of seconds on large apps): permission vs
+        // traffic findings are ready first, and the scan refines them when it ends.
+        state.isLoadingMismatch -> {
             item { LoadingCard("Correlating permissions with observed traffic...") }
         }
         state.mismatchFindings.isEmpty() -> {

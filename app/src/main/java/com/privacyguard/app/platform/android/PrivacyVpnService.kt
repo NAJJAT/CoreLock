@@ -689,7 +689,10 @@ class PrivacyVpnService : VpnService() {
                 val appLabel = resolvedAppLabel(snapshot.ownerUid, resolvedPackage)
                 val dstIp = snapshot.key.destinationIp
                 val isIpv6 = dstIp.contains(':')
-                connectionLogger.log(ConnectionEntity(
+                // Sessions that never moved a byte are failed or abandoned connection
+                // attempts (e.g. browser pre-connects). Persisting them made two thirds
+                // of history "UNKNOWN" and dragged every encryption percentage down.
+                if (snapshot.bytesFromDevice + snapshot.bytesToDevice > 0) connectionLogger.log(ConnectionEntity(
                     appUid = snapshot.ownerUid,
                     appName = appLabel,
                     packageName = resolvedPackage,

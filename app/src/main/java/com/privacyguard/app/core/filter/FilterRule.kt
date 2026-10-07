@@ -155,8 +155,10 @@ data class FilterRule(
         const val HIGH_PRIORITY    = 10
         const val LOW_PRIORITY     = 1_000
 
-        private var idCounter = 0L
-        private fun nextId() = "rule_${++idCounter}"
+        // Rules are persisted with REPLACE-on-conflict, so ids must be unique across
+        // process restarts. A per-process counter ("rule_1", "rule_2", …) restarted at
+        // 1 on every launch and silently overwrote the user's earlier rules.
+        private fun nextId() = "rule_${java.util.UUID.randomUUID()}"
 
         // ── Domain ───────────────────────────────────────────────────────────
         fun blockDomain(domain: String, label: String = "Block $domain",

@@ -29,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -60,12 +61,18 @@ fun ConnectionsScreen(
     onAppClick: (packageName: String, appName: String) -> Unit = { _, _ -> },
     viewModel: ConnectionsViewModel = viewModel()
 ) {
+    // getFilteredConnections() picks the source and applies the filter and rule
+    // state; every input is read here (as remember keys) so the list recomposes when
+    // any of them changes, including BLOCK/UNBLOCK. Never fall back to the
+    // unfiltered list: an empty result is the answer to the filter.
     val liveConnections by viewModel.connections.collectAsStateWithLifecycle()
     val storedConnections by viewModel.recentConnections.collectAsStateWithLifecycle()
-    val connections = viewModel.getFilteredConnections().ifEmpty {
-        if (liveConnections.isNotEmpty()) liveConnections else storedConnections
-    }
+    val blockedRuleKeys by viewModel.blockedRuleKeys.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
+    val connections = remember(liveConnections, storedConnections, blockedRuleKeys, filter) {
+        viewModel.getFilteredConnections()
+    }
+    val filterActive = filter.showBlockedOnly || filter.showCleartextOnly || filter.query.isNotBlank()
     val dnsLookup by viewModel.dnsLookup.collectAsStateWithLifecycle()
     val selectedConnection by viewModel.selectedConnection.collectAsStateWithLifecycle()
 
@@ -122,10 +129,14 @@ fun ConnectionsScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("No connections yet", style = MaterialTheme.typography.titleMedium, color = PgTextMuted)
+                        Text(
+                            if (filterActive) "No matching connections" else "No connections yet",
+                            style = MaterialTheme.typography.titleMedium, color = PgTextMuted,
+                        )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "Open another app while the VPN is running. Connections will appear here once non-PrivacyGuard traffic flows.",
+                            if (filterActive) "Nothing in the current list matches this filter or search. Tap All to clear it."
+                            else "Open another app while the VPN is running. Connections will appear here once non-PrivacyGuard traffic flows.",
                             style = MaterialTheme.typography.bodySmall,
                             color = PgTextMuted,
                         )

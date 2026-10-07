@@ -32,4 +32,33 @@ class StalkerwareDetectorTest {
         assertTrue(assessment.score >= 70)
         assertTrue(assessment.reasons.isNotEmpty())
     }
+
+    @Test
+    fun ordinaryStoreMessengerScoresLow() {
+        val assessment = StalkerwareDetector.assess(
+            requestedPermissions = setOf("android.permission.ACCESS_FINE_LOCATION", "android.permission.READ_CONTACTS"),
+            profiles = listOf(
+                ConnectionProfile(
+                    packageName = "com.whatsapp", hostname = "g.whatsapp.net", destinationIp = "179.60.195.49",
+                    destinationPort = 443, connectionCount = 40, totalBytesOut = 300_000L, backgroundRatio = 0.9f,
+                    hourlyDistribution = IntArray(24) { 2 },
+                )
+            ),
+            hasLauncherIcon = true,
+            installerPackage = "com.android.vending",
+        )
+        assertTrue("score was ${assessment.score}", assessment.score < 30)
+    }
+
+    @Test
+    fun preinstalledSystemAppIsNotScored() {
+        val assessment = StalkerwareDetector.assess(
+            requestedPermissions = setOf("android.permission.ACCESS_BACKGROUND_LOCATION"),
+            profiles = emptyList(),
+            hasLauncherIcon = true,
+            installerPackage = null,
+            isSystemApp = true,
+        )
+        assertTrue(assessment.score == 0)
+    }
 }

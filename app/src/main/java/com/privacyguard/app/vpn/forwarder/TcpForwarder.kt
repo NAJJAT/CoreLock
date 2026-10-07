@@ -427,7 +427,14 @@ class TcpForwarder(
                 while (keys.hasNext()) {
                     val selKey = keys.next()
                     keys.remove()
-                    val session = selKey.attachment() as? Session ?: continue
+                    val session = selKey.attachment() as? Session
+                    // A key whose session is gone must be closed here: left registered,
+                    // its channel stays readable (at EOF) and select() returns at once
+                    // forever, spinning this thread at 100% CPU.
+                    if (session == null || session.isClosed) {
+                        discard(selKey)
+                        continue
+                    }
                     try {
                         when {
                             selKey.isConnectable -> finishConnect(selKey, session)
@@ -435,6 +442,7 @@ class TcpForwarder(
                         }
                     } catch (e: Exception) {
                         Log.w(TAG, "Selector error for ${session.key}: ${e.message}")
+                        discard(selKey)
                         sessionTable.remove(session.key)
                         errorCount.incrementAndGet()
                     }
@@ -445,6 +453,12 @@ class TcpForwarder(
             }
         }
         Log.d(TAG, "Selector loop exited")
+    }
+
+    /** Cancels [selKey] and closes its channel, whichever session (if any) it belonged to. */
+    private fun discard(selKey: SelectionKey) {
+        selKey.cancel()
+        runCatching { selKey.channel().close() }
     }
 
     private fun finishConnect(selKey: SelectionKey, session: Session) {
@@ -479,6 +493,7 @@ class TcpForwarder(
             }
         } catch (e: Exception) {
             Log.w(TAG, "finishConnect failed for ${session.key}: ${e.message}")
+            discard(selKey)
             sessionTable.remove(session.key)
             errorCount.incrementAndGet()
         }
@@ -489,6 +504,7 @@ class TcpForwarder(
         buffer.clear()
         val n = channel.read(buffer)
         if (n < 0) {
+            discard(selKey)
             sessionTable.remove(session.key)
             return
         }

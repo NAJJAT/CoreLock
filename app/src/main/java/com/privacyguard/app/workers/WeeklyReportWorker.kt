@@ -145,61 +145,52 @@ class WeeklyReportWorker(
     }
     
     /**
-     * Generates the weekly report
+     * Generates the weekly report. Blocking happens at DNS level, so the blocked
+     * count and top domains come from blocked DNS lookups (connections are never
+     * stored as blocked), and the score is the Dashboard's, so the two agree.
      */
     private suspend fun generateReport(): WeeklyReport {
-        val oneWeekAgo = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L)
-        
+        val now = System.currentTimeMillis()
+        val oneWeekAgo = now - (7 * 24 * 60 * 60 * 1000L)
+
         val database = AppDatabase.getInstance(applicationContext)
         val connectionRepo = ConnectionRepository(database.connectionDao())
-        
-        val dailyStats = connectionRepo.getDailyStats(7)
-        val totalBlocked = dailyStats.sumOf { it.blockedConnections }
-        val totalConnections = dailyStats.sumOf { it.totalConnections }
-        val totalDataSaved = dailyStats.sumOf { it.totalBytes }
-        val topBlockedDomains = connectionRepo.getTopBlockedDomains(days = 7, limit = 5)
+        val dnsQueries = database.dnsQueryDao()
+
+        val totalBlocked = dnsQueries.countBlockedSince(oneWeekAgo)
+        val totalBytes = connectionRepo.getDailyStats(7).sumOf { it.totalBytes }
+        val topBlockedDomains = dnsQueries.topBlockedDomainsSince(oneWeekAgo, 5)
+        val topBlockedApps = dnsQueries.topBlockedAppsSince(oneWeekAgo, 3)
         val hourlyStats = connectionRepo.getHourlyStats(days = 7)
-        val privacyScore = calculatePrivacyScore(
-            blockedCount = totalBlocked,
-            totalConnections = totalConnections,
-            topDomainCount = topBlockedDomains.sumOf { it.count }
-        )
-        
+        val privacyScore = com.privacyguard.app.core.privacy.PrivacyScoreCalculator.calculate(
+            connections = database.connectionDao().getRecentConnections(oneWeekAgo, 2_000),
+            profiles = database.connectionProfileDao().allProfiles()
+                .map { com.privacyguard.app.data.repository.MetadataRepo(database.connectionProfileDao()).toDomainForDashboard(it) },
+            trackersBlocked = totalBlocked,
+            blocklistDomains = com.privacyguard.app.core.blocklist.BlocklistManager.size.value,
+        ).score
+
         return WeeklyReport(
-            date = System.currentTimeMillis(),
+            date = now,
             weekStart = oneWeekAgo,
-            weekEnd = System.currentTimeMillis(),
+            weekEnd = now,
             totalBlocked = totalBlocked.toLong(),
-            totalDataSaved = totalDataSaved,
-            topBlockedDomains = topBlockedDomains.map { it.domain to it.count },
+            totalDataSaved = totalBytes,
+            topBlockedDomains = topBlockedDomains.map { it.domain to it.blockedQueries },
+            topBlockedApps = topBlockedApps.map { it.appName.ifBlank { it.appPackage } },
             privacyScore = privacyScore,
             hourlyStats = hourlyStats
         )
     }
-    
-    /**
-     * Calculates privacy score based on blocked trackers
-     */
-    private fun calculatePrivacyScore(
-        blockedCount: Int,
-        totalConnections: Int,
-        topDomainCount: Int,
-    ): Int {
-        if (totalConnections <= 0) return 50
-        val blockRateScore = ((blockedCount.toFloat() / totalConnections.toFloat()) * 60f)
-            .coerceIn(0f, 60f)
-        val domainProtectionScore = (topDomainCount / 25f).coerceIn(0f, 25f)
-        val activityScore = (blockedCount / 40f).coerceIn(0f, 15f)
-        return (blockRateScore + domainProtectionScore + activityScore).toInt().coerceIn(0, 100)
-    }
-    
+
     /**
      * Shows notification with report summary
      */
     private fun showReportNotification(report: WeeklyReport) {
         val notificationHelper = NotificationHelper(applicationContext)
         
-        val topApps = report.topBlockedDomains.take(3).map { it.first }
+        // The notification says "most tracked app", so name apps, not domains.
+        val topApps = report.topBlockedApps
         notificationHelper.showWeeklyReportNotification(
             blockedCount = report.totalBlocked.toInt(),
             topApps = topApps
@@ -224,6 +215,7 @@ data class WeeklyReport(
     val totalBlocked: Long,
     val totalDataSaved: Long,
     val topBlockedDomains: List<Pair<String, Int>>,
+    val topBlockedApps: List<String>,
     val privacyScore: Int,
     val hourlyStats: List<com.privacyguard.app.data.db.HourlyStats>
 ) {

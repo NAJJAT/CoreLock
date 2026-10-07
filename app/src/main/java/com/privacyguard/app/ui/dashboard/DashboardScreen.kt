@@ -1,5 +1,9 @@
 package com.privacyguard.app.ui.dashboard
 
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import android.app.Activity
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -92,13 +96,6 @@ fun DashboardScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val runProtectedAction = rememberProtectedActionRunner()
 
-    val vpnPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            VpnManager.startVpn(context)
-        }
-    }
 
     LazyColumn(
         modifier = Modifier.background(MaterialTheme.colorScheme.background),
@@ -171,8 +168,8 @@ fun DashboardScreen(
                                         if (uiState.isVpnActive) {
                                             VpnManager.stopVpn(context)
                                         } else {
-                                            val intent = VpnManager.prepareVpn(context)
-                                            if (intent != null) vpnPermissionLauncher.launch(intent) else VpnManager.startVpn(context)
+                                            // MainActivity asks for notifications, then VPN consent.
+                                            onRequestVpn()
                                         }
                                     }
                                 )
@@ -600,7 +597,8 @@ private fun PrivacySwitch(checked: Boolean, onToggle: () -> Unit) {
         modifier = Modifier
             .clip(RoundedCornerShape(999.dp))
             .background(if (checked) PgAccent else PgPanelStrong)
-            .clickable(onClick = onToggle)
+            .toggleable(value = checked, role = Role.Switch, onValueChange = { onToggle() })
+            .semantics { contentDescription = "Protection" }
             .padding(horizontal = 4.dp, vertical = 4.dp)
     ) {
         Row(

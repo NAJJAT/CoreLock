@@ -1,5 +1,11 @@
 package com.privacyguard.app.ui.components
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -220,6 +226,13 @@ fun MetricRow(
 fun ToggleChip(checked: Boolean, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
+            // Purely visual otherwise: tell TalkBack this is a switch and whether it
+            // is on (the clickable parent merges this into what it announces).
+            .semantics {
+                role = Role.Switch
+                toggleableState = ToggleableState(checked)
+                stateDescription = if (checked) "On" else "Off"
+            }
             .size(width = 38.dp, height = 22.dp)
             .clip(RoundedCornerShape(999.dp))
             .background(if (checked) PgAccent else PgPanelStrong)

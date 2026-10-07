@@ -26,7 +26,7 @@ import com.privacyguard.app.core.security.DatabaseEncryption
         TlsAlertEntity::class,
         DnsQueryEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -86,6 +86,27 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) = Unit
         }
 
+        // blocklist: unique per (domain, source) instead of per domain, so lists that
+        // share a domain no longer overwrite each other's rows. Rows are kept.
+        internal val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `blocklist_new` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `domain` TEXT NOT NULL, `source` TEXT NOT NULL, `category` TEXT NOT NULL,
+                        `lastUpdated` INTEGER NOT NULL, `isEnabled` INTEGER NOT NULL)
+                """)
+                db.execSQL("""
+                    INSERT INTO `blocklist_new` (id, domain, source, category, lastUpdated, isEnabled)
+                    SELECT id, domain, source, category, lastUpdated, isEnabled FROM `blocklist`
+                """)
+                db.execSQL("DROP TABLE `blocklist`")
+                db.execSQL("ALTER TABLE `blocklist_new` RENAME TO `blocklist`")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_blocklist_domain_source` ON `blocklist` (`domain`, `source`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_blocklist_source` ON `blocklist` (`source`)")
+            }
+        }
+
         /**
          * Debug builds wipe on any schema mismatch so local iteration never gets stuck.
          * Release builds only wipe where no migration can exist (version 1, which
@@ -109,7 +130,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     DATABASE_NAME
-                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                     .openHelperFactory(DatabaseEncryption.openHelperFactory(context, DATABASE_NAME))
                     .applyFallback()
                     .build().also {

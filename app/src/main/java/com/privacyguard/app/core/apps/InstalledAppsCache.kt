@@ -31,7 +31,11 @@ object InstalledAppsCache {
     )
 
     /** Per-package details used for the stalkerware assessment. */
-    data class PackageDetails(val hasLauncherIcon: Boolean, val installerPackage: String?)
+    data class PackageDetails(
+        val hasLauncherIcon: Boolean,
+        val installerPackage: String?,
+        val isSystemApp: Boolean = false,
+    )
 
     private val _version = MutableStateFlow(0)
     /** Bumps whenever the installed set changes; collect it to reload. */
@@ -65,6 +69,10 @@ object InstalledAppsCache {
             PackageDetails(
                 hasLauncherIcon = pm.getLaunchIntentForPackage(packageName) != null,
                 installerPackage = runCatching { pm.getInstallerPackageName(packageName) }.getOrNull(),
+                isSystemApp = runCatching {
+                    pm.getApplicationInfo(packageName, 0).flags and
+                        (android.content.pm.ApplicationInfo.FLAG_SYSTEM or android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
+                }.getOrDefault(false),
             )
         }
 

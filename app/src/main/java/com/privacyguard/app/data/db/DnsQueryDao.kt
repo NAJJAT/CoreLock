@@ -122,6 +122,37 @@ interface DnsQueryDao {
     """)
     suspend fun idleCountForApp(packageName: String, since: Long): Int
 
+    /** Blocking happens at DNS level, so blocked lookups are the "trackers blocked" count. */
+    @Query("SELECT COUNT(*) FROM dns_queries WHERE timestamp >= :since AND was_blocked = 1")
+    suspend fun countBlockedSince(since: Long): Int
+
+    @Query("""
+        SELECT domain AS domain,
+               COUNT(*) AS totalQueries,
+               SUM(CASE WHEN phone_was_idle THEN 1 ELSE 0 END) AS idleQueries,
+               COUNT(*) AS blockedQueries
+        FROM dns_queries
+        WHERE timestamp >= :since AND was_blocked = 1
+        GROUP BY domain
+        ORDER BY blockedQueries DESC
+        LIMIT :limit
+    """)
+    suspend fun topBlockedDomainsSince(since: Long, limit: Int): List<DnsDomainSummary>
+
+    @Query("""
+        SELECT app_package AS appPackage,
+               MAX(app_name) AS appName,
+               COUNT(*) AS totalQueries,
+               SUM(CASE WHEN phone_was_idle THEN 1 ELSE 0 END) AS idleQueries,
+               COUNT(*) AS blockedQueries
+        FROM dns_queries
+        WHERE timestamp >= :since AND was_blocked = 1 AND app_package != ''
+        GROUP BY app_package
+        ORDER BY blockedQueries DESC
+        LIMIT :limit
+    """)
+    suspend fun topBlockedAppsSince(since: Long, limit: Int): List<DnsAppSummary>
+
     @Query("DELETE FROM dns_queries WHERE timestamp < :cutoff")
     suspend fun pruneOld(cutoff: Long)
 
