@@ -25,6 +25,8 @@ class MitmConfig(
         // Default values
         private const val DEFAULT_MAX_PAYLOAD_SIZE = 32768 // 32KB
         private const val DEFAULT_RETENTION_DAYS = 7
+        // Longer retention belongs in the SIEM, not on the device (data minimisation).
+        const val MAX_RETENTION_DAYS = 30
     }
 
     private val prefs: SharedPreferences =
@@ -73,7 +75,7 @@ class MitmConfig(
         get() = prefs.getBoolean("mitm_write_local_log", true)
 
     val retentionDays: Int
-        get() = prefs.getInt("mitm_retention_days", DEFAULT_RETENTION_DAYS)
+        get() = prefs.getInt("mitm_retention_days", DEFAULT_RETENTION_DAYS).coerceIn(1, MAX_RETENTION_DAYS)
 
     val consentTimestamp: Long
         get() = prefs.getLong("mitm_consent_timestamp", 0L)
@@ -89,6 +91,8 @@ class MitmConfig(
     fun setEnabled(enabled: Boolean) {
         prefs.edit().putBoolean("mitm_enabled", enabled).apply()
         _isEnabled.value = enabled
+        // Decrypted payloads must not outlive the feature that captured them.
+        if (!enabled) com.privacyguard.app.workers.PruneWorker.runNow(context)
     }
 
     fun setSkipPinnedApps(skip: Boolean) {
@@ -138,7 +142,7 @@ class MitmConfig(
     }
 
     fun setRetentionDays(days: Int) {
-        val clampedDays = days.coerceIn(1, 90)
+        val clampedDays = days.coerceIn(1, MAX_RETENTION_DAYS)
         prefs.edit().putInt("mitm_retention_days", clampedDays).apply()
     }
 

@@ -55,12 +55,6 @@ class ConnectionRepo(private val connectionDao: ConnectionDao) {
         connectionDao.getTopBlockedDomains(since, limit).map { AppBlockCount(it.domain ?: "", it.count) }
     }
 
-    suspend fun pruneOldRecords(days: Int = 30): Int = withContext(Dispatchers.IO) {
-        val cutoff = System.currentTimeMillis() - days.toLong() * 86_400_000
-        connectionDao.deleteOldConnections(cutoff)
-        0
-    }
-
     suspend fun deleteAll() = withContext(Dispatchers.IO) {
         connectionDao.deleteAll()
     }

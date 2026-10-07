@@ -124,5 +124,19 @@ interface DnsQueryDao {
 
     @Query("DELETE FROM dns_queries WHERE timestamp < :cutoff")
     suspend fun pruneOld(cutoff: Long)
+
+    /**
+     * Deletes at most [limit] rows older than [cutoff]. Callers loop until it returns
+     * less than [limit], so no single transaction holds the write lock for long.
+     */
+    @Query("""
+        DELETE FROM dns_queries WHERE id IN
+            (SELECT id FROM dns_queries WHERE timestamp < :cutoff LIMIT :limit)
+    """)
+    suspend fun deleteOlderThanBatch(cutoff: Long, limit: Int): Int
+
+    /** Timestamp of the [keep]th newest row, or null if there are fewer than [keep] rows. */
+    @Query("SELECT timestamp FROM dns_queries ORDER BY timestamp DESC LIMIT 1 OFFSET :keep - 1")
+    suspend fun capCutoff(keep: Int): Long?
 }
 

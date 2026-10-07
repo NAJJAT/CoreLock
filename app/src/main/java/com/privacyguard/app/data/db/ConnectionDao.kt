@@ -116,6 +116,20 @@ interface ConnectionDao {
      */
     @Query("DELETE FROM connections WHERE timestamp < :cutoff")
     suspend fun deleteOldConnections(cutoff: Long)
+
+    /**
+     * Deletes at most [limit] rows older than [cutoff]. Callers loop until it returns
+     * less than [limit], so no single transaction holds the write lock for long.
+     */
+    @Query("""
+        DELETE FROM connections WHERE id IN
+            (SELECT id FROM connections WHERE timestamp < :cutoff LIMIT :limit)
+    """)
+    suspend fun deleteOlderThanBatch(cutoff: Long, limit: Int): Int
+
+    /** Timestamp of the [keep]th newest row, or null if there are fewer than [keep] rows. */
+    @Query("SELECT timestamp FROM connections ORDER BY timestamp DESC LIMIT 1 OFFSET :keep - 1")
+    suspend fun capCutoff(keep: Int): Long?
     
     /**
      * Deletes all connections

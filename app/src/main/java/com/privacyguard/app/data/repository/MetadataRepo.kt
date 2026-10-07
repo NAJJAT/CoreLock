@@ -44,10 +44,6 @@ class MetadataRepo(private val connectionProfileDao: ConnectionProfileDao) {
         connectionProfileDao.trackedPackages()
     }
 
-    suspend fun pruneOld(maxAgeMs: Long) = withContext(Dispatchers.IO) {
-        connectionProfileDao.deleteOlderThan(System.currentTimeMillis() - maxAgeMs)
-    }
-
     suspend fun deleteAll() = withContext(Dispatchers.IO) {
         connectionProfileDao.deleteAll()
     }

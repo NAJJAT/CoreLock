@@ -38,6 +38,20 @@ interface PayloadLogDao {
     @Query("DELETE FROM payload_logs WHERE timestamp < :beforeMs")
     suspend fun deleteOlderThan(beforeMs: Long): Int
 
+    /**
+     * Deletes at most [limit] rows older than [cutoff]. Callers loop until it returns
+     * less than [limit], so no single transaction holds the write lock for long.
+     */
+    @Query("""
+        DELETE FROM payload_logs WHERE id IN
+            (SELECT id FROM payload_logs WHERE timestamp < :cutoff LIMIT :limit)
+    """)
+    suspend fun deleteOlderThanBatch(cutoff: Long, limit: Int): Int
+
+    /** Timestamp of the [keep]th newest row, or null if there are fewer than [keep] rows. */
+    @Query("SELECT timestamp FROM payload_logs ORDER BY timestamp DESC LIMIT 1 OFFSET :keep - 1")
+    suspend fun capCutoff(keep: Int): Long?
+
     @Query("DELETE FROM payload_logs")
     suspend fun deleteAll()
 

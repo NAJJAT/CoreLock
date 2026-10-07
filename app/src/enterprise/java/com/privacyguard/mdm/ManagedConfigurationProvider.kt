@@ -27,7 +27,7 @@ import com.privacyguard.vpn.mitm.MitmConfig
  *  mitm_siem_endpoint    string   URL of the SIEM/log aggregation server
  *  mitm_siem_api_key     string   Bearer token for the SIEM endpoint
  *  mitm_redact_pii       boolean  Redact PII before storing/shipping payloads
- *  mitm_retention_days   integer  How long to keep payload logs (1-90)
+ *  mitm_retention_days   integer  How long to keep payload logs (1-30)
  */
 object ManagedConfigApplier {
 
@@ -63,7 +63,7 @@ object ManagedConfigApplier {
         applyBoolean(bundle, "mitm_ship_to_siem") { mitmConfig.setShipToSiem(it) }
 
         applyInt(bundle, "mitm_retention_days") {
-            mitmConfig.setRetentionDays(it.coerceIn(1, 90))
+            mitmConfig.setRetentionDays(it)
         }
 
         // If the EMM pushes ca_install_automatic=true AND the app is Device/Profile

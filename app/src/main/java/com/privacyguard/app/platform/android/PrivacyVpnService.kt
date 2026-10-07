@@ -354,22 +354,6 @@ class PrivacyVpnService : VpnService() {
             com.privacyguard.app.vpn.KillSwitch.startMonitoring(this)
         }
 
-        // Periodic housekeeping: prune old tls_alerts once per day while VPN runs
-        scope.launch {
-            val dayMs = 24L * 60L * 60L * 1000L
-            kotlinx.coroutines.delay(dayMs)
-            while (isRunning) {
-                val retentionDays = com.privacyguard.app.data.local.preferences.SettingsPreferences
-                    .getInstance(applicationContext).retentionDays.value
-                val cutoff = System.currentTimeMillis() - retentionDays.toLong() * 86_400_000L
-                val db = buildDatabase()
-                db.tlsAlertDao().pruneOld(cutoff)
-                db.dnsQueryDao().pruneOld(cutoff)
-                Log.d(TAG, "Periodic prune complete (cutoff=$retentionDays days)")
-                kotlinx.coroutines.delay(dayMs)
-            }
-        }
-
         isRunning = true
         _isRunningFlow.value = true
         Log.i(TAG, "VPN fully started — all pillars active")
@@ -816,19 +800,8 @@ class PrivacyVpnService : VpnService() {
         com.privacyguard.app.vpn.BootReceiver.markVpnStopped(this)
         runCatching { unregisterReceiver(stopReceiver) }
 
-        scope.launch {
-            metadataRepo.saveAll(metadataEngine.allProfiles())
-            val retentionDays = com.privacyguard.app.data.local.preferences.SettingsPreferences
-                .getInstance(applicationContext)
-                .retentionDays
-                .value
-            connectionRepo.pruneOldRecords(retentionDays)
-            metadataRepo.pruneOld(retentionDays.toLong() * 86_400_000L)
-            dnsAnomalyRepo.pruneOld(retentionDays)
-            val tlsCutoff = System.currentTimeMillis() - retentionDays.toLong() * 86_400_000L
-            buildDatabase().tlsAlertDao().pruneOld(tlsCutoff)
-            buildDatabase().dnsQueryDao().pruneOld(tlsCutoff)
-        }
+        // History pruning is PruneWorker's job (daily, VPN on or off).
+        scope.launch { metadataRepo.saveAll(metadataEngine.allProfiles()) }
 
         com.privacyguard.app.vpn.KillSwitch.stopMonitoring()
         com.privacyguard.app.vpn.KillSwitch.clearLockdownState()

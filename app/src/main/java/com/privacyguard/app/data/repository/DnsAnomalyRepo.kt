@@ -31,10 +31,6 @@ class DnsAnomalyRepo(private val dnsAnomalyDao: DnsAnomalyDao) {
         dnsAnomalyDao.countHighSeverity()
     }
 
-    suspend fun pruneOld(days: Int = 7) = withContext(Dispatchers.IO) {
-        dnsAnomalyDao.deleteOlderThan(System.currentTimeMillis() - days.toLong() * 86_400_000)
-    }
-
     suspend fun deleteAll() = withContext(Dispatchers.IO) {
         dnsAnomalyDao.deleteAll()
     }
