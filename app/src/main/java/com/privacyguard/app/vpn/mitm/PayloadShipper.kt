@@ -50,16 +50,15 @@ class PayloadShipper(
     }
 
     private val queue = LinkedBlockingQueue<ShipEvent>(MAX_QUEUE_SIZE)
-    private fun httpClientFor(host: String): OkHttpClient {
+    private fun httpClientFor(host: String, pin: SiemEndpoint.Pin): OkHttpClient {
         val builder = OkHttpClient.Builder()
             .connectTimeout(HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .readTimeout(HTTP_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             // A redirect could move the bearer token to another host or to http://.
             .followRedirects(false)
             .followSslRedirects(false)
-        val pin = config.siemPinSha256
-        if (pin.startsWith("sha256/")) {
-            builder.certificatePinner(CertificatePinner.Builder().add(host, pin).build())
+        if (pin is SiemEndpoint.Pin.Valid) {
+            builder.certificatePinner(CertificatePinner.Builder().add(host, pin.value).build())
         }
         return builder.build()
     }
@@ -115,6 +114,12 @@ class PayloadShipper(
             if (config.siemEndpoint.isNotBlank()) Log.w(TAG, "SIEM endpoint rejected: must be an https:// URL")
             return
         }
+        // Fail closed: a malformed pin must not quietly fall back to unpinned TLS.
+        val pin = SiemEndpoint.parsePin(config.siemPinSha256)
+        if (pin is SiemEndpoint.Pin.Invalid) {
+            Log.e(TAG, "SIEM pin rejected: expected sha256/<base64 SHA-256>; events kept queued")
+            return
+        }
 
         val events = mutableListOf<ShipEvent>()
         queue.drainTo(events)
@@ -134,7 +139,7 @@ class PayloadShipper(
                     requestBuilder.header(SiemEndpoint.SIGNATURE_HEADER, it)
                 }
 
-                val response = httpClientFor(endpoint.host).newCall(requestBuilder.build()).execute()
+                val response = httpClientFor(endpoint.host, pin).newCall(requestBuilder.build()).execute()
                 if (response.isSuccessful) {
                     Log.i(TAG, "Shipped ${events.size} events — HTTP ${response.code}")
                 } else {

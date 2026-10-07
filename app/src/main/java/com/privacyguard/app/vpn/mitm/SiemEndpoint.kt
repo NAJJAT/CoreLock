@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets
 import java.util.Locale
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
+import okio.ByteString.Companion.decodeBase64
 
 /**
  * One rule for every SIEM upload: payloads and the bearer token only ever
@@ -23,6 +24,28 @@ object SiemEndpoint {
         if (uri.host.isNullOrBlank()) return null
         if (uri.userInfo != null) return null   // credentials in the URL would end up in logs
         return uri
+    }
+
+    /** Result of reading the optional SIEM certificate pin from managed config. */
+    sealed interface Pin {
+        /** No pin configured; normal CA validation only. */
+        object None : Pin
+        /** A well-formed "sha256/<base64 of 32 bytes>" pin. */
+        data class Valid(val value: String) : Pin
+        /** A pin was configured but is malformed; uploads must not proceed. */
+        object Invalid : Pin
+    }
+
+    /**
+     * Parses an SPKI pin. A malformed pin is [Pin.Invalid], never [Pin.None]:
+     * silently dropping a pin the admin set would weaken the connection.
+     */
+    fun parsePin(raw: String): Pin {
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty()) return Pin.None
+        if (!trimmed.startsWith("sha256/")) return Pin.Invalid
+        val hash = trimmed.removePrefix("sha256/").decodeBase64() ?: return Pin.Invalid
+        return if (hash.size == 32) Pin.Valid(trimmed) else Pin.Invalid
     }
 
     /** Hex HMAC-SHA256 of [body] under [signingKey], or null when no separate key is set. */

@@ -31,6 +31,17 @@ class SiemEndpointTest {
         )
     }
 
+    @Test fun parsesPins() {
+        val good = "sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        assertEquals(SiemEndpoint.Pin.None, SiemEndpoint.parsePin("  "))
+        assertEquals(SiemEndpoint.Pin.Valid(good), SiemEndpoint.parsePin(" $good "))
+        // Malformed pins must be Invalid, not None, so shipping fails closed.
+        assertEquals(SiemEndpoint.Pin.Invalid, SiemEndpoint.parsePin("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="))
+        assertEquals(SiemEndpoint.Pin.Invalid, SiemEndpoint.parsePin("sha1/AAAAAAAAAAAAAAAAAAAAAAAAAAA="))
+        assertEquals(SiemEndpoint.Pin.Invalid, SiemEndpoint.parsePin("sha256/not base64!"))
+        assertEquals(SiemEndpoint.Pin.Invalid, SiemEndpoint.parsePin("sha256/AAAA"))
+    }
+
     @Test fun escapesControlCharacters() {
         assertEquals("a\\\"b\\\\c\\n\\t\\u0001", SiemEndpoint.escapeJson("a\"b\\c\n\t\u0001"))
     }
