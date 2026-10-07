@@ -1,0 +1,1344 @@
+package com.privacyguard.ui.mitm
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.privacyguard.app.data.db.AppDatabase
+import com.privacyguard.app.data.db.PayloadLogEntity
+import com.privacyguard.app.data.db.notDecryptedReason
+import com.privacyguard.app.data.repository.PayloadLogRepositoryImpl
+import com.privacyguard.domain.repository.PayloadLogRepository
+import com.privacyguard.vpn.mitm.LeakDetector
+import com.privacyguard.vpn.mitm.MitmConfig
+import com.privacyguard.vpn.mitm.PayloadShipper
+import android.content.Intent
+import android.provider.Settings
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import com.privacyguard.vpn.mitm.CaManager
+import com.privacyguard.ui.mitm.CaInstallHelper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.*
+
+// ── COLORS ──────────────────────────────────────────────────────────────────
+private val Bg       = Color(0xFF080B10)
+private val Bg1      = Color(0xFF0D1117)
+private val Bg2      = Color(0xFF111720)
+private val Bg3      = Color(0xFF19212E)
+private val LineCol  = Color(0xFF1A2030)
+private val Ac       = Color(0xFF00F5C4)
+private val AcDim    = Color(0x1500F5C4)
+private val Red      = Color(0xFFFF4560)
+private val RedDim   = Color(0x20FF4560)
+private val Amber    = Color(0xFFFFB300)
+private val AmberDim = Color(0x1DFFB300)
+private val Blue     = Color(0xFF3D9EFF)
+private val Purple   = Color(0xFF9D7AFF)
+private val TxP      = Color(0xFFDDE3F0)
+private val TxS      = Color(0xFF7A87A3)
+private val TxM      = Color(0xFF48566A)
+
+// ── HELPERS ─────────────────────────────────────────────────────────────────
+internal fun computeRiskScore(log: PayloadLogEntity): Int {
+    var score = 0
+    if (log.piiRedacted) score += 50
+    if (log.method == "POST" || log.method == "PUT") score += 10
+    val h = log.headers.lowercase()
+    if (h.contains("authorization")) score += 20
+    if (h.contains("cookie")) score += 15
+    if (h.contains("x-device") || h.contains("device-id")) score += 15
+    if (!log.body.isNullOrBlank() && log.body.length > 500) score += 5
+    return score.coerceIn(0, 99)
+}
+
+/** Personal data types [com.privacyguard.vpn.mitm.LeakDetector] found in this request. */
+internal fun leaksOf(log: PayloadLogEntity): Set<LeakDetector.LeakType> =
+    LeakDetector.decode(parseHeadersMap(log.headers)[LeakDetector.LEAKS_HEADER])
+
+private fun isLogFlagged(log: PayloadLogEntity): Boolean =
+    log.piiRedacted || computeRiskScore(log) >= 60
+
+private fun parseHeadersMap(json: String): Map<String, String> {
+    val map = mutableMapOf<String, String>()
+    try {
+        val obj = org.json.JSONObject(json)
+        for (k in obj.keys()) map[k] = obj.optString(k)
+    } catch (_: Exception) {}
+    return map
+}
+
+private fun shortAppName(pkg: String?): String {
+    if (pkg.isNullOrBlank()) return "Unknown"
+    return when {
+        pkg.contains("tiktok", ignoreCase = true)    -> "TikTok"
+        pkg.contains("instagram", ignoreCase = true) -> "Instagram"
+        pkg.contains("whatsapp", ignoreCase = true)  -> "WhatsApp"
+        pkg.contains("snapchat", ignoreCase = true)  -> "Snapchat"
+        pkg.contains("facebook", ignoreCase = true)  -> "Facebook"
+        pkg.contains("spotify", ignoreCase = true)   -> "Spotify"
+        pkg.contains("youtube", ignoreCase = true)   -> "YouTube"
+        pkg.contains("twitter", ignoreCase = true) ||
+                pkg.contains(".x.", ignoreCase = true) -> "Twitter/X"
+        pkg.contains("chrome", ignoreCase = true) ||
+                pkg.contains("browser", ignoreCase = true) -> "Browser"
+        else -> pkg.split(".").filter { it.length > 2 }
+            .lastOrNull()?.replaceFirstChar { it.uppercase() } ?: pkg
+    }
+}
+
+private fun fmtBytes(bytes: Int): String = when {
+    bytes < 1_024 -> "$bytes B"
+    bytes < 1_048_576 -> "${bytes / 1_024} KB"
+    else -> "${"%.1f".format(bytes / 1_048_576.0)} MB"
+}
+
+private fun fmtRelative(ts: Long): String {
+    val diff = System.currentTimeMillis() - ts
+    return when {
+        diff < 60_000 -> "${diff / 1_000}s ago"
+        diff < 3_600_000 -> "${diff / 60_000}m ago"
+        else -> SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(ts))
+    }
+}
+
+// ── NAV STATE ───────────────────────────────────────────────────────────────
+private sealed class PScreen {
+    object List : PScreen()
+    object Analytics : PScreen()
+    data class Detail(val log: PayloadLogEntity) : PScreen()
+}
+
+// ── MAIN ENTRY ───────────────────────────────────────────────────────────────
+@Composable
+fun MitmScreen() {
+    val context = LocalContext.current
+    val mitmConfig  = remember { MitmConfig(context) }
+    val caManager   = remember { CaManager(context) }          // shared with CaptureListScreen
+    val database    = remember { AppDatabase.getInstance(context) }
+    val repository: PayloadLogRepository = remember { PayloadLogRepositoryImpl(database.payloadLogDao()) }
+    val payloadShipper = remember { PayloadShipper(mitmConfig) }
+    val vm: MitmViewModel = viewModel(factory = MitmViewModelFactory(mitmConfig, repository, payloadShipper))
+    val uiState by vm.uiState.collectAsState()
+    var screen by remember { mutableStateOf<PScreen>(PScreen.List) }
+    var showConsentDialog by remember { mutableStateOf(false) }
+
+    // Show consent dialog whenever MITM is toggled on without prior consent.
+    LaunchedEffect(uiState.isEnabled, uiState.isConsentValid) {
+        if (uiState.isEnabled && !uiState.isConsentValid) showConsentDialog = true
+    }
+
+    val caHelper     = remember { CaInstallHelper(context, caManager) }
+    val installScope = rememberCoroutineScope()
+    var showScreenLockDialog by remember { mutableStateOf(false) }
+    // null = hidden; true = cert saved to Downloads; false = saving failed
+    var settingsInstallSaved by remember { mutableStateOf<Boolean?>(null) }
+
+    // Exports the cert to Downloads and shows the "install it from Settings" steps.
+    val saveCaForSettings: () -> Unit = {
+        installScope.launch {
+            if (!caManager.initialize()) { settingsInstallSaved = false; return@launch }
+            val saved = withContext(Dispatchers.IO) { caHelper.exportCaToDownloads() } != null
+            settingsInstallSaved = saved
+        }
+    }
+
+    // Android 10 and below: open the system installer directly.
+    // Android 11+: the system rejects app-started CA installs, so go via Settings.
+    val startCaInstall: () -> Unit = {
+        installScope.launch {
+            if (!caManager.initialize()) { settingsInstallSaved = false; return@launch }
+            if (!caHelper.isScreenLockSet()) { showScreenLockDialog = true; return@launch }
+            val intent = caHelper.getInAppInstallIntent()
+            val launched = intent != null &&
+                runCatching { context.startActivity(intent) }.isSuccess
+            if (!launched) saveCaForSettings()
+        }
+    }
+
+    // After the user accepts consent the ViewModel emits one installCaEvent.
+    LaunchedEffect(Unit) {
+        vm.installCaEvent.collect { startCaInstall() }
+    }
+
+    Box(Modifier.fillMaxSize().background(Bg)) {
+        when (val s = screen) {
+            is PScreen.List -> CaptureListScreen(
+                uiState = uiState, vm = vm, caManager = caManager,
+                onInstallCa = startCaInstall,
+                onSaveCa = saveCaForSettings,
+                onItemClick = { log -> screen = PScreen.Detail(log) },
+                onStatsClick = { screen = PScreen.Analytics }
+            )
+            is PScreen.Analytics -> AnalyticsScreen(
+                logs = uiState.recentLogs,
+                onBack = { screen = PScreen.List }
+            )
+            is PScreen.Detail -> DetailScreen(
+                log = s.log,
+                onBack = { screen = PScreen.List }
+            )
+        }
+
+        if (showConsentDialog) {
+            AlertDialog(
+                onDismissRequest = { showConsentDialog = false },
+                containerColor = Bg2,
+                title = { Text("Enable Traffic Inspection", color = Ac, fontWeight = FontWeight.Bold) },
+                text = {
+                    Text(
+                        "PrivacyGuard will intercept and log your HTTPS traffic so you can " +
+                        "inspect every request and response on this device.\n\n" +
+                        "After you confirm, the app will ask you to install a CA certificate. " +
+                        "This is required to decrypt HTTPS. The certificate stays on your device " +
+                        "and can be removed at any time from Settings → Security → Certificates.",
+                        color = TxS, fontSize = 13.sp, lineHeight = 19.sp
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { vm.recordConsent(); showConsentDialog = false }) {
+                        Text("Confirm & Install Certificate", color = Ac, fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showConsentDialog = false }) {
+                        Text("Cancel", color = TxS)
+                    }
+                }
+            )
+        }
+
+        if (showScreenLockDialog) {
+            ScreenLockRequiredDialog(
+                onOpenSettings = {
+                    showScreenLockDialog = false
+                    openSettings(context, caHelper.getSecuritySettingsIntent())
+                },
+                onDismiss = { showScreenLockDialog = false },
+            )
+        }
+
+        settingsInstallSaved?.let { saved ->
+            SettingsInstallDialog(
+                saved = saved,
+                onOpenSettings = {
+                    settingsInstallSaved = null
+                    openSettings(context, caHelper.getSecuritySettingsIntent())
+                },
+                onDismiss = { settingsInstallSaved = null },
+            )
+        }
+    }
+}
+
+/** Starts [intent], falling back to the top-level Settings app if the OEM lacks that screen. */
+private fun openSettings(context: android.content.Context, intent: Intent) {
+    runCatching { context.startActivity(intent) }.onFailure {
+        context.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+}
+
+@Composable
+private fun ScreenLockRequiredDialog(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Bg2,
+        icon = { Icon(Icons.Default.Lock, null, tint = Amber) },
+        title = { Text("Screen Lock Required", color = Amber, fontWeight = FontWeight.Bold) },
+        text = {
+            Text(
+                "Android requires a screen lock (PIN, pattern, or password) before " +
+                "installing CA certificates.\n\n" +
+                "Go to:\nSettings → Security → Screen Lock\n\n" +
+                "Set a PIN or password, then come back and tap Install.",
+                color = TxS, fontSize = 13.sp, lineHeight = 18.sp
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onOpenSettings) {
+                Text("Open Settings", color = Amber, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel", color = TxS) }
+        }
+    )
+}
+
+/**
+ * Android 11+ only lets the Settings app install CA certificates, so we save the
+ * cert to Downloads and walk the user through picking it there.
+ */
+@Composable
+private fun SettingsInstallDialog(saved: Boolean, onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Bg2,
+        icon = { Icon(if (saved) Icons.Default.Download else Icons.Default.ErrorOutline, null,
+            tint = if (saved) Ac else Red) },
+        title = {
+            Text(
+                if (saved) "Install from Settings" else "Couldn't save certificate",
+                color = if (saved) Ac else Red, fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Text(
+                if (saved)
+                    "Android 11 and newer only allow CA certificates to be installed from " +
+                    "the Settings app, not from inside other apps.\n\n" +
+                    "The certificate was saved to Downloads as " +
+                    "${CaInstallHelper.CA_FILENAME}.\n\n" +
+                    "1. Tap Open Settings\n" +
+                    "2. Search for \"CA certificate\" in the Settings search bar\n" +
+                    "   (Pixel: Security & privacy → More security settings → " +
+                    "Encryption & credentials → Install a certificate.\n" +
+                    "   Samsung: Security and privacy → More security settings → " +
+                    "Install from device storage)\n" +
+                    "3. Choose CA certificate → Install anyway\n" +
+                    "4. Pick ${CaInstallHelper.CA_FILENAME} from Downloads (the newest one)\n\n" +
+                    "Come back here afterwards — the card turns green once Android trusts it."
+                else
+                    "The certificate could not be written to Downloads. Check free storage " +
+                    "and try again; details are in logcat under the CaInstallHelper tag.",
+                color = TxS, fontSize = 13.sp, lineHeight = 18.sp
+            )
+        },
+        confirmButton = {
+            if (saved) {
+                TextButton(onClick = onOpenSettings) {
+                    Text("Open Settings", color = Ac, fontWeight = FontWeight.Bold)
+                }
+            } else {
+                TextButton(onClick = onDismiss) { Text("OK", color = TxS) }
+            }
+        },
+        dismissButton = if (saved) {
+            { TextButton(onClick = onDismiss) { Text("Later", color = TxS) } }
+        } else null
+    )
+}
+
+// ── CAPTURE LIST SCREEN ──────────────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CaptureListScreen(
+    uiState: MitmUiState,
+    vm: MitmViewModel,
+    caManager: CaManager,
+    onInstallCa: () -> Unit,
+    onSaveCa: () -> Unit,
+    onItemClick: (PayloadLogEntity) -> Unit,
+    onStatsClick: () -> Unit,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var showRemoveCaPrompt by remember { mutableStateOf(false) }
+
+    if (showRemoveCaPrompt) {
+        AlertDialog(
+            onDismissRequest = { showRemoveCaPrompt = false },
+            title = { Text("Remove the PrivacyGuard certificate") },
+            text = {
+                Text(
+                    "Inspection is off and the signing key has been deleted, but Android still trusts " +
+                        "the installed PrivacyGuard CA. Remove it in Settings → Security → " +
+                        "Encryption & credentials → User credentials."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRemoveCaPrompt = false
+                    runCatching {
+                        context.startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                }) { Text("Open settings") }
+            },
+            dismissButton = { TextButton(onClick = { showRemoveCaPrompt = false }) { Text("Later") } },
+        )
+    }
+
+    Column(Modifier.fillMaxSize().background(Bg)) {
+        // Top bar
+        Row(
+            Modifier.fillMaxWidth().background(Bg1)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.size(8.dp).clip(CircleShape).background(if (uiState.isEnabled) Ac else TxM))
+                Text("PRIVACYGUARD", color = Ac, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                Surface(color = AcDim, shape = RoundedCornerShape(5.dp), border = BorderStroke(1.dp, Ac.copy(alpha = 0.3f))) {
+                    Text("PAYLOAD", Modifier.padding(horizontal = 7.dp, vertical = 2.dp), color = Ac, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // CA certificate install button
+                IconButton(onClick = onInstallCa) {
+                    Icon(Icons.Default.Lock, null, tint = Ac, modifier = Modifier.size(20.dp))
+                }
+
+                Switch(
+                    checked = uiState.isEnabled,
+                    onCheckedChange = { on ->
+                        if (on) {
+                            vm.enableMitm()
+                        } else {
+                            vm.disableMitm()
+                            // Turning inspection off retires the CA: delete its key so it can
+                            // never sign again, then ask the user to untrust the installed copy.
+                            scope.launch { caManager.reset() }
+                            showRemoveCaPrompt = true
+                        }
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Bg, checkedTrackColor = Ac,
+                        uncheckedThumbColor = TxM, uncheckedTrackColor = Bg3
+                    )
+                )
+                IconButton(onClick = onStatsClick) {
+                    Icon(Icons.Default.BarChart, null, tint = TxS, modifier = Modifier.size(20.dp))
+                }
+            }
+        }
+
+        HorizontalDivider(color = LineCol)
+
+        // Filter chips
+        Row(
+            Modifier.fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            val allActive = uiState.methodFilter == null && !uiState.showFlaggedOnly
+            FilterPill("All", allActive) { vm.setMethodFilter(null); vm.setShowFlaggedOnly(false) }
+            FilterPill("POST", uiState.methodFilter == "POST") { vm.setMethodFilter(if (uiState.methodFilter == "POST") null else "POST") }
+            FilterPill("GET", uiState.methodFilter == "GET") { vm.setMethodFilter(if (uiState.methodFilter == "GET") null else "GET") }
+            FilterPill("⚑ Flagged", uiState.showFlaggedOnly, accent = Red) { vm.setShowFlaggedOnly(!uiState.showFlaggedOnly) }
+            FilterPill("Has Body", uiState.filterHasBody, accent = Amber) { vm.setFilterHasBody(!uiState.filterHasBody) }
+        }
+
+        // Search
+        OutlinedTextField(
+            value = uiState.searchQuery,
+            onValueChange = { vm.setSearchQuery(it) },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+            placeholder = { Text("Search app, host, domain…", color = TxM, fontSize = 12.sp) },
+            leadingIcon = { Icon(Icons.Default.Search, null, tint = TxM, modifier = Modifier.size(18.dp)) },
+            singleLine = true,
+            shape = RoundedCornerShape(10.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Ac.copy(alpha = 0.45f),
+                unfocusedBorderColor = LineCol,
+                focusedContainerColor = Bg2,
+                unfocusedContainerColor = Bg2,
+                focusedTextColor = TxP, unfocusedTextColor = TxP,
+                cursorColor = Ac
+            ),
+            textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+        )
+
+        // MITM status banner
+        if (uiState.isEnabled && uiState.mitmStatus !in listOf("IDLE", "ACTIVE")) {
+            val bc = when (uiState.mitmStatus) { "ERROR", "HANDSHAKE_FAILED" -> Red; "PINNED_BYPASS" -> Amber; else -> Blue }
+            Surface(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                color = bc.copy(alpha = 0.1f), shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, bc.copy(alpha = 0.3f))
+            ) {
+                Column(Modifier.padding(10.dp)) {
+                    Text(uiState.mitmStatus, color = bc, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(uiState.mitmStatusMessage, color = TxS, fontSize = 11.sp)
+                    uiState.mitmStatusDomain?.let { Text("Domain: $it", color = TxM, fontSize = 10.sp) }
+                }
+            }
+        }
+
+        // CA card — shown only when CA is not yet installed (helper checks quickly).
+        if (uiState.isEnabled) {
+            CaInstallCard(
+                context = context, caManager = caManager,
+                onInstall = onInstallCa, onSaveFile = onSaveCa,
+            )
+            QuicBlockRow(blockQuic = uiState.blockQuic, onToggle = { vm.setBlockQuic(it) })
+        }
+
+        // List or empty
+        if (uiState.recentLogs.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(Icons.Default.NetworkCheck, null, tint = TxM, modifier = Modifier.size(56.dp))
+                    Text(if (uiState.isEnabled) "No payloads captured yet" else "MITM interception disabled", color = TxS, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        if (uiState.isEnabled)
+                            "Install the CA, then test with a browser. Apps using pinning, QUIC/UDP, or end-to-end encryption may show metadata only."
+                        else
+                            "Toggle the switch above to enable",
+                        color = TxM, fontSize = 12.sp, textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
+                }
+            }
+        } else {
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
+                items(uiState.recentLogs, key = { it.id }) { log ->
+                    PayloadListItem(log = log, onClick = { onItemClick(log) })
+                    HorizontalDivider(color = LineCol, thickness = 0.5.dp)
+                }
+            }
+        }
+    }
+}
+
+// ── QUIC BLOCK ROW ────────────────────────────────────────────────────────────
+@Composable
+private fun QuicBlockRow(blockQuic: Boolean, onToggle: (Boolean) -> Unit) {
+    Surface(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        color = if (blockQuic) Blue.copy(alpha = 0.08f) else Bg2,
+        shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(1.dp, if (blockQuic) Blue.copy(alpha = 0.35f) else LineCol)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(Icons.Default.Block, null, tint = if (blockQuic) Blue else TxM, modifier = Modifier.size(18.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "Block QUIC / HTTP3",
+                    color = if (blockQuic) Blue else TxS,
+                    fontSize = 11.sp, fontWeight = FontWeight.Bold
+                )
+                Text(
+                    if (blockQuic)
+                        "UDP/443 is being dropped. Chrome, YouTube, and WhatsApp will fall back to TLS/TCP and become interceptable."
+                    else
+                        "Enable to drop UDP/443 (QUIC), forcing apps to retry on TLS/TCP. Required to inspect Chrome and YouTube traffic.",
+                    color = TxM, fontSize = 10.sp, lineHeight = 15.sp
+                )
+            }
+            Switch(
+                checked = blockQuic,
+                onCheckedChange = onToggle,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Bg, checkedTrackColor = Blue,
+                    uncheckedThumbColor = TxM, uncheckedTrackColor = Bg3
+                )
+            )
+        }
+    }
+}
+
+// ── CA INSTALL CARD ───────────────────────────────────────────────────────────
+@Composable
+private fun CaInstallCard(
+    context: android.content.Context,
+    caManager: CaManager,
+    onInstall: () -> Unit,
+    onSaveFile: () -> Unit,
+) {
+    val helper       = remember(context, caManager) { CaInstallHelper(context, caManager) }
+    val installScope = rememberCoroutineScope()
+    var caReady      by remember { mutableStateOf(false) }
+    var caFailed     by remember { mutableStateOf(false) }
+    var caTrusted    by remember { mutableStateOf(false) }
+
+    // Initialise the CA on first composition so the card reflects real state immediately.
+    LaunchedEffect(helper) {
+        val ok = caManager.initialize()
+        caReady   = ok
+        caFailed  = !ok
+        caTrusted = ok && helper.isCaTrustedByDevice()
+    }
+
+    // Re-check trust when the user returns to the app (e.g. after the CA install dialog).
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (caReady) caTrusted = helper.isCaTrustedByDevice()
+    }
+
+    val cardColor  = when { caTrusted -> Ac; caReady -> Amber; caFailed -> Red; else -> Red }
+    val cardBg     = cardColor.copy(alpha = 0.08f)
+    val cardBorder = cardColor.copy(alpha = 0.35f)
+
+    Surface(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        color = cardBg, shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(1.dp, cardBorder)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                if (caTrusted) Icons.Default.VerifiedUser else Icons.Default.Lock,
+                contentDescription = null,
+                tint = cardColor, modifier = Modifier.size(18.dp)
+            )
+            Column(Modifier.weight(1f)) {
+                Text(
+                    when {
+                        caTrusted -> "CA installed — HTTPS decryption active"
+                        caFailed  -> "CA generation failed"
+                        caReady   -> "Install CA certificate to decrypt HTTPS"
+                        else      -> "Generating CA certificate…"
+                    },
+                    color = cardColor, fontSize = 11.sp, fontWeight = FontWeight.Bold
+                )
+                Text(
+                    when {
+                        caTrusted ->
+                            "Browsers that trust user certificates (Chrome, Edge, Brave) now " +
+                            "show full payloads. Most other apps ignore user-installed CAs " +
+                            "since Android 7, and pinned apps (WhatsApp, Instagram, banking) " +
+                            "always show metadata only — that's an Android limit, not a bug."
+                        caFailed  ->
+                            "Tap Regenerate to try again. If the problem persists, clear the " +
+                            "app's storage in Android Settings and reopen the app."
+                        caReady && helper.canInstallFromApp ->
+                            "Tap Install. Android will ask you to name the certificate — " +
+                            "type anything (e.g. PrivacyGuard) and tap OK."
+                        caReady   ->
+                            "Android 11+ only installs CA certificates from Settings. Tap " +
+                            "Install: the certificate is saved to Downloads and you'll get " +
+                            "step-by-step instructions."
+                        else      ->
+                            "Generating CA for the first time. This takes a few seconds."
+                    },
+                    color = TxS, fontSize = 10.sp, lineHeight = 15.sp
+                )
+            }
+
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (caFailed) {
+                    // Regenerate button
+                    Surface(
+                        onClick = {
+                            installScope.launch {
+                                caFailed = false
+                                caManager.reset()
+                                val ok = caManager.initialize()
+                                caReady  = ok
+                                caFailed = !ok
+                            }
+                        },
+                        color = Red.copy(alpha = 0.18f),
+                        shape = RoundedCornerShape(6.dp),
+                        border = BorderStroke(1.dp, Red.copy(alpha = 0.4f))
+                    ) {
+                        Text(
+                            "Regenerate",
+                            Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            color = Red, fontSize = 10.sp, fontWeight = FontWeight.Bold
+                        )
+                    }
+                } else if (caReady && !caTrusted) {
+                    // In-app installer on Android ≤ 10, Settings walkthrough on 11+.
+                    // Trust is re-checked by the ON_RESUME effect when the user returns.
+                    Surface(
+                        onClick = onInstall,
+                        color = Amber.copy(alpha = 0.18f),
+                        shape = RoundedCornerShape(6.dp),
+                        border = BorderStroke(1.dp, Amber.copy(alpha = 0.4f))
+                    ) {
+                        Text(
+                            "Install",
+                            Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            color = Amber, fontSize = 10.sp, fontWeight = FontWeight.Bold
+                        )
+                    }
+                    // Secondary on Android ≤ 10: save to Downloads and install from Settings
+                    // (for OEM installers that reject the in-app flow). On 11+ Install
+                    // already does exactly this, so the button would be redundant.
+                    if (helper.canInstallFromApp) Surface(
+                        onClick = onSaveFile,
+                        color = Bg3,
+                        shape = RoundedCornerShape(6.dp),
+                        border = BorderStroke(1.dp, LineCol)
+                    ) {
+                        Text(
+                            "Save .crt",
+                            Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            color = TxS, fontSize = 10.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun FilterPill(label: String, selected: Boolean, accent: Color = Ac, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        color = if (selected) accent.copy(alpha = 0.14f) else Bg3,
+        border = BorderStroke(1.dp, if (selected) accent.copy(alpha = 0.4f) else LineCol)
+    ) {
+        Text(label, Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+            color = if (selected) accent else TxS, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun PayloadListItem(log: PayloadLogEntity, onClick: () -> Unit) {
+    val riskScore = remember(log.id) { computeRiskScore(log) }
+    val flagged = remember(log.id) { isLogFlagged(log) }
+    val dotColor = when { flagged || riskScore >= 80 -> Red; riskScore >= 50 -> Amber; else -> Ac }
+    val appName = remember(log.ownerPackage) { shortAppName(log.ownerPackage) }
+
+    Row(
+        Modifier.fillMaxWidth()
+            .clickable(onClick = onClick)
+            .drawBehind { if (flagged) drawRect(Red, size = Size(3.dp.toPx(), size.height)) }
+            .padding(start = if (flagged) 19.dp else 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(Modifier.size(8.dp).clip(CircleShape).background(dotColor))
+
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(appName, color = TxP, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                if (log.method != null) {
+                    MethodBadge(log.method)
+                } else {
+                    val proto = if (log.destinationPort == 443) "HTTPS" else log.protocol.take(5)
+                    Surface(color = Blue.copy(alpha = 0.12f), shape = RoundedCornerShape(4.dp)) {
+                        Text(proto, Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            color = Blue, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                if (log.destinationPort == 443 && log.body.isNullOrBlank()) {
+                    Icon(Icons.Default.Lock, null, tint = TxM, modifier = Modifier.size(10.dp))
+                }
+            }
+            Spacer(Modifier.height(3.dp))
+            Text(
+                "${log.sniHostname ?: log.destinationIp}${log.urlPath?.take(32) ?: ""}",
+                color = TxS, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis
+            )
+            val leaks = remember(log.id) { leaksOf(log) }
+            if (leaks.isNotEmpty()) {
+                Text(
+                    "Sends: " + leaks.joinToString(" · ") { it.label },
+                    color = Red, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(if (log.direction == "OUTBOUND") "↑" else "↓",
+                color = if (log.direction == "OUTBOUND") Amber else Ac, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(fmtBytes(log.sizeBytes), color = TxM, fontSize = 10.sp)
+            Text(fmtRelative(log.timestamp), color = TxM, fontSize = 9.sp)
+        }
+    }
+}
+
+@Composable
+private fun MethodBadge(method: String?) {
+    if (method == null) return
+    val (bg, fg) = when (method.uppercase()) {
+        "POST"   -> AmberDim to Amber
+        "PUT"    -> Purple.copy(alpha = 0.15f) to Purple
+        "DELETE" -> RedDim to Red
+        "GET"    -> AcDim to Ac
+        else     -> Bg3 to TxS
+    }
+    Surface(color = bg, shape = RoundedCornerShape(4.dp)) {
+        Text(method.uppercase(), Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            color = fg, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+    }
+}
+
+// ── ANALYTICS SCREEN ─────────────────────────────────────────────────────────
+@Composable
+private fun AnalyticsScreen(logs: List<PayloadLogEntity>, onBack: () -> Unit) {
+    val flaggedCount = remember(logs) { logs.count { isLogFlagged(it) } }
+    val warnCount = remember(logs) { logs.count { computeRiskScore(it) in 50..79 } }
+    val cleanCount = remember(logs) { logs.count { computeRiskScore(it) < 30 } }
+    val totalKb = remember(logs) { logs.sumOf { it.sizeBytes } / 1_024 }
+
+    val appRisks = remember(logs) {
+        logs.groupBy { shortAppName(it.ownerPackage) }
+            .mapValues { (_, v) -> v.maxOf { computeRiskScore(it) } }
+            .entries.sortedByDescending { it.value }.take(6)
+    }
+    val total = logs.size.coerceAtLeast(1)
+    val protocolRows = remember(logs) {
+        listOf(
+            Triple("HTTP/1.x", logs.count { it.protocol == "HTTP1" }.toDouble() / total, "${logs.count { it.protocol == "HTTP1" }}"),
+            Triple("HTTP/2", logs.count { it.protocol == "HTTP2" }.toDouble() / total, "${logs.count { it.protocol == "HTTP2" }}"),
+            Triple("Outbound", logs.count { it.direction == "OUTBOUND" }.toDouble() / total, "${logs.count { it.direction == "OUTBOUND" }}"),
+            Triple("Inbound", logs.count { it.direction == "INBOUND" }.toDouble() / total, "${logs.count { it.direction == "INBOUND" }}"),
+        ).filter { it.second > 0 }
+    }
+
+    Column(Modifier.fillMaxSize().background(Bg)) {
+        Row(Modifier.fillMaxWidth().background(Bg1).padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Ac) }
+            Text("Analytics", color = TxP, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        }
+        HorizontalDivider(color = LineCol)
+
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Surface(color = Bg2, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, LineCol)) {
+                Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("${logs.size}", color = Ac, fontSize = 52.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 52.sp)
+                    Text("Total requests captured", color = TxS, fontSize = 12.sp)
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatCard(Modifier.weight(1f), "$flaggedCount", "Flagged", Red)
+                StatCard(Modifier.weight(1f), "$warnCount", "Warnings", Amber)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatCard(Modifier.weight(1f), "$cleanCount", "Clean", Ac)
+                StatCard(Modifier.weight(1f), "$totalKb KB", "Total Size", Blue)
+            }
+
+            if (appRisks.isNotEmpty()) {
+                BarChartCard("Risk by app", appRisks.map { Triple(it.key, it.value / 100.0, "${it.value}") })
+            }
+            if (protocolRows.isNotEmpty()) {
+                BarChartCard("Traffic breakdown", protocolRows)
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun StatCard(modifier: Modifier, value: String, label: String, valueColor: Color) {
+    Surface(modifier, color = Bg2, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, LineCol)) {
+        Column(Modifier.padding(14.dp)) {
+            Text(value, color = valueColor, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+            Text(label, color = TxM, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.7.sp)
+        }
+    }
+}
+
+@Composable
+private fun BarChartCard(title: String, rows: List<Triple<String, Double, String>>) {
+    Surface(color = Bg2, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, LineCol)) {
+        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+            Text(title, color = TxP, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(14.dp))
+            rows.forEach { (label, fraction, valStr) ->
+                val barColor = when { fraction > 0.7 -> Red; fraction > 0.4 -> Amber; else -> Ac }
+                Row(
+                    Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(label, color = TxS, fontSize = 11.sp, modifier = Modifier.width(72.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Box(Modifier.weight(1f).height(6.dp).clip(RoundedCornerShape(3.dp)).background(Bg3)) {
+                        Box(Modifier.fillMaxHeight().fillMaxWidth(fraction.toFloat().coerceIn(0.02f, 1f)).clip(RoundedCornerShape(3.dp)).background(barColor))
+                    }
+                    Text(valStr, color = TxM, fontSize = 10.sp, modifier = Modifier.width(32.dp), textAlign = TextAlign.End)
+                }
+            }
+        }
+    }
+}
+
+// ── DETAIL SCREEN ─────────────────────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DetailScreen(log: PayloadLogEntity, onBack: () -> Unit) {
+    val riskScore = remember(log.id) { computeRiskScore(log) }
+    val flagged = remember(log.id) { isLogFlagged(log) }
+    var selectedTab by remember { mutableIntStateOf(0) }
+    val tabs = listOf("Payload", "Headers", "Risk", "Fields")
+
+    Column(Modifier.fillMaxSize().background(Bg)) {
+        // Header
+        Surface(color = Bg1, shadowElevation = 2.dp) {
+            Column(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 4.dp, end = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Ac) }
+                    Text("Captures", color = Ac, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                }
+                Column(Modifier.padding(horizontal = 16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        MethodBadge(log.method)
+                        Text(log.sniHostname ?: log.destinationIp, color = Blue, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    }
+                    Spacer(Modifier.height(2.dp))
+                    Text(log.urlPath ?: "/", color = TxS, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+                Spacer(Modifier.height(10.dp))
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    val rc = when { riskScore >= 60 -> Red; riskScore >= 40 -> Amber; else -> Ac }
+                    MetaCell(Modifier.weight(1f), "Risk", "$riskScore", rc)
+                    MetaCell(Modifier.weight(1f), "Dir", log.direction.take(3), TxP)
+                    MetaCell(Modifier.weight(1f), "Proto", log.protocol.take(5), TxP)
+                    MetaCell(Modifier.weight(1f), "Size", fmtBytes(log.sizeBytes), TxP)
+                }
+            }
+        }
+
+        // Tab row
+        ScrollableTabRow(
+            selectedTabIndex = selectedTab,
+            containerColor = Bg1,
+            contentColor = Ac,
+            edgePadding = 0.dp,
+            divider = { HorizontalDivider(color = LineCol) }
+        ) {
+            tabs.forEachIndexed { i, label ->
+                Tab(
+                    selected = selectedTab == i,
+                    onClick = { selectedTab = i },
+                    text = {
+                        Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                            color = if (selectedTab == i) Ac else TxM, letterSpacing = 0.4.sp)
+                    }
+                )
+            }
+        }
+
+        // Tab content
+        when (selectedTab) {
+            0 -> PayloadTab(log)
+            1 -> HeadersTab(log)
+            2 -> RiskTab(log, riskScore, flagged)
+            3 -> FieldsTab(log)
+        }
+    }
+}
+
+@Composable
+private fun MetaCell(modifier: Modifier, label: String, value: String, valueColor: Color) {
+    Surface(modifier, color = Bg2, shape = RoundedCornerShape(8.dp)) {
+        Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(label, color = TxM, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
+            Spacer(Modifier.height(2.dp))
+            Text(value, color = valueColor, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+// ── PAYLOAD TAB ───────────────────────────────────────────────────────────────
+@Composable
+private fun PayloadTab(log: PayloadLogEntity) {
+    var fmt by remember { mutableStateOf("json") }
+    val hasBody = !log.body.isNullOrBlank()
+    val notDecryptedReason = remember(log) { log.notDecryptedReason() }
+
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp)) {
+        SectionLabel(if (log.direction == "OUTBOUND") "Request Body" else "Response Body")
+
+        // HTTPS that was NOT decrypted → explain why
+        if (notDecryptedReason != null) {
+            Surface(
+                Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                color = Blue.copy(alpha = 0.09f),
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, Blue.copy(alpha = 0.3f))
+            ) {
+                Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(Icons.Default.Lock, null, tint = Blue, modifier = Modifier.size(18.dp))
+                    Column {
+                        Text("Not decrypted — metadata only", color = Blue,
+                            fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "$notDecryptedReason\n\n" +
+                                    "App: ${log.ownerPackage ?: "unknown"}\n" +
+                                    "Host: ${log.sniHostname ?: log.destinationIp}\n" +
+                                    "Sent: ${fmtBytes(log.sizeBytes)}",
+                            color = TxS, fontSize = 11.sp, lineHeight = 17.sp
+                        )
+                    }
+                }
+            }
+        }
+
+        // Format selector (only when there is a body)
+        if (hasBody) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 8.dp)) {
+                listOf("JSON", "RAW", "HEX").forEach { f ->
+                    FmtButton(f, fmt.uppercase() == f) { fmt = f.lowercase() }
+                }
+            }
+        }
+
+        // Body box
+        val body = log.body
+        val displayText = remember(body, fmt, notDecryptedReason) {
+            when {
+                body.isNullOrBlank() -> when {
+                    notDecryptedReason != null -> "(not decrypted — see notice above)"
+                    log.method != null -> "(no body — ${log.method} request; data is in the URL and headers)"
+                    else -> "(no body)"
+                }
+                fmt == "hex" -> toHexDump(body)
+                fmt == "raw" -> body
+                else -> tryPrettyJson(body)
+            }
+        }
+        val annotated = remember(displayText, fmt) {
+            if (fmt == "json" && hasBody) syntaxHighlight(displayText)
+            else buildAnnotatedString { append(displayText) }
+        }
+
+        Surface(Modifier.fillMaxWidth(), color = Bg, shape = RoundedCornerShape(10.dp), border = BorderStroke(1.dp, LineCol)) {
+            Text(annotated, Modifier.fillMaxWidth().padding(12.dp),
+                color = if (hasBody) TxP else TxM,
+                fontSize = 10.sp, lineHeight = 17.sp, fontFamily = FontFamily.Monospace)
+        }
+
+        Spacer(Modifier.height(16.dp))
+        SectionLabel("Headers")
+        Surface(Modifier.fillMaxWidth(), color = Bg, shape = RoundedCornerShape(10.dp), border = BorderStroke(1.dp, LineCol)) {
+            val prettyHeaders = remember(log.headers) { tryPrettyJson(log.headers) }
+            Text(prettyHeaders.ifBlank { "(none)" }, Modifier.fillMaxWidth().padding(12.dp),
+                color = TxS, fontSize = 10.sp, lineHeight = 17.sp, fontFamily = FontFamily.Monospace)
+        }
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(text, color = TxM, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+        letterSpacing = 0.8.sp, modifier = Modifier.padding(bottom = 8.dp))
+}
+
+@Composable
+private fun FmtButton(label: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(onClick = onClick, color = if (selected) AcDim else Bg3,
+        shape = RoundedCornerShape(6.dp), border = BorderStroke(1.dp, if (selected) Ac.copy(alpha = 0.4f) else LineCol)) {
+        Text(label, Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+            color = if (selected) Ac else TxS, fontSize = 10.sp,
+            fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium)
+    }
+}
+
+private fun tryPrettyJson(s: String): String {
+    return try { org.json.JSONObject(s).toString(2) }
+    catch (_: Exception) {
+        try { org.json.JSONArray(s).toString(2) }
+        catch (_: Exception) { s }
+    }
+}
+
+private fun syntaxHighlight(json: String): androidx.compose.ui.text.AnnotatedString = buildAnnotatedString {
+    val keyColor  = Color(0xFF7DD3FC)
+    val strColor  = Color(0xFF86EFAC)
+    val numColor  = Color(0xFFFCA5A5)
+    val boolColor = Color(0xFF9D7AFF)
+    val nullColor = Color(0xFF48566A)
+    var i = 0
+    while (i < json.length) {
+        when {
+            json[i] == '"' -> {
+                val start = i++
+                while (i < json.length && !(json[i] == '"' && json[i - 1] != '\\')) i++
+                i++ // closing quote
+                val token = json.substring(start, minOf(i, json.length))
+                val afterSpaces = json.drop(i).trimStart()
+                withStyle(SpanStyle(color = if (afterSpaces.startsWith(":")) keyColor else strColor)) { append(token) }
+            }
+            json.substring(i).let { it.startsWith("true") } -> {
+                withStyle(SpanStyle(color = boolColor)) { append("true") }; i += 4
+            }
+            json.substring(i).startsWith("false") -> {
+                withStyle(SpanStyle(color = boolColor)) { append("false") }; i += 5
+            }
+            json.substring(i).startsWith("null") -> {
+                withStyle(SpanStyle(color = nullColor)) { append("null") }; i += 4
+            }
+            json[i].isDigit() || (json[i] == '-' && i + 1 < json.length && json[i + 1].isDigit()) -> {
+                val start = i; if (json[i] == '-') i++
+                while (i < json.length && (json[i].isDigit() || json[i] in ".eE+-")) i++
+                withStyle(SpanStyle(color = numColor)) { append(json.substring(start, i)) }
+            }
+            else -> { append(json[i]); i++ }
+        }
+    }
+}
+
+private fun toHexDump(s: String): String {
+    val sb = StringBuilder()
+    val bytes = s.toByteArray()
+    for (i in bytes.indices step 16) {
+        val chunk = bytes.slice(i until minOf(i + 16, bytes.size))
+        val hex = chunk.joinToString(" ") { "%02x".format(it) }
+        val ascii = chunk.joinToString("") { if (it.toInt() in 32..126) it.toInt().toChar().toString() else "." }
+        sb.appendLine("${"%04x".format(i)}  $hex  $ascii")
+    }
+    return sb.toString().trimEnd()
+}
+
+// ── HEADERS TAB ───────────────────────────────────────────────────────────────
+@Composable
+private fun HeadersTab(log: PayloadLogEntity) {
+    val headers = remember(log.id) { parseHeadersMap(log.headers) }
+    val sensitiveKeys = remember { setOf("authorization", "cookie", "x-auth", "x-api-key", "x-device", "x-forwarded-for") }
+    val warnKeys = remember { setOf("user-agent", "x-session", "x-request-id", "x-client", "x-app") }
+
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(14.dp)) {
+        item { SectionLabel("Headers (${headers.size})") }
+        if (headers.isEmpty()) {
+            item { Text("No headers captured", color = TxM, fontSize = 12.sp) }
+        }
+        items(headers.entries.toList()) { (key, value) ->
+            val kl = key.lowercase()
+            val severity = when {
+                sensitiveKeys.any { kl.contains(it) } -> "bad"
+                warnKeys.any { kl.contains(it) }      -> "warn"
+                else -> "ok"
+            }
+            HeaderItem(key, value, severity)
+            Spacer(Modifier.height(4.dp))
+        }
+        item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+@Composable
+private fun HeaderItem(name: String, value: String, severity: String) {
+    val borderColor = when (severity) { "bad" -> Red; "warn" -> Amber; else -> LineCol }
+    Surface(Modifier.fillMaxWidth(), color = Bg2, shape = RoundedCornerShape(8.dp), border = BorderStroke(1.dp, LineCol)) {
+        Row {
+            Box(Modifier.width(3.dp).defaultMinSize(minHeight = 48.dp).background(borderColor,
+                RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp)))
+            Column(Modifier.weight(1f).padding(horizontal = 10.dp, vertical = 8.dp)) {
+                Text(name, color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                Spacer(Modifier.height(2.dp))
+                Text(value, color = TxP, fontSize = 11.sp, lineHeight = 16.sp)
+                if (severity != "ok") {
+                    Spacer(Modifier.height(4.dp))
+                    Surface(color = borderColor.copy(alpha = 0.14f), shape = RoundedCornerShape(4.dp)) {
+                        Text(severity.uppercase(), Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                            color = borderColor, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── RISK TAB ──────────────────────────────────────────────────────────────────
+@Composable
+private fun RiskTab(log: PayloadLogEntity, riskScore: Int, flagged: Boolean) {
+    val risks = remember(log.id) { buildRisks(log, riskScore) }
+    val riskColor = when { riskScore >= 80 -> Red; riskScore >= 50 -> Amber; else -> Ac }
+
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(14.dp)) {
+        item {
+            Surface(Modifier.fillMaxWidth().padding(bottom = 14.dp),
+                color = Bg2, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, LineCol)) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Risk ring
+                    Box(Modifier.size(72.dp), contentAlignment = Alignment.Center) {
+                        Canvas(Modifier.fillMaxSize()) {
+                            val stroke = Stroke(6.dp.toPx(), cap = StrokeCap.Round)
+                            val inset = Offset(3.dp.toPx(), 3.dp.toPx())
+                            val sz = Size(size.width - 6.dp.toPx(), size.height - 6.dp.toPx())
+                            drawArc(Bg3, -90f, 360f, false, style = stroke, topLeft = inset, size = sz)
+                            drawArc(riskColor, -90f, 360f * (riskScore / 100f), false, style = stroke, topLeft = inset, size = sz)
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("$riskScore", color = riskColor, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 22.sp)
+                            Text("RISK", color = TxM, fontSize = 7.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+                        }
+                    }
+                    Column {
+                        Text(when { riskScore >= 80 -> "High Risk"; riskScore >= 50 -> "Medium Risk"; else -> "Low Risk" },
+                            color = riskColor, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                        Spacer(Modifier.height(4.dp))
+                        Text("${risks.count { it.first == "crit" }} critical · ${risks.count { it.first == "warn" }} warnings",
+                            color = TxS, fontSize = 11.sp)
+                    }
+                }
+            }
+        }
+        items(risks) { (level, title, body) ->
+            RiskAnomalyItem(level, title, body)
+            Spacer(Modifier.height(8.dp))
+        }
+        item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+private fun buildRisks(log: PayloadLogEntity, riskScore: Int): List<Triple<String, String, String>> {
+    val risks = mutableListOf<Triple<String, String, String>>()
+    for (leak in leaksOf(log))
+        risks += Triple("crit", "${leak.label} sent", leak.description)
+    val headers = parseHeadersMap(log.headers)
+    val hKeys = headers.keys.map { it.lowercase() }
+    if (hKeys.any { it.contains("authorization") })
+        risks += Triple("warn", "Authorization Header Present", "Bearer token or credentials transmitted in this request.")
+    if (hKeys.any { it.contains("x-device") || it.contains("device-id") })
+        risks += Triple("crit", "Device Identifier in Headers", "Device ID being sent to remote — potential tracking vector.")
+    if (hKeys.any { it.contains("cookie") })
+        risks += Triple("warn", "Session Cookie Transmitted", "Cookie header may contain session tokens or tracking IDs.")
+    if (!log.body.isNullOrBlank() && log.body.length > 500)
+        risks += Triple("info", "Large Request Body (${fmtBytes(log.body.length)})", "Request body is ${log.body.length} bytes.")
+    if (log.method == "POST" || log.method == "PUT")
+        risks += Triple("info", "${log.method} Request", "Data is being submitted to ${log.sniHostname ?: log.destinationIp}.")
+    if (log.protocol == "HTTP1" && log.destinationPort != 443)
+        risks += Triple("crit", "Unencrypted HTTP Traffic", "Data transmitted over plain HTTP without TLS encryption.")
+    log.notDecryptedReason()?.let {
+        risks += Triple("info", "Not Decrypted", it)
+    }
+    if (risks.isEmpty())
+        risks += Triple("info", "No anomalies detected", "This request appears clean based on available metadata.")
+    return risks
+}
+
+@Composable
+private fun RiskAnomalyItem(level: String, title: String, body: String) {
+    val (iconTint, surfaceBg, badgeFg) = when (level) {
+        "crit" -> Triple(Red, RedDim, Red)
+        "warn" -> Triple(Amber, AmberDim, Amber)
+        else   -> Triple(Blue, Blue.copy(alpha = 0.12f), Blue)
+    }
+    val icon = when (level) { "crit" -> Icons.Default.Warning; "warn" -> Icons.Default.Info; else -> Icons.Default.CheckCircle }
+    Surface(Modifier.fillMaxWidth(), color = Bg2, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, LineCol)) {
+        Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Surface(Modifier.size(32.dp), color = surfaceBg, shape = RoundedCornerShape(10.dp)) {
+                Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = iconTint, modifier = Modifier.size(18.dp)) }
+            }
+            Column(Modifier.weight(1f)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(title, color = TxP, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    Spacer(Modifier.width(8.dp))
+                    Surface(color = surfaceBg, shape = RoundedCornerShape(5.dp), border = BorderStroke(1.dp, badgeFg.copy(alpha = 0.3f))) {
+                        Text(level.uppercase(), Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            color = badgeFg, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(body, color = TxS, fontSize = 11.sp, lineHeight = 17.sp)
+            }
+        }
+    }
+}
+
+// ── FIELDS TAB ────────────────────────────────────────────────────────────────
+@Composable
+private fun FieldsTab(log: PayloadLogEntity) {
+    val fields = remember(log.id) {
+        buildList {
+            add(Triple("package", log.ownerPackage ?: "unknown", Ac))
+            add(Triple("sni_hostname", log.sniHostname ?: "(none)", Blue))
+            add(Triple("destination_ip", log.destinationIp, TxP))
+            add(Triple("destination_port", "${log.destinationPort}", TxP))
+            add(Triple("protocol", log.protocol, TxP))
+            if (!log.method.isNullOrBlank()) add(Triple("method", log.method, Amber))
+            if (!log.urlPath.isNullOrBlank()) add(Triple("url_path", log.urlPath, Blue))
+            add(Triple("direction", log.direction, if (log.direction == "OUTBOUND") Amber else Ac))
+            add(Triple("size_bytes", "${log.sizeBytes} (${fmtBytes(log.sizeBytes)})", TxP))
+            add(Triple("body_encoding", log.bodyEncoding, TxS))
+            add(Triple("personal_data", leaksOf(log).joinToString { it.label }.ifEmpty { "none found" },
+                if (log.piiRedacted) Red else Ac))
+            add(Triple("mitm_success", "${log.isMitmSuccess}", if (log.isMitmSuccess) Ac else Red))
+            add(Triple("session_id", log.sessionId.take(36), TxM))
+            add(Triple("timestamp", SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(log.timestamp)), TxS))
+        }
+    }
+
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(14.dp)) {
+        item { SectionLabel("Extracted Fields (${fields.size})") }
+        items(fields) { (key, value, color) ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
+                Box(Modifier.size(6.dp).offset(y = 4.dp).clip(CircleShape).background(color.copy(alpha = 0.7f)))
+                Column(Modifier.weight(1f)) {
+                    Text(key, color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.height(2.dp))
+                    Text(value, color = color, fontSize = 11.sp, lineHeight = 16.sp, fontFamily = FontFamily.Monospace)
+                }
+            }
+            HorizontalDivider(color = LineCol, thickness = 0.5.dp)
+        }
+        item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+// أضف هذه الدالة في أي مكان في الملف
+@Composable
+private fun CertificateStatusCard(caManager: CaManager) {
+    val isInstalled = remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        // محاولة التحقق من وجود الشهادة
+        isInstalled.value = caManager.getCaCert() != null
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        color = if (isInstalled.value) Ac.copy(alpha = 0.1f) else Red.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, if (isInstalled.value) Ac.copy(alpha = 0.3f) else Red.copy(alpha = 0.3f))
+    ) {
+        Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                if (isInstalled.value) Icons.Default.CheckCircle else Icons.Default.Warning,
+                null,
+                tint = if (isInstalled.value) Ac else Red,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                if (isInstalled.value) "✓ CA Certificate Installed" else "✗ CA Certificate NOT Installed",
+                color = if (isInstalled.value) Ac else Red,
+                fontSize = 11.sp
+            )
+        }
+    }
+}

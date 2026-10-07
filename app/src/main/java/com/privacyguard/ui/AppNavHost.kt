@@ -52,7 +52,7 @@ import com.privacyguard.app.ui.theme.PgBackgroundAlt
 import com.privacyguard.app.ui.theme.PgBorder
 import com.privacyguard.app.ui.theme.PgTextFaint
 import com.privacyguard.app.ui.theme.PgTextMuted
-import com.privacyguard.ui.mitm.MitmScreen
+import com.privacyguard.ui.flavor.PayloadInspectorUi
 
 private data class NavTab(val route: String, val label: String, val icon: ImageVector)
 
@@ -242,7 +242,7 @@ fun AppNavHost(
             // MITM Screen - only in enterprise build
             if (BuildConfig.MITM_AVAILABLE) {
                 composable("payloads") {
-                    MitmScreen()
+                    PayloadInspectorUi.Screen()
                 }
             }
 

@@ -23,3 +23,6 @@ local.properties
 /.kotlin/
 /.claude/
 compile-log.txt
+
+# Rust build output
+rust/target/

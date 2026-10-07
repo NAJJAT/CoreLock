@@ -5,6 +5,7 @@ edition = "2021"
 
 [[bin]]
 name = "privacyguard"
+path = "src/main.rs"
 
 [dependencies]
 privacyguard-core = { path = "../privacyguard-core", default-features = false }

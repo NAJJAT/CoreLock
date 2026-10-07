@@ -9,26 +9,14 @@ import com.privacyguard.core.session.Session
 import com.privacyguard.core.session.SessionKey
 import com.privacyguard.core.session.SessionTable
 import com.privacyguard.core.utils.Checksum
-import com.privacyguard.app.data.db.NOT_DECRYPTED_PREFIX
-import com.privacyguard.app.data.db.PayloadLogEntity
-import com.privacyguard.domain.repository.PayloadLogRepository
 import com.privacyguard.vpn.inspector.EncryptionEnforcer
-import com.privacyguard.vpn.mitm.HttpCodec
-import com.privacyguard.vpn.mitm.MitmConfig
-import com.privacyguard.vpn.mitm.MitmEngine
-import com.privacyguard.vpn.mitm.PayloadParser
-import com.privacyguard.vpn.mitm.PayloadShipper
-import com.privacyguard.vpn.mitm.PinningDetector
+import com.privacyguard.vpn.interception.TlsInterception
 import com.privacyguard.vpn.dualvpn.DualVpnConfig
 import com.privacyguard.vpn.dualvpn.DualVpnTunnel
 import com.privacyguard.vpn.tunnel.TunWriter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.builtins.MapSerializer
-import kotlinx.serialization.builtins.serializer
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
@@ -45,13 +33,8 @@ class TcpForwarder(
     private val encEnforcer: EncryptionEnforcer,
     private val filterEngine: com.privacyguard.core.filter.FilterEngine,
     private val protectSocket: (java.net.Socket) -> Boolean,
-    // MITM dependencies
-    private val mitmEngine: MitmEngine,
-    private val pinningDetector: PinningDetector,
-    private val mitmConfig: MitmConfig,
-    private val payloadParser: PayloadParser,
-    private val payloadShipper: PayloadShipper,
-    private val payloadLogRepository: PayloadLogRepository,
+    // HTTPS payload inspection; TlsInterception.None outside enterprise builds.
+    private val interception: TlsInterception,
     private val dualVpnConfig: () -> DualVpnConfig = { DualVpnConfig() },
 ) : Runnable {
 
@@ -277,14 +260,11 @@ class TcpForwarder(
             // First TLS ClientHello on port 443: redirect the session to the local
             // MITM SSL server instead of the real destination. The MITM engine
             // completes TLS with the device using a forged cert and opens the real
-            // upstream connection itself, passing plaintext to bufferAndCapture.
-            if (BuildConfig.MITM_AVAILABLE &&
-                mitmConfig.isEnabled &&
-                mitmConfig.isConsentValid() &&
-                sni != null &&
+            // upstream connection itself, passing plaintext to TlsInterception.capture.
+            if (sni != null &&
                 key.destinationPort == 443 &&
                 !session.isMitmIntercepted &&
-                !pinningDetector.isPinned(session.ownerPackage, sni)) {
+                interception.shouldIntercept(session.ownerPackage, sni)) {
 
                 val clientHello = clientHelloBytes.copyOf()
                 // Bind the loopback client socket first so MitmEngine can accept
@@ -298,9 +278,7 @@ class TcpForwarder(
                     null
                 }
                 val clientPort = (mitmChannel?.localAddress as? InetSocketAddress)?.port ?: -1
-                val mitmPort = if (mitmChannel == null) -1 else mitmEngine.intercept(session, clientPort) { dir, bytes, sess ->
-                    bufferAndCapture(dir, bytes, sess)
-                }
+                val mitmPort = if (mitmChannel == null) -1 else interception.intercept(session, clientPort)
                 if (mitmPort <= 0) runCatching { mitmChannel?.close() }
 
                 if (mitmPort > 0 && mitmChannel != null) {
@@ -325,7 +303,7 @@ class TcpForwarder(
                         runCatching { mitmChannel.close() }
                         session.isMitmIntercepted = false
                         session.pendingMitmData = null
-                        pinningDetector.markAsPinned(sni)
+                        interception.markPinned(sni)
                     }
                     // ACK the ClientHello now: it will be replayed to the MITM socket.
                     // Without this the device retransmits it and the MITM server
@@ -381,45 +359,21 @@ class TcpForwarder(
         }
 
         // ── PAYLOAD CAPTURE (fully async — never touches the forwarding path) ──
-        if (BuildConfig.MITM_AVAILABLE && mitmConfig.isEnabled && !isPrivacyGuardTraffic(session.ownerPackage)) {
+        if (interception.isEnabled && !isPrivacyGuardTraffic(session.ownerPackage)) {
             val snap = tcp.data.copyOf()          // snapshot before forwarding
-            val sni  = session.tlsSni
-            val port = session.key.destinationPort
             val enc  = session.encryptionStatus
             // Metadata-only stub for TLS sessions we are NOT decrypting. MITM'd sessions
-            // log real decrypted entries via bufferAndCapture — a stub there would show
+            // log real decrypted entries via capture — a stub there would show
             // up as a bogus "encrypted" entry next to the plaintext.
-            val needStub = port == 443 && sni != null && !session.metadataLogged && !session.isMitmIntercepted
+            val needStub = session.key.destinationPort == 443 && session.tlsSni != null &&
+                !session.metadataLogged && !session.isMitmIntercepted
             if (needStub) session.metadataLogged = true   // set flag on capture thread
-            val stubEncoding = if (!needStub) "" else NOT_DECRYPTED_PREFIX + when {
-                !mitmConfig.isConsentValid() -> "mitm-off"
-                pinningDetector.isBypassDomain(sni!!) -> "bypass"
-                pinningDetector.isPinned(session.ownerPackage, sni) -> "pinned"
-                else -> "failed"
-            }
 
             coroutineScope.launch {
                 try {
-                    if (needStub) {
-                        payloadLogRepository.saveLog(PayloadLogEntity(
-                            timestamp    = System.currentTimeMillis(),
-                            sessionId    = session.key.toString(),
-                            direction    = "OUTBOUND",
-                            ownerPackage = session.ownerPackage,
-                            sniHostname  = sni,
-                            destinationIp   = session.key.destinationIp,
-                            destinationPort = port,
-                            protocol     = enc.name,
-                            method = null, urlPath = null,
-                            headers = "{}", body = null,
-                            bodyEncoding = stubEncoding,
-                            sizeBytes    = snap.size,
-                            piiRedacted  = false,
-                            isMitmSuccess = false
-                        ))
-                    }
+                    if (needStub) interception.logNotDecrypted(session, snap.size)
                     if (enc == EncryptionStatus.CLEARTEXT) {
-                        bufferAndCapture("OUTBOUND", snap, session)
+                        interception.capture("OUTBOUND", snap, session)
                     }
                 } catch (e: Exception) {
                     Log.w(TAG, "Outbound capture failed: ${e.message}")
@@ -449,105 +403,6 @@ class TcpForwarder(
         }
     }
 
-
-    // ── TCP segment accumulator ──────────────────────────────────────────────
-    // HTTP messages (especially POSTs) routinely span multiple TCP segments:
-    //   segment 1 → request line + headers
-    //   segment 2 → body
-    // This function appends to a per-session buffer and only fires processPayload
-    // once a complete HTTP message (headers + Content-Length bytes of body) is ready.
-
-    private fun bufferAndCapture(direction: String, newBytes: ByteArray, session: Session) {
-        val combined = if (direction == "OUTBOUND") {
-            session.httpOutBytes + newBytes
-        } else {
-            session.httpInBytes + newBytes
-        }
-
-        if (HttpCodec.headerEnd(combined) < 0) {
-            // Haven't received complete headers yet — keep buffering (cap at 64 KB).
-            if (combined.size <= 65_536) {
-                if (direction == "OUTBOUND") session.httpOutBytes = combined
-                else session.httpInBytes = combined
-            }
-            return
-        }
-
-        // Content-Length or chunked framing decides where the message ends.
-        val messageLength = HttpCodec.messageLength(combined)
-        if (messageLength == null && combined.size <= 2_097_152) {
-            // Body is still arriving in later segments — keep buffering.
-            if (direction == "OUTBOUND") session.httpOutBytes = combined
-            else session.httpInBytes = combined
-            return
-        }
-        val totalExpected = messageLength ?: combined.size   // over the cap: parse what we have
-
-        // Complete message — parse it.
-        val toParse = if (combined.size >= totalExpected) combined.copyOfRange(0, totalExpected) else combined
-        coroutineScope.launch { processPayload(direction, toParse, session) }
-        Log.d(TAG, "📦 HTTP $direction captured ${toParse.size}B (${session.tlsSni ?: session.key.destinationIp})")
-
-        // Clear buffer; carry over any bytes that belong to the next message.
-        val leftover = if (combined.size > totalExpected)
-            combined.copyOfRange(totalExpected, combined.size) else ByteArray(0)
-        if (direction == "OUTBOUND") session.httpOutBytes = leftover
-        else session.httpInBytes = leftover
-    }
-
-    // ── Payload parse + save ─────────────────────────────────────────────────
-    private fun processPayload(direction: String, bytes: ByteArray, session: Session) {
-        try {
-            if (isPrivacyGuardTraffic(session.ownerPackage)) return
-
-            val parsed = payloadParser.parse(bytes, direction, session)
-
-            // FIXED: Proper JSON serialization for headers map
-            val headersJson = try {
-                Json.encodeToString(parsed.headers)
-            } catch (e: Exception) {
-                "{}"
-            }
-
-            val entity = PayloadLogEntity(
-                timestamp = parsed.timestamp,
-                sessionId = session.key.toString(),
-                direction = parsed.direction,
-                ownerPackage = session.ownerPackage,
-                sniHostname = session.tlsSni,
-                destinationIp = session.key.destinationIp,
-                destinationPort = session.key.destinationPort,
-                protocol = parsed.protocol.name,
-                method = parsed.method,
-                urlPath = parsed.urlPath,
-                headers = headersJson,
-                body = parsed.body,
-                bodyEncoding = parsed.bodyEncoding,
-                sizeBytes = parsed.sizeBytes,
-                piiRedacted = parsed.piiRedacted,
-                isMitmSuccess = true
-            )
-
-            coroutineScope.launch {
-                payloadLogRepository.saveLog(entity)
-            }
-
-            // The local log keeps the full payload; anything leaving the device is redacted.
-            payloadShipper.enqueue(
-                payloadParser.redactForExport(parsed),
-                session.key.toString(),
-                session.key.destinationIp,
-                session.key.destinationPort,
-                session.ownerPackage,
-                session.tlsSni
-            )
-
-            session.payloadCount.incrementAndGet()
-            Log.d(TAG, "MITM payload processed: ${parsed.protocol} ${parsed.sizeBytes} bytes")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to process MITM payload", e)
-        }
-    }
 
     private fun isPrivacyGuardTraffic(ownerPackage: String?): Boolean {
         return ownerPackage == BuildConfig.APPLICATION_ID ||
@@ -644,11 +499,11 @@ class TcpForwarder(
         forwardedBytesIn.addAndGet(n.toLong())
 
         // Capture response async — injectDataToDevice always runs regardless
-        if (BuildConfig.MITM_AVAILABLE && mitmConfig.isEnabled &&
+        if (interception.isEnabled &&
             session.encryptionStatus == EncryptionStatus.CLEARTEXT) {
             val snap = data.copyOf()
             coroutineScope.launch {
-                try { bufferAndCapture("INBOUND", snap, session) }
+                try { interception.capture("INBOUND", snap, session) }
                 catch (e: Exception) { Log.w(TAG, "Inbound capture failed: ${e.message}") }
             }
         }

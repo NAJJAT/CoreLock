@@ -76,7 +76,7 @@ pub extern "C" fn Java_com_privacyguard_core_native_1engine_RustBridge_computeJa
 /// Query whether a domain is present in the native bloom filter.
 #[no_mangle]
 pub extern "C" fn Java_com_privacyguard_core_native_1engine_RustBridge_bloomCheck(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     domain: JString,
 ) -> jboolean {
@@ -91,7 +91,7 @@ pub extern "C" fn Java_com_privacyguard_core_native_1engine_RustBridge_bloomChec
 /// Rebuild the bloom filter from a domain array.
 #[no_mangle]
 pub extern "C" fn Java_com_privacyguard_core_native_1engine_RustBridge_bloomRebuild(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     domains: JObjectArray,
 ) {
@@ -100,10 +100,12 @@ pub extern "C" fn Java_com_privacyguard_core_native_1engine_RustBridge_bloomRebu
     for i in 0..len {
         if let Ok(obj) = env.get_object_array_element(&domains, i as i32) {
             let jstr = JString::from(obj);
-            if let Ok(s) = env.get_string(&jstr) {
-                let domain: String = s.into();
+            let domain: Option<String> = env.get_string(&jstr).ok().map(Into::into);
+            if let Some(domain) = domain {
                 bf.insert(&domain);
             }
+            // Free each element's local ref; a large blocklist would overflow the local ref table.
+            let _ = env.delete_local_ref(jstr);
         }
     }
     *bloom() = Some(bf);

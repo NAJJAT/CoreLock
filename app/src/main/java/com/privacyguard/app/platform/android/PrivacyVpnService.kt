@@ -43,15 +43,8 @@ import android.util.Log
 import java.net.InetSocketAddress
 import kotlinx.coroutines.*
 import java.util.concurrent.atomic.AtomicLong
-import com.privacyguard.vpn.mitm.CaManager
-import com.privacyguard.vpn.mitm.CertForger
-import com.privacyguard.vpn.mitm.MitmConfig
-import com.privacyguard.vpn.mitm.MitmEngine
-import com.privacyguard.vpn.mitm.PayloadParser
-import com.privacyguard.vpn.mitm.PayloadShipper
-import com.privacyguard.vpn.mitm.PiiRedactor
-import com.privacyguard.vpn.mitm.PinningDetector
-import com.privacyguard.data.repository.PayloadLogRepositoryImpl
+import com.privacyguard.vpn.interception.TlsInterception
+import com.privacyguard.vpn.interception.TlsInterceptionFactory
 import com.privacyguard.app.core.blocklist.CuratedAdDomains
 import com.privacyguard.core.tls.CipherRisk
 import com.privacyguard.core.tls.CipherSuiteAnalyzer
@@ -87,7 +80,7 @@ class PrivacyVpnService : VpnService() {
     private lateinit var blocklistRepo: BlocklistRepo
     private lateinit var metadataRepo: MetadataRepo
     private lateinit var dnsAnomalyRepo: DnsAnomalyRepo
-    private lateinit var mitmConfig: MitmConfig
+    private lateinit var interception: TlsInterception
 
     private var tunFd: ParcelFileDescriptor? = null
     private val totalBlocked = AtomicLong(0)
@@ -324,47 +317,13 @@ class PrivacyVpnService : VpnService() {
         }
         // Opt-in: CT checks send contacted domains to crt.sh.
         if (com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(this).ctMonitoringEnabled.value) ctMonitor.startMonitoring()
-        // ==================== MITM INITIALIZATION ====================
-        val caManager = CaManager(this)
-
-        // ADDED: initialize CA before TcpForwarder starts so first HTTPS traffic cannot race ahead of certificate generation.
-        val caReady = runBlocking(Dispatchers.IO) { caManager.initialize() }
-        if (caReady) {
-            val cert = caManager.getCaCert()
-            Log.i(TAG, "CaManager ready before forwarder start — cert=${cert?.encoded?.size}B subject=${cert?.subjectDN}")
-        } else {
-            Log.e(TAG, "CaManager.initialize() failed before forwarder start — MITM payload decryption will be unavailable")
-        }
-
-        // Initialize CA asynchronously — must complete before the first TLS SYN arrives.
-        scope.launch {
-            val ok = caManager.initialize()
-            if (ok) {
-                val cert = caManager.getCaCert()
-                Log.i(TAG, "CaManager ready — cert=${cert?.encoded?.size}B " +
-                    "subject=${cert?.subjectDN}")
-            } else {
-                Log.e(TAG, "CaManager.initialize() returned false — " +
-                    "MITM will not work until the CA is regenerated")
-            }
-        }
-
-        val piiRedactor = PiiRedactor()
-        val pinningDetector = PinningDetector()
-        mitmConfig = MitmConfig(this)
-        val payloadParser = PayloadParser(piiRedactor)
-        val payloadShipper = PayloadShipper(mitmConfig)
-        val certForger = CertForger(caManager)
-        val mitmEngine = MitmEngine(certForger, pinningDetector, caManager, payloadParser, ::protect)
-        val payloadLogRepository = PayloadLogRepositoryImpl(
-            db.payloadLogDao()
-        )
+        // HTTPS inspection exists only in enterprise builds; consumer gets a no-op.
+        interception = TlsInterceptionFactory.create(this, db, ::protect)
         tcpForwarder = TcpForwarder(
             sessionTable, tunWriter, encEnforcer, filterEngine, ::protect,
-            mitmEngine, pinningDetector, mitmConfig, payloadParser, payloadShipper, payloadLogRepository,
+            interception,
             dualVpnConfig = { settings.getDualVpnConfig() },
         ).also { it.start() }
-        // ==================== END MITM INITIALIZATION ====================
 
         udpForwarder = UdpForwarder(sessionTable, tunWriter, ::protect).also { it.start() }
 
@@ -472,7 +431,7 @@ class PrivacyVpnService : VpnService() {
 
         // Drop QUIC (UDP/443) for IPv6 when MITM block-QUIC is active
         if (ipv6.nextHeader == com.privacyguard.core.packet.Ipv6Packet.PROTO_UDP
-            && dstPort == 443 && mitmConfig.isEnabled && mitmConfig.blockQuicWhenMitm) return
+            && dstPort == 443 && interception.blockQuic) return
 
         when (ipv6.nextHeader) {
             com.privacyguard.core.packet.Ipv6Packet.PROTO_TCP,
@@ -542,7 +501,7 @@ class PrivacyVpnService : VpnService() {
                 // Drop QUIC (UDP/443) when MITM is active and the block-QUIC option is on.
                 // Silently dropping forces QUIC-capable apps (Chrome, WhatsApp, YouTube) to
                 // retry on TCP/TLS, where MITM interception is possible.
-                if (udp.destinationPort == 443 && mitmConfig.isEnabled && mitmConfig.blockQuicWhenMitm) return
+                if (udp.destinationPort == 443 && interception.blockQuic) return
 
                 val udpKey = com.privacyguard.core.session.SessionKey.of(
                     ip.sourceIp, udp.sourcePort, ip.destinationIp, udp.destinationPort, IpPacket.PROTO_UDP)

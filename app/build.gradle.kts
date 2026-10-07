@@ -255,17 +255,18 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
     // ==================== MITM DEPENDENCIES ====================
+    // MITM code lives in src/enterprise, so its libraries are enterprise-only.
 
     // Bouncy Castle (X.509 certificate generation for MITM)
     // 1.78+ fixes CVE-2024-29857, CVE-2024-30171 and CVE-2024-30172.
-    implementation("org.bouncycastle:bcpkix-jdk18on:1.86")
-    implementation("org.bouncycastle:bcprov-jdk18on:1.86")
+    "enterpriseImplementation"("org.bouncycastle:bcpkix-jdk18on:1.86")
+    "enterpriseImplementation"("org.bouncycastle:bcprov-jdk18on:1.86")
 
-    // OkHttp (SIEM shipping for MITM payloads)
+    // OkHttp (SIEM shipping for MITM payloads; also used by shared code)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // Kotlinx Serialization (JSON serialization for MITM payloads)
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    "enterpriseImplementation"("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     // ==================== END MITM DEPENDENCIES ====================
 

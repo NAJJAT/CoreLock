@@ -17,15 +17,50 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c3310cda-f85f-4df1-9ea9-882636f15d4e" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.4.1/executionHistory/executionHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.4.1/executionHistory/executionHistory.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/9.4.1/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.4.1/executionHistory/executionHistory.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/9.4.1/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.4.1/fileHashes/fileHashes.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/9.4.1/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.4.1/fileHashes/fileHashes.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/9.4.1/fileHashes/resourceHashesCache.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.4.1/fileHashes/resourceHashesCache.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/mitm/EnterpriseMetadataShipper.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/mitm/EnterpriseMetadataShipper.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/PayloadShipper.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/PayloadShipper.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/SiemEndpoint.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/SiemEndpoint.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/test/java/com/privacyguard/vpn/mitm/SiemEndpointTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/test/java/com/privacyguard/vpn/mitm/SiemEndpointTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/app/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/platform/android/PrivacyVpnService.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/platform/android/PrivacyVpnService.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/mitm/EnterpriseMetadataShipper.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/app/ui/mitm/EnterpriseMetadataShipper.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/mitm/MitmScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/app/ui/mitm/MitmScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/mitm/MitmViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/app/ui/mitm/MitmViewModel.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/ui/mitm/MitmViewModelFactory.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/app/ui/mitm/MitmViewModelFactory.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/forwarder/TcpForwarder.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/forwarder/TcpForwarder.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/CaInstallHelper.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/app/vpn/mitm/CaInstallHelper.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/CaManager.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/app/vpn/mitm/CaManager.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/CertForger.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/app/vpn/mitm/CertForger.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/HttpCodec.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/app/vpn/mitm/HttpCodec.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/LeakDetector.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/app/vpn/mitm/LeakDetector.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/MitmConfig.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/app/vpn/mitm/MitmConfig.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/MitmEngine.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/app/vpn/mitm/MitmEngine.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/PayloadParser.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/app/vpn/mitm/PayloadParser.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/PayloadShipper.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/app/vpn/mitm/PayloadShipper.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/PiiRedactor.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/app/vpn/mitm/PiiRedactor.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/PinningDetector.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/app/vpn/mitm/PinningDetector.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/app/vpn/mitm/SiemEndpoint.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/app/vpn/mitm/SiemEndpoint.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/mdm/DeviceAdminReceiver.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/mdm/DeviceAdminReceiver.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/mdm/ManagedConfigurationProvider.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/mdm/ManagedConfigurationProvider.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/mdm/MdmConfigReceiver.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/java/com/privacyguard/mdm/MdmConfigReceiver.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/ui/AppNavHost.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/privacyguard/ui/AppNavHost.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/xml/application_restrictions.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/res/xml/application_restrictions.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/res/xml/device_admin_receiver.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/enterprise/res/xml/device_admin_receiver.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/test/java/com/privacyguard/vpn/mitm/CertForgerHostnameTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/testEnterprise/java/com/privacyguard/vpn/mitm/CertForgerHostnameTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/test/java/com/privacyguard/vpn/mitm/HttpCodecTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/testEnterprise/java/com/privacyguard/vpn/mitm/HttpCodecTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/test/java/com/privacyguard/vpn/mitm/LeakDetectorTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/testEnterprise/java/com/privacyguard/vpn/mitm/LeakDetectorTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/test/java/com/privacyguard/vpn/mitm/MitmEnginePeerTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/testEnterprise/java/com/privacyguard/vpn/mitm/MitmEnginePeerTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/test/java/com/privacyguard/vpn/mitm/PiiRedactorTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/testEnterprise/java/com/privacyguard/vpn/mitm/PiiRedactorTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/test/java/com/privacyguard/vpn/mitm/SiemEndpointTest.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/testEnterprise/java/com/privacyguard/vpn/mitm/SiemEndpointTest.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rust/privacyguard-core/src/ffi.rs" beforeDir="false" afterPath="$PROJECT_DIR$/rust/privacyguard-core/src/ffi.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rust/privacyguard-core/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/rust/privacyguard-core/src/lib.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rust/privacyguard-linux/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/rust/privacyguard-linux/Cargo.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rust/privacyguard-windows/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/rust/privacyguard-windows/Cargo.toml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -84,25 +119,25 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Android App.app.executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.privacyguard [dependencyUpdates].executor&quot;: &quot;Run&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
-    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;com.google.services.firebase.aqiPopupShown&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_directory_selection&quot;: &quot;C:/Users/ooo77/AndroidStudioProjects/privacyguard/app/src/main/java/com/privacyguard/app&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Android App.app.executor": "Run",
+    "Gradle.privacyguard [dependencyUpdates].executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "com.google.services.firebase.aqiPopupShown": "true",
+    "git-widget-placeholder": "main",
+    "kotlin-language-version-configured": "true",
+    "last_directory_selection": "C:/Users/ooo77/AndroidStudioProjects/privacyguard/app/src/main/java/com/privacyguard/app"
   }
-}</component>
+}]]></component>
   <component name="RunManager" selected="Android App.app">
     <configuration name="app" type="AndroidRunConfigurationType" factoryName="Android App" activateToolWindowBeforeRun="false">
       <module name="privacyguard.app" />

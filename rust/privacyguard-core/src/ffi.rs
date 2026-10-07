@@ -13,8 +13,11 @@ use std::slice;
 
 /// Classify a raw IPv4/IPv6 packet.
 /// Returns bitmask: 0x01=block, 0x02=tls_client_hello, 0x04=dns_query.
+///
+/// # Safety
+/// `data` must be null or point to `len` readable bytes.
 #[no_mangle]
-pub extern "C" fn pg_classify_packet(data: *const c_uchar, len: c_int) -> c_int {
+pub unsafe extern "C" fn pg_classify_packet(data: *const c_uchar, len: c_int) -> c_int {
     if data.is_null() || len <= 0 {
         return 0;
     }
@@ -25,8 +28,11 @@ pub extern "C" fn pg_classify_packet(data: *const c_uchar, len: c_int) -> c_int 
 /// Compute JA3 fingerprint of a raw TLS ClientHello.
 /// Caller must free the returned string with `pg_free_string`.
 /// Returns NULL if parsing fails.
+///
+/// # Safety
+/// `data` must be null or point to `len` readable bytes.
 #[no_mangle]
-pub extern "C" fn pg_compute_ja3(data: *const c_uchar, len: c_int) -> *mut c_char {
+pub unsafe extern "C" fn pg_compute_ja3(data: *const c_uchar, len: c_int) -> *mut c_char {
     if data.is_null() || len <= 0 {
         return std::ptr::null_mut();
     }
@@ -40,8 +46,11 @@ pub extern "C" fn pg_compute_ja3(data: *const c_uchar, len: c_int) -> *mut c_cha
 }
 
 /// Free a string previously returned by a `pg_*` function.
+///
+/// # Safety
+/// `s` must be null or a pointer returned by a `pg_*` function, freed only once.
 #[no_mangle]
-pub extern "C" fn pg_free_string(s: *mut c_char) {
+pub unsafe extern "C" fn pg_free_string(s: *mut c_char) {
     if !s.is_null() {
         unsafe { drop(CString::from_raw(s)) };
     }
@@ -49,8 +58,11 @@ pub extern "C" fn pg_free_string(s: *mut c_char) {
 
 /// Query the native bloom filter for a domain name (null-terminated C string).
 /// Returns 1 if present (probable), 0 if definitely absent.
+///
+/// # Safety
+/// `domain` must be null or a valid null-terminated string.
 #[no_mangle]
-pub extern "C" fn pg_bloom_check(domain: *const c_char) -> c_int {
+pub unsafe extern "C" fn pg_bloom_check(domain: *const c_char) -> c_int {
     if domain.is_null() {
         return 0;
     }
@@ -61,8 +73,11 @@ pub extern "C" fn pg_bloom_check(domain: *const c_char) -> c_int {
 
 /// Rebuild the bloom filter from a null-terminated array of null-terminated strings.
 /// The array must end with a NULL pointer.
+///
+/// # Safety
+/// `domains` must be null or a NULL-terminated array of valid null-terminated strings.
 #[no_mangle]
-pub extern "C" fn pg_bloom_rebuild(domains: *const *const c_char) {
+pub unsafe extern "C" fn pg_bloom_rebuild(domains: *const *const c_char) {
     if domains.is_null() {
         return;
     }
@@ -83,8 +98,11 @@ pub extern "C" fn pg_bloom_rebuild(domains: *const *const c_char) {
 }
 
 /// Compute Shannon entropy of a byte buffer.
+///
+/// # Safety
+/// `data` must be null or point to `len` readable bytes.
 #[no_mangle]
-pub extern "C" fn pg_shannon_entropy(data: *const c_uchar, len: c_int) -> c_double {
+pub unsafe extern "C" fn pg_shannon_entropy(data: *const c_uchar, len: c_int) -> c_double {
     if data.is_null() || len <= 0 {
         return 0.0;
     }
