@@ -25,7 +25,7 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       - name: Unit tests (consumer + enterprise)
         run: ./gradlew --no-daemon :app:testConsumerDebugUnitTest :app:testEnterpriseDebugUnitTest
