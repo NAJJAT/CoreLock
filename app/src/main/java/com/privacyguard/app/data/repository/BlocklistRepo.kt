@@ -2,10 +2,22 @@ package com.privacyguard.app.data.repository
 
 import com.privacyguard.app.data.db.BlocklistDao
 import com.privacyguard.app.data.db.BlocklistEntity
+import com.privacyguard.app.data.db.BlocklistToggleDao
+import com.privacyguard.app.data.db.BlocklistToggleEntity
+import com.privacyguard.app.data.db.BlocklistToggleEntity.Companion.SCOPE_CATEGORY
+import com.privacyguard.app.data.db.BlocklistToggleEntity.Companion.SCOPE_SOURCE
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class BlocklistRepo(private val blocklistDao: BlocklistDao) {
+/**
+ * Downloaded domains live in history (a re-downloadable cache); which sources and
+ * categories the user switched off lives in config.db and is re-applied to the
+ * cache whenever either changes.
+ */
+class BlocklistRepo(
+    private val blocklistDao: BlocklistDao,
+    private val toggleDao: BlocklistToggleDao,
+) {
 
     suspend fun replaceSource(source: String, category: String, domains: List<String>) = withContext(Dispatchers.IO) {
         blocklistDao.deleteBySource(source)
@@ -18,6 +30,33 @@ class BlocklistRepo(private val blocklistDao: BlocklistDao) {
                 lastUpdated = now,
             )
         })
+        applyToggles()
+    }
+
+    suspend fun setSourceEnabled(source: String, enabled: Boolean) = withContext(Dispatchers.IO) {
+        toggleDao.upsert(BlocklistToggleEntity(SCOPE_SOURCE, source, enabled))
+        applyToggles()
+    }
+
+    suspend fun setCategoryEnabled(category: String, enabled: Boolean) = withContext(Dispatchers.IO) {
+        toggleDao.upsert(BlocklistToggleEntity(SCOPE_CATEGORY, category, enabled))
+        applyToggles()
+    }
+
+    suspend fun setAllEnabled(enabled: Boolean) = withContext(Dispatchers.IO) {
+        if (enabled) {
+            toggleDao.deleteAll()
+        } else {
+            toggleDao.upsertAll(
+                blocklistDao.sources().map { BlocklistToggleEntity(SCOPE_SOURCE, it, false) } +
+                    blocklistDao.categories().map { BlocklistToggleEntity(SCOPE_CATEGORY, it, false) }
+            )
+        }
+        applyToggles()
+    }
+
+    private suspend fun applyToggles() {
+        blocklistDao.applyToggles(toggleDao.disabled(SCOPE_SOURCE), toggleDao.disabled(SCOPE_CATEGORY))
     }
 
     suspend fun allDomains(): List<String> = withContext(Dispatchers.IO) {

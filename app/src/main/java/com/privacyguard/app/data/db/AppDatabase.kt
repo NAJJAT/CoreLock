@@ -9,14 +9,14 @@ import android.content.Context
 import com.privacyguard.app.BuildConfig
 import com.privacyguard.app.core.security.DatabaseEncryption
 
-// ADD THESE IMPORTS
-import com.privacyguard.app.data.db.PayloadLogDao
-import com.privacyguard.app.data.db.PayloadLogEntity
-
+/**
+ * History: connections, DNS queries, alerts, profiles, payload logs and the
+ * downloaded blocklist cache. Large and disposable. The user's own configuration
+ * lives in [ConfigDatabase].
+ */
 @Database(
     entities = [
         ConnectionEntity::class,
-        RuleEntity::class,
         BlocklistEntity::class,
         ConnectionProfileEntity::class,
         DnsAnomalyEntity::class,
@@ -26,13 +26,12 @@ import com.privacyguard.app.data.db.PayloadLogEntity
         TlsAlertEntity::class,
         DnsQueryEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun connectionDao(): ConnectionDao
-    abstract fun rulesDao(): RulesDao
     abstract fun blocklistDao(): BlocklistDao
     abstract fun connectionProfileDao(): ConnectionProfileDao
     abstract fun dnsAnomalyDao(): DnsAnomalyDao
@@ -80,6 +79,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Rules moved to config.db. The old table is deliberately left in place:
+        // LegacyConfigImporter copies it on config.db's first open and only then
+        // drops it, so a crash in between cannot lose the user's rules.
+        internal val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) = Unit
+        }
+
         /**
          * Debug builds wipe on any schema mismatch so local iteration never gets stuck.
          * Release builds only wipe where no migration can exist (version 1, which
@@ -103,7 +109,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     DATABASE_NAME
-                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     .openHelperFactory(DatabaseEncryption.openHelperFactory(context, DATABASE_NAME))
                     .applyFallback()
                     .build().also {

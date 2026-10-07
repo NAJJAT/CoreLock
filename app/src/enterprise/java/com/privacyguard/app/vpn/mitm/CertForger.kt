@@ -43,15 +43,19 @@ class CertForger(
         }
     }
 
-    data class ForgedCert(val certificate: X509Certificate, val privateKey: PrivateKey)
+    /** [caSerial] identifies the CA that signed the leaf. */
+    data class ForgedCert(val certificate: X509Certificate, val privateKey: PrivateKey, val caSerial: java.math.BigInteger?)
 
     private val cache = LruCache<String, ForgedCert>(MAX_CACHE_SIZE)
     private val lock = ReentrantReadWriteLock()
 
     fun forge(domain: String): Pair<X509Certificate, PrivateKey> {
         require(isValidHostname(domain)) { "refusing to forge a certificate for an invalid hostname" }
+        // A leaf signed by a CA that has since been replaced (MITM switched off and on,
+        // or the CA regenerated) would be rejected by every client; forge a new one.
+        val caSerial = caManager.getCaCert()?.serialNumber
         lock.read {
-            cache.get(domain)?.let {
+            cache.get(domain)?.takeIf { it.caSerial == caSerial }?.let {
                 Log.d(TAG, "Cache hit for domain: $domain")
                 return it.certificate to it.privateKey
             }
@@ -61,7 +65,7 @@ class CertForger(
         val result = generateDomainCertificate(domain)
 
         lock.write {
-            cache.put(domain, ForgedCert(result.first, result.second))
+            cache.put(domain, ForgedCert(result.first, result.second, caSerial))
         }
 
         return result

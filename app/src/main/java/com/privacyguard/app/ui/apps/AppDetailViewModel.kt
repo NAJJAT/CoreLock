@@ -14,6 +14,7 @@ import com.privacyguard.app.core.detection.PermissionMismatchFinding
 import com.privacyguard.app.core.tracker.TrackerDatabase
 import com.privacyguard.app.core.tracker.TrackerEntry
 import com.privacyguard.app.data.db.AppDatabase
+import com.privacyguard.app.data.db.ConfigDatabase
 import com.privacyguard.app.data.db.ConnectionEntity
 import com.privacyguard.app.data.db.DnsDomainSummary
 import com.privacyguard.app.data.repository.MetadataRepo
@@ -123,8 +124,9 @@ class AppDetailViewModel(
     private val appName: String     = savedState["appName"]     ?: packageName
 
     private val db by lazy { AppDatabase.getInstance(app) }
+    private val configDb by lazy { ConfigDatabase.getInstance(app) }
     private val metadataRepo by lazy { MetadataRepo(db.connectionProfileDao()) }
-    private val rulesRepo by lazy { RulesRepo(db.rulesDao(), com.privacyguard.core.filter.FilterEngine()) }
+    private val rulesRepo by lazy { RulesRepo(configDb.rulesDao(), com.privacyguard.core.filter.FilterEngine()) }
     private val settings by lazy { com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(app) }
 
     private val _state = MutableStateFlow(AppDetailState(packageName = packageName, appName = appName))
@@ -140,7 +142,7 @@ class AppDetailViewModel(
     private fun observeBlockStatus() {
         viewModelScope.launch {
             RuleSyncBus.version.collect {
-                val rules = db.rulesDao().getAllRules()
+                val rules = configDb.rulesDao().getAllRules()
                     .filter { it.matchPackage == packageName && it.action == "DENY" && it.enabled }
                 _state.value = _state.value.copy(
                     isBlocked = rules.any { it.matchBackground == null || it.matchBackground == false },
@@ -174,7 +176,7 @@ class AppDetailViewModel(
             val currentlyBlocked = _state.value.isBlocked
             if (currentlyBlocked) {
                 // Keep background-only deny rules intact when removing the main package block
-                db.rulesDao().getAllRules()
+                configDb.rulesDao().getAllRules()
                     .filter {
                         it.matchPackage == packageName &&
                         it.action == FilterRule.Action.DENY.name &&

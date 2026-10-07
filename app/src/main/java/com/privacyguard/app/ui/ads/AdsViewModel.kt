@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.privacyguard.app.core.blocklist.BlocklistManager
 import com.privacyguard.app.core.tracker.TrackerDatabase
 import com.privacyguard.app.data.db.AppDatabase
+import com.privacyguard.app.data.db.ConfigDatabase
 import com.privacyguard.app.data.db.CategoryToggleStats
 import com.privacyguard.app.data.db.SourceToggleStats
+import com.privacyguard.app.data.repository.BlocklistRepo
 import com.privacyguard.app.data.repository.BlocklistSyncBus
 import com.privacyguard.app.data.repository.RulesRepo
 import com.privacyguard.core.filter.FilterEngine
@@ -56,8 +58,10 @@ data class AdsState(
 
 class AdsViewModel(app: Application) : AndroidViewModel(app) {
     private val db = AppDatabase.getInstance(app)
-    private val rulesRepo = RulesRepo(db.rulesDao(), FilterEngine())
+    private val configDb = ConfigDatabase.getInstance(app)
+    private val rulesRepo = RulesRepo(configDb.rulesDao(), FilterEngine())
     private val blocklistDao = db.blocklistDao()
+    private val blocklistRepo = BlocklistRepo(blocklistDao, configDb.blocklistToggleDao())
     private val connectionDao = db.connectionDao()
 
     private val _state = MutableStateFlow(AdsState())
@@ -116,7 +120,7 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setMasterEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            blocklistDao.setAllEnabled(enabled)
+            blocklistRepo.setAllEnabled(enabled)
             BlocklistSyncBus.publish()
             refresh()
         }
@@ -124,7 +128,7 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setCategoryEnabled(category: String, enabled: Boolean) {
         viewModelScope.launch {
-            blocklistDao.setCategoryEnabled(category, enabled)
+            blocklistRepo.setCategoryEnabled(category, enabled)
             BlocklistSyncBus.publish()
             refresh()
         }
@@ -132,7 +136,7 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setSourceEnabled(source: String, enabled: Boolean) {
         viewModelScope.launch {
-            blocklistDao.setSourceEnabled(source, enabled)
+            blocklistRepo.setSourceEnabled(source, enabled)
             BlocklistSyncBus.publish()
             refresh()
         }

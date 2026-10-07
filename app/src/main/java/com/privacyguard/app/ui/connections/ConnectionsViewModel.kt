@@ -8,6 +8,7 @@ import com.privacyguard.app.core.geoip.GeoIpResolver
 import com.privacyguard.app.core.geoip.GeoResult
 import com.privacyguard.app.core.stats.StatsManager
 import com.privacyguard.app.data.db.AppDatabase
+import com.privacyguard.app.data.db.ConfigDatabase
 import com.privacyguard.app.data.repository.RulesRepo
 import com.privacyguard.app.data.repository.RuleSyncBus
 import com.privacyguard.app.ui.apps.AppsViewModel
@@ -68,7 +69,8 @@ data class ConnectionDetailState(
 
 class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
     private val db = AppDatabase.getInstance(app)
-    private val rulesRepo = RulesRepo(db.rulesDao(), FilterEngine())
+    private val configDb = ConfigDatabase.getInstance(app)
+    private val rulesRepo = RulesRepo(configDb.rulesDao(), FilterEngine())
     private val packageManager = app.packageManager
 
     private val _recentConnections = MutableStateFlow<List<Connection>>(emptyList())

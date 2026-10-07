@@ -38,8 +38,23 @@ class CaInstallHelper(
 
     companion object {
         private const val TAG = "CaInstallHelper"
-        const val CA_FILENAME = "privacyguard_ca.crt"
+        private const val CA_FILE_PREFIX = "PrivacyGuard-CA-"
         private const val CA_MIME = "application/x-x509-ca-cert"
+        private const val SETTINGS_PACKAGE = "com.android.settings"
+    }
+
+    /**
+     * Name of the exported file, unique per CA (date and serial), so the user can
+     * tell the current certificate apart from copies left by earlier installs. An
+     * app cannot delete Downloads entries it did not create (e.g. before a
+     * reinstall), and Android renames clashes to "name (1).crt", so a fixed name
+     * leads people to install an old certificate.
+     */
+    fun exportFileName(): String {
+        val cert = caManager.getCaCert() ?: return "${CA_FILE_PREFIX}pending.crt"
+        val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).format(cert.notBefore)
+        val serial = cert.serialNumber.toString(16).takeLast(6).uppercase(java.util.Locale.ROOT)
+        return "$CA_FILE_PREFIX$date-$serial.crt"
     }
 
     // ── Sealed result ─────────────────────────────────────────────────────────
@@ -161,12 +176,13 @@ class CaInstallHelper(
         Log.d(TAG, "exportViaMediaStore: inserting into MediaStore.Downloads")
         val resolver = context.contentResolver
 
-        // Remove stale copies so the file manager doesn't accumulate duplicates.
+        // Remove earlier exports so Downloads doesn't fill with certificates. Only
+        // entries this install created are visible here, which is all we may delete.
         resolver.query(
             android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
             arrayOf(android.provider.MediaStore.Downloads._ID),
-            "${android.provider.MediaStore.Downloads.DISPLAY_NAME} = ?",
-            arrayOf(CA_FILENAME), null,
+            "${android.provider.MediaStore.Downloads.DISPLAY_NAME} LIKE ?",
+            arrayOf("$CA_FILE_PREFIX%"), null,
         )?.use { cursor ->
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(0)
@@ -179,7 +195,7 @@ class CaInstallHelper(
         }
 
         val values = ContentValues().apply {
-            put(android.provider.MediaStore.Downloads.DISPLAY_NAME, CA_FILENAME)
+            put(android.provider.MediaStore.Downloads.DISPLAY_NAME, exportFileName())
             put(android.provider.MediaStore.Downloads.MIME_TYPE, CA_MIME)
             put(android.provider.MediaStore.Downloads.IS_PENDING, 1)
         }
@@ -221,7 +237,8 @@ class CaInstallHelper(
                 "PrivacyGuard",
             )
             if (!downloadsDir.exists()) downloadsDir.mkdirs()
-            val caFile = File(downloadsDir, CA_FILENAME)
+            downloadsDir.listFiles { f -> f.name.startsWith(CA_FILE_PREFIX) }?.forEach { it.delete() }
+            val caFile = File(downloadsDir, exportFileName())
             FileOutputStream(caFile).use { out ->
                 out.write(certPem.toByteArray(StandardCharsets.UTF_8))
                 out.flush()
@@ -269,6 +286,20 @@ class CaInstallHelper(
         }
     }
 
+    /**
+     * Opens Settings straight at "Install a certificate" / "Install from device
+     * storage" (AOSP, Pixel and Samsung on Android 11+). Callers fall back to
+     * [getSecuritySettingsIntent] if the OEM removed it.
+     */
+    fun getInstallFromStorageIntent(): Intent =
+        Intent().setClassName(SETTINGS_PACKAGE, "$SETTINGS_PACKAGE.Settings\$InstallCertificateFromStorageActivity")
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+    /** Opens the trusted-credentials list, where an old CA can be removed (User tab). */
+    fun getTrustedCredentialsIntent(): Intent =
+        Intent().setClassName(SETTINGS_PACKAGE, "$SETTINGS_PACKAGE.Settings\$TrustedCredentialsSettingsActivity")
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
     /** Opens Security settings — last resort for manual installation. */
     fun getSecuritySettingsIntent(): Intent =
         Intent(Settings.ACTION_SECURITY_SETTINGS).apply {
@@ -289,6 +320,25 @@ class CaInstallHelper(
         } catch (e: Exception) {
             Log.w(TAG, "isCaTrustedByDevice: unable to inspect AndroidCAStore: ${e.message}")
             false
+        }
+    }
+
+    /**
+     * User-installed PrivacyGuard CAs that are not the current one. Their keys are
+     * gone (reinstall, or MITM switched off), so they can never sign again: they
+     * only confuse the user about which certificate is active and should be removed.
+     */
+    fun staleTrustedCaCount(): Int {
+        val ourCert = caManager.getCaCert() ?: return 0
+        return try {
+            val keyStore = java.security.KeyStore.getInstance("AndroidCAStore").apply { load(null) }
+            keyStore.aliases().asSequence()
+                .filter { it.startsWith("user:") }
+                .mapNotNull { keyStore.getCertificate(it) as? java.security.cert.X509Certificate }
+                .count { it.subjectX500Principal == ourCert.subjectX500Principal && !it.encoded.contentEquals(ourCert.encoded) }
+        } catch (e: Exception) {
+            Log.w(TAG, "staleTrustedCaCount: unable to inspect AndroidCAStore: ${e.message}")
+            0
         }
     }
 

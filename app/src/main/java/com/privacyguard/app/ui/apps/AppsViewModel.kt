@@ -8,6 +8,7 @@ import com.privacyguard.app.core.detection.StalkerwareAssessment
 import com.privacyguard.app.core.detection.StalkerwareDetector
 import com.privacyguard.app.core.stats.StatsManager
 import com.privacyguard.app.data.db.AppDatabase
+import com.privacyguard.app.data.db.ConfigDatabase
 import com.privacyguard.app.data.db.ConnectionEntity
 import com.privacyguard.app.data.repository.MetadataRepo
 import com.privacyguard.app.data.repository.RulesRepo
@@ -67,8 +68,9 @@ data class AppRiskItem(
 
 class AppsViewModel(app: Application) : AndroidViewModel(app) {
     private val db = AppDatabase.getInstance(app)
+    private val configDb = ConfigDatabase.getInstance(app)
     private val metadataRepo = MetadataRepo(db.connectionProfileDao())
-    private val rulesRepo = RulesRepo(db.rulesDao(), FilterEngine())
+    private val rulesRepo = RulesRepo(configDb.rulesDao(), FilterEngine())
 
     private val _apps = MutableStateFlow<List<AppRiskItem>>(emptyList())
     val apps: StateFlow<List<AppRiskItem>> = _apps.asStateFlow()
@@ -128,7 +130,7 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
         val recentConnections = runCatching {
             db.connectionDao().getRecentConnections(since, 800)
         }.getOrElse { emptyList() }
-        val blockedPackages = db.rulesDao()
+        val blockedPackages = configDb.rulesDao()
             .getAllRules()
             .filter {
                 it.enabled &&
@@ -307,7 +309,7 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
                 )
             } else {
                 // Delete any DENY rule matching this package, regardless of how it was created
-                db.rulesDao().getAllRules()
+                configDb.rulesDao().getAllRules()
                     .filter { it.matchPackage == packageName && it.action == FilterRule.Action.DENY.name }
                     .forEach { rulesRepo.deleteRule(it.id) }
             }

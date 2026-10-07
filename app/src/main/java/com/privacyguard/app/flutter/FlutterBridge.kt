@@ -2,6 +2,7 @@ package com.privacyguard.app.flutter
 
 import android.content.Context
 import com.privacyguard.app.data.db.AppDatabase
+import com.privacyguard.app.data.db.ConfigDatabase
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
 import com.privacyguard.app.data.repository.RulesRepo
 import com.privacyguard.app.vpn.VpnManager
@@ -26,8 +27,9 @@ class FlutterBridge(private val context: Context) {
     }
 
     private val db        = AppDatabase.getInstance(context)
+    private val configDb  = ConfigDatabase.getInstance(context)
     private val prefs     = SettingsPreferences.getInstance(context)
-    private val rulesRepo = RulesRepo(db.rulesDao(), FilterEngine())
+    private val rulesRepo = RulesRepo(configDb.rulesDao(), FilterEngine())
     private val scope     = CoroutineScope(Dispatchers.IO)
 
     fun register(engine: FlutterEngine) {

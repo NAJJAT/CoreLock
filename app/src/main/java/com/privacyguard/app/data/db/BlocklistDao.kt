@@ -61,19 +61,20 @@ interface BlocklistDao {
     suspend fun getEntry(domain: String): BlocklistEntity?
     
     /**
-     * Deletes a blocklist entry
+     * Recomputes isEnabled from the user's switches in config.db. This is the only
+     * writer of isEnabled; switches are changed through BlocklistRepo.
      */
-    @Query("UPDATE blocklist SET isEnabled = :enabled WHERE domain = :domain")
-    suspend fun setEnabled(domain: String, enabled: Boolean)
+    @Query("""
+        UPDATE blocklist SET isEnabled =
+            CASE WHEN source IN (:disabledSources) OR category IN (:disabledCategories) THEN 0 ELSE 1 END
+    """)
+    suspend fun applyToggles(disabledSources: List<String>, disabledCategories: List<String>)
 
-    @Query("UPDATE blocklist SET isEnabled = :enabled WHERE source = :source")
-    suspend fun setSourceEnabled(source: String, enabled: Boolean)
+    @Query("SELECT DISTINCT source FROM blocklist")
+    suspend fun sources(): List<String>
 
-    @Query("UPDATE blocklist SET isEnabled = :enabled WHERE category = :category")
-    suspend fun setCategoryEnabled(category: String, enabled: Boolean)
-
-    @Query("UPDATE blocklist SET isEnabled = :enabled")
-    suspend fun setAllEnabled(enabled: Boolean)
+    @Query("SELECT DISTINCT category FROM blocklist")
+    suspend fun categories(): List<String>
 
     @Query("DELETE FROM blocklist WHERE domain = :domain")
     suspend fun deleteEntry(domain: String)

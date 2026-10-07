@@ -258,9 +258,10 @@ fun MitmScreen() {
         settingsInstallSaved?.let { saved ->
             SettingsInstallDialog(
                 saved = saved,
+                fileName = caHelper.exportFileName(),
                 onOpenSettings = {
                     settingsInstallSaved = null
-                    openSettings(context, caHelper.getSecuritySettingsIntent())
+                    openSettings(context, caHelper.getInstallFromStorageIntent(), caHelper.getSecuritySettingsIntent())
                 },
                 onDismiss = { settingsInstallSaved = null },
             )
@@ -268,9 +269,13 @@ fun MitmScreen() {
     }
 }
 
-/** Starts [intent], falling back to the top-level Settings app if the OEM lacks that screen. */
-private fun openSettings(context: android.content.Context, intent: Intent) {
-    runCatching { context.startActivity(intent) }.onFailure {
+/**
+ * Starts the first of [intents] the device has, falling back to the top-level
+ * Settings app if the OEM lacks all of those screens.
+ */
+private fun openSettings(context: android.content.Context, vararg intents: Intent) {
+    val opened = intents.any { runCatching { context.startActivity(it) }.isSuccess }
+    if (!opened) {
         context.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }
@@ -307,7 +312,12 @@ private fun ScreenLockRequiredDialog(onOpenSettings: () -> Unit, onDismiss: () -
  * cert to Downloads and walk the user through picking it there.
  */
 @Composable
-private fun SettingsInstallDialog(saved: Boolean, onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
+private fun SettingsInstallDialog(
+    saved: Boolean,
+    fileName: String,
+    onOpenSettings: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Bg2,
@@ -324,17 +334,13 @@ private fun SettingsInstallDialog(saved: Boolean, onOpenSettings: () -> Unit, on
                 if (saved)
                     "Android 11 and newer only allow CA certificates to be installed from " +
                     "the Settings app, not from inside other apps.\n\n" +
-                    "The certificate was saved to Downloads as " +
-                    "${CaInstallHelper.CA_FILENAME}.\n\n" +
-                    "1. Tap Open Settings\n" +
-                    "2. Search for \"CA certificate\" in the Settings search bar\n" +
-                    "   (Pixel: Security & privacy → More security settings → " +
-                    "Encryption & credentials → Install a certificate.\n" +
-                    "   Samsung: Security and privacy → More security settings → " +
-                    "Install from device storage)\n" +
-                    "3. Choose CA certificate → Install anyway\n" +
-                    "4. Pick ${CaInstallHelper.CA_FILENAME} from Downloads (the newest one)\n\n" +
-                    "Come back here afterwards — the card turns green once Android trusts it."
+                    "The certificate was saved to Downloads as:\n$fileName\n\n" +
+                    "1. Tap Open Settings (it opens \"Install a certificate\")\n" +
+                    "2. Tap CA certificate → Install anyway\n" +
+                    "3. Open Download and pick $fileName. Older privacyguard_ca " +
+                    "files there are from earlier installs and no longer work.\n" +
+                    "4. Come back here — the card turns green once Android trusts it.\n\n" +
+                    "If Settings opens a different page, search Settings for \"CA certificate\"."
                 else
                     "The certificate could not be written to Downloads. Check free storage " +
                     "and try again; details are in logcat under the CaInstallHelper tag.",
@@ -582,6 +588,9 @@ private fun CaInstallCard(
     var caReady      by remember { mutableStateOf(false) }
     var caFailed     by remember { mutableStateOf(false) }
     var caTrusted    by remember { mutableStateOf(false) }
+    // Old PrivacyGuard CAs still trusted by Android; their keys are gone, so they are
+    // dead weight and make it unclear which certificate is the working one.
+    var staleCas     by remember { mutableStateOf(0) }
 
     // Initialise the CA on first composition so the card reflects real state immediately.
     LaunchedEffect(helper) {
@@ -589,11 +598,15 @@ private fun CaInstallCard(
         caReady   = ok
         caFailed  = !ok
         caTrusted = ok && helper.isCaTrustedByDevice()
+        staleCas  = helper.staleTrustedCaCount()
     }
 
     // Re-check trust when the user returns to the app (e.g. after the CA install dialog).
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        if (caReady) caTrusted = helper.isCaTrustedByDevice()
+        if (caReady) {
+            caTrusted = helper.isCaTrustedByDevice()
+            staleCas  = helper.staleTrustedCaCount()
+        }
     }
 
     val cardColor  = when { caTrusted -> Ac; caReady -> Amber; caFailed -> Red; else -> Red }
@@ -647,6 +660,28 @@ private fun CaInstallCard(
                     },
                     color = TxS, fontSize = 10.sp, lineHeight = 15.sp
                 )
+                if (staleCas > 0) {
+                    Text(
+                        "$staleCas old PrivacyGuard certificate" + (if (staleCas > 1) "s are" else " is") +
+                            " still installed and no longer works. Tap Remove old, open the " +
+                            "User tab and remove every \"PrivacyGuard Enterprise CA\" except the newest.",
+                        color = Amber, fontSize = 10.sp, lineHeight = 15.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                    Surface(
+                        onClick = { openSettings(context, helper.getTrustedCredentialsIntent(), helper.getSecuritySettingsIntent()) },
+                        color = Amber.copy(alpha = 0.18f),
+                        shape = RoundedCornerShape(6.dp),
+                        border = BorderStroke(1.dp, Amber.copy(alpha = 0.4f)),
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Text(
+                            "Remove old",
+                            Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            color = Amber, fontSize = 10.sp, fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
 
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1312,34 +1347,3 @@ private fun FieldsTab(log: PayloadLogEntity) {
     }
 }
 
-// أضف هذه الدالة في أي مكان في الملف
-@Composable
-private fun CertificateStatusCard(caManager: CaManager) {
-    val isInstalled = remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        // محاولة التحقق من وجود الشهادة
-        isInstalled.value = caManager.getCaCert() != null
-    }
-
-    Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-        color = if (isInstalled.value) Ac.copy(alpha = 0.1f) else Red.copy(alpha = 0.1f),
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, if (isInstalled.value) Ac.copy(alpha = 0.3f) else Red.copy(alpha = 0.3f))
-    ) {
-        Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                if (isInstalled.value) Icons.Default.CheckCircle else Icons.Default.Warning,
-                null,
-                tint = if (isInstalled.value) Ac else Red,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                if (isInstalled.value) "✓ CA Certificate Installed" else "✗ CA Certificate NOT Installed",
-                color = if (isInstalled.value) Ac else Red,
-                fontSize = 11.sp
-            )
-        }
-    }
-}

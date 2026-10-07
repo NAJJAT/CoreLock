@@ -3,6 +3,7 @@ package com.privacyguard.app.core.blocklist
 import android.annotation.SuppressLint
 import android.content.Context
 import com.privacyguard.app.data.db.AppDatabase
+import com.privacyguard.app.data.db.ConfigDatabase
 import com.privacyguard.app.data.remote.BlocklistDownloader
 import com.privacyguard.app.data.repository.BlocklistRepo
 import kotlinx.coroutines.CoroutineScope
@@ -37,7 +38,7 @@ object BlocklistManager {
         this.context = context.applicationContext
         initScope.launch {
             runCatching {
-                val repo = BlocklistRepo(AppDatabase.getInstance(context.applicationContext).blocklistDao())
+                val repo = blocklistRepo(context.applicationContext)
                 if (repo.totalCount() == 0) {
                     seedBuiltInBlocklists(repo)
                 }
@@ -51,7 +52,7 @@ object BlocklistManager {
         if (_isUpdating.value) return UpdateResult.Failure("Update already in progress")
         return try {
             _isUpdating.value = true
-            val repo = BlocklistRepo(AppDatabase.getInstance(ctx).blocklistDao())
+            val repo = blocklistRepo(ctx)
             var totalEntries = 0
             BlocklistSource.values().forEach { source ->
                 if (source.downloadUrl() != null) {
@@ -72,7 +73,7 @@ object BlocklistManager {
     suspend fun updateBlocklist(source: BlocklistSource): UpdateResult {
         val ctx = context ?: return UpdateResult.Failure("Not initialized")
         return try {
-            val repo = BlocklistRepo(AppDatabase.getInstance(ctx).blocklistDao())
+            val repo = blocklistRepo(ctx)
             val result = updateBlocklistInternal(source, repo)
             _size.value = repo.totalCount()
             result
@@ -80,6 +81,11 @@ object BlocklistManager {
             UpdateResult.Failure(e.message ?: "Unknown error")
         }
     }
+
+    private fun blocklistRepo(ctx: Context) = BlocklistRepo(
+        AppDatabase.getInstance(ctx).blocklistDao(),
+        ConfigDatabase.getInstance(ctx).blocklistToggleDao(),
+    )
 
     private suspend fun updateBlocklistInternal(source: BlocklistSource, repo: BlocklistRepo): UpdateResult {
         val raw = downloader.download(source) ?: return UpdateResult.Failure("Download failed for $source")

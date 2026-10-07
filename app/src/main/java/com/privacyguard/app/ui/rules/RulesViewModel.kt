@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.privacyguard.app.data.db.AppDatabase
+import com.privacyguard.app.data.db.ConfigDatabase
 import com.privacyguard.app.data.repository.RulesRepo
 import com.privacyguard.core.filter.FilterEngine
 import com.privacyguard.core.filter.FilterRule
@@ -29,8 +30,9 @@ data class SuggestedRule(
 class RulesViewModel(app: Application) : AndroidViewModel(app) {
 
     private val db     by lazy { AppDatabase.getInstance(app) }
+    private val configDb by lazy { ConfigDatabase.getInstance(app) }
     private val engine by lazy { FilterEngine() }
-    private val repo   by lazy { RulesRepo(db.rulesDao(), engine) }
+    private val repo   by lazy { RulesRepo(configDb.rulesDao(), engine) }
 
     private val _allRules = MutableStateFlow<List<FilterRule>>(emptyList())
     private val _searchQuery = MutableStateFlow("")

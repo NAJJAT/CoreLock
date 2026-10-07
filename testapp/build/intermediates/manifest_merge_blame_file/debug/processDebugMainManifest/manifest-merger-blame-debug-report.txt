@@ -26,25 +26,26 @@
 17-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:8:9-36
 18        android:networkSecurityConfig="@xml/network_security_config"
 18-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:9:9-69
-19        android:theme="@android:style/Theme.Material.Light" >
-19-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:10:9-60
-20        <activity
-20-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:12:9-19:20
-21            android:name="com.privacyguard.testapp.MainActivity"
-21-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:13:13-41
-22            android:exported="true" >
-22-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:14:13-36
-23            <intent-filter>
-23-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:15:13-18:29
-24                <action android:name="android.intent.action.MAIN" />
-24-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:16:17-69
-24-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:16:25-66
-25
-26                <category android:name="android.intent.category.LAUNCHER" />
-26-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:17:17-77
-26-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:17:27-74
-27            </intent-filter>
-28        </activity>
-29    </application>
-30
-31</manifest>
+19        android:testOnly="true"
+20        android:theme="@android:style/Theme.Material.Light" >
+20-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:10:9-60
+21        <activity
+21-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:12:9-19:20
+22            android:name="com.privacyguard.testapp.MainActivity"
+22-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:13:13-41
+23            android:exported="true" >
+23-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:14:13-36
+24            <intent-filter>
+24-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:15:13-18:29
+25                <action android:name="android.intent.action.MAIN" />
+25-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:16:17-69
+25-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:16:25-66
+26
+27                <category android:name="android.intent.category.LAUNCHER" />
+27-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:17:17-77
+27-->C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\AndroidManifest.xml:17:27-74
+28            </intent-filter>
+29        </activity>
+30    </application>
+31
+32</manifest>

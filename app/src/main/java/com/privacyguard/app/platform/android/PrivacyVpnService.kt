@@ -159,8 +159,8 @@ class PrivacyVpnService : VpnService() {
 
         connectionRepo   = ConnectionRepo(db.connectionDao())
         connectionLogger = com.privacyguard.app.data.db.ConnectionLogger(db.connectionDao(), scope)
-        rulesRepo = RulesRepo(db.rulesDao(), filterEngine)
-        blocklistRepo = BlocklistRepo(db.blocklistDao())
+        rulesRepo = RulesRepo(configDatabase().rulesDao(), filterEngine)
+        blocklistRepo = BlocklistRepo(db.blocklistDao(), configDatabase().blocklistToggleDao())
         metadataRepo = MetadataRepo(db.connectionProfileDao())
         dnsAnomalyRepo = DnsAnomalyRepo(db.dnsAnomalyDao())
 
@@ -196,7 +196,7 @@ class PrivacyVpnService : VpnService() {
         scope.launch {
             RuleSyncBus.version.collect {
                 rulesRepo.loadIntoEngine()
-                blockCleartextRuleActive = buildDatabase().rulesDao().getAllRules().any {
+                blockCleartextRuleActive = configDatabase().rulesDao().getAllRules().any {
                     it.enabled &&
                     it.action == com.privacyguard.core.filter.FilterRule.Action.DENY.name &&
                     it.matchEncryption == com.privacyguard.core.metadata.EncryptionStatus.CLEARTEXT.name
@@ -404,7 +404,7 @@ class PrivacyVpnService : VpnService() {
         if (decision.isBlocked) {
             recordBlock()
             decision.matchedRule?.id?.let { id ->
-                scope.launch { buildDatabase().rulesDao().incrementHitCount(id) }
+                scope.launch { configDatabase().rulesDao().incrementHitCount(id) }
             }
             if (decision.matchedRule?.matchBackground == true && !pkg.isNullOrBlank()
                 && backgroundBlockNotifiedPackages.add(pkg)) {
@@ -417,11 +417,27 @@ class PrivacyVpnService : VpnService() {
         if (ipv6.nextHeader == com.privacyguard.core.packet.Ipv6Packet.PROTO_UDP
             && dstPort == 443 && interception.blockQuic) return
 
+        // Ipv6Proxy relays raw bytes and cannot inspect TLS, so with inspection on,
+        // new IPv6 HTTPS connections are refused and apps fall back to IPv4 at once,
+        // where TcpForwarder can intercept them. Established sessions are left alone.
+        if (ipv6.nextHeader == com.privacyguard.core.packet.Ipv6Packet.PROTO_TCP
+            && dstPort == 443 && interception.isEnabled && isNewTcpConnection(raw, off)) {
+            ipv6Proxy.refuse(ipv6)
+            return
+        }
+
         when (ipv6.nextHeader) {
             com.privacyguard.core.packet.Ipv6Packet.PROTO_TCP,
             com.privacyguard.core.packet.Ipv6Packet.PROTO_UDP -> ipv6Proxy.handle(ipv6)
             else -> StatsManager.recordIpv6Blocked(raw.size.toLong())
         }
+    }
+
+    /** SYN without ACK: the first packet of a new TCP connection. */
+    private fun isNewTcpConnection(raw: ByteArray, tcpOffset: Int): Boolean {
+        if (raw.size < tcpOffset + 14) return false
+        val flags = raw[tcpOffset + 13].toInt()
+        return flags and 0x02 != 0 && flags and 0x10 == 0
     }
 
     private fun ipv6ToString(raw: ByteArray, offset: Int): String {
@@ -475,7 +491,7 @@ class PrivacyVpnService : VpnService() {
                 val decision = filterEngine.evaluate(uid, pkg, null, ip.destinationIp, udp.destinationPort, 17, isBackground = isBackground)
                 if (decision.isBlocked) {
                     recordBlock()
-                    decision.matchedRule?.id?.let { id -> scope.launch { buildDatabase().rulesDao().incrementHitCount(id) } }
+                    decision.matchedRule?.id?.let { id -> scope.launch { configDatabase().rulesDao().incrementHitCount(id) } }
                     if (decision.matchedRule?.matchBackground == true && !pkg.isNullOrBlank()
                         && backgroundBlockNotifiedPackages.add(pkg)) {
                         notifHelper.postBackgroundBlockAlert(pkg, ip.destinationIp, getMainActivityClass())
@@ -525,7 +541,7 @@ class PrivacyVpnService : VpnService() {
                 val decision = filterEngine.evaluate(uid, pkg, null, ip.destinationIp, tcp.destinationPort, 6, isBackground = isBg)
                 if (decision.isBlocked) {
                     recordBlock()
-                    decision.matchedRule?.id?.let { id -> scope.launch { buildDatabase().rulesDao().incrementHitCount(id) } }
+                    decision.matchedRule?.id?.let { id -> scope.launch { configDatabase().rulesDao().incrementHitCount(id) } }
                     if (decision.matchedRule?.matchBackground == true && !pkg.isNullOrBlank()
                         && backgroundBlockNotifiedPackages.add(pkg)) {
                         notifHelper.postBackgroundBlockAlert(pkg, ip.destinationIp, getMainActivityClass())
@@ -831,6 +847,7 @@ class PrivacyVpnService : VpnService() {
     }
 
     private fun buildDatabase(): AppDatabase = AppDatabase.getInstance(this)
+    private fun configDatabase(): ConfigDatabase = ConfigDatabase.getInstance(this)
 }
 
 

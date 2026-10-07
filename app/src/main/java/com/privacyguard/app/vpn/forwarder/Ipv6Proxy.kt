@@ -71,6 +71,12 @@ class Ipv6Proxy(
         }
     }
 
+    /** Answers a TCP SYN with RST, so the app gives up on this address immediately. */
+    fun refuse(ipv6: Ipv6Packet) {
+        val tcp = TcpPacket.parse(ipv6.rawPacket, Ipv6Packet.HEADER_LEN, ipv6.rawPacket.size) ?: return
+        sendRst(ipv6, tcp)
+    }
+
     // ── TCP ───────────────────────────────────────────────────────────────────
 
     private fun handleTcp(ipv6: Ipv6Packet, tcp: TcpPacket) {

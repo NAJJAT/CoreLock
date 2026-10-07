@@ -9,6 +9,7 @@ import com.privacyguard.app.core.security.AppSecurityMonitor
 import com.privacyguard.app.core.security.SecurityPosture
 import com.privacyguard.app.core.stats.StatsManager
 import com.privacyguard.app.data.db.AppDatabase
+import com.privacyguard.app.data.db.ConfigDatabase
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
 import com.privacyguard.app.data.repository.RulesRepo
 import com.privacyguard.app.data.repository.RuleSyncBus
@@ -54,8 +55,9 @@ data class NetworkDiagnosticsState(
 
 class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     private val db = AppDatabase.getInstance(app)
+    private val configDb = ConfigDatabase.getInstance(app)
     private val settingsPreferences = SettingsPreferences.getInstance(app)
-    private val rulesRepo = RulesRepo(db.rulesDao(), FilterEngine())
+    private val rulesRepo = RulesRepo(configDb.rulesDao(), FilterEngine())
 
     private val _securityState = MutableStateFlow(SecuritySettingsState())
     val securityState: StateFlow<SecuritySettingsState> = _securityState.asStateFlow()
@@ -189,7 +191,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private suspend fun refreshRules() {
-        val rules = db.rulesDao().getAllRules()
+        val rules = configDb.rulesDao().getAllRules()
         _securityState.value = _securityState.value.copy(
             blockCleartext = rules.any {
                 it.enabled &&
