@@ -226,6 +226,7 @@ class MitmEngine(
                     throw MitmHandshakeException(deviceSide = true, cause = e)
                 }
 
+                pinningDetector.recordSuccess(domain)
                 _statusFlow.value = MitmRuntimeStatus(
                     state = "ACTIVE",
                     message = "Interception active",
@@ -391,12 +392,10 @@ class MitmEngine(
         Exception(cause.message, cause)
 
     private fun handleHandshakeFailure(session: Session, domain: String, e: MitmHandshakeException) {
-        // Whichever side failed, retrying MITM for this host fails the same way every time:
-        // the app retries, gets intercepted again, and never connects. BoringSSL messages
-        // ("Read error: ssl=0x…: Failure in SSL library, usually a protocol error" +
-        // "…SSLV3_ALERT_CERTIFICATE_UNKNOWN") vary too much to match reliably, so pass the
-        // host through from now on regardless of the exact alert.
-        pinningDetector.markAsPinned(domain)
+        // Retrying MITM where it failed fails the same way every time: the app retries,
+        // gets intercepted again, and never connects. PinningDetector decides whether to
+        // pass through this host or the whole app.
+        pinningDetector.recordRejection(session.ownerPackage, domain, rejectionOf(e))
         val who = if (e.deviceSide) "${session.ownerPackage ?: "app"} rejected the PrivacyGuard certificate"
                   else "upstream TLS to $domain failed"
         Log.w(TAG, "MITM handshake failed for $domain ($who) — passing this host through: ${e.cause?.message}")
@@ -410,6 +409,21 @@ class MitmEngine(
             timestamp = System.currentTimeMillis(),
         )
         session.isMitmIntercepted = false
+    }
+
+    /**
+     * BoringSSL reports a received alert as "...SSLV3_ALERT_CERTIFICATE_UNKNOWN" and the
+     * like; a peer that just hangs up shows as "connection closed", EOF or reset.
+     */
+    private fun rejectionOf(e: MitmHandshakeException): PinningDetector.Rejection {
+        if (!e.deviceSide) return PinningDetector.Rejection.UPSTREAM
+        val message = generateSequence<Throwable>(e) { it.cause }
+            .mapNotNull { it.message }
+            .joinToString(" ")
+            .uppercase()
+        val alert = "ALERT" in message || "BAD_RECORD_MAC" in message ||
+            "DECRYPTION_FAILED" in message || "CERTIFICATE" in message
+        return if (alert) PinningDetector.Rejection.ALERT else PinningDetector.Rejection.CLOSED
     }
 
     fun shutdown() {

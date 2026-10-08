@@ -6,6 +6,11 @@ data class GeoResult(
     val org: String,
 )
 
+/**
+ * Country and operator for well-known address ranges (Google, Meta, AWS, …),
+ * bundled with the app so lookups never leave the device. Addresses outside
+ * those ranges return null.
+ */
 object GeoIpResolver {
 
     fun lookup(ip: String): GeoResult? {
@@ -21,14 +26,9 @@ object GeoIpResolver {
                 return GeoResult(country, countryName, org)
             }
         }
-        // Coarse continent-level fallback by first octet
-        val firstOctet = ip.substringBefore('.').toIntOrNull() ?: return null
-        return when (firstOctet) {
-            in 1..126   -> GeoResult("US", "United States", "Unknown")
-            in 128..191 -> GeoResult("US", "United States", "Unknown")
-            in 192..223 -> GeoResult("EU", "Europe", "Unknown")
-            else        -> null
-        }
+        // Outside the ranges we know: say nothing rather than guess. A first-octet
+        // fallback used to label most of the internet "United States / Unknown".
+        return null
     }
 
     private fun ipToInt(ip: String): Long? {

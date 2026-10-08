@@ -106,6 +106,7 @@ fun AppDetailScreen(
     val state by vm.state.collectAsStateWithLifecycle()
     var selectedTab by remember { mutableIntStateOf(0) }
     var domainSort by remember { mutableStateOf(DomainSort.COUNT) }
+    var selectedRoute by remember { mutableIntStateOf(0) }
 
     LazyColumn(
         modifier = Modifier
@@ -218,7 +219,7 @@ fun AppDetailScreen(
         when (selectedTab) {
             0 -> mismatchTab(state)
             1 -> connectionsTab(state, domainSort) { domainSort = it }
-            2 -> topologyTab(state)
+            2 -> topologyTab(state, selectedRoute) { selectedRoute = it }
             3 -> sdkTab(state)
             4 -> activityTab(state)
             5 -> if (BuildConfig.MITM_AVAILABLE) item { PayloadTabContent(state.packageName) }
@@ -372,40 +373,51 @@ private fun RecentActivityItem(row: RecentActivityRow) {
 }
 
 private fun LazyListScope.mismatchTab(state: AppDetailState) {
-    when {
+    if (state.isLoadingMismatch) {
         // Don't wait for the APK scan (tens of seconds on large apps): permission vs
         // traffic findings are ready first, and the scan refines them when it ends.
-        state.isLoadingMismatch -> {
-            item { LoadingCard("Correlating permissions with observed traffic...") }
+        item { LoadingCard("Correlating permissions with observed traffic...") }
+        return
+    }
+    item {
+        PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+            SectionLabel("Access you have granted")
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                if (state.grantedSensitive.isEmpty()) "No sensitive permissions granted."
+                else state.grantedSensitive.joinToString(" · "),
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (state.grantedSensitive.isEmpty()) PgTextMuted else PgText,
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            val thirdParty = state.domains.count { !it.firstParty }
+            val trackers = state.domains.count { it.trackerName != null }
+            Text(
+                "Checked against ${state.domains.size} destinations in the last 24 h: " +
+                    "$thirdParty outside ${state.appName.ifBlank { "the app" }}'s own company, $trackers trackers, " +
+                    "${state.idleConnectionCount} background connections.",
+                style = MaterialTheme.typography.bodySmall,
+                color = PgTextMuted,
+            )
         }
-        state.mismatchFindings.isEmpty() -> {
-            item {
-                PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Text("No permission mismatch found", style = MaterialTheme.typography.titleMedium, color = PgText)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        "Declared Android permissions and observed traffic look consistent for this app so far.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = PgTextMuted,
-                    )
-                }
+    }
+    if (state.mismatchFindings.isEmpty()) {
+        item {
+            PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                Text("No mismatch found", style = MaterialTheme.typography.titleMedium, color = PgText)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    if (state.domains.isEmpty()) "No traffic recorded yet — open the app while the VPN is on."
+                    else "Its traffic fits the access it holds: no trackers alongside sensitive permissions, " +
+                        "no large background uploads, no traffic its permissions cannot explain.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PgTextMuted,
+                )
             }
         }
-        else -> {
-            item {
-                PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    SectionLabel("Permission vs Traffic")
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        "Cross-checking declared permissions against live destinations and tracker infrastructure.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = PgTextMuted,
-                    )
-                }
-            }
-            items(state.mismatchFindings, key = { "finding:${it.id}" }) { finding ->
-                MismatchCard(finding)
-            }
+    } else {
+        items(state.mismatchFindings, key = { "finding:${it.id}" }) { finding ->
+            MismatchCard(finding)
         }
     }
 }
@@ -460,12 +472,16 @@ private fun LazyListScope.connectionsTab(
     }
 }
 
-private fun LazyListScope.topologyTab(state: AppDetailState) {
+private fun LazyListScope.topologyTab(
+    state: AppDetailState,
+    selectedRoute: Int,
+    onSelectRoute: (Int) -> Unit,
+) {
     when {
         state.isLoadingDomains -> {
             item { LoadingCard("Tracing DNS and connection path...") }
         }
-        state.routeSummary == null || state.topologyHops.isEmpty() -> {
+        state.routes.isEmpty() -> {
             item {
                 PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Text("Topology will appear after traffic flows", style = MaterialTheme.typography.titleMedium, color = PgText)
@@ -479,14 +495,39 @@ private fun LazyListScope.topologyTab(state: AppDetailState) {
             }
         }
         else -> {
-            val summary = state.routeSummary
+            val index = selectedRoute.coerceIn(0, state.routes.lastIndex)
+            val route = state.routes[index]
             item {
-                Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ResolverHeader(summary)
-                    TopologyRoutePanel(summary)
+                PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    SectionLabel("Path to")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(route.destination, style = MaterialTheme.typography.titleMedium, color = PgText, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        "${route.ownerSummary} · ${route.connectionCount} connection${if (route.connectionCount == 1) "" else "s"}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PgTextMuted,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Every step below is recorded traffic: times are measured, not estimated.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = PgTextFaint,
+                    )
+                    if (state.routes.size > 1) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            state.routes.forEachIndexed { i, r ->
+                                DomainSortChip(r.destination, i == index) { onSelectRoute(i) }
+                            }
+                        }
+                    }
                 }
             }
-            items(state.topologyHops) { hop ->
+            items(route.hops, key = { "hop:${route.destination}:${it.label}" }) { hop ->
                 TimelineHopCard(hop)
             }
             if (state.topologyQueryLog.isNotEmpty()) {
@@ -521,196 +562,6 @@ private fun LazyListScope.sdkTab(state: AppDetailState) {
                 SdkCard(sdk)
             }
         }
-    }
-}
-
-@Composable
-private fun ResolverHeader(summary: TopologyRouteSummary) {
-    PanelCard {
-        SectionLabel("DNS Topology")
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(PgInfoDim, RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Default.Public, contentDescription = null, tint = PgInfo, modifier = Modifier.size(18.dp))
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(summary.resolverLabel, style = MaterialTheme.typography.titleMedium, color = PgText, fontWeight = FontWeight.SemiBold)
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    "${summary.dnsLatencyMs}ms · ${summary.policyLabel} · ${summary.countryName}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = PgTextMuted,
-                )
-            }
-            StatusPill(
-                if (summary.resolverLabel.contains("HTTPS")) "DoH" else "DNS",
-                PgInfoDim,
-                PgInfo,
-            )
-        }
-    }
-}
-
-@Composable
-private fun TopologyRoutePanel(summary: TopologyRouteSummary) {
-    PanelCard {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column {
-                Text("Route", style = MaterialTheme.typography.labelSmall, color = PgTextFaint)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "${countryFlag(summary.countryCode)} ${summary.countryName}",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = PgText,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(summary.org, style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
-            }
-            StatusPill("${summary.totalLatencyMs}ms", PgAccentDim, PgAccent)
-        }
-        Spacer(modifier = Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatusPill("APP", PgAccentDim, PgAccent)
-            StatusPill(
-                summary.policyLabel.uppercase(),
-                if (summary.policyLabel.contains("Blocked")) PgDangerDim else PgInfoDim,
-                if (summary.policyLabel.contains("Blocked")) PgDanger else PgInfo,
-            )
-            StatusPill(summary.countryCode.ifBlank { "NET" }, PgBackgroundAlt, PgTextMuted)
-        }
-        Spacer(modifier = Modifier.height(14.dp))
-        RouteMap(summary)
-        Spacer(modifier = Modifier.height(14.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            RouteMetric("DNS", "${summary.dnsLatencyMs}ms", PgInfo)
-            RouteMetric("Transport", "${summary.transportLatencyMs}ms", PgAccent)
-            RouteMetric("Security", summary.encryptionLabel, if (summary.encryptionLabel.contains("CLEAR")) PgDanger else PgAccent)
-        }
-    }
-}
-
-@Composable
-private fun RouteMap(summary: TopologyRouteSummary) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                Brush.linearGradient(listOf(Color(0x14111F2F), Color(0x20203B52), Color(0x10111620))),
-                RoundedCornerShape(16.dp),
-            )
-            .padding(14.dp),
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                RouteNode(
-                    title = summary.appLabel,
-                    subtitle = "Local app",
-                    badge = "Phone",
-                    tint = PgAccent,
-                )
-                RouteNode(
-                    title = summary.destinationLabel,
-                    subtitle = summary.destinationIp,
-                    badge = summary.countryCode.ifBlank { "Net" },
-                    tint = PgInfo,
-                    alignEnd = true,
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Phone", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
-                Text(summary.resolverLabel, style = MaterialTheme.typography.labelSmall, color = PgInfo)
-                Text(countryFlag(summary.countryCode), style = MaterialTheme.typography.titleMedium, color = PgText)
-            }
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(92.dp),
-            ) {
-                val start = Offset(size.width * 0.12f, size.height * 0.75f)
-                val end = Offset(size.width * 0.88f, size.height * 0.28f)
-
-                drawLine(
-                    color = PgTextFaint.copy(alpha = 0.25f),
-                    start = Offset(0f, size.height * 0.5f),
-                    end = Offset(size.width, size.height * 0.5f),
-                    strokeWidth = 2f,
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 10f), 0f),
-                )
-
-                drawCircle(color = PgAccent, radius = 8f, center = start)
-                drawCircle(color = PgInfo, radius = 8f, center = end)
-                drawCircle(color = Color(0xFF9C7AFF), radius = 7f, center = Offset(size.width * 0.34f, size.height * 0.38f))
-                drawCircle(color = PgWarning, radius = 7f, center = Offset(size.width * 0.68f, size.height * 0.62f))
-
-                drawLine(
-                    brush = Brush.horizontalGradient(listOf(PgAccent, PgWarning, PgInfo)),
-                    start = start,
-                    end = end,
-                    strokeWidth = 5f,
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 10f), 0f),
-                )
-
-                drawCircle(color = PgWarning, radius = 7f, center = Offset(size.width * 0.5f, size.height * 0.45f))
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("VPN intercept", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
-                Text(summary.policyLabel, style = MaterialTheme.typography.labelSmall, color = if (summary.policyLabel.contains("Blocked")) PgDanger else PgAccent)
-                Text(summary.resolverLabel, style = MaterialTheme.typography.labelSmall, color = PgInfo)
-            }
-        }
-    }
-}
-
-@Composable
-private fun RouteNode(
-    title: String,
-    subtitle: String,
-    badge: String,
-    tint: Color,
-    alignEnd: Boolean = false,
-) {
-    Column(horizontalAlignment = if (alignEnd) Alignment.End else Alignment.Start) {
-        StatusPill(badge, tint.copy(alpha = 0.18f), tint)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(title, style = MaterialTheme.typography.titleSmall, color = PgText, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = PgTextMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
-
-@Composable
-private fun RouteMetric(label: String, value: String, tint: Color) {
-    Column(
-        modifier = Modifier
-            .background(PgBackgroundAlt, RoundedCornerShape(12.dp))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-    ) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = PgTextFaint)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(value, style = MaterialTheme.typography.bodySmall, color = tint, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -765,9 +616,12 @@ private fun TimelineHopCard(hop: TopologyHop) {
                     Text(hop.detail, style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    StatusPill(hop.latencyLabel, appearance.cardTint, appearance.dotColor)
-                    hop.badge?.takeIf { it.isNotBlank() }?.let {
+                    // Only measured times are shown; a step without one has no pill.
+                    if (hop.latencyLabel.isNotBlank()) {
+                        StatusPill(hop.latencyLabel, appearance.cardTint, appearance.dotColor)
                         Spacer(modifier = Modifier.height(6.dp))
+                    }
+                    hop.badge?.takeIf { it.isNotBlank() }?.let {
                         Text(it, style = MaterialTheme.typography.labelSmall, color = PgTextFaint)
                     }
                 }
@@ -784,7 +638,7 @@ private fun QueryLogCard(items: List<TopologyQueryLogItem>) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            SectionLabel("Live query log")
+            SectionLabel("Recent DNS lookups")
             Text("${items.size} recent", style = MaterialTheme.typography.labelSmall, color = PgAccent)
         }
         Spacer(modifier = Modifier.height(12.dp))
@@ -1092,11 +946,6 @@ private fun buildAppReport(state: AppDetailState): String = buildString {
     appendLine("Generated by PrivacyGuard · ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}")
 }
 
-private fun countryFlag(countryCode: String): String {
-    if (countryCode.length != 2) return ""
-    val offset = 0x1F1E6 - 'A'.code
-    return countryCode.uppercase().map { Character.toChars(it.code + offset).concatToString() }.joinToString("")
-}
 
 @Composable
 private fun PayloadTabContent(packageName: String) {

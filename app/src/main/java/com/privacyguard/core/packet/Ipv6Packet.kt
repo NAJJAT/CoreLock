@@ -71,7 +71,11 @@ data class Ipv6Packet(
                         append("::")
                         i += bestLen
                     } else {
-                        if (i > 0 && (i != bestStart + bestLen)) append(":")
+                        // No separator right after "::"; everywhere else groups need one.
+                        // (Comparing without bestLen > 1 dropped the ":" after a lone zero
+                        // group: "b00c:0:7260" came out as "b00c:07260", an invalid address.)
+                        val afterCompression = bestLen > 1 && i == bestStart + bestLen
+                        if (i > 0 && !afterCompression) append(":")
                         append(groups[i].toString(16))
                         i++
                     }

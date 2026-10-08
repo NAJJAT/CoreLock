@@ -45,6 +45,9 @@ class Ipv6Proxy(
     /** Active TCP relay sessions keyed by SessionKey. */
     private val tcpSessions = ConcurrentHashMap<SessionKey, TcpRelaySession>()
 
+    /** Flows whose upstream connect is in progress. */
+    private val connecting = ConcurrentHashMap.newKeySet<SessionKey>()
+
     /** UDP relay sockets keyed by (srcIp, srcPort, dstIp, dstPort). */
     private val udpRelays = ConcurrentHashMap<String, UdpRelay>()
 
@@ -98,6 +101,9 @@ class Ipv6Proxy(
     }
 
     private fun openTcpSession(key: SessionKey, ipv6: Ipv6Packet, tcp: TcpPacket) {
+        // A retransmitted SYN while the first connect is still running must not open
+        // a second upstream socket.
+        if (tcpSessions.containsKey(key) || !connecting.add(key)) return
         scope.launch(Dispatchers.IO) {
             try {
                 val channel = SocketChannel.open()
@@ -125,8 +131,10 @@ class Ipv6Proxy(
                 // Start relay loop
                 session.startRelay()
             } catch (e: Exception) {
-                Log.e(TAG, "IPv6 TCP connect failed: ${e.message}")
+                Log.w(TAG, "IPv6 TCP connect failed: ${e.message}")
                 sendRst(ipv6, tcp)
+            } finally {
+                connecting.remove(key)
             }
         }
     }

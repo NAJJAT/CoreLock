@@ -299,20 +299,6 @@ object TrackerDatabase {
     fun companyForDomain(host: String): String =
         lookupByDomain(host)?.company ?: inferFallbackCompany(host)
 
-    private fun inferFallbackCompany(host: String): String {
-        val h = host.lowercase()
-        return when {
-            "google" in h || "gstatic" in h || "googleapis" in h || "goog" in h -> "Google"
-            "facebook" in h || "fbcdn" in h || "fbsbx" in h -> "Meta"
-            "amazon" in h || "aws" in h || "amazonaws" in h -> "Amazon"
-            "microsoft" in h || "azure" in h || "msn" in h || "bing" in h -> "Microsoft"
-            "apple" in h || "icloud" in h || "mzstatic" in h -> "Apple"
-            "cloudflare" in h -> "Cloudflare"
-            "akamai" in h || "akamaitechnologies" in h -> "Akamai"
-            "twitter" in h || "twimg" in h -> "X Corp"
-            "tiktok" in h || "bytedance" in h || "ttwstatic" in h -> "ByteDance"
-            "snapchat" in h || "snap.com" in h -> "Snap"
-            else -> "Network"
-        }
-    }
+    private fun inferFallbackCompany(host: String): String =
+        OrgDirectory.ownerOf(host)?.name ?: DestinationOwner.registrableDomain(host)
 }

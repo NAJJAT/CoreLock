@@ -26,7 +26,7 @@ import com.privacyguard.app.core.security.DatabaseEncryption
         TlsAlertEntity::class,
         DnsQueryEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -107,6 +107,16 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Measured timings: TCP connect time per connection, resolver time and first
+        // answer per DNS query. Existing rows read as "not measured".
+        internal val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `connections` ADD COLUMN `connectMs` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `dns_queries` ADD COLUMN `response_ms` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `dns_queries` ADD COLUMN `answer_ip` TEXT")
+            }
+        }
+
         /**
          * Debug builds wipe on any schema mismatch so local iteration never gets stuck.
          * Release builds only wipe where no migration can exist (version 1, which
@@ -130,7 +140,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     DATABASE_NAME
-                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                     .openHelperFactory(DatabaseEncryption.openHelperFactory(context, DATABASE_NAME))
                     .applyFallback()
                     .build().also {

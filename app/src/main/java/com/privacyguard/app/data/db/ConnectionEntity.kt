@@ -1,5 +1,6 @@
 package com.privacyguard.app.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -48,6 +49,9 @@ data class ConnectionEntity(
     // ── Timing ────────────────────────────────────────────────────────────────
     val timestamp:        Long    = System.currentTimeMillis(),
     val durationMs:       Long    = 0L,
+    /** Measured TCP connect time to the server in ms; 0 when not measured (UDP, old rows). */
+    @ColumnInfo(defaultValue = "0")
+    val connectMs:        Long    = 0L,
 
     // ── Decision ──────────────────────────────────────────────────────────────
     val wasBlocked:       Boolean = false,

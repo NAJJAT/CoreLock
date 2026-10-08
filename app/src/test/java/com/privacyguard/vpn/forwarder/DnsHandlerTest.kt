@@ -89,7 +89,7 @@ class DnsHandlerTest {
     fun blocked_domain_fires_queryListener_wasBlocked_true() {
         blockDomain("tracker.ad")
         var captured: Boolean? = null
-        handler.queryListener = DnsHandler.QueryListener { _, _, wasBlocked -> captured = wasBlocked }
+        handler.queryListener = DnsHandler.QueryListener { _, _, wasBlocked, _, _ -> captured = wasBlocked }
         handler.handle(makeIp(), dnsQueryUdp("tracker.ad"), ownerPackage = "com.test.app")
         assertNotNull(captured)
         assertEquals(true, captured)
@@ -99,7 +99,7 @@ class DnsHandlerTest {
     fun blocked_domain_passes_correct_domain_to_listener() {
         blockDomain("ads.example.com")
         var domain: String? = null
-        handler.queryListener = DnsHandler.QueryListener { _, d, _ -> domain = d }
+        handler.queryListener = DnsHandler.QueryListener { _, d, _, _, _ -> domain = d }
         handler.handle(makeIp(), dnsQueryUdp("ads.example.com"))
         assertEquals("ads.example.com", domain)
     }
@@ -108,7 +108,7 @@ class DnsHandlerTest {
     fun blocked_domain_passes_ownerPackage_to_listener() {
         blockDomain("blocked.test")
         var pkg: String? = "UNSET"
-        handler.queryListener = DnsHandler.QueryListener { p, _, _ -> pkg = p }
+        handler.queryListener = DnsHandler.QueryListener { p, _, _, _, _ -> pkg = p }
         handler.handle(makeIp(), dnsQueryUdp("blocked.test"), ownerPackage = "com.my.app")
         assertEquals("com.my.app", pkg)
     }
@@ -117,7 +117,7 @@ class DnsHandlerTest {
     fun null_ownerPackage_forwarded_to_listener_as_null() {
         blockDomain("blocked.test")
         var pkg: String? = "UNSET"
-        handler.queryListener = DnsHandler.QueryListener { p, _, _ -> pkg = p }
+        handler.queryListener = DnsHandler.QueryListener { p, _, _, _, _ -> pkg = p }
         handler.handle(makeIp(), dnsQueryUdp("blocked.test"), ownerPackage = null)
         assertNull(pkg)
     }
@@ -144,28 +144,30 @@ class DnsHandlerTest {
     fun forwarded_domain_fires_queryListener_wasBlocked_false() {
         val latch = CountDownLatch(1)
         var wasBlocked: Boolean? = null
-        handler.queryListener = DnsHandler.QueryListener { _, _, blocked ->
+        handler.queryListener = DnsHandler.QueryListener { _, _, blocked, _, _ ->
             wasBlocked = blocked
             latch.countDown()
         }
         handler.handle(makeIp(), dnsQueryUdp("safe.example.com"))
-        latch.await(2, TimeUnit.SECONDS)
+        // Fires after the upstream answer — or after all three resolvers time out offline.
+        latch.await(12, TimeUnit.SECONDS)
         assertEquals(false, wasBlocked)
     }
 
     @Test
     fun forwarded_domain_increments_forwardCount() {
         val latch = CountDownLatch(1)
-        handler.queryListener = DnsHandler.QueryListener { _, _, _ -> latch.countDown() }
+        handler.queryListener = DnsHandler.QueryListener { _, _, _, _, _ -> latch.countDown() }
         handler.handle(makeIp(), dnsQueryUdp("safe.example.com"))
-        latch.await(2, TimeUnit.SECONDS)
+        // Fires after the upstream answer — or after all three resolvers time out offline.
+        latch.await(12, TimeUnit.SECONDS)
         assertEquals(1L, handler.forwardCount.get())
     }
 
     @Test
     fun malformed_payload_queryListener_not_called() {
         var called = false
-        handler.queryListener = DnsHandler.QueryListener { _, _, _ -> called = true }
+        handler.queryListener = DnsHandler.QueryListener { _, _, _, _, _ -> called = true }
         val udp = makeUdp(srcPort = 12345, dstPort = 53, data = ByteArray(5) { 0xFF.toByte() })
         handler.handle(makeIp(), udp)
         assertFalse(called)
@@ -174,7 +176,7 @@ class DnsHandlerTest {
     @Test
     fun dns_response_packet_queryListener_not_called() {
         var called = false
-        handler.queryListener = DnsHandler.QueryListener { _, _, _ -> called = true }
+        handler.queryListener = DnsHandler.QueryListener { _, _, _, _, _ -> called = true }
         val udp = makeUdp(srcPort = 53, dstPort = 12345, data = dnsResponseBytes("example.com"))
         handler.handle(makeIp(), udp)
         assertFalse(called)
@@ -205,7 +207,7 @@ class DnsHandlerTest {
     fun multiple_blocked_domains_each_fire_listener() {
         blockDomain("x.com"); blockDomain("y.com"); blockDomain("z.com")
         val captured = mutableListOf<String>()
-        handler.queryListener = DnsHandler.QueryListener { _, d, _ -> captured += d }
+        handler.queryListener = DnsHandler.QueryListener { _, d, _, _, _ -> captured += d }
         handler.handle(makeIp(), dnsQueryUdp("x.com"))
         handler.handle(makeIp(), dnsQueryUdp("y.com"))
         handler.handle(makeIp(), dnsQueryUdp("z.com"))

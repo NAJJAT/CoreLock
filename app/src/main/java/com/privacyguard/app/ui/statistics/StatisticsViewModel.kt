@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.privacyguard.app.core.behavior.BehaviorDnaAnalyzer
 import com.privacyguard.app.core.geoip.GeoIpResolver
+import com.privacyguard.app.core.tracker.DestinationOwner
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.db.NetworkTrustEntity
 import com.privacyguard.app.data.repository.MetadataRepo
@@ -128,15 +129,15 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
         val now = System.currentTimeMillis()
         val todaySince = now - 24L * 60L * 60L * 1000L
         val since = now - 7L * 24L * 60L * 60L * 1000L
-        val recentConnections = db.connectionDao().getRecentConnections(todaySince, 1_000)
+        // Breakdowns use the latest 5,000 rows; the headline count is exact.
+        val recentConnections = db.connectionDao().getRecentConnections(todaySince, 5_000)
         val profiles = cachedProfiles
         val behaviorSummaries = cachedBehaviorSummaries
-        val totalConnections = recentConnections.size
-        val blockedToday = recentConnections.count { it.wasBlocked }
-        val cleartextToday = recentConnections.count {
-            it.encryptionStatus == "CLEARTEXT"
-        }
-        val secureToday = recentConnections.count { it.encryptionStatus == "TLS" }
+        val totalConnections = db.connectionDao().countSince(todaySince)
+        val blockedToday = db.connectionDao().getBlockedCountToday(todaySince)
+        val cleartextToday = db.connectionDao().getCleartextConnectionCount(todaySince)
+        val encryptedShare = com.privacyguard.core.metadata.EncryptionStatus
+            .secureShare(recentConnections.map { it.encryptionStatus })
         val totalBytes = recentConnections.sumOf { it.bytesSent + it.bytesReceived }
 
         _stats.value = StatisticsData(
@@ -145,9 +146,9 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
             cleartextToday = cleartextToday,
             dataTransferredToday = formatBytes(totalBytes),
             blockRate = if (totalConnections == 0) 0f else blockedToday.toFloat() / totalConnections.toFloat(),
-            encryptionHealth = if (totalConnections == 0) 0f else secureToday.toFloat() / totalConnections.toFloat(),
+            encryptionHealth = encryptedShare,
             privacyScore = (
-                (if (totalConnections == 0) 0.5f else secureToday.toFloat() / totalConnections.toFloat()) * 50f +
+                (if (totalConnections == 0) 0.5f else encryptedShare) * 50f +
                     (1f - (cleartextToday.toFloat() / totalConnections.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f)) * 25f +
                     (1f - (behaviorSummaries.sumOf { it.findings.size } / 10f).coerceIn(0f, 1f)) * 25f
                 ).toInt().coerceIn(0, 100),
@@ -187,14 +188,18 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
             .sortedByDescending { it.totalBytes }
             .take(6)
 
+        // Only addresses in a known range have a country; the rest are left out
+        // rather than guessed.
         _topCountries.value = recentConnections
             .mapNotNull { GeoIpResolver.lookup(it.destinationIp) }
             .groupBy { it.countryCode }
             .map { (_, results) ->
+                val operators = results.groupingBy { it.org }.eachCount().entries.sortedByDescending { it.value }
                 CountryStat(
                     countryCode     = results.first().countryCode,
                     countryName     = results.first().countryName,
-                    org             = results.first().org,
+                    org             = operators.take(2).joinToString(", ") { it.key } +
+                        if (operators.size > 2) " +${operators.size - 2} more" else "",
                     connectionCount = results.size,
                 )
             }
@@ -249,9 +254,9 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
         }
         _heatmap.value = grid
 
-        // Sunburst: top orgs across 7 days
+        // Sunburst: who the phone talked to across 7 days, by owner of each destination
         _sunburstOrgs.value = weekConnections
-            .mapNotNull { GeoIpResolver.lookup(it.destinationIp)?.org }
+            .map { DestinationOwner.describe(it.sniHostname ?: it.domain, it.destinationIp).owner }
             .groupBy { it }
             .map { (org, list) -> SunburstOrgSlice(org, list.size) }
             .sortedByDescending { it.count }

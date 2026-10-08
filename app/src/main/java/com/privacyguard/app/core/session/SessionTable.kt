@@ -72,6 +72,7 @@ class SessionTable(
     fun getOrCreate(key: SessionKey, uid: Int = -1, ownerPackage: String? = null): Session {
         return sessions.getOrPut(key) {
             val session = Session(key = key, ownerUid = uid, ownerPackage = ownerPackage)
+            session.resolvedHostname = DnsNameCache.nameFor(key.destinationIp)
             listeners.forEach { it.onSessionCreated(session) }
             session
         }

@@ -63,9 +63,14 @@ class DnsHandler(
         fun onAnomaly(anomaly: DnsAnomalyDetector.Anomaly)
     }
 
-    /** Notified for every client DNS query after the block decision is known. */
+    /**
+     * Notified once per client DNS query, when its outcome is known: at once for a
+     * blocked query, after the upstream answer (or the last failure) otherwise.
+     * [responseMs] is the measured upstream time, 0 when blocked, -1 when no
+     * resolver answered; [answerIp] is the first address in the answer.
+     */
     fun interface QueryListener {
-        fun onQuery(ownerPackage: String?, domain: String, wasBlocked: Boolean)
+        fun onQuery(ownerPackage: String?, domain: String, wasBlocked: Boolean, responseMs: Long, answerIp: String?)
     }
 
     @Volatile var resolvedListener: ResolvedListener? = null
@@ -108,7 +113,7 @@ class DnsHandler(
         val isBlockedByDomainFilter = domainFilter?.isBlocked(queryName) == true
         val isBlockedByRuleEngine = filterEngine.isDomainBlocked(queryName)
         if (isBlockedByDomainFilter || isBlockedByRuleEngine) {
-            queryListener?.onQuery(ownerPackage, queryName, true)
+            queryListener?.onQuery(ownerPackage, queryName, true, 0L, null)
             blockedCount.incrementAndGet()
             val nxdomain = DnsPacket.buildBlockedResponse(dns)
             val response = buildUdpResponse(
@@ -118,12 +123,11 @@ class DnsHandler(
                 dstPort = udpPacket.sourcePort,
                 data    = nxdomain,
             )
-            tunWriter.enqueueWithChecksums(response)
+            tunWriter.enqueue(response)
             return true
         }
 
         // ── Forward to upstream DNS (plain UDP or DoH) ───────────────────────
-        queryListener?.onQuery(ownerPackage, queryName, false)
         forwardCount.incrementAndGet()
         val label = "dns-fwd-${dns.id}"
         if (dohEnabled) {
@@ -150,11 +154,13 @@ class DnsHandler(
             add(upstreamDns)
             FALLBACK_DNS_SERVERS.forEach { if (it != upstreamDns) add(it) }
         }
+        val startedAt = System.nanoTime()
         for (server in serversToTry) {
-            if (tryForwardToServer(server, ipPacket, udpPacket, dnsQuery, ownerPackage)) return
+            if (tryForwardToServer(server, ipPacket, udpPacket, dnsQuery, ownerPackage, startedAt)) return
         }
         upstreamErrors.incrementAndGet()
-        Log.e(TAG, "All DNS servers failed for ${dnsQuery.queryName}")
+        dnsQuery.queryName?.let { queryListener?.onQuery(ownerPackage, it, false, -1L, null) }
+        Log.w(TAG, "All DNS servers failed for ${dnsQuery.queryName}")
     }
 
     private fun tryForwardToServer(
@@ -163,6 +169,7 @@ class DnsHandler(
         udpPacket:    UdpPacket,
         dnsQuery:     DnsPacket,
         ownerPackage: String?,
+        startedAt:    Long,
     ): Boolean {
         return try {
             DatagramSocket().use { socket ->
@@ -186,7 +193,7 @@ class DnsHandler(
                 socket.receive(recv)
 
                 val responseData = responseBuf.copyOf(recv.length)
-                injectDnsResponse(ipPacket, udpPacket, dnsQuery, responseData, ownerPackage)
+                injectDnsResponse(ipPacket, udpPacket, dnsQuery, responseData, ownerPackage, startedAt)
                 true
             }
         } catch (e: Exception) {
@@ -200,17 +207,23 @@ class DnsHandler(
         udpPacket:    UdpPacket,
         dnsQuery:     DnsPacket,
         responseData: ByteArray,
-        @Suppress("UNUSED_PARAMETER") ownerPackage: String?,
+        ownerPackage: String?,
+        startedAt:    Long,
     ) {
+        val elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
         val dnsResponse = DnsPacket.parse(responseData)
-        if (dnsResponse != null) {
-            val queryName = dnsQuery.queryName
-            if (queryName != null) {
-                for (ip in dnsResponse.aRecords)    resolvedListener?.onResolved(ip, queryName)
-                for (ip in dnsResponse.aaaaRecords) resolvedListener?.onResolved(ip, queryName)
+        val queryName = dnsQuery.queryName
+        if (dnsResponse != null && queryName != null) {
+            for (ip in dnsResponse.aRecords + dnsResponse.aaaaRecords) {
+                com.privacyguard.core.session.DnsNameCache.record(ip, queryName)
+                resolvedListener?.onResolved(ip, queryName)
             }
         }
-        tunWriter.enqueueWithChecksums(buildUdpResponse(
+        if (queryName != null) {
+            val answer = dnsResponse?.aRecords?.firstOrNull() ?: dnsResponse?.aaaaRecords?.firstOrNull()
+            queryListener?.onQuery(ownerPackage, queryName, false, elapsedMs, answer)
+        }
+        tunWriter.enqueue(buildUdpResponse(   // buildUdpResponse already set the checksums
             srcIp   = ipPacket.destinationIp,
             dstIp   = ipPacket.sourceIp,
             srcPort = DNS_PORT,
@@ -229,11 +242,12 @@ class DnsHandler(
         dnsQuery:     DnsPacket,
         ownerPackage: String?,
     ) {
+        val startedAt = System.nanoTime()
         try {
             val queryBytes = udpPacket.data
             val responseData = postDoh(queryBytes)
             if (responseData != null) {
-                injectDnsResponse(ipPacket, udpPacket, dnsQuery, responseData, ownerPackage)
+                injectDnsResponse(ipPacket, udpPacket, dnsQuery, responseData, ownerPackage, startedAt)
             } else {
                 upstreamErrors.incrementAndGet()
                 forwardBlocking(ipPacket, udpPacket, dnsQuery, ownerPackage)

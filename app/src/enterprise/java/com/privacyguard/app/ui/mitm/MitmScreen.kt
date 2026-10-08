@@ -1026,7 +1026,10 @@ private fun PayloadTab(log: PayloadLogEntity) {
                 Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(Icons.Default.Lock, null, tint = Blue, modifier = Modifier.size(18.dp))
                     Column {
-                        Text("Not decrypted — metadata only", color = Blue,
+                        Text(
+                            if (log.bodyEncoding.endsWith("e2e")) "End-to-end encrypted — unreadable by design"
+                            else "Not decrypted — metadata only",
+                            color = Blue,
                             fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
                         Text(

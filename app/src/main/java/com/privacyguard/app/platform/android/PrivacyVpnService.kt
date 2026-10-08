@@ -28,6 +28,7 @@ import com.privacyguard.vpn.firewall.AppFilter
 import com.privacyguard.vpn.firewall.DomainFilter
 import com.privacyguard.vpn.firewall.IpFilter
 import com.privacyguard.vpn.forwarder.DnsHandler
+import com.privacyguard.vpn.forwarder.IcmpUnreachable
 import com.privacyguard.vpn.forwarder.TcpForwarder
 import com.privacyguard.vpn.forwarder.UdpForwarder
 import com.privacyguard.vpn.inspector.DnsAnomalyDetector
@@ -85,6 +86,8 @@ class PrivacyVpnService : VpnService() {
     private var tunFd: ParcelFileDescriptor? = null
     private val totalBlocked = AtomicLong(0)
     private val totalCleartext = AtomicLong(0)
+    /** IPv6 flow → owner UID (IPv6 flows are relayed by Ipv6Proxy, outside SessionTable). */
+    private val ipv6Owners = java.util.concurrent.ConcurrentHashMap<com.privacyguard.core.session.SessionKey, Int>()
 
     private lateinit var ctMonitor: CtMonitor
     private val ja3NotifiedHashes = mutableSetOf<String>()
@@ -96,6 +99,7 @@ class PrivacyVpnService : VpnService() {
         private const val TAG = "PrivacyVpnService"
         /** Virtual resolver inside the tunnel subnet; see DnsHandler. */
         private const val TUNNEL_DNS_V4 = "10.0.0.1"
+        private const val MAX_IPV6_OWNERS = 4_096
         const val ACTION_STOP = "com.privacyguard.action.STOP_VPN"
 
         private val _isRunningFlow = MutableStateFlow(false)
@@ -264,7 +268,7 @@ class PrivacyVpnService : VpnService() {
                 }
             }
             h.anomalyListener = DnsHandler.AnomalyListener { /* handled in dnsAnomalyDetector */ }
-            h.queryListener = DnsHandler.QueryListener { ownerPackage, domain, wasBlocked ->
+            h.queryListener = DnsHandler.QueryListener { ownerPackage, domain, wasBlocked, responseMs, answerIp ->
                 val pkg = ownerPackage?.takeIf { it.isNotBlank() } ?: "Unknown"
                 val appName = if (pkg != "Unknown") {
                     appTracker.labelForPackage(pkg) ?: pkg.substringAfterLast('.')
@@ -279,6 +283,8 @@ class PrivacyVpnService : VpnService() {
                         domain = domain,
                         wasBlocked = wasBlocked,
                         phoneWasIdle = isPhoneIdle(),
+                        responseMs = responseMs,
+                        answerIp = answerIp,
                     ))
                 }
             }
@@ -380,20 +386,20 @@ class PrivacyVpnService : VpnService() {
             srcPort = 0; dstPort = 0
         }
 
-        // Resolve owner UID and package — /proc/net/tcp6 and /proc/net/udp6 are read the same way
-        val uid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(
-            srcPort, ipv6.nextHeader, applicationInfo.uid
+        // Owner of this flow, looked up once per flow (a binder call) and cached.
+        val flowKey = com.privacyguard.core.session.SessionKey.of(
+            ipv6.sourceIp, srcPort, ipv6.destinationIp, dstPort, ipv6.nextHeader
         )
+        val uid = ipv6Owners[flowKey] ?: run {
+            val protocol = if (ipv6.nextHeader == com.privacyguard.core.packet.Ipv6Packet.PROTO_TCP)
+                OsConstants.IPPROTO_TCP else OsConstants.IPPROTO_UDP
+            val resolved = resolveOwnerUid(protocol, ipv6.sourceIp, srcPort, ipv6.destinationIp, dstPort)
+            if (ipv6Owners.size > MAX_IPV6_OWNERS) ipv6Owners.clear()
+            ipv6Owners[flowKey] = resolved
+            resolved
+        }
         val pkg          = appTracker.packageForUid(uid)
         val isBackground = if (pkg != null) !appTracker.isInForeground(pkg) else false
-
-        // Register in live connection list
-        if (pkg != null) {
-            val sessionId = com.privacyguard.core.session.SessionKey.of(
-                ipv6.sourceIp, srcPort, ipv6.destinationIp, dstPort, ipv6.nextHeader
-            ).toString()
-            updateActiveConnectionIdentity(sessionId, resolvedAppLabel(uid, pkg), pkg)
-        }
 
         // Apply filter rules (uid, package, background flag — same as IPv4 path)
         val decision = filterEngine.evaluate(
@@ -450,116 +456,127 @@ class PrivacyVpnService : VpnService() {
     }
 
     private fun onPacket(ip: IpPacket) {
-        Log.d(TAG, "📨 onPacket: ${ip.sourceIp} → ${ip.destinationIp}, proto=${ip.protocol}, len=${ip.totalLength}")
-
         StatsManager.recordPacket(ip.totalLength.toLong())
 
         if (ipFilter.isBlocked(ip.destinationIp)) {
-            Log.d(TAG, "IP blocked: ${ip.destinationIp}")
             recordBlock()
+            refuse(ip)
             return
         }
 
         when (ip.protocol) {
-            IpPacket.PROTO_UDP -> {
-                val udp = UdpPacket.parse(ip) ?: return
-                // DNS over TLS/QUIC and DoH by IP would skip the blocklist.
-                if (DnsBypassGuard.isEncryptedDnsPort(udp.destinationPort) ||
-                    DnsBypassGuard.isDohAddress(ip.destinationIp, udp.destinationPort)) {
-                    recordBlock()
-                    return
-                }
-                val uid = resolveOwnerUid(
-                    fallbackUid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(udp.sourcePort, 17, applicationInfo.uid),
-                    protocol = OsConstants.IPPROTO_UDP,
-                    sourceIp = ip.sourceIp,
-                    sourcePort = udp.sourcePort,
-                    destinationIp = ip.destinationIp,
-                    destinationPort = udp.destinationPort,
-                )
-                val pkg = appTracker.packageForUid(uid)
-                val sessionId = com.privacyguard.core.session.SessionKey.of(
-                    ip.sourceIp,
-                    udp.sourcePort,
-                    ip.destinationIp,
-                    udp.destinationPort,
-                    IpPacket.PROTO_UDP,
-                ).toString()
-                updateActiveConnectionIdentity(sessionId, resolvedAppLabel(uid, pkg), pkg)
-                if (dnsHandler.handle(ip, udp, pkg)) return
-                val isBackground = if (pkg != null) !appTracker.isInForeground(pkg) else false
-                val decision = filterEngine.evaluate(uid, pkg, null, ip.destinationIp, udp.destinationPort, 17, isBackground = isBackground)
-                if (decision.isBlocked) {
-                    recordBlock()
-                    decision.matchedRule?.id?.let { id -> scope.launch { configDatabase().rulesDao().incrementHitCount(id) } }
-                    if (decision.matchedRule?.matchBackground == true && !pkg.isNullOrBlank()
-                        && backgroundBlockNotifiedPackages.add(pkg)) {
-                        notifHelper.postBackgroundBlockAlert(pkg, ip.destinationIp, getMainActivityClass())
-                    }
-                    return
-                }
-                // Drop QUIC (UDP/443) when MITM is active and the block-QUIC option is on.
-                // Silently dropping forces QUIC-capable apps (Chrome, WhatsApp, YouTube) to
-                // retry on TCP/TLS, where MITM interception is possible.
-                if (udp.destinationPort == 443 && interception.blockQuic) return
+            IpPacket.PROTO_UDP -> onUdpPacket(ip)
+            IpPacket.PROTO_TCP -> onTcpPacket(ip)
+        }
+    }
 
-                val udpKey = com.privacyguard.core.session.SessionKey.of(
-                    ip.sourceIp, udp.sourcePort, ip.destinationIp, udp.destinationPort, IpPacket.PROTO_UDP)
-                val isNewUdpSession = sessionTable.get(udpKey) == null
-                udpForwarder.handle(ip, udp, uid, pkg)
-                if (isNewUdpSession && pkg != null) {
-                    sessionTable.get(udpKey)?.wasBackground = !appTracker.isInForeground(pkg)
-                }
+    /**
+     * Owner lookups (a binder call), filter rules and connection bookkeeping run
+     * once per flow, on its first packet. They used to run on every packet, which
+     * capped the single TUN reader thread at a few thousand packets a second:
+     * video apps stuttered and every app's traffic queued behind them.
+     */
+    private fun onUdpPacket(ip: IpPacket) {
+        val udp = UdpPacket.parse(ip) ?: return
+        val key = com.privacyguard.core.session.SessionKey.of(
+            ip.sourceIp, udp.sourcePort, ip.destinationIp, udp.destinationPort, IpPacket.PROTO_UDP)
+        val existing = sessionTable.get(key)
+        if (existing != null) {
+            udpForwarder.handle(ip, udp, existing.ownerUid, existing.ownerPackage)
+            return
+        }
+
+        // DNS over TLS/QUIC and DoH by IP would skip the blocklist.
+        if (DnsBypassGuard.isEncryptedDnsPort(udp.destinationPort) ||
+            DnsBypassGuard.isDohAddress(ip.destinationIp, udp.destinationPort)) {
+            recordBlock()
+            refuse(ip)
+            return
+        }
+        val uid = resolveOwnerUid(OsConstants.IPPROTO_UDP, ip.sourceIp, udp.sourcePort,
+            ip.destinationIp, udp.destinationPort)
+        val pkg = appTracker.packageForUid(uid)
+        if (dnsHandler.handle(ip, udp, pkg)) return
+
+        val isBackground = if (pkg != null) !appTracker.isInForeground(pkg) else false
+        val decision = filterEngine.evaluate(uid, pkg, null, ip.destinationIp, udp.destinationPort, 17, isBackground = isBackground)
+        if (decision.isBlocked) {
+            onRuleBlocked(decision, pkg, ip.destinationIp)
+            refuse(ip)
+            return
+        }
+        // QUIC (UDP/443) is refused while HTTPS inspection runs with block-QUIC on,
+        // so apps use TCP/TLS, where interception is possible. The ICMP error makes
+        // them switch at once instead of after seconds of QUIC retries.
+        if (udp.destinationPort == 443 && interception.blockQuic) {
+            refuse(ip)
+            return
+        }
+
+        udpForwarder.handle(ip, udp, uid, pkg)
+        sessionTable.get(key)?.wasBackground = isBackground
+    }
+
+    private fun onTcpPacket(ip: IpPacket) {
+        val tcp = TcpPacket.parse(ip) ?: return
+        if (!tcp.isSyn) {
+            // Established flow: everything below was decided on its SYN.
+            val key = com.privacyguard.core.session.SessionKey.of(
+                ip.sourceIp, tcp.sourcePort, ip.destinationIp, tcp.destinationPort, IpPacket.PROTO_TCP)
+            val session = sessionTable.get(key)
+            // TLS fingerprinting on the first data segment of a connection.
+            if (session != null && !session.encryptionClassified && tcp.destinationPort == 443 &&
+                tcp.data.isNotEmpty() && (tcp.data[0].toInt() and 0xFF) == 0x16) {
+                inspectTlsClientHello(tcp.data, session.ownerPackage)
             }
-            IpPacket.PROTO_TCP -> {
-                val tcp = TcpPacket.parse(ip) ?: return
-                if (DnsBypassGuard.isEncryptedDnsPort(tcp.destinationPort) ||
-                    DnsBypassGuard.isDohAddress(ip.destinationIp, tcp.destinationPort)) {
-                    // Dropping the SYN makes the app fall back to plain DNS through the tunnel.
-                    recordBlock()
-                    return
-                }
-                val uid = resolveOwnerUid(
-                    fallbackUid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(tcp.sourcePort, 6, applicationInfo.uid),
-                    protocol = OsConstants.IPPROTO_TCP,
-                    sourceIp = ip.sourceIp,
-                    sourcePort = tcp.sourcePort,
-                    destinationIp = ip.destinationIp,
-                    destinationPort = tcp.destinationPort,
-                )
-                val pkg = appTracker.packageForUid(uid)
-                val sessionId = com.privacyguard.core.session.SessionKey.of(
-                    ip.sourceIp,
-                    tcp.sourcePort,
-                    ip.destinationIp,
-                    tcp.destinationPort,
-                    IpPacket.PROTO_TCP,
-                ).toString()
-                updateActiveConnectionIdentity(sessionId, resolvedAppLabel(uid, pkg), pkg)
-                val isSynPacket = tcp.isSyn && !tcp.flagAck
-                val isBg = if (pkg != null) !appTracker.isInForeground(pkg) else false
-                val decision = filterEngine.evaluate(uid, pkg, null, ip.destinationIp, tcp.destinationPort, 6, isBackground = isBg)
-                if (decision.isBlocked) {
-                    recordBlock()
-                    decision.matchedRule?.id?.let { id -> scope.launch { configDatabase().rulesDao().incrementHitCount(id) } }
-                    if (decision.matchedRule?.matchBackground == true && !pkg.isNullOrBlank()
-                        && backgroundBlockNotifiedPackages.add(pkg)) {
-                        notifHelper.postBackgroundBlockAlert(pkg, ip.destinationIp, getMainActivityClass())
-                    }
-                    return
-                }
-                // TLS fingerprinting on first data packet to port 443
-                if (tcp.destinationPort == 443 && tcp.data.isNotEmpty()) {
-                    inspectTlsClientHello(tcp.data, pkg)
-                }
-                tcpForwarder.handle(ip, tcp, uid, pkg)
-                // Keep session state aligned with current foreground/background status
-                if (pkg != null) {
-                    val tcpKey = com.privacyguard.core.session.SessionKey.of(
-                        ip.sourceIp, tcp.sourcePort, ip.destinationIp, tcp.destinationPort, IpPacket.PROTO_TCP)
-                    sessionTable.get(tcpKey)?.wasBackground = isBg
-                }
-            }
+            tcpForwarder.handle(ip, tcp, session?.ownerUid ?: -1, session?.ownerPackage)
+            return
+        }
+
+        if (DnsBypassGuard.isEncryptedDnsPort(tcp.destinationPort) ||
+            DnsBypassGuard.isDohAddress(ip.destinationIp, tcp.destinationPort)) {
+            // Refusing the SYN makes the app fall back to plain DNS through the tunnel.
+            recordBlock()
+            tcpForwarder.refuse(ip, tcp)
+            return
+        }
+        // DNS over TCP to the tunnel's resolver: DnsHandler answers UDP only, and
+        // 10.0.0.1 does not exist upstream. Refuse so the resolver retries on UDP
+        // instead of waiting for a connect timeout.
+        if (ip.destinationIp == TUNNEL_DNS_V4) {
+            tcpForwarder.refuse(ip, tcp)
+            return
+        }
+        val uid = resolveOwnerUid(OsConstants.IPPROTO_TCP, ip.sourceIp, tcp.sourcePort,
+            ip.destinationIp, tcp.destinationPort)
+        val pkg = appTracker.packageForUid(uid)
+        val isBg = if (pkg != null) !appTracker.isInForeground(pkg) else false
+        val decision = filterEngine.evaluate(uid, pkg, null, ip.destinationIp, tcp.destinationPort, 6, isBackground = isBg)
+        if (decision.isBlocked) {
+            onRuleBlocked(decision, pkg, ip.destinationIp)
+            tcpForwarder.refuse(ip, tcp)
+            return
+        }
+        tcpForwarder.handle(ip, tcp, uid, pkg)
+        val key = com.privacyguard.core.session.SessionKey.of(
+            ip.sourceIp, tcp.sourcePort, ip.destinationIp, tcp.destinationPort, IpPacket.PROTO_TCP)
+        sessionTable.get(key)?.wasBackground = isBg
+    }
+
+    private fun onRuleBlocked(decision: FilterEngine.Decision, pkg: String?, destinationIp: String) {
+        recordBlock()
+        decision.matchedRule?.id?.let { id -> scope.launch { configDatabase().rulesDao().incrementHitCount(id) } }
+        if (decision.matchedRule?.matchBackground == true && !pkg.isNullOrBlank()
+            && backgroundBlockNotifiedPackages.add(pkg)) {
+            notifHelper.postBackgroundBlockAlert(pkg, destinationIp, getMainActivityClass())
+        }
+    }
+
+    /** Answers a refused packet so the app gives up at once: ICMP for UDP. */
+    private fun refuse(ip: IpPacket) {
+        when (ip.protocol) {
+            IpPacket.PROTO_UDP -> IcmpUnreachable.replyTo(ip)?.let { tunWriter.enqueue(it) }
+            IpPacket.PROTO_TCP -> TcpPacket.parse(ip)?.let { if (!it.isRst) tcpForwarder.refuse(ip, it) }
         }
     }
 
@@ -708,6 +725,7 @@ class PrivacyVpnService : VpnService() {
                     wasBlocked = false,
                     timestamp = snapshot.createdAt,
                     durationMs = snapshot.ageMs,
+                    connectMs = snapshot.connectMs,
                     encryptionStatus = snapshot.encryptionStatus.name,
                     tlsVersion = snapshot.tlsVersion?.name,
                     wasBackground = snapshot.wasBackground,
@@ -768,39 +786,19 @@ class PrivacyVpnService : VpnService() {
         }
     }
 
-    private fun updateActiveConnectionIdentity(sessionId: String, appLabel: String, packageName: String?) {
-        if (appLabel == "Unknown" && packageName.isNullOrBlank()) return
-        StatsManager.update {
-            copy(
-                activeConnections = activeConnections.map { info ->
-                    if (info.id == sessionId) {
-                        info.copy(
-                            appName = if (appLabel != "Unknown") appLabel else info.appName,
-                            packageName = packageName?.takeIf { it.isNotBlank() } ?: info.packageName,
-                        )
-                    } else {
-                        info
-                    }
-                }
-            )
-        }
-    }
-
     private fun resolveOwnerUid(
-        fallbackUid: Int,
         protocol: Int,
         sourceIp: String,
         sourcePort: Int,
         destinationIp: String,
         destinationPort: Int,
     ): Int {
-        // FIXED: ask Android's endpoint-aware owner API before trusting the port-only /proc fallback.
-        // The /proc fallback can accidentally match PrivacyGuard's own protected upstream socket,
-        // which made external app traffic appear as com.privacyguard.app.enterprise.
+        // Android's endpoint-aware owner API first. The /proc fallback matches by port
+        // only and can hit PrivacyGuard's own protected upstream socket, which made
+        // external app traffic appear as com.privacyguard.app.enterprise.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val ownerUid = runCatching {
-                val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-                cm?.getConnectionOwnerUid(
+                connectivityManager?.getConnectionOwnerUid(
                     protocol,
                     InetSocketAddress(sourceIp, sourcePort),
                     InetSocketAddress(destinationIp, destinationPort),
@@ -808,8 +806,12 @@ class PrivacyVpnService : VpnService() {
             }.getOrDefault(-1)
             if (ownerUid >= 0) return ownerUid
         }
+        val proto = if (protocol == OsConstants.IPPROTO_TCP) 6 else 17
+        return com.privacyguard.app.vpn.UidMapper.uidForSrcPort(sourcePort, proto, applicationInfo.uid)
+    }
 
-        return fallbackUid
+    private val connectivityManager by lazy {
+        getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
     }
 
     private fun stopVpn() {

@@ -45,6 +45,10 @@ fun PayloadLogEntity.notDecryptedReason(): String? {
     if (isMitmSuccess || destinationPort != 443) return null
     return when (bodyEncoding.removePrefix(NOT_DECRYPTED_PREFIX)) {
         "mitm-off" -> "HTTPS interception is turned off or consent has expired, so this connection was passed through untouched."
+        "e2e" -> "This app encrypts its messages end-to-end (Signal protocol) on your phone before they leave it. " +
+            "Only the recipient's device holds the keys, so no VPN, network operator or proxy can read them — " +
+            "and that cannot be changed from outside the app. What is visible: which servers it contacts, " +
+            "when, how much it sends, and whether it does so in the background (see the app's Connections tab)."
         "bypass" -> "This host is on the never-intercept list (DNS-over-HTTPS / Google / Samsung services). Decrypting it breaks name resolution or sign-in, so it is passed through."
         "pinned" -> "This app pins its certificate or does not trust user-installed CAs (the default for apps targeting Android 7+). It rejected the PrivacyGuard certificate, so the connection was passed through and only metadata is visible."
         "failed" -> "Interception could not start for this connection (CA not ready yet or local proxy error). It was passed through; later connections to this host may be decrypted."

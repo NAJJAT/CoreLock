@@ -153,6 +153,13 @@ interface DnsQueryDao {
     """)
     suspend fun topBlockedAppsSince(since: Long, limit: Int): List<DnsAppSummary>
 
+    @Query("""
+        SELECT * FROM dns_queries
+        WHERE timestamp >= :since AND app_package = :packageName
+        ORDER BY timestamp DESC LIMIT :limit
+    """)
+    suspend fun recentForApp(packageName: String, since: Long, limit: Int): List<DnsQueryEntity>
+
     @Query("DELETE FROM dns_queries WHERE timestamp < :cutoff")
     suspend fun pruneOld(cutoff: Long)
 

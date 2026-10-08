@@ -9,12 +9,18 @@ import java.util.concurrent.atomic.AtomicLong
 
 class TunWriter(
     private val tunInterface: TunInterface,
-    queueCapacity: Int = 512,
+    queueCapacity: Int = 4096,
 ) : Runnable {
 
     companion object {
         private const val TAG = "TunWriter"
         private const val QUEUE_POLL_TIMEOUT_MS = 200L
+        /**
+         * How long a producer waits for queue space. A dropped TCP segment is never
+         * retransmitted by the forwarder, so it stalls its connection; waiting here
+         * instead slows the producer down (backpressure) until the writer catches up.
+         */
+        private const val OFFER_TIMEOUT_MS = 500L
         private val SENTINEL = ByteArray(0)
     }
 
@@ -52,7 +58,13 @@ class TunWriter(
             droppedClosed.incrementAndGet()
             return false
         }
-        return if (queue.offer(packet)) {
+        val queued = try {
+            queue.offer(packet) || queue.offer(packet, OFFER_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            false
+        }
+        return if (queued) {
             true
         } else {
             droppedOverflow.incrementAndGet()
@@ -97,9 +109,6 @@ class TunWriter(
             if (tunInterface.writePacket(packet)) {
                 totalPacketsWritten.incrementAndGet()
                 totalBytesWritten.addAndGet(packet.size.toLong())
-                if (totalPacketsWritten.get() % 100 == 0L) {
-                    Log.d(TAG, "Written ${totalPacketsWritten.get()} packets")
-                }
             } else {
                 droppedWriteError.incrementAndGet()
                 Log.w(TAG, "Failed to write packet to TUN")

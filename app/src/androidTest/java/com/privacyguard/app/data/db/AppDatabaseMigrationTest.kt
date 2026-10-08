@@ -83,4 +83,34 @@ class AppDatabaseMigrationTest {
         }
         db.close()
     }
+
+    @Test
+    fun migrate7To8_keepsRowsAndMarksTimingsUnmeasured() {
+        helper.createDatabase(dbName, 7).use { db ->
+            db.execSQL(
+                "INSERT INTO connections (appUid, appName, packageName, destinationIp, destinationPort, isIPv6, protocol, " +
+                    "bytesSent, bytesReceived, timestamp, durationMs, wasBlocked, encryptionStatus, wasBackground) " +
+                    "VALUES (10123, 'WhatsApp', 'com.whatsapp', '157.240.1.1', 443, 0, 'TCP', 10, 20, 1, 5, 0, 'TLS', 0)"
+            )
+            db.execSQL(
+                "INSERT INTO dns_queries (timestamp, app_package, app_name, domain, was_blocked, phone_was_idle) " +
+                    "VALUES (1, 'com.whatsapp', 'WhatsApp', 'g.whatsapp.net', 0, 0)"
+            )
+        }
+
+        // Validates the new columns (and their defaults) against 8.json.
+        val db = helper.runMigrationsAndValidate(dbName, 8, true, AppDatabase.MIGRATION_7_8)
+
+        db.query("SELECT connectMs, bytesReceived FROM connections").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(0L, c.getLong(0))
+            assertEquals(20L, c.getLong(1))
+        }
+        db.query("SELECT response_ms, answer_ip FROM dns_queries").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(0L, c.getLong(0))
+            assertTrue(c.isNull(1))
+        }
+        db.close()
+    }
 }

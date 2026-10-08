@@ -20,7 +20,41 @@ data class PermissionMismatchFinding(
     val evidence: List<String> = emptyList(),
 )
 
+/** One destination as seen in this app's traffic, for [PermissionMismatchDetector.exposure]. */
+data class ObservedDestination(
+    val host: String,
+    val owner: String,
+    /** Tracker product name when the host is a listed tracker (and not the app's own company). */
+    val trackerName: String?,
+    val firstParty: Boolean,
+    val bytesSent: Long,
+    val backgroundConnections: Int,
+)
+
 object PermissionMismatchDetector {
+
+    /** Plain-language names for the sensitive permissions we check. */
+    val SENSITIVE_PERMISSION_LABELS: Map<String, String> = linkedMapOf(
+        "android.permission.ACCESS_FINE_LOCATION" to "Precise location",
+        "android.permission.ACCESS_COARSE_LOCATION" to "Approximate location",
+        "android.permission.ACCESS_BACKGROUND_LOCATION" to "Location in background",
+        "android.permission.READ_CONTACTS" to "Contacts",
+        "android.permission.GET_ACCOUNTS" to "Accounts on the phone",
+        "android.permission.RECORD_AUDIO" to "Microphone",
+        "android.permission.CAMERA" to "Camera",
+        "android.permission.READ_CALENDAR" to "Calendar",
+        "android.permission.READ_CALL_LOG" to "Call log",
+        "android.permission.READ_SMS" to "SMS messages",
+        "android.permission.READ_PHONE_STATE" to "Phone identity & state",
+        "android.permission.READ_MEDIA_IMAGES" to "Photos",
+        "android.permission.READ_MEDIA_VIDEO" to "Videos",
+        "android.permission.READ_EXTERNAL_STORAGE" to "Files & media",
+        "android.permission.BODY_SENSORS" to "Body sensors",
+        "android.permission.ACTIVITY_RECOGNITION" to "Physical activity",
+        "android.permission.BLUETOOTH_SCAN" to "Nearby devices",
+        "android.permission.NEARBY_WIFI_DEVICES" to "Nearby Wi-Fi devices",
+    )
+
     private val locationPermissions = setOf(
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
@@ -186,6 +220,66 @@ object PermissionMismatchDetector {
         return findings
             .distinctBy { it.id }
             .sortedByDescending { it.severity.rank }
+    }
+
+    /**
+     * What the app does with access it actually holds: sensitive permissions that
+     * are granted, combined with third-party trackers, background uploads and
+     * activity while the phone is idle. Unlike [analyze], which looks for traffic
+     * the app should not be able to produce, this applies to apps that hold
+     * plenty of permissions (WhatsApp, TikTok, Snapchat).
+     */
+    fun exposure(
+        appName: String,
+        grantedPermissions: Set<String>,
+        destinations: List<ObservedDestination>,
+        idleDnsQueries: Int,
+    ): List<PermissionMismatchFinding> {
+        val granted = SENSITIVE_PERMISSION_LABELS.filterKeys { it in grantedPermissions }.values.toList()
+        if (granted.isEmpty()) return emptyList()
+        val findings = mutableListOf<PermissionMismatchFinding>()
+        val grantedList = granted.joinToString()
+
+        val trackers = destinations.filter { it.trackerName != null && !it.firstParty }
+        if (trackers.isNotEmpty()) {
+            val holdsLocationOrContacts = grantedPermissions.any { it in locationPermissions || it in contactsPermissions }
+            findings += PermissionMismatchFinding(
+                id = "granted_access_with_trackers",
+                severity = if (holdsLocationOrContacts) MismatchSeverity.HIGH else MismatchSeverity.MEDIUM,
+                title = "Has access to $grantedList — and talks to trackers",
+                summary = "$appName can read data behind these permissions and sends traffic to third-party tracking companies. " +
+                    "The contents are encrypted, so what is sent cannot be confirmed, but the capability and the recipients are both present.",
+                evidence = trackers.sortedByDescending { it.bytesSent }.take(4).map {
+                    "${it.trackerName} (${it.owner}) · ${it.host} · ${formatBytes(it.bytesSent)} sent"
+                },
+            )
+        }
+
+        val backgroundUpload = destinations.filter { it.backgroundConnections > 0 }
+        val backgroundBytes = backgroundUpload.sumOf { it.bytesSent }
+        if (backgroundBytes >= 1_000_000L) {
+            findings += PermissionMismatchFinding(
+                id = "granted_access_background_upload",
+                severity = MismatchSeverity.MEDIUM,
+                title = "Uploads in the background while holding $grantedList",
+                summary = "$appName sent ${formatBytes(backgroundBytes)} while you were not using it.",
+                evidence = backgroundUpload.sortedByDescending { it.bytesSent }.take(4).map {
+                    "${it.host} (${it.owner}) · ${it.backgroundConnections} background connections · ${formatBytes(it.bytesSent)} sent"
+                },
+            )
+        }
+
+        if (idleDnsQueries >= 20) {
+            findings += PermissionMismatchFinding(
+                id = "granted_access_idle_activity",
+                severity = MismatchSeverity.LOW,
+                title = "Active while the phone was idle",
+                summary = "$appName made $idleDnsQueries DNS lookups while the screen was off. " +
+                    "Messaging apps do this to receive messages; other apps rarely need to.",
+                evidence = listOf("Holds: $grantedList"),
+            )
+        }
+        return findings
     }
 
     private fun looksLikeUtilityApp(appName: String, packageName: String): Boolean {

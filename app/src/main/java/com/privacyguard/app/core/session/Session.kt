@@ -47,9 +47,46 @@ class Session(
     // TCP Sequence / Acknowledgment Numbers
     // ─────────────────────────────────────────────────────────────────────────
 
+    /** The device's initial sequence number, from its SYN. */
     @Volatile var lastDeviceSeq: Long = 0L
-    @Volatile var sendSeq: Long = System.nanoTime() and 0xFFFFFFFFL
+    /** Our initial sequence number towards the device (the SYN-ACK's seq). */
+    val localIsn: Long = System.nanoTime() and 0xFFFFFFFFL
+    /** Next sequence number we send to the device; always kept modulo 2^32. */
+    @Volatile var sendSeq: Long = localIsn
+    /** Next sequence number we expect from the device (everything before it is ACKed). */
     @Volatile var lastAckToDevice: Long = 0L
+    @Volatile var synAckSent: Boolean = false
+
+    // ── Flow control towards the device ──────────────────────────────────────
+    // We may only send what the device's receive window allows; anything beyond
+    // it is dropped by the device and, since we never retransmit, the connection
+    // would stall. Reading from the server pauses while the window is full.
+
+    /** Highest sequence number the device has acknowledged. */
+    @Volatile var deviceAcked: Long = 0L
+    /** The device's receive window in bytes (already scaled). */
+    @Volatile var deviceWindow: Long = 65_535L
+    /** Window scale shift from the device's SYN, or -1 if it did not offer scaling. */
+    @Volatile var deviceWindowShift: Int = -1
+    /** True while reading from the server is paused for a full device window. */
+    @Volatile var readPaused: Boolean = false
+
+    // ── Device → server write buffer ─────────────────────────────────────────
+    // Bytes the device sent (and we ACKed) that the server socket could not take
+    // yet. Guarded by [outLock]; flushed by the selector thread on OP_WRITE.
+
+    val outLock = Any()
+    val outPending = ArrayDeque<java.nio.ByteBuffer>()
+    @Volatile var outPendingBytes: Int = 0
+    /** The device sent FIN; shut the server side down once [outPending] drains. */
+    @Volatile var shutdownAfterFlush: Boolean = false
+    /** True after we advertised a shrunken window, so a drained buffer sends an update. */
+    @Volatile var windowLimited: Boolean = false
+
+    /** The device has sent FIN (and we ACKed it). */
+    @Volatile var deviceFinReceived: Boolean = false
+    /** The server closed its side and we sent FIN to the device. */
+    @Volatile var finSentToDevice: Boolean = false
 
     // ─────────────────────────────────────────────────────────────────────────
     // Traffic Counters
@@ -65,6 +102,8 @@ class Session(
     // ─────────────────────────────────────────────────────────────────────────
 
     @Volatile var lastActivityAt: Long = createdAt
+    /** Measured time for the upstream TCP connect (SYN → connected), or 0 if unknown. */
+    @Volatile var connectMs: Long = 0L
     @Volatile var isClosing: Boolean = false
     @Volatile var isClosed: Boolean = false
 
@@ -219,7 +258,8 @@ class Session(
         wasBackground = wasBackground,
         isClosed = isClosed,
         isMitmIntercepted = isMitmIntercepted,
-        payloadCount = payloadCount.get()
+        payloadCount = payloadCount.get(),
+        connectMs = connectMs,
     )
 
     override fun toString(): String =
@@ -251,6 +291,7 @@ data class SessionSnapshot(
     // MITM fields in snapshot
     val isMitmIntercepted: Boolean,
     val payloadCount: Int,
+    val connectMs: Long = 0L,
 ) {
     val totalBytes: Long get() = bytesFromDevice + bytesToDevice
     val ageMs: Long get() = System.currentTimeMillis() - createdAt

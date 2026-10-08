@@ -56,6 +56,7 @@ class MitmTlsInterception(
         val sni = session.tlsSni ?: return
         val reason = when {
             !mitmConfig.isConsentValid() -> "mitm-off"
+            session.ownerPackage in PinningDetector.END_TO_END_PACKAGES -> "e2e"
             pinningDetector.isBypassDomain(sni) -> "bypass"
             pinningDetector.isPinned(session.ownerPackage, sni) -> "pinned"
             else -> "failed"

@@ -102,6 +102,10 @@ interface ConnectionDao {
     """)
     suspend fun getTopBackgroundApps(since: Long, limit: Int = 5): List<TopBlockedDomain>
 
+    /** All connections since [since] — the list queries are capped, this is not. */
+    @Query("SELECT COUNT(*) FROM connections WHERE timestamp > :since")
+    suspend fun countSince(since: Long): Int
+
     /**
      * Cleartext (unencrypted) connection count since [since].
      */

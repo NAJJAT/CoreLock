@@ -27,5 +27,11 @@ data class DnsQueryEntity(
     val wasBlocked: Boolean,
     @ColumnInfo(name = "phone_was_idle")
     val phoneWasIdle: Boolean,
+    /** Measured upstream resolver time in ms; 0 for blocked queries, -1 if no answer came. */
+    @ColumnInfo(name = "response_ms", defaultValue = "0")
+    val responseMs: Long = 0L,
+    /** First address in the answer, if any. */
+    @ColumnInfo(name = "answer_ip")
+    val answerIp: String? = null,
 )
 

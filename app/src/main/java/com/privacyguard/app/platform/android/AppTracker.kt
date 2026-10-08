@@ -53,12 +53,18 @@ class AppTracker(
     /**
      * Returns the human-readable application label for [packageName].
      */
-    fun labelForPackage(packageName: String): String? = try {
-        val info = pm.getApplicationInfo(packageName, 0)
-        pm.getApplicationLabel(info).toString()
-    } catch (_: PackageManager.NameNotFoundException) {
-        null
+    fun labelForPackage(packageName: String): String? {
+        packageLabelCache[packageName]?.let { return it }
+        return try {
+            val info = pm.getApplicationInfo(packageName, 0)
+            pm.getApplicationLabel(info).toString().also { packageLabelCache[packageName] = it }
+        } catch (_: PackageManager.NameNotFoundException) {
+            null
+        }
     }
+
+    /** package → label; PackageManager lookups are binder calls. */
+    private val packageLabelCache = ConcurrentHashMap<String, String>(64)
 
     /**
      * Returns the [ApplicationInfo] for [packageName], or null if not installed.
@@ -94,7 +100,9 @@ class AppTracker(
             val uid = info.uid
             if (uid > 0) {
                 appFilter.register(uid, info.packageName)
-                labelCache[uid] = pm.getApplicationLabel(info).toString()
+                val label = pm.getApplicationLabel(info).toString()
+                labelCache[uid] = label
+                packageLabelCache[info.packageName] = label
             }
         }
     }
@@ -134,6 +142,7 @@ class AppTracker(
         if (uid != -1) {
             appFilter.invalidate(uid)
             labelCache.remove(uid)
+            packageLabelCache.remove(packageName)
         } else {
             appFilter.invalidate(packageName)
         }
@@ -145,6 +154,7 @@ class AppTracker(
     fun invalidateAll() {
         appFilter.invalidateAll()
         labelCache.clear()
+        packageLabelCache.clear()
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -158,12 +168,32 @@ class AppTracker(
      */
     fun isInForeground(packageName: String): Boolean {
         if (packageName.isBlank()) return false
-        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager ?: return false
-        val processes = am.runningAppProcesses ?: return false
-        return processes.any { proc ->
-            proc.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND &&
-                proc.pkgList?.contains(packageName) == true
-        }
+        return packageName in foregroundPackages()
+    }
+
+    @Volatile private var foregroundCache: Set<String> = emptySet()
+    @Volatile private var foregroundCacheAt = 0L
+
+    /**
+     * Packages with a foreground process, refreshed at most every
+     * [FOREGROUND_TTL_MS]. This is asked for new connections on the packet path;
+     * `runningAppProcesses` is a binder call listing every process, far too slow
+     * to make per connection, let alone per packet.
+     */
+    private fun foregroundPackages(): Set<String> {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - foregroundCacheAt < FOREGROUND_TTL_MS) return foregroundCache
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        val fresh = am?.runningAppProcesses.orEmpty()
+            .filter { it.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND }
+            .flatMapTo(HashSet()) { it.pkgList?.asList().orEmpty() }
+        foregroundCache = fresh
+        foregroundCacheAt = now
+        return fresh
+    }
+
+    private companion object {
+        const val FOREGROUND_TTL_MS = 2_000L
     }
 
     /**

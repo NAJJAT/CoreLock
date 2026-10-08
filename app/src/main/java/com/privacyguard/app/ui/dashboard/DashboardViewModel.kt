@@ -218,9 +218,8 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         val cleartextCount = recentConnections.count {
             !it.wasBlocked && it.encryptionStatus == "CLEARTEXT"
         }
-        val secureCount = recentConnections.count { it.encryptionStatus == "TLS" || it.tlsVersion?.startsWith("TLS_1_") == true }
-        val encryptionHealth = if (recentConnections.isEmpty()) 0f
-            else secureCount.toFloat() / recentConnections.size.toFloat()
+        val encryptionHealth = com.privacyguard.core.metadata.EncryptionStatus
+            .secureShare(recentConnections.map { it.encryptionStatus })
 
         val cards = buildSecurityCards(recentConnections, recentAnomalies, behaviorAlerts, trustSummary)
         val privacyScore = PrivacyScoreCalculator.calculate(
@@ -252,6 +251,15 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             sleepActivity = cachedSleepActivity,
         )
     }
+
+    /**
+     * HTTPS inspection exists only in the enterprise flavor, which keeps its switch in
+     * the "mitm_prefs" file (MitmConfig); consumer builds never create it.
+     */
+    private fun isHttpsInspectionOn(): Boolean =
+        getApplication<android.app.Application>()
+            .getSharedPreferences("mitm_prefs", android.content.Context.MODE_PRIVATE)
+            .getBoolean("mitm_enabled", false)
 
     private fun buildSecurityCards(
         connections: List<ConnectionEntity>,
@@ -318,7 +326,13 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
                 severity = if (KillSwitch.lockdownActive) CardSeverity.GOOD else CardSeverity.WARNING,
                 value = if (PrivacyVpnService.isRunning) "VPN live" else "VPN off",
             ),
-            SecurityCardState(
+            if (isHttpsInspectionOn()) SecurityCardState(
+                title = "HTTPS Inspection On",
+                subtitle = "PrivacyGuard decrypts traffic from apps that trust its certificate; contents are kept on this phone",
+                status = "Decrypting",
+                severity = CardSeverity.WARNING,
+                value = "Payloads visible",
+            ) else SecurityCardState(
                 title = "No Payload Decryption",
                 subtitle = "Metadata-only inspection; TLS contents stay private",
                 status = "Verified",

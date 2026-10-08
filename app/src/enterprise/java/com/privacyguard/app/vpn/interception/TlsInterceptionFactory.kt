@@ -17,6 +17,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import java.net.Socket
 
+/** Learned pins in SharedPreferences, so a VPN restart does not re-learn them by failing. */
+private class PrefsPinStore(context: Context) : PinningDetector.Store {
+    private val prefs = context.getSharedPreferences("mitm_pins", Context.MODE_PRIVATE)
+    override fun load() =
+        prefs.getStringSet("domains", null).orEmpty().toSet() to prefs.getStringSet("packages", null).orEmpty().toSet()
+    override fun save(domains: Set<String>, packages: Set<String>) {
+        prefs.edit().putStringSet("domains", domains).putStringSet("packages", packages).apply()
+    }
+}
+
 /** Enterprise builds wire up the full MITM pipeline. */
 object TlsInterceptionFactory {
     private const val TAG = "TlsInterceptionFactory"
@@ -33,7 +43,7 @@ object TlsInterceptionFactory {
             Log.e(TAG, "CaManager.initialize() failed — MITM payload decryption will be unavailable")
         }
 
-        val pinningDetector = PinningDetector()
+        val pinningDetector = PinningDetector(PrefsPinStore(context))
         val mitmConfig = MitmConfig(context)
         val payloadParser = PayloadParser(PiiRedactor())
         val mitmEngine = MitmEngine(CertForger(caManager), pinningDetector, caManager, payloadParser, protect)
