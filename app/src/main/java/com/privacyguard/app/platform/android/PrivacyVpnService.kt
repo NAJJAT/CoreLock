@@ -90,6 +90,7 @@ class PrivacyVpnService : VpnService() {
     private val ipv6Owners = java.util.concurrent.ConcurrentHashMap<com.privacyguard.core.session.SessionKey, Int>()
 
     private lateinit var ctMonitor: CtMonitor
+    private var sensorMonitor: com.privacyguard.app.core.sensors.SensorAccessMonitor? = null
     private val ja3NotifiedHashes = mutableSetOf<String>()
     private val cleartextNotifiedPackages = mutableSetOf<String>()
     private val backgroundBlockNotifiedPackages = mutableSetOf<String>()
@@ -359,6 +360,19 @@ class PrivacyVpnService : VpnService() {
         if (com.privacyguard.app.vpn.KillSwitch.isEnabled()) {
             com.privacyguard.app.vpn.KillSwitch.startMonitoring(this)
         }
+
+        // Camera & microphone watch runs for as long as protection is on.
+        sensorMonitor = com.privacyguard.app.core.sensors.SensorAccessMonitor(
+            this,
+            object : com.privacyguard.app.core.sensors.SensorSessionTracker.Listener {
+                override fun onStarted(use: com.privacyguard.app.core.sensors.SensorUse) {
+                    Log.i(TAG, "${use.sensor} in use (${use.source})")
+                }
+                override fun onEnded(use: com.privacyguard.app.core.sensors.SensorUse) {
+                    Log.i(TAG, "${use.sensor} released after ${use.durationMs} ms (${use.source})")
+                }
+            },
+        ).also { it.start() }
 
         isRunning = true
         _isRunningFlow.value = true
@@ -824,6 +838,8 @@ class PrivacyVpnService : VpnService() {
         // History pruning is PruneWorker's job (daily, VPN on or off).
         scope.launch { metadataRepo.saveAll(metadataEngine.allProfiles()) }
 
+        sensorMonitor?.stop()
+        sensorMonitor = null
         com.privacyguard.app.vpn.KillSwitch.stopMonitoring()
         com.privacyguard.app.vpn.KillSwitch.clearLockdownState()
         if (::ctMonitor.isInitialized) ctMonitor.stop()
