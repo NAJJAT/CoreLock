@@ -29,6 +29,8 @@ class SettingsPreferences private constructor(context: Context) {
         private const val KEY_EXTERNAL_IP_CHECK_ENABLED  = "external_ip_check_enabled"
         private const val KEY_DOH_PROVIDER               = "doh_provider"
         private const val KEY_RETENTION_DAYS             = "retention_days"
+        private const val KEY_QUIET_HOURS_START = "quiet_hours_start"
+        private const val KEY_QUIET_HOURS_END = "quiet_hours_end"
         private const val KEY_UPSTREAM_DNS               = "upstream_dns"
         private const val KEY_ONBOARDING_COMPLETED       = "onboarding_completed"
         private const val KEY_VPN_CONSENT_TS             = "vpn_consent_ts"
@@ -130,6 +132,12 @@ class SettingsPreferences private constructor(context: Context) {
 
     private val _retentionDays = MutableStateFlow(prefs.getInt(KEY_RETENTION_DAYS, 30))
     val retentionDays: StateFlow<Int> = _retentionDays.asStateFlow()
+
+    /** Camera & Mic Watch quiet hours, minutes after midnight (default 23:00–07:00). */
+    private val _quietHoursStart = MutableStateFlow(prefs.getInt(KEY_QUIET_HOURS_START, 23 * 60))
+    val quietHoursStart: StateFlow<Int> = _quietHoursStart.asStateFlow()
+    private val _quietHoursEnd = MutableStateFlow(prefs.getInt(KEY_QUIET_HOURS_END, 7 * 60))
+    val quietHoursEnd: StateFlow<Int> = _quietHoursEnd.asStateFlow()
 
     private val _upstreamDns = MutableStateFlow(prefs.getString(KEY_UPSTREAM_DNS, "1.1.1.1") ?: "1.1.1.1")
     val upstreamDns: StateFlow<String> = _upstreamDns.asStateFlow()
@@ -295,6 +303,14 @@ class SettingsPreferences private constructor(context: Context) {
     fun setDohProvider(provider: String) {
         prefs.edit().putString(KEY_DOH_PROVIDER, provider).apply()
         _dohProvider.value = provider
+    }
+
+    fun setQuietHours(startMinute: Int, endMinute: Int) {
+        val start = startMinute.coerceIn(0, 24 * 60 - 1)
+        val end = endMinute.coerceIn(0, 24 * 60 - 1)
+        prefs.edit().putInt(KEY_QUIET_HOURS_START, start).putInt(KEY_QUIET_HOURS_END, end).apply()
+        _quietHoursStart.value = start
+        _quietHoursEnd.value = end
     }
 
     fun setRetentionDays(days: Int) {

@@ -78,6 +78,7 @@ class UdpForwarder(
 
         session.recordOutbound(udp.data.size)
         forwardedBytesOut.addAndGet(udp.data.size.toLong())
+        com.privacyguard.app.core.sensors.UploadMeter.record(session.ownerUid, udp.data.size)
 
         val channel = session.udpChannel ?: return
         try {

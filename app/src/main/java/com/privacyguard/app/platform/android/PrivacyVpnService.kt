@@ -90,7 +90,7 @@ class PrivacyVpnService : VpnService() {
     private val ipv6Owners = java.util.concurrent.ConcurrentHashMap<com.privacyguard.core.session.SessionKey, Int>()
 
     private lateinit var ctMonitor: CtMonitor
-    private var sensorMonitor: com.privacyguard.app.core.sensors.SensorAccessMonitor? = null
+    private var sensorWatch: com.privacyguard.app.core.sensors.SensorWatch? = null
     private val ja3NotifiedHashes = mutableSetOf<String>()
     private val cleartextNotifiedPackages = mutableSetOf<String>()
     private val backgroundBlockNotifiedPackages = mutableSetOf<String>()
@@ -362,29 +362,7 @@ class PrivacyVpnService : VpnService() {
         }
 
         // Camera & microphone watch runs for as long as protection is on.
-        val sensorAttributor = com.privacyguard.app.core.sensors.SensorAttributor(this)
-        sensorMonitor = com.privacyguard.app.core.sensors.SensorAccessMonitor(
-            this,
-            object : com.privacyguard.app.core.sensors.SensorSessionTracker.Listener {
-                override fun onStarted(use: com.privacyguard.app.core.sensors.SensorUse) {
-                    val who = sensorAttributor.attribute(use)
-                    Log.i(TAG, "${use.sensor} in use (${use.source}) — ${who.packageName ?: "unknown app"} [${who.confidence}, ${who.method}]")
-                    // The camera is reported busy a moment before the app-ops record is
-                    // written and before a starting app shows as on screen; one re-check
-                    // shortly after usually names the app.
-                    if (who.confidence != com.privacyguard.app.core.sensors.Confidence.CONFIRMED) {
-                        android.os.Handler(android.os.Looper.myLooper()!!).postDelayed({
-                            val again = sensorAttributor.attribute(use)
-                            Log.i(TAG, "${use.sensor} re-checked — ${again.packageName ?: "unknown app"} [${again.confidence}, ${again.method}]")
-                        }, com.privacyguard.app.core.sensors.SensorAttributor.STARTUP_WINDOW_MS)
-                    }
-                }
-                override fun onEnded(use: com.privacyguard.app.core.sensors.SensorUse) {
-                    val who = sensorAttributor.attribute(use)
-                    Log.i(TAG, "${use.sensor} released after ${use.durationMs} ms — ${who.packageName ?: "unknown app"} [${who.confidence}]")
-                }
-            },
-        ).also { it.start() }
+        sensorWatch = com.privacyguard.app.core.sensors.SensorWatch(this).also { it.start() }
 
         isRunning = true
         _isRunningFlow.value = true
@@ -850,8 +828,8 @@ class PrivacyVpnService : VpnService() {
         // History pruning is PruneWorker's job (daily, VPN on or off).
         scope.launch { metadataRepo.saveAll(metadataEngine.allProfiles()) }
 
-        sensorMonitor?.stop()
-        sensorMonitor = null
+        sensorWatch?.stop()
+        sensorWatch = null
         com.privacyguard.app.vpn.KillSwitch.stopMonitoring()
         com.privacyguard.app.vpn.KillSwitch.clearLockdownState()
         if (::ctMonitor.isInitialized) ctMonitor.stop()

@@ -446,6 +446,7 @@ class TcpForwarder(
         }
         if (needWriteInterest) runOnSelector { setInterest(session, SelectionKey.OP_WRITE, true) }
         forwardedBytesOut.addAndGet(newBytes.toLong())
+        com.privacyguard.app.core.sensors.UploadMeter.record(session.ownerUid, newBytes)
         acceptFromDevice(session, newBytes)
         return true
     }
