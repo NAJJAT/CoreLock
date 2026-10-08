@@ -6,6 +6,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.db.ConnectionEntity
 import com.privacyguard.app.data.db.PayloadLogEntity
+import com.privacyguard.app.data.db.SensorEventEntity
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -49,6 +50,22 @@ class PruneWorkerTest {
         PruneWorker.prune(db, now, retentionDays = 30, payloadCutoffMs = 0L)
 
         assertEquals(1, count("connections"))
+    }
+
+    @Test
+    fun prune_keepsCameraAndMicHistoryThirtyDaysWhateverTheRetention() = runBlocking {
+        fun event(start: Long) = SensorEventEntity(
+            sensor = "CAMERA", startTime = start, endTime = start + 1_000, source = "camera 0",
+            packageName = null, confidence = "UNKNOWN", attributionMethod = "test", screenOn = true,
+            locked = false, quietHours = false, inCall = false, openedRecently = false,
+        )
+        db.sensorEventDao().insert(event(now - 31 * day))
+        db.sensorEventDao().insert(event(now - 20 * day))
+
+        // General history is kept 7 days here; camera & mic history still 30.
+        PruneWorker.prune(db, now, retentionDays = 7, payloadCutoffMs = 0L)
+
+        assertEquals(1, count("sensor_events"))
     }
 
     @Test

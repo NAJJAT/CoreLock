@@ -45,6 +45,8 @@ class PruneWorker(
         // Rows per delete transaction; small enough that ConnectionLogger's inserts
         // are not held off for long.
         internal const val BATCH_SIZE = 10_000
+        /** Camera & mic history is kept 30 days whatever the general retention. */
+        internal const val SENSOR_RETENTION_DAYS = 30
 
         fun schedule(context: Context) {
             val wm = WorkManager.getInstance(context)
@@ -115,6 +117,7 @@ class PruneWorker(
             db.tlsAlertDao().pruneOld(cutoff)
             db.dnsAnomalyDao().deleteOlderThan(cutoff)
             db.connectionProfileDao().deleteOlderThan(cutoff)
+            db.sensorEventDao().deleteOlderThan(now - SENSOR_RETENTION_DAYS * DAY_MS)
         }
 
         private suspend fun deleteInBatches(batchSize: Int, deleteBatch: suspend (Int) -> Int) {

@@ -25,8 +25,9 @@ import com.privacyguard.app.core.security.DatabaseEncryption
         PayloadLogEntity::class,
         TlsAlertEntity::class,
         DnsQueryEntity::class,
+        SensorEventEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -40,6 +41,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun payloadLogDao(): PayloadLogDao
     abstract fun tlsAlertDao(): TlsAlertDao
     abstract fun dnsQueryDao(): DnsQueryDao
+    abstract fun sensorEventDao(): SensorEventDao
 
     companion object {
         const val DATABASE_NAME = "privacyguard.db"
@@ -117,6 +119,24 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Camera & Mic Watch: one row per camera/microphone use. SQL copied from 9.json
+        // so Room's schema check matches (see AppDatabaseMigrationTest).
+        internal val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `sensor_events` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`sensor` TEXT NOT NULL, `startTime` INTEGER NOT NULL, `endTime` INTEGER, `source` TEXT NOT NULL, " +
+                        "`packageName` TEXT, `confidence` TEXT NOT NULL, `attributionMethod` TEXT NOT NULL, " +
+                        "`candidates` TEXT NOT NULL, `screenOn` INTEGER NOT NULL, `locked` INTEGER NOT NULL, " +
+                        "`quietHours` INTEGER NOT NULL, `inCall` INTEGER NOT NULL, `openedRecently` INTEGER NOT NULL, " +
+                        "`uploadBytes` INTEGER, `networkBurst` INTEGER NOT NULL, `severity` TEXT NOT NULL, " +
+                        "`reason` TEXT NOT NULL, `userMarkedExpected` INTEGER NOT NULL DEFAULT 0)"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_sensor_events_startTime` ON `sensor_events` (`startTime`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_sensor_events_packageName_startTime` ON `sensor_events` (`packageName`, `startTime`)")
+            }
+        }
+
         /**
          * Debug builds wipe on any schema mismatch so local iteration never gets stuck.
          * Release builds only wipe where no migration can exist (version 1, which
@@ -140,7 +160,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     DATABASE_NAME
-                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                     .openHelperFactory(DatabaseEncryption.openHelperFactory(context, DATABASE_NAME))
                     .applyFallback()
                     .build().also {

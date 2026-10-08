@@ -4,7 +4,15 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import com.privacyguard.app.data.db.AppDatabase
+import com.privacyguard.app.data.db.SensorEventEntity
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Camera & Mic Watch: ties the system signals ([SensorAccessMonitor]) to
@@ -31,6 +39,44 @@ class SensorWatch(context: Context) {
 
     private data class Observation(val attribution: Attribution, val context: SensorContext)
 
+    private val dao = AppDatabase.getInstance(appContext).sensorEventDao()
+    // Outlives stop(): a use that ended just before the VPN stopped still gets saved.
+    private val io = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /** Row id per use id; each use's writes run in order under [writeLock]. */
+    private val rowIds = HashMap<Long, Long>()
+    private val writeLock = Mutex()
+
+    /** Saves the current view of [use]: inserted on the first call, updated after. */
+    private fun save(use: SensorUse, o: Observation) {
+        io.launch {
+            writeLock.withLock {
+                val row = toEntity(use, o)
+                val existing = rowIds[use.id]
+                if (existing == null) rowIds[use.id] = dao.insert(row)
+                else dao.update(row.copy(id = existing))
+                if (use.endTime != null && o.context.uploadBytes != null) rowIds.remove(use.id)
+            }
+        }
+    }
+
+    private fun toEntity(use: SensorUse, o: Observation) = SensorEventEntity(
+        sensor = use.sensor.name,
+        startTime = use.startTime,
+        endTime = use.endTime,
+        source = use.source,
+        packageName = o.attribution.packageName,
+        confidence = o.attribution.confidence.name,
+        attributionMethod = o.attribution.method,
+        candidates = o.attribution.candidates.take(MAX_CANDIDATES).joinToString(","),
+        screenOn = o.context.screenOn,
+        locked = o.context.locked,
+        quietHours = o.context.quietHours,
+        inCall = o.context.inCall,
+        openedRecently = o.context.openedRecently,
+        uploadBytes = o.context.uploadBytes,
+        networkBurst = o.context.networkBurst,
+    )
+
     private val monitor = SensorAccessMonitor(appContext, object : SensorSessionTracker.Listener {
         override fun onStarted(use: SensorUse) = handleStarted(use)
         override fun onEnded(use: SensorUse) = handleEnded(use)
@@ -51,6 +97,7 @@ class SensorWatch(context: Context) {
         val first = attributor.attribute(use)
         open[use.id] = Observation(first, contextBuilder.atStart(use, first))
         log("started", use, open.getValue(use.id))
+        save(use, open.getValue(use.id))
         if (first.confidence == Confidence.CONFIRMED) return
         // The camera is reported busy a moment before the app-ops record is written
         // and before a starting app shows as on screen; one re-check names it.
@@ -63,6 +110,7 @@ class SensorWatch(context: Context) {
                     screenOn = previous.context.screenOn, locked = previous.context.locked,
                 ))
                 log("re-checked", use, open.getValue(use.id))
+                save(use, open.getValue(use.id))
             }
         }, SensorAttributor.STARTUP_WINDOW_MS)
     }
@@ -75,10 +123,12 @@ class SensorWatch(context: Context) {
         // The end can confirm what the start could not (the app-ops record is written by now).
         val atEnd = attributor.attribute(use)
         val attribution = if (atEnd.confidence.ordinal < started.attribution.confidence.ordinal) atEnd else started.attribution
+        save(use, Observation(attribution, started.context))
         // Wait out the upload window, then judge the whole use.
         Handler(Looper.myLooper()!!).postDelayed({
             val final = Observation(attribution, contextBuilder.withUploads(started.context, use, attribution))
             log("ended", use, final)
+            save(use, final)
         }, SensorContext.BURST_WINDOW_MS)
     }
 
@@ -95,5 +145,6 @@ class SensorWatch(context: Context) {
 
     private companion object {
         const val TAG = "SensorWatch"
+        const val MAX_CANDIDATES = 12
     }
 }

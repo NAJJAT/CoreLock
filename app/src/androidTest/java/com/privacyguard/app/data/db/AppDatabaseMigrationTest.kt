@@ -113,4 +113,32 @@ class AppDatabaseMigrationTest {
         }
         db.close()
     }
+
+    @Test
+    fun migrate8To9_addsSensorEventsTable() {
+        helper.createDatabase(dbName, 8).use { db ->
+            db.execSQL(
+                "INSERT INTO dns_queries (timestamp, app_package, app_name, domain, was_blocked, phone_was_idle, response_ms) " +
+                    "VALUES (1, 'com.whatsapp', 'WhatsApp', 'g.whatsapp.net', 0, 0, 31)"
+            )
+        }
+
+        // Validates the new table and its indexes against 9.json.
+        val db = helper.runMigrationsAndValidate(dbName, 9, true, AppDatabase.MIGRATION_8_9)
+
+        db.execSQL(
+            "INSERT INTO sensor_events (sensor, startTime, endTime, source, packageName, confidence, attributionMethod, " +
+                "candidates, screenOn, locked, quietHours, inCall, openedRecently, networkBurst, severity, reason) " +
+                "VALUES ('CAMERA', 5, 9, 'camera 0', NULL, 'UNKNOWN', 'no app on screen', '', 0, 1, 1, 0, 0, 0, 'CRITICAL', 'r')"
+        )
+        db.query("SELECT userMarkedExpected, packageName FROM sensor_events").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(0, c.getInt(0))
+            assertTrue(c.isNull(1))
+        }
+        db.query("SELECT response_ms FROM dns_queries").use { c ->
+            assertTrue(c.moveToFirst()); assertEquals(31L, c.getLong(0))
+        }
+        db.close()
+    }
 }
