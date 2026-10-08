@@ -98,7 +98,7 @@ class SensorAlertNotifier(private val context: Context) {
     private fun timelineIntent(rowId: Long): PendingIntent = PendingIntent.getActivity(
         context, ("timeline$rowId").hashCode(),
         context.packageManager.getLaunchIntentForPackage(context.packageName)!!
-            .putExtra(EXTRA_OPEN, OPEN_TIMELINE)
+            .putExtra(com.privacyguard.platform.android.NotificationHelper.EXTRA_NAV_ROUTE, OPEN_TIMELINE)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
@@ -134,7 +134,6 @@ class SensorAlertNotifier(private val context: Context) {
         private const val GROUP = "camera_mic"
         private const val NOTIFICATION_ID = 7_301
         const val REPEAT_WINDOW_MS = 15 * 60_000L
-        const val EXTRA_OPEN = "com.privacyguard.open"
         const val OPEN_TIMELINE = "sensorTimeline"
         private const val EXTRA_ROW_ID = "row_id"
         private const val EXTRA_TAG = "tag"

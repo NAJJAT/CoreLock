@@ -265,11 +265,17 @@ fun AppNavHost(
                     onOpenSecurityAnalysis = { navController.navigate("crypto") },
                     onOpenAds = { navController.navigate("ads") },
                     onOpenRules = { navController.navigate("rules") },
-                    onOpenCameraMic = { navController.navigate("usageAccess") },
+                    onOpenCameraMic = { navController.navigate("sensorTimeline") },
                     onOpenPayloads = if (BuildConfig.MITM_AVAILABLE) {
                         { navController.navigate("payloads") }
                     } else null,
                     onOpenFlutterUi = flutterLauncher,
+                )
+            }
+
+            composable("sensorTimeline") {
+                com.privacyguard.app.ui.sensors.SensorTimelineScreen(
+                    onOpenUsageAccess = { navController.navigate("usageAccess") },
                 )
             }
 
