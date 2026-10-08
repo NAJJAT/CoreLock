@@ -27,8 +27,11 @@ interface TlsInterception {
      */
     fun intercept(session: Session, clientPort: Int): Int
 
-    /** Records that [sni] rejected interception, so it is passed through next time. */
-    fun markPinned(sni: String)
+    /**
+     * Interception of [sni] failed on our side (not the app rejecting the
+     * certificate): pass it through until protection restarts. Never persisted.
+     */
+    fun skipForNow(sni: String)
 
     /** Logs a metadata-only entry for a TLS session that is not being decrypted. */
     fun logNotDecrypted(session: Session, sizeBytes: Int)
@@ -42,7 +45,7 @@ interface TlsInterception {
         override val blockQuic = false
         override fun shouldIntercept(ownerPackage: String?, sni: String) = false
         override fun intercept(session: Session, clientPort: Int) = -1
-        override fun markPinned(sni: String) = Unit
+        override fun skipForNow(sni: String) = Unit
         override fun logNotDecrypted(session: Session, sizeBytes: Int) = Unit
         override fun capture(direction: String, bytes: ByteArray, session: Session) = Unit
     }

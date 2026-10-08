@@ -45,12 +45,12 @@ class MitmTlsInterception(
         ownerPackage != com.privacyguard.app.BuildConfig.APPLICATION_ID &&
             mitmConfig.isEnabled &&
             mitmConfig.isConsentValid() &&
-            !pinningDetector.isPinned(ownerPackage, sni)
+            !pinningDetector.shouldPassThrough(ownerPackage, sni)
 
     override fun intercept(session: Session, clientPort: Int): Int =
         mitmEngine.intercept(session, clientPort) { dir, bytes, sess -> capture(dir, bytes, sess) }
 
-    override fun markPinned(sni: String) = pinningDetector.markAsPinned(sni)
+    override fun skipForNow(sni: String) = pinningDetector.skipForNow(sni)
 
     override fun logNotDecrypted(session: Session, sizeBytes: Int) {
         val sni = session.tlsSni ?: return
@@ -59,6 +59,7 @@ class MitmTlsInterception(
             session.ownerPackage in PinningDetector.END_TO_END_PACKAGES -> "e2e"
             pinningDetector.isBypassDomain(sni) -> "bypass"
             pinningDetector.isPinned(session.ownerPackage, sni) -> "pinned"
+            pinningDetector.isSkippedForNow(sni) -> "skipped"
             else -> "failed"
         }
         coroutineScope.launch {

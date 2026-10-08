@@ -56,6 +56,29 @@ class PinningDetectorTest {
         assertEquals(setOf("com.snapchat.android"), store.packages)
         val restarted = PinningDetector(store)
         assertTrue(restarted.isPinned("com.snapchat.android", "cf-st.sc-cdn.net"))
-        assertTrue(restarted.isPinned(null, "broken-upstream.example"))
+        // A server-side failure is not learned: it is retried after a restart.
+        assertFalse(restarted.shouldPassThrough(null, "broken-upstream.example"))
+    }
+
+    @Test
+    fun aServerFailureIsNotTheAppRejectingTheCertificate() {
+        val store = MemoryStore()
+        val pins = PinningDetector(store)
+        pins.recordRejection("com.android.chrome", "broken-upstream.example", Rejection.UPSTREAM)
+        assertFalse(pins.isPinned("com.android.chrome", "broken-upstream.example"))
+        assertTrue(pins.shouldPassThrough("com.android.chrome", "broken-upstream.example"))
+        assertTrue(store.domains.isEmpty() && store.packages.isEmpty())
+        // A later successful interception clears it.
+        pins.recordSuccess("broken-upstream.example")
+        assertFalse(pins.shouldPassThrough("com.android.chrome", "broken-upstream.example"))
+    }
+
+    @Test
+    fun aLocalFailureNeverMarksTheAppOrSite() {
+        val pins = PinningDetector()
+        pins.skipForNow("www.bbc.com")
+        assertFalse(pins.isPinned("com.android.chrome", "www.bbc.com"))
+        assertTrue(pins.shouldPassThrough("com.android.chrome", "www.bbc.com"))
+        assertFalse(pins.shouldPassThrough("com.android.chrome", "www.example.org"))
     }
 }

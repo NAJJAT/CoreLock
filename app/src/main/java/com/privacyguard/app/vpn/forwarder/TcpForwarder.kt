@@ -368,7 +368,12 @@ class TcpForwarder(
                         runCatching { mitmChannel.close() }
                         session.isMitmIntercepted = false
                         session.pendingMitmData = null
-                        interception.markPinned(sni)
+                        // Our failure, not the app's: pass the host through for now, and
+                        // reset this connection (its upstream socket is already closed)
+                        // so the app retries straight away instead of hanging.
+                        interception.skipForNow(sni)
+                        failSession(session, "MITM redirect: ${e.message}")
+                        return
                     }
                     // ACK the ClientHello now: it will be replayed to the MITM socket.
                     // Without this the device retransmits it and the MITM server

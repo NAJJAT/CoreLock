@@ -97,7 +97,7 @@ class MitmEngine(
         }
 
         // Check if we should skip due to pinning
-        if (pinningDetector.isPinned(session.ownerPackage, domain)) {
+        if (pinningDetector.shouldPassThrough(session.ownerPackage, domain)) {
             Log.d(TAG, "Skipping MITM for pinned domain: $domain")
             _statusFlow.value = MitmRuntimeStatus(
                 state = "PINNED_BYPASS",
@@ -302,15 +302,18 @@ class MitmEngine(
 
                 var payload = buffer.copyOf(bytesRead)
                 // Ask servers for gzip/deflate instead of br/zstd so captured
-                // response bodies can be decoded and shown.
-                if (direction == "OUTBOUND") payload = HttpCodec.rewriteAcceptEncoding(payload)
+                // response bodies can be decoded and shown. A rewrite error sends
+                // the bytes unchanged.
+                if (direction == "OUTBOUND") {
+                    payload = runCatching { HttpCodec.rewriteAcceptEncoding(payload) }.getOrDefault(payload)
+                }
 
-                // Call payload callback for inspection
-                onPayload(direction, payload, session)
-
-                // Forward to destination
+                // Forward first: the connection must never wait on, or die from, inspection.
                 to.write(payload, 0, payload.size)
                 to.flush()
+
+                runCatching { onPayload(direction, payload, session) }
+                    .onFailure { Log.w(TAG, "Inspection failed for ${session.key}: ${it.message}") }
             }
         } catch (e: Exception) {
             Log.d(TAG, "Relay interrupted: ${e.message}")

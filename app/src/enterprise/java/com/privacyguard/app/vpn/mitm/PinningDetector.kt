@@ -144,6 +144,13 @@ class PinningDetector(private val store: Store = Store.InMemory) {
      */
     private val untrustingPackages = ConcurrentHashMap.newKeySet<String>()
 
+    /**
+     * Hosts whose interception failed on our side (the real server's TLS, or the
+     * local redirect). Passed through until the VPN restarts and never persisted:
+     * the cause may be temporary, and it says nothing about the app's trust.
+     */
+    private val skippedForNow = ConcurrentHashMap.newKeySet<String>()
+
     /** Handshakes the app closed without an alert, per domain. */
     private val silentCloses = ConcurrentHashMap<String, Int>()
 
@@ -176,6 +183,17 @@ class PinningDetector(private val store: Store = Store.InMemory) {
         return result
     }
 
+    /** Whether to leave this connection alone: pinned, or skipped after our own failure. */
+    fun shouldPassThrough(packageName: String?, domain: String?): Boolean =
+        isPinned(packageName, domain) || (domain != null && domain in skippedForNow)
+
+    /** Interception of [domain] failed on our side; see [skippedForNow]. */
+    fun skipForNow(domain: String) {
+        if (skippedForNow.add(domain)) Log.w(TAG, "Passing $domain through until restart (interception failed on our side)")
+    }
+
+    fun isSkippedForNow(domain: String): Boolean = domain in skippedForNow
+
     /**
      * True if [domain] is on the never-intercept [BYPASS_DOMAINS] list (exact host
      * or a subdomain of a listed parent). Intercepting these breaks connectivity.
@@ -198,14 +216,16 @@ class PinningDetector(private val store: Store = Store.InMemory) {
 
     /**
      * Records a failed MITM handshake and decides what to pass through from now on.
-     * A browser trusts user CAs, so its rejection pins only the [domain]; any other
+     * Only the app's side of the handshake counts as a rejection (an alert, or a
+     * close before it completed); the real server failing is [skipForNow]. Errors
+     * after the handshake never reach here. A browser trusts user CAs, so its rejection pins only the [domain]; any other
      * app's rejection pins the whole app. A silent close is only believed the second
      * time for the same domain: browsers often cancel speculative connections
      * mid-handshake, which says nothing about trust.
      */
     fun recordRejection(packageName: String?, domain: String, rejection: Rejection) {
         when (rejection) {
-            Rejection.UPSTREAM -> markAsPinned(domain)
+            Rejection.UPSTREAM -> skipForNow(domain)
             Rejection.ALERT -> rejectFor(packageName, domain)
             Rejection.CLOSED -> {
                 val closes = silentCloses.merge(domain, 1, Int::plus) ?: 1
@@ -217,6 +237,7 @@ class PinningDetector(private val store: Store = Store.InMemory) {
     /** A successful interception: forget earlier inconclusive closes. */
     fun recordSuccess(domain: String) {
         silentCloses.remove(domain)
+        skippedForNow.remove(domain)
     }
 
     private fun rejectFor(packageName: String?, domain: String) {
@@ -254,6 +275,7 @@ class PinningDetector(private val store: Store = Store.InMemory) {
         dynamicPinnedDomains.clear()
         untrustingPackages.clear()
         silentCloses.clear()
+        skippedForNow.clear()
         persist()
         Log.d(TAG, "Cleared dynamic pinned domains")
     }
