@@ -116,6 +116,11 @@
             android:name=".core.utils.NotificationDismissReceiver"
             android:exported="false" />
 
+        <!-- Camera & Mic Watch: "It was me" action on an alert. -->
+        <receiver
+            android:name=".core.sensors.SensorAlertNotifier$ItWasMeReceiver"
+            android:exported="false" />
+
         <!-- ── Providers ──────────────────────────────────────────────────── -->
 
         <provider

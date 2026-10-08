@@ -46,18 +46,48 @@ class SensorWatch(context: Context) {
     private val rowIds = HashMap<Long, Long>()
     private val writeLock = Mutex()
 
-    /** Saves the current view of [use]: inserted on the first call, updated after. */
-    private fun save(use: SensorUse, o: Observation) {
+    private val notifier = SensorAlertNotifier(appContext).also { it.createChannel() }
+
+    /**
+     * Judges the current view of [use] and saves it: inserted on the first call,
+     * updated after. Alerts when the verdict reaches HIGH. [final] once the upload
+     * window after the use has passed.
+     */
+    private fun save(use: SensorUse, o: Observation, final: Boolean = false) {
         io.launch {
             writeLock.withLock {
-                val row = toEntity(use, o)
-                val existing = rowIds[use.id]
-                if (existing == null) rowIds[use.id] = dao.insert(row)
-                else dao.update(row.copy(id = existing))
-                if (use.endTime != null && o.context.uploadBytes != null) rowIds.remove(use.id)
+                val pkg = o.attribution.packageName
+                val verdict = SensorAlertRules.evaluate(
+                    use = use,
+                    attribution = o.attribution,
+                    context = o.context,
+                    appLabel = pkg?.let(::labelOf),
+                    purpose = pkg?.let(::purposeOf) ?: SensorPurpose.UNKNOWN,
+                    userConfirmedBefore = pkg != null && dao.expectedCount(pkg, use.sensor.name) > 0,
+                    final = final,
+                )
+                val row = toEntity(use, o).copy(severity = verdict.severity.name, reason = verdict.reason)
+                val rowId = rowIds[use.id]?.also { dao.update(row.copy(id = it)) } ?: dao.insert(row).also { rowIds[use.id] = it }
+                if (final) rowIds.remove(use.id)
+                if (verdict.severity >= Severity.HIGH) {
+                    val title = if (use.sensor == SensorType.CAMERA) "Camera used" else "Microphone used"
+                    notifier.show(use.id, rowId, use.sensor, pkg, title, verdict)
+                }
             }
         }
     }
+
+    private fun labelOf(pkg: String): String? = runCatching {
+        val pm = appContext.packageManager
+        pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+    }.getOrNull()
+
+    private fun purposeOf(pkg: String): SensorPurpose = runCatching {
+        val info = appContext.packageManager.getApplicationInfo(pkg, 0)
+        val category = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) info.category else -1
+        val system = info.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM != 0
+        SensorPurpose.of(pkg, category, system)
+    }.getOrDefault(SensorPurpose.UNKNOWN)
 
     private fun toEntity(use: SensorUse, o: Observation) = SensorEventEntity(
         sensor = use.sensor.name,
@@ -72,7 +102,7 @@ class SensorWatch(context: Context) {
         locked = o.context.locked,
         quietHours = o.context.quietHours,
         inCall = o.context.inCall,
-        openedRecently = o.context.openedRecently,
+        openedRecently = o.context.openedRecently == true,
         uploadBytes = o.context.uploadBytes,
         networkBurst = o.context.networkBurst,
     )
@@ -128,7 +158,7 @@ class SensorWatch(context: Context) {
         Handler(Looper.myLooper()!!).postDelayed({
             val final = Observation(attribution, contextBuilder.withUploads(started.context, use, attribution))
             log("ended", use, final)
-            save(use, final)
+            save(use, final, final = true)
         }, SensorContext.BURST_WINDOW_MS)
     }
 

@@ -19,8 +19,11 @@ data class SensorContext(
     val quietHours: Boolean,
     /** A phone or VoIP call is in progress: the microphone is expected. */
     val inCall: Boolean,
-    /** The attributed app was brought to the screen by the user in the last 5 minutes. */
-    val openedRecently: Boolean,
+    /**
+     * The attributed app was brought to the screen by the user in the last 5 minutes;
+     * null when that is unknown (no Usage Access, or no app identified).
+     */
+    val openedRecently: Boolean?,
     /** Milliseconds since the screen last turned on, or null if not seen since watching began. */
     val sinceScreenOnMs: Long?,
     /**
@@ -99,7 +102,8 @@ class AndroidDeviceState(private val context: Context) : DeviceState {
 class SensorContextBuilder(
     private val device: DeviceState,
     private val quietHours: () -> QuietHours,
-    private val openedSince: (since: Long, until: Long) -> Set<String>,
+    /** Apps opened in the window, or null without Usage Access. */
+    private val openedSince: (since: Long, until: Long) -> Set<String>?,
     private val uidOf: (String) -> Int?,
     private val uploads: (uid: Int, from: Long, to: Long) -> Long = UploadMeter::bytesBetween,
     private val zone: () -> TimeZone = TimeZone::getDefault,
@@ -114,8 +118,10 @@ class SensorContextBuilder(
             hourOfDay = cal.get(Calendar.HOUR_OF_DAY),
             quietHours = quietHours().contains(use.startTime, zone()),
             inCall = device.isInCall(),
-            openedRecently = pkg != null &&
-                pkg in openedSince(use.startTime - SensorContext.OPENED_RECENTLY_MS, use.startTime + SensorAttributor.STARTUP_WINDOW_MS),
+            openedRecently = pkg?.let { p ->
+                openedSince(use.startTime - SensorContext.OPENED_RECENTLY_MS, use.startTime + SensorAttributor.STARTUP_WINDOW_MS)
+                    ?.contains(p)
+            },
             sinceScreenOnMs = device.lastScreenOnAt()?.let { use.startTime - it }?.takeIf { it >= 0 },
         )
     }

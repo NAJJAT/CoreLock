@@ -78,11 +78,11 @@ class SensorAttributor(private val context: Context) {
         )
     }
 
-    /** Packages the user brought to the screen since [since] (Usage Access only). */
-    fun packagesOpenedSince(since: Long, until: Long): Set<String> {
-        if (!hasUsageAccess()) return emptySet()
-        val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager ?: return emptySet()
-        val events = runCatching { usm.queryEvents(since, until) }.getOrNull() ?: return emptySet()
+    /** Packages the user brought to the screen since [since]; null without Usage Access. */
+    fun packagesOpenedSince(since: Long, until: Long): Set<String>? {
+        if (!hasUsageAccess()) return null
+        val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager ?: return null
+        val events = runCatching { usm.queryEvents(since, until) }.getOrNull() ?: return null
         val opened = HashSet<String>()
         val event = UsageEvents.Event()
         while (events.hasNextEvent()) {

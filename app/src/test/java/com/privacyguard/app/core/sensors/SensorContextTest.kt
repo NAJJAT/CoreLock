@@ -74,7 +74,7 @@ class SensorContextTest {
         assertTrue(ctx.locked)
         assertTrue(ctx.quietHours)
         assertEquals(2, ctx.hourOfDay)
-        assertFalse(ctx.openedRecently)
+        assertNull(ctx.openedRecently)       // no app identified
         assertNull(ctx.uploadBytes)
     }
 
@@ -83,7 +83,7 @@ class SensorContextTest {
         val use = SensorUse(1, SensorType.CAMERA, at(14), null, "camera 0")
         val ctx = builder(FakeDevice(screenOnAt = at(14) - 1_000), opened = setOf("com.whatsapp"))
             .atStart(use, Attribution("com.whatsapp", Confidence.LIKELY, "test"))
-        assertTrue(ctx.openedRecently)
+        assertEquals(true, ctx.openedRecently)
         assertEquals(1_000L, ctx.sinceScreenOnMs)
     }
 
