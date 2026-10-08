@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Enterprise-only components, merged into the main manifest for the enterprise flavor. -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+        Camera & Mic Watch "Advanced mode": exact attribution from the system's
+        app-ops record. Not grantable by the user or by Play - an administrator
+        grants it with `adb shell pm grant <package> android.permission.GET_APP_OPS_STATS`.
+        Enterprise build only; the consumer build never declares it.
+    -->
+    <uses-permission
+        android:name="android.permission.GET_APP_OPS_STATS"
+        tools:ignore="ProtectedPermissions" />
 
     <application>
 

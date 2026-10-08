@@ -265,11 +265,16 @@ fun AppNavHost(
                     onOpenSecurityAnalysis = { navController.navigate("crypto") },
                     onOpenAds = { navController.navigate("ads") },
                     onOpenRules = { navController.navigate("rules") },
+                    onOpenCameraMic = { navController.navigate("usageAccess") },
                     onOpenPayloads = if (BuildConfig.MITM_AVAILABLE) {
                         { navController.navigate("payloads") }
                     } else null,
                     onOpenFlutterUi = flutterLauncher,
                 )
+            }
+
+            composable("usageAccess") {
+                com.privacyguard.app.ui.sensors.UsageAccessScreen(onDone = { navController.popBackStack() })
             }
 
             composable("appDetail/{packageName}?appName={appName}") { backStack ->

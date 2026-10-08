@@ -75,6 +75,7 @@ fun SettingsScreen(
     onOpenSecurityAnalysis: () -> Unit = {},
     onOpenAds: () -> Unit = {},
     onOpenRules: () -> Unit = {},
+    onOpenCameraMic: () -> Unit = {},
     onOpenPayloads: (() -> Unit)? = null,
     onOpenFlutterUi: (() -> Unit)? = null,
     settingsViewModel: SettingsViewModel = viewModel(),
@@ -405,6 +406,8 @@ fun SettingsScreen(
                 NavRow("Ads & Trackers", "Per-app tracker detection and SDK inventory", Icons.Default.MonetizationOn, PgWarning, onOpenAds)
                 Spacer(modifier = Modifier.height(12.dp))
                 NavRow("Firewall Rules", "View, add, disable and delete all your block and allow rules", Icons.Default.Block, PgDanger, onOpenRules)
+                Spacer(modifier = Modifier.height(12.dp))
+                NavRow("Camera & Mic Watch", "See which app uses the camera or microphone", Icons.Default.PhoneAndroid, PgWarning, onOpenCameraMic)
                 if (onOpenPayloads != null) {
                     Spacer(modifier = Modifier.height(12.dp))
                     NavRow("Payload Inspector", "Intercepted HTTPS traffic logs", Icons.Default.Search, PgInfo, onOpenPayloads)
