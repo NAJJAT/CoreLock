@@ -145,10 +145,13 @@ class SensorTimelineViewModel(app: Application) : AndroidViewModel(app) {
     private fun whenLabel(time: Long): String {
         val now = Calendar.getInstance()
         val then = Calendar.getInstance().apply { timeInMillis = time }
+        val yesterday = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
+        fun Calendar.sameDay(other: Calendar) =
+            get(Calendar.YEAR) == other.get(Calendar.YEAR) && get(Calendar.DAY_OF_YEAR) == other.get(Calendar.DAY_OF_YEAR)
         val clock = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(time))
         return when {
-            now.get(Calendar.YEAR) == then.get(Calendar.YEAR) && now.get(Calendar.DAY_OF_YEAR) == then.get(Calendar.DAY_OF_YEAR) -> "Today $clock"
-            now.get(Calendar.DAY_OF_YEAR) - then.get(Calendar.DAY_OF_YEAR) == 1 -> "Yesterday $clock"
+            then.sameDay(now) -> "Today $clock"
+            then.sameDay(yesterday) -> "Yesterday $clock"
             else -> SimpleDateFormat("EEE d MMM, HH:mm", Locale.getDefault()).format(Date(time))
         }
     }
