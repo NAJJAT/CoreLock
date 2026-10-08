@@ -172,6 +172,8 @@ class AppDetailViewModel(
         viewModelScope.launch {
             val currentlyBlocked = _state.value.isBlocked
             if (currentlyBlocked) {
+                // Unblocking also tells the behavior blocker to leave this app alone.
+                com.privacyguard.app.core.detection.BehaviorBlocker.neverBlock(getApplication(), packageName)
                 // Keep background-only deny rules intact when removing the main package block
                 configDb.rulesDao().getAllRules()
                     .filter {

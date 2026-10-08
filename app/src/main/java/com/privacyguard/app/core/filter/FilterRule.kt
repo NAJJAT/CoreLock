@@ -51,6 +51,8 @@ data class FilterRule(
         BLOCKLIST,   // from EasyList / OISD etc.
         COMMUNITY,   // from community threat-intelligence feed
         SYSTEM,      // hard-coded system rules (DNS interceptor etc.)
+        BEHAVIOR,         // app risk score >= 70: active at STANDARD and STRICT
+        BEHAVIOR_STRICT,  // app risk score 40-69: active at STRICT only
     }
 
     enum class Protocol { TCP, UDP, ANY }

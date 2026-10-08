@@ -41,6 +41,8 @@ data class AppRiskItem(
     val stalkerwareScore: Int = 0,
     val stalkerwareReasons: List<String> = emptyList(),
     val backgroundCount: Int = 0,
+    /** Why the score is what it is, strongest first (plain language). */
+    val riskReasons: List<String> = emptyList(),
 ) {
     val riskLevel: String
         get() = when {
@@ -49,20 +51,18 @@ data class AppRiskItem(
             else -> "LOW"
         }
 
+    /**
+     * Letter grade from the risk score alone. The score already counts cleartext and
+     * stalkerware traits; background traffic and volume count for nothing (a
+     * messenger is busy in the background by design).
+     */
     val privacyGrade: String
-        get() {
-            var score = 100
-            score -= (maxRiskScore * 0.4f).toInt().coerceAtMost(40)
-            score -= (cleartextCount * 5).coerceAtMost(20)
-            score -= (backgroundCount * 2).coerceAtMost(10)
-            score -= (stalkerwareScore * 0.3f).toInt().coerceAtMost(30)
-            return when (score.coerceAtLeast(0)) {
-                in 80..100 -> "A"
-                in 60..79  -> "B"
-                in 40..59  -> "C"
-                in 20..39  -> "D"
-                else       -> "F"
-            }
+        get() = when {
+            maxRiskScore < 15 -> "A"
+            maxRiskScore < 40 -> "B"
+            maxRiskScore < 55 -> "C"
+            maxRiskScore < 70 -> "D"
+            else -> "F"
         }
 }
 
@@ -130,12 +130,23 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
         val recentConnections = runCatching {
             db.connectionDao().getRecentConnections(since, 800)
         }.getOrElse { emptyList() }
+        val level = runCatching {
+            FilterEngine.BlockLevel.valueOf(
+                com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(getApplication()).protectionLevel.value
+            )
+        }.getOrDefault(FilterEngine.BlockLevel.STANDARD)
+        // User blocks, plus behavior blocks the current protection level applies.
+        val activeSources = buildSet {
+            add(FilterRule.Source.USER.name)
+            if (level >= FilterEngine.BlockLevel.STANDARD) add(FilterRule.Source.BEHAVIOR.name)
+            if (level >= FilterEngine.BlockLevel.STRICT) add(FilterRule.Source.BEHAVIOR_STRICT.name)
+        }
         val blockedPackages = configDb.rulesDao()
             .getAllRules()
             .filter {
                 it.enabled &&
                     it.action == FilterRule.Action.DENY.name &&
-                    it.type == FilterRule.Source.USER.name &&
+                    it.type in activeSources &&
                     !it.matchPackage.isNullOrBlank()
             }
             .mapNotNull { it.matchPackage }
@@ -149,6 +160,9 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
         val profileBuckets = profiles.groupBy { canonicalPackageForObserved(it.packageName, installedPackages) }
         val liveBuckets = liveStats.groupBy { canonicalPackageForObserved(it.packageName, installedPackages) }
         val connectionBuckets = recentConnections.groupBy { canonicalPackageForObserved(it.packageName, installedPackages) }
+        val sensorBuckets = runCatching {
+            db.sensorEventDao().since(System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000)
+        }.getOrDefault(emptyList()).filter { it.packageName != null }.groupBy { it.packageName!! }
         val observed = if (profiles.isNotEmpty()) {
             installed
                 .mapNotNull { installedApp ->
@@ -159,6 +173,11 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
                     if (rows.isEmpty() && liveRows.isEmpty() && connectionRows.isEmpty()) return@mapNotNull null
                     val stalkerware = assessStalkerware(pkg, permissionsByPackage[pkg].orEmpty(), rows)
                     val fallbackMetrics = connectionMetrics(connectionRows)
+                    val risk = com.privacyguard.app.core.detection.AppRiskScorer.score(
+                        com.privacyguard.app.core.detection.BehaviorBlocker.inputsFrom(
+                            pkg, connectionRows, sensorBuckets[pkg].orEmpty(), purposeOf(pkg), stalkerware.score,
+                        )
+                    )
                     AppRiskItem(
                         appName           = installedNames[pkg].orEmpty().ifBlank { pkg.substringAfterLast('.') },
                         packageName       = pkg,
@@ -167,11 +186,12 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
                         cleartextCount    = rows.count { it.encryptionStatus.name == "CLEARTEXT" }
                             .takeIf { it > 0 } ?: fallbackMetrics.cleartextCount,
                         totalBytesOut     = rows.sumOf { it.totalBytesOut } + liveRows.sumOf { it.bytesTransferred } + fallbackMetrics.totalBytes,
-                        maxRiskScore      = (rows.maxOfOrNull { it.riskScore } ?: fallbackMetrics.maxRiskScore),
+                        maxRiskScore      = risk.score,
                         isBlocked         = pkg in blockedPackages,
                         stalkerwareScore  = stalkerware.score,
                         stalkerwareReasons = stalkerware.reasons,
                         backgroundCount   = connectionRows.count { it.wasBackground },
+                        riskReasons       = risk.reasons,
                     )
                 }
                 .sortedWith(compareByDescending<AppRiskItem> { it.maxRiskScore }.thenByDescending { it.totalBytesOut })
@@ -278,6 +298,12 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
         else -> null
     }
 
+    private fun purposeOf(pkg: String): com.privacyguard.app.core.sensors.SensorPurpose = runCatching {
+        val info = getApplication<Application>().packageManager.getApplicationInfo(pkg, 0)
+        val category = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) info.category else -1
+        com.privacyguard.app.core.sensors.SensorPurpose.of(pkg, category, info.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM != 0)
+    }.getOrDefault(com.privacyguard.app.core.sensors.SensorPurpose.UNKNOWN)
+
     private fun assessStalkerware(
         packageName: String,
         requestedPermissions: Set<String>,
@@ -309,6 +335,8 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
                     )
                 )
             } else {
+                // Unblocking also tells the behavior blocker to leave this app alone.
+                com.privacyguard.app.core.detection.BehaviorBlocker.neverBlock(getApplication(), packageName)
                 // Delete any DENY rule matching this package, regardless of how it was created
                 configDb.rulesDao().getAllRules()
                     .filter { it.matchPackage == packageName && it.action == FilterRule.Action.DENY.name }

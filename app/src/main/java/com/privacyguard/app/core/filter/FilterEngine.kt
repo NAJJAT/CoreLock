@@ -146,6 +146,10 @@ class FilterEngine(
         FilterRule.Source.USER      -> true
         FilterRule.Source.BLOCKLIST -> blockLevel >= BlockLevel.STANDARD
         FilterRule.Source.COMMUNITY -> blockLevel >= BlockLevel.STRICT
+        // Behavior blocks (BehaviorBlocker): MINIMAL ignores the app risk score,
+        // STANDARD acts from 70, STRICT from 40.
+        FilterRule.Source.BEHAVIOR -> blockLevel >= BlockLevel.STANDARD
+        FilterRule.Source.BEHAVIOR_STRICT -> blockLevel >= BlockLevel.STRICT
     }
 
     // ─────────────────────────────────────────────────────────────────────────

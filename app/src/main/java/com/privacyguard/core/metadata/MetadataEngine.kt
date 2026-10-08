@@ -81,8 +81,10 @@ MetadataEngine {
         if (host in knownTrackers) signals += RiskSignal(RiskCode.KNOWN_TRACKER, "Known tracker domain", 6)
         if (encStatus == EncryptionStatus.CLEARTEXT) signals += RiskSignal(RiskCode.CLEARTEXT, "Unencrypted connection", 7)
         if (encStatus == EncryptionStatus.WEAK_TLS) signals += RiskSignal(RiskCode.WEAK_TLS, "Weak TLS version", 4)
-        if (bgRatio > 0.8f && count > 5) signals += RiskSignal(RiskCode.BACKGROUND_ONLY, "Mostly background connections", 5)
-        if (avgInterval in 1L..60_000L && count > 10) signals += RiskSignal(RiskCode.BEACON_PATTERN, "Regular beacon interval", 6)
+        // Kept as information, weighted 0: a messenger's always-open socket is mostly
+        // background and regular by design, and scoring it made WhatsApp "high risk".
+        if (bgRatio > 0.8f && count > 5) signals += RiskSignal(RiskCode.BACKGROUND_ONLY, "Mostly background connections", 0)
+        if (avgInterval in 1L..60_000L && count > 10) signals += RiskSignal(RiskCode.BEACON_PATTERN, "Regular beacon interval", 0)
 
         val riskScore = (signals.sumOf { it.severity } * 10).coerceIn(0, 100)
 

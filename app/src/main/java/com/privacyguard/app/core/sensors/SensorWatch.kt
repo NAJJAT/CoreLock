@@ -47,6 +47,7 @@ class SensorWatch(context: Context) {
     private val writeLock = Mutex()
 
     private val notifier = SensorAlertNotifier(appContext).also { it.createChannel() }
+    private val behaviorBlocker = com.privacyguard.app.core.detection.BehaviorBlocker(appContext)
 
     /**
      * Judges the current view of [use] and saves it: inserted on the first call,
@@ -73,6 +74,9 @@ class SensorWatch(context: Context) {
                     val title = if (use.sensor == SensorType.CAMERA) "Camera used" else "Microphone used"
                     notifier.show(use.id, rowId, use.sensor, pkg, title, verdict)
                 }
+                // The finished use may change the app's risk score, and with it a block.
+                if (final && pkg != null) runCatching { behaviorBlocker.review(pkg) }
+                    .onFailure { Log.w(TAG, "Behavior review failed for $pkg: ${it.message}") }
             }
         }
     }

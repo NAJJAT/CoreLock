@@ -121,6 +121,11 @@
             android:name=".core.sensors.SensorAlertNotifier$ItWasMeReceiver"
             android:exported="false" />
 
+        <!-- "Undo" on an automatic behavior block. -->
+        <receiver
+            android:name=".core.detection.BehaviorBlocker$UndoReceiver"
+            android:exported="false" />
+
         <!-- ── Providers ──────────────────────────────────────────────────── -->
 
         <provider
