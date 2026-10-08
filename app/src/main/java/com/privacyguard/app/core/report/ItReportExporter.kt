@@ -35,7 +35,7 @@ object ItReportExporter {
 
         val backgroundCount = connections.count { it.wasBackground }
         val cleartextCount = connections.count {
-            !it.wasBlocked && (it.encryptionStatus == "CLEARTEXT" || it.encryptionStatus == "UNKNOWN")
+            !it.wasBlocked && it.encryptionStatus == "CLEARTEXT"
         }
         val json = JSONObject().apply {
             put("generatedAt", stamp)

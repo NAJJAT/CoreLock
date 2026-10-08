@@ -10,6 +10,9 @@ class EncryptionEnforcer {
 
     companion object {
         private const val TAG = "EncryptionEnforcer"
+        private val HTTP_PREFIXES = listOf(
+            "GET ", "POST ", "HEAD ", "PUT ", "DELETE ", "PATCH ", "OPTIONS ", "CONNECT ", "HTTP/",
+        )
     }
 
     data class Result(
@@ -18,38 +21,22 @@ class EncryptionEnforcer {
         val sniHostname: String?,
     )
 
-    fun inspect(ip: IpPacket, tcp: TcpPacket): Result {
-        val port = tcp.destinationPort
-        val data = tcp.data
+    fun inspect(ip: IpPacket, tcp: TcpPacket): Result = classify(tcp.destinationPort, tcp.data)
 
-        Log.d(TAG, "Inspecting connection to port $port, data size ${data.size}")
-
-        // FIXED: Don't block, just classify
-        return when {
-            port == 80 || port == 8080 -> {
-                Log.d(TAG, "Port $port detected as CLEARTEXT")
-                Result(EncryptionStatus.CLEARTEXT, null, null)
-            }
-            port == 443 || port == 8443 -> {
-                val result = inspectTls(data)
-                Log.d(TAG, "Port $port detected as ${result.encryptionStatus}")
-                result
-            }
-            data.size > 5 && isTlsClientHello(data) -> {
-                val result = inspectTls(data)
-                Log.d(TAG, "TLS ClientHello detected as ${result.encryptionStatus}")
-                result
-            }
-            data.size > 0 && isPlaintextHttp(data) -> {
-                Log.d(TAG, "Plaintext HTTP detected as CLEARTEXT")
-                Result(EncryptionStatus.CLEARTEXT, null, null)
-            }
-            else -> {
-                Log.d(TAG, "Unknown encryption status for port $port")
-                Result(EncryptionStatus.UNKNOWN, null, null)
-            }
-        }
-    }
+    /**
+     * Classifies a connection from its first client bytes. Content decides, not the
+     * port: a TLS handshake is TLS on any port, readable HTTP is cleartext on any
+     * port, and anything else is UNKNOWN (often an app's own encrypted protocol,
+     * e.g. WhatsApp on 5222). Port 80 alone used to mean CLEARTEXT.
+     */
+    internal fun classify(port: Int, data: ByteArray): Result = when {
+        data.size > 5 && isTlsClientHello(data) -> inspectTls(data)
+        isPlaintextHttp(data) -> Result(EncryptionStatus.CLEARTEXT, null, null)
+        // Nothing sent yet: the well-known ports are the best evidence available.
+        data.isEmpty() && (port == 80 || port == 8080) -> Result(EncryptionStatus.CLEARTEXT, null, null)
+        port == 443 || port == 8443 -> inspectTls(data)
+        else -> Result(EncryptionStatus.UNKNOWN, null, null)
+    }.also { Log.d(TAG, "Port $port classified as ${it.encryptionStatus}") }
 
     private fun inspectTls(data: ByteArray): Result {
         if (data.size < 6) return Result(EncryptionStatus.TLS, null, null)
@@ -89,9 +76,7 @@ class EncryptionEnforcer {
     private fun isPlaintextHttp(data: ByteArray): Boolean {
         if (data.size < 4) return false
         val prefix = String(data, 0, minOf(8, data.size), Charsets.ISO_8859_1)
-        return prefix.startsWith("GET ") || prefix.startsWith("POST ") ||
-               prefix.startsWith("HEAD ") || prefix.startsWith("PUT ") ||
-               prefix.startsWith("DELETE ") || prefix.startsWith("HTTP/")
+        return HTTP_PREFIXES.any { prefix.startsWith(it) }
     }
 
     private fun extractSni(data: ByteArray): String? {

@@ -30,7 +30,7 @@ object NetworkTrustAnalyzer {
         var penalty = 0
         val reasons = mutableListOf<String>()
 
-        val cleartext = connections.count { it.encryptionStatus == "CLEARTEXT" || it.encryptionStatus == "UNKNOWN" }
+        val cleartext = connections.count { it.encryptionStatus == "CLEARTEXT" }
         if (cleartext > 0) {
             penalty += minOf(25, cleartext * 3)
             reasons += "$cleartext cleartext or unknown sessions"

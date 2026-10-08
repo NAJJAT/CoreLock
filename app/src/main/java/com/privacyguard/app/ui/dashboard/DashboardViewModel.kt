@@ -216,7 +216,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             prefs.setProtectionLevel(com.privacyguard.core.filter.FilterEngine.BlockLevel.STRICT.name)
         }
         val cleartextCount = recentConnections.count {
-            !it.wasBlocked && (it.encryptionStatus == "CLEARTEXT" || it.encryptionStatus == "UNKNOWN")
+            !it.wasBlocked && it.encryptionStatus == "CLEARTEXT"
         }
         val secureCount = recentConnections.count { it.encryptionStatus == "TLS" || it.tlsVersion?.startsWith("TLS_1_") == true }
         val encryptionHealth = if (recentConnections.isEmpty()) 0f
@@ -276,7 +276,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             .mapNotNull { it.packageName.takeIf { p -> p.isNotBlank() } }
             .distinct().size
         val cleartextUnblocked = connections.count {
-            !it.wasBlocked && (it.encryptionStatus == "CLEARTEXT" || it.encryptionStatus == "UNKNOWN")
+            !it.wasBlocked && it.encryptionStatus == "CLEARTEXT"
         }
 
         return listOf(

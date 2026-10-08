@@ -164,7 +164,7 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
                         packageName       = pkg,
                         totalDestinations = rows.size.takeIf { it > 0 } ?: fallbackMetrics.totalDestinations,
                         suspiciousCount   = rows.count { it.riskScore >= 40 }.takeIf { it > 0 } ?: fallbackMetrics.suspiciousCount,
-                        cleartextCount    = rows.count { it.encryptionStatus.name == "CLEARTEXT" || it.encryptionStatus.name == "UNKNOWN" }
+                        cleartextCount    = rows.count { it.encryptionStatus.name == "CLEARTEXT" }
                             .takeIf { it > 0 } ?: fallbackMetrics.cleartextCount,
                         totalBytesOut     = rows.sumOf { it.totalBytesOut } + liveRows.sumOf { it.bytesTransferred } + fallbackMetrics.totalBytes,
                         maxRiskScore      = (rows.maxOfOrNull { it.riskScore } ?: fallbackMetrics.maxRiskScore),
@@ -229,7 +229,7 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
             .distinct()
             .size
         val suspicious = rows.count { it.wasBlocked }
-        val cleartext = rows.count { it.encryptionStatus.equals("CLEARTEXT", ignoreCase = true) || it.encryptionStatus.equals("UNKNOWN", ignoreCase = true) }
+        val cleartext = rows.count { it.encryptionStatus.equals("CLEARTEXT", ignoreCase = true) }
         val totalBytes = rows.sumOf { it.bytesSent + it.bytesReceived }
         val risk = when {
             suspicious > 0 -> 40

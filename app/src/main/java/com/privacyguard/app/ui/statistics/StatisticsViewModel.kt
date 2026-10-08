@@ -134,7 +134,7 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
         val totalConnections = recentConnections.size
         val blockedToday = recentConnections.count { it.wasBlocked }
         val cleartextToday = recentConnections.count {
-            it.encryptionStatus == "CLEARTEXT" || it.encryptionStatus == "UNKNOWN"
+            it.encryptionStatus == "CLEARTEXT"
         }
         val secureToday = recentConnections.count { it.encryptionStatus == "TLS" }
         val totalBytes = recentConnections.sumOf { it.bytesSent + it.bytesReceived }
