@@ -130,6 +130,23 @@ private fun fmtBytes(bytes: Int): String = when {
     else -> "${"%.1f".format(bytes / 1_048_576.0)} MB"
 }
 
+/**
+ * Readable protocol name. Decrypted entries store the HTTP protocol, metadata-only
+ * entries store the connection's encryption status (e.g. TLS_1_3).
+ */
+private fun protocolLabel(protocol: String): String = when (protocol) {
+    "HTTP1" -> "HTTP/1"
+    "HTTP2" -> "HTTP/2"
+    "GRPC" -> "gRPC"
+    "WEBSOCKET" -> "WS"
+    "TLS_1_3" -> "TLS 1.3"
+    "TLS_1_2" -> "TLS 1.2"
+    "WEAK_TLS" -> "Old TLS"
+    "CLEARTEXT" -> "Plain"
+    "TLS" -> "TLS"
+    else -> "Other"
+}
+
 private fun fmtRelative(ts: Long): String {
     val diff = System.currentTimeMillis() - ts
     return when {
@@ -781,7 +798,7 @@ private fun PayloadListItem(log: PayloadLogEntity, onClick: () -> Unit) {
                 if (log.method != null) {
                     MethodBadge(log.method)
                 } else {
-                    val proto = if (log.destinationPort == 443) "HTTPS" else log.protocol.take(5)
+                    val proto = if (log.destinationPort == 443) "HTTPS" else protocolLabel(log.protocol)
                     Surface(color = Blue.copy(alpha = 0.12f), shape = RoundedCornerShape(4.dp)) {
                         Text(proto, Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             color = Blue, fontSize = 9.sp, fontWeight = FontWeight.Bold)
@@ -951,14 +968,17 @@ private fun DetailScreen(log: PayloadLogEntity, onBack: () -> Unit) {
                         Text(log.sniHostname ?: log.destinationIp, color = Blue, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                     }
                     Spacer(Modifier.height(2.dp))
-                    Text(log.urlPath ?: "/", color = TxS, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        log.urlPath ?: if (log.isMitmSuccess) "/" else "Path not visible (not decrypted)",
+                        color = TxS, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    )
                 }
                 Spacer(Modifier.height(10.dp))
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     val rc = when { riskScore >= 60 -> Red; riskScore >= 40 -> Amber; else -> Ac }
                     MetaCell(Modifier.weight(1f), "Risk", "$riskScore", rc)
                     MetaCell(Modifier.weight(1f), "Dir", log.direction.take(3), TxP)
-                    MetaCell(Modifier.weight(1f), "Proto", log.protocol.take(5), TxP)
+                    MetaCell(Modifier.weight(1f), "Proto", protocolLabel(log.protocol), TxP)
                     MetaCell(Modifier.weight(1f), "Size", fmtBytes(log.sizeBytes), TxP)
                 }
             }
