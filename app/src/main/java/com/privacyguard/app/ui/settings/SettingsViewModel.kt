@@ -166,6 +166,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             db.connectionDao().deleteAll()
             db.connectionProfileDao().deleteAll()
             db.dnsAnomalyDao().deleteAll()
+            db.sensorEventDao().deleteOlderThan(Long.MAX_VALUE)   // camera & mic history
         }
     }
 
