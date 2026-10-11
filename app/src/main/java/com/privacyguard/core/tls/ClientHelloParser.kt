@@ -12,6 +12,8 @@ data class ClientHello(
     val sni: String?,
     val alpn: List<String>,
     val supportedVersions: List<Int>,
+    // JA4 hashes these in wire order, so they are kept unsorted.
+    val signatureAlgorithms: List<Int> = emptyList(),
 ) {
     fun ja3String(): String {
         val version = tlsVersion.toString()
@@ -28,10 +30,12 @@ data class ClientHello(
             .joinToString("") { "%02x".format(it) }
     }
 
-    private fun isGrease(value: Int): Boolean {
-        val lo = value and 0xFF
-        val hi = (value ushr 8) and 0xFF
-        return hi == lo && (lo and 0x0F) == 0x0A
+    companion object {
+        fun isGrease(value: Int): Boolean {
+            val lo = value and 0xFF
+            val hi = (value ushr 8) and 0xFF
+            return hi == lo && (lo and 0x0F) == 0x0A
+        }
     }
 }
 
@@ -80,6 +84,7 @@ object ClientHelloParser {
         val versions = mutableListOf<Int>()
         var sni: String? = null
         val alpn = mutableListOf<String>()
+        val sigAlgs = mutableListOf<Int>()
 
         while (pos + 4 <= extEnd) {
             val eType = readU16(data, pos); pos += 2
@@ -90,6 +95,7 @@ object ClientHelloParser {
                 0x0000 -> sni = parseSni(data, pos, eEnd)
                 0x000a -> parseGroups(data, pos, eEnd, groups)
                 0x000b -> parsePointFormats(data, pos, eEnd, pointFmts)
+                0x000d -> parseGroups(data, pos, eEnd, sigAlgs) // same u16-list layout
                 0x0010 -> parseAlpn(data, pos, eEnd, alpn)
                 0x002b -> parseSupportedVersions(data, pos, eEnd, versions)
             }
@@ -97,7 +103,7 @@ object ClientHelloParser {
         }
 
         return ClientHello(clientVersion, ciphers, comprMethods, extTypes, groups,
-            pointFmts, sni, alpn, versions)
+            pointFmts, sni, alpn, versions, sigAlgs)
     }
 
     private fun parseSni(data: ByteArray, start: Int, end: Int): String? {
@@ -134,7 +140,8 @@ object ClientHelloParser {
         while (p < end) {
             if (p >= data.size) break
             val protoLen = data[p].toInt() and 0xFF; p++
-            if (p + protoLen <= data.size) out += String(data, p, protoLen, Charsets.UTF_8)
+            // Latin-1 maps each byte to one char, so JA4 can recover the raw bytes.
+            if (p + protoLen <= data.size) out += String(data, p, protoLen, Charsets.ISO_8859_1)
             p += protoLen
         }
     }

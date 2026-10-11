@@ -62,6 +62,7 @@ class ClientHelloParserTest {
         pointFmts: List<Int>    = listOf(0),
         alpn: List<String>      = listOf("h2"),
         supportedVersions: List<Int> = listOf(0x0304),
+        sigAlgs: List<Int>?     = null,
     ): ByteArray {
         val random = ByteArray(32)
 
@@ -70,6 +71,7 @@ class ClientHelloParserTest {
             if (sni != null)        add(buildSniExtension(sni))
             add(buildGroupsExtension(groups))
             add(buildPointFmtsExtension(pointFmts))
+            if (sigAlgs != null)    add(buildSigAlgsExtension(sigAlgs))
             add(buildAlpnExtension(alpn))
             add(buildSupportedVersionsExtension(supportedVersions))
         }.fold(ByteArray(0)) { a, b -> a + b }
@@ -86,6 +88,21 @@ class ClientHelloParserTest {
 
         val handshake = u8(0x01) + u24(body.size) + body   // ClientHello type + 3-byte length
         return u8(0x16) + u16(0x0303) + u16(handshake.size) + handshake
+    }
+
+    private fun buildSigAlgsExtension(algs: List<Int>): ByteArray {
+        val listBytes = algs.flatMap { u16(it).toList() }.toByteArray()
+        val data      = u16(listBytes.size) + listBytes
+        return u16(0x000d) + u16(data.size) + data
+    }
+
+    @Test
+    fun parse_extracts_signature_algorithms_in_wire_order() {
+        val algs = listOf(0x0804, 0x0403, 0x0401)
+        val hello = ClientHelloParser.parse(buildClientHelloRecord(sigAlgs = algs))!!
+        assertEquals(algs, hello.signatureAlgorithms)
+        // Wire bytes -> JA4 end to end: 3 ciphers, 6 extensions, h2, TLS 1.3, SNI.
+        assertTrue(Ja4Fingerprinter.ja4(hello).startsWith("t13d0306h2_"))
     }
 
     // ── happy path ────────────────────────────────────────────────────────────

@@ -25,8 +25,10 @@ import com.privacyguard.app.core.security.DatabaseEncryption
         PayloadLogEntity::class,
         TlsAlertEntity::class,
         DnsQueryEntity::class,
+        TlsAppProfileEntity::class,
+        TlsFingerprintEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -40,6 +42,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun payloadLogDao(): PayloadLogDao
     abstract fun tlsAlertDao(): TlsAlertDao
     abstract fun dnsQueryDao(): DnsQueryDao
+    abstract fun tlsBaselineDao(): TlsBaselineDao
 
     companion object {
         const val DATABASE_NAME = "privacyguard.db"
@@ -107,6 +110,29 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // TLS fingerprint baseline (per-app learned JA4 fingerprints).
+        internal val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `tls_app_profiles` (
+                        `uid` INTEGER NOT NULL, `packageName` TEXT NOT NULL,
+                        `learningStartedAt` INTEGER NOT NULL, `envSignature` TEXT NOT NULL,
+                        `versionCode` INTEGER NOT NULL, `lastUpdateAt` INTEGER,
+                        PRIMARY KEY(`uid`, `packageName`))
+                """)
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `tls_fingerprints` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `uid` INTEGER NOT NULL, `packageName` TEXT NOT NULL,
+                        `ja4` TEXT NOT NULL, `ja3` TEXT NOT NULL, `firstSni` TEXT,
+                        `firstSeen` INTEGER NOT NULL, `lastSeen` INTEGER NOT NULL,
+                        `seenCount` INTEGER NOT NULL, `origin` TEXT NOT NULL,
+                        `versionCode` INTEGER NOT NULL)
+                """)
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_tls_fingerprints_uid_packageName_ja4` ON `tls_fingerprints` (`uid`, `packageName`, `ja4`)")
+            }
+        }
+
         /**
          * Debug builds wipe on any schema mismatch so local iteration never gets stuck.
          * Release builds only wipe where no migration can exist (version 1, which
@@ -130,7 +156,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     DATABASE_NAME
-                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                     .openHelperFactory(DatabaseEncryption.openHelperFactory(context, DATABASE_NAME))
                     .applyFallback()
                     .build().also {

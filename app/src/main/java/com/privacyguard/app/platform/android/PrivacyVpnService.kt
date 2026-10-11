@@ -87,7 +87,9 @@ class PrivacyVpnService : VpnService() {
     private val totalCleartext = AtomicLong(0)
 
     private lateinit var ctMonitor: CtMonitor
-    private val ja3NotifiedHashes = mutableSetOf<String>()
+    // Touched from the TCP forwarder thread.
+    private val ja3NotifiedHashes = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    private lateinit var tlsFingerprintMonitor: com.privacyguard.app.vpn.TlsFingerprintMonitor
     private val cleartextNotifiedPackages = mutableSetOf<String>()
     private val backgroundBlockNotifiedPackages = mutableSetOf<String>()
     @Volatile private var blockCleartextRuleActive = false
@@ -319,10 +321,20 @@ class PrivacyVpnService : VpnService() {
         if (com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(this).ctMonitoringEnabled.value) ctMonitor.startMonitoring()
         // HTTPS inspection exists only in enterprise builds; consumer gets a no-op.
         interception = TlsInterceptionFactory.create(this, db, ::protect)
+        tlsFingerprintMonitor = com.privacyguard.app.vpn.TlsFingerprintMonitor(
+            context = this,
+            db = buildDatabase(),
+            scope = scope,
+            onAlert = { label, pkg, sni -> notifHelper.postTlsFingerprintChange(label, pkg, sni, getMainActivityClass()) },
+            labelFor = { uid, pkg -> resolvedAppLabel(uid, pkg) },
+        )
         tcpForwarder = TcpForwarder(
             sessionTable, tunWriter, encEnforcer, filterEngine, ::protect,
             interception,
             dualVpnConfig = { settings.getDualVpnConfig() },
+            onClientHello = { session, bytes ->
+                inspectTlsClientHello(bytes, session.ownerUid, session.ownerPackage ?: appTracker.packageForUid(session.ownerUid))
+            },
         ).also { it.start() }
 
         udpForwarder = UdpForwarder(sessionTable, tunWriter, ::protect).also { it.start() }
@@ -548,10 +560,6 @@ class PrivacyVpnService : VpnService() {
                     }
                     return
                 }
-                // TLS fingerprinting on first data packet to port 443
-                if (tcp.destinationPort == 443 && tcp.data.isNotEmpty()) {
-                    inspectTlsClientHello(tcp.data, pkg)
-                }
                 tcpForwarder.handle(ip, tcp, uid, pkg)
                 // Keep session state aligned with current foreground/background status
                 if (pkg != null) {
@@ -563,7 +571,12 @@ class PrivacyVpnService : VpnService() {
         }
     }
 
-    private fun inspectTlsClientHello(data: ByteArray, pkg: String?) {
+    /**
+     * Runs once per TCP session on the complete ClientHello (TcpForwarder
+     * reassembles it). It used to run on every port-443 packet with only the first
+     * segment, which truncated large ClientHellos and gave unstable fingerprints.
+     */
+    private fun inspectTlsClientHello(data: ByteArray, uid: Int, pkg: String?) {
         // Fast path: use Rust native JA3 computation when available
         val ja3Hash: String? = if (com.privacyguard.core.native_engine.RustBridge.isAvailable) {
             com.privacyguard.core.native_engine.RustBridge.computeJa3(data)
@@ -571,6 +584,8 @@ class PrivacyVpnService : VpnService() {
 
         val hello = ClientHelloParser.parse(data) ?: return
         val db = buildDatabase()
+
+        tlsFingerprintMonitor.onClientHello(uid, pkg, hello)
 
         // JA3 threat check — prefer native hash, fall back to Kotlin-computed hash
         val effectiveHash = ja3Hash ?: hello.ja3Hash()

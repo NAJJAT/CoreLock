@@ -36,6 +36,8 @@ class TcpForwarder(
     // HTTPS payload inspection; TlsInterception.None outside enterprise builds.
     private val interception: TlsInterception,
     private val dualVpnConfig: () -> DualVpnConfig = { DualVpnConfig() },
+    // Gets the whole first TLS record, reassembled across segments, once per session.
+    private val onClientHello: ((Session, ByteArray) -> Unit)? = null,
 ) : Runnable {
 
     companion object {
@@ -235,6 +237,11 @@ class TcpForwarder(
                 }
                 clientHelloBytes = buffered
                 session.httpOutBytes = ByteArray(0)
+            }
+            if (key.destinationPort == 443 && clientHelloBytes.isNotEmpty() &&
+                (clientHelloBytes[0].toInt() and 0xFF) == 0x16) {
+                runCatching { onClientHello?.invoke(session, clientHelloBytes) }
+                    .onFailure { Log.w(TAG, "ClientHello listener failed: ${it.message}") }
             }
 
             val result = encEnforcer.inspect(ip, tcp)

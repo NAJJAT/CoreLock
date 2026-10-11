@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-enum class AlertType { DNS_ANOMALY, JA3_THREAT, WEAK_CIPHER, CT_EVENT, CLEARTEXT }
+enum class AlertType { DNS_ANOMALY, JA3_THREAT, TLS_FP_CHANGE, WEAK_CIPHER, CT_EVENT, CLEARTEXT }
 
 enum class AlertSeverityFilter { ALL, CRITICAL, HIGH, MEDIUM }
 
@@ -89,16 +89,26 @@ class AlertInboxViewModel(app: Application) : AndroidViewModel(app) {
         packageName = packageName.ifBlank { null },
     )
 
+    private fun appLabel(pkg: String): String = runCatching {
+        val pm = getApplication<Application>().packageManager
+        pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+    }.getOrDefault(pkg)
+
     private fun TlsAlertEntity.toAlertItem() = AlertItem(
         id = "tls_$id",
         type = when (alertType) {
             "JA3_THREAT"  -> AlertType.JA3_THREAT
+            TlsAlertEntity.TYPE_TLS_FP_CHANGE -> AlertType.TLS_FP_CHANGE
             "WEAK_CIPHER" -> AlertType.WEAK_CIPHER
             else          -> AlertType.CT_EVENT
         },
         title = when (alertType) {
             "JA3_THREAT"  -> "JA3 fingerprint · ${malwareName ?: category ?: "Unknown malware"}"
             "WEAK_CIPHER" -> "Weak cipher suite detected"
+            TlsAlertEntity.TYPE_TLS_FP_CHANGE -> getApplication<Application>().getString(
+                com.privacyguard.app.R.string.tls_fp_alert_title,
+                packageName?.let { appLabel(it) } ?: "?",
+            )
             else          -> "Certificate Transparency event"
         },
         detail = listOfNotNull(sni, hash?.take(16)?.let { "hash:$it" }, detail).firstOrNull() ?: "",

@@ -255,6 +255,44 @@ class NotificationHelper(private val context: Context) {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // TLS fingerprint baseline change
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /** One notification per app, so two apps changing at once both stay visible. */
+    fun postTlsFingerprintChange(
+        appLabel: String,
+        packageName: String,
+        sni: String?,
+        mainActivityClass: Class<*>,
+    ) {
+        val id = NOTIFICATION_ID_TLS_FP_BASE + (packageName.hashCode() and 0xFFF)
+        val tapIntent = Intent(context, mainActivityClass).putExtra(EXTRA_NAV_ROUTE, "crypto")
+        val pendingTap = PendingIntent.getActivity(
+            context, id, tapIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val what = if (sni.isNullOrBlank())
+            context.getString(com.privacyguard.app.R.string.tls_fp_alert_what_no_domain, appLabel)
+        else
+            context.getString(com.privacyguard.app.R.string.tls_fp_alert_what_domain, appLabel, sni)
+        val body = listOf(
+            what,
+            context.getString(com.privacyguard.app.R.string.tls_fp_alert_reasons),
+            context.getString(com.privacyguard.app.R.string.tls_fp_alert_actions),
+        ).joinToString("\n\n")
+        val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentTitle(context.getString(com.privacyguard.app.R.string.tls_fp_alert_title, appLabel))
+            .setContentText(context.getString(com.privacyguard.app.R.string.tls_fp_alert_short))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setContentIntent(pendingTap)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
+        manager.notify(id, notification)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Behavior DNA Alert
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -414,6 +452,8 @@ class NotificationHelper(private val context: Context) {
         const val NOTIFICATION_ID_CLEARTEXT    = 7
         const val NOTIFICATION_ID_BEHAVIOR        = 8
         const val NOTIFICATION_ID_BACKGROUND_BLOCK = 9
+        // 1000..5095: one slot per app (see postTlsFingerprintChange).
+        const val NOTIFICATION_ID_TLS_FP_BASE  = 1000
 
         /** Broadcast action to stop the VPN from the notification's Stop button. */
         const val ACTION_STOP_VPN = "com.privacyguard.action.STOP_VPN"

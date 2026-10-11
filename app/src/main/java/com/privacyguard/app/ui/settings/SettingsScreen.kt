@@ -400,7 +400,13 @@ fun SettingsScreen(
             PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                 Text("ANALYSIS & INSIGHTS", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
                 Spacer(modifier = Modifier.height(12.dp))
-                NavRow("Security Analysis", "JA3 threats, cipher alerts, certificate transparency", Icons.Default.Security, PgAccent, onOpenSecurityAnalysis)
+                NavRow("Security Analysis", "App TLS fingerprints, cipher alerts, certificate transparency", Icons.Default.Security, PgAccent, onOpenSecurityAnalysis)
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    androidx.compose.ui.res.stringResource(com.privacyguard.app.R.string.tls_fp_settings_explainer),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PgTextMuted,
+                )
                 Spacer(modifier = Modifier.height(12.dp))
                 NavRow("Ads & Trackers", "Per-app tracker detection and SDK inventory", Icons.Default.MonetizationOn, PgWarning, onOpenAds)
                 Spacer(modifier = Modifier.height(12.dp))

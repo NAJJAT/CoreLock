@@ -27,6 +27,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.privacyguard.app.R
 import com.privacyguard.app.data.db.TlsAlertEntity
 import com.privacyguard.app.ui.components.PanelCard
 import com.privacyguard.app.ui.components.ScreenScaffold
@@ -93,7 +96,12 @@ fun SecurityAnalysisScreen(
             }
         }
 
-        // JA3 / JA4 section
+        // Per-app JA4 baseline
+        item {
+            TlsBaselinePanel(state.baseline, onTrust = viewModel::trust)
+        }
+
+        // JA3 threat list
         item {
             PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                 SectionLabel("JA3 Fingerprint Threats")
@@ -234,6 +242,90 @@ fun SecurityAnalysisScreen(
         }
 
         item { Spacer(modifier = Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+private fun TlsBaselinePanel(summary: TlsBaselineSummary, onTrust: (TlsChangeItem) -> Unit) {
+    PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+        SectionLabel(stringResource(R.string.tls_fp_section_title))
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            stringResource(R.string.tls_fp_section_body),
+            style = MaterialTheme.typography.bodySmall,
+            color = PgTextMuted,
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        if (summary.appCount == 0) {
+            EmptyBanner(stringResource(R.string.tls_fp_no_apps_yet), isGood = false)
+            return@PanelCard
+        }
+        Text(
+            pluralStringResource(R.plurals.tls_fp_known_count, summary.knownFingerprints, summary.knownFingerprints),
+            style = MaterialTheme.typography.bodySmall,
+            color = PgText,
+        )
+        if (summary.appsLearning > 0) {
+            Text(
+                pluralStringResource(R.plurals.tls_fp_apps_learning, summary.appsLearning, summary.appsLearning),
+                style = MaterialTheme.typography.bodySmall,
+                color = PgTextMuted,
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        if (summary.changes.isEmpty()) {
+            EmptyBanner(stringResource(R.string.tls_fp_no_changes), isGood = true)
+        } else {
+            summary.changes.forEachIndexed { index, item ->
+                if (index > 0) Spacer(modifier = Modifier.height(10.dp))
+                TlsChangeRow(item, onTrust)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TlsChangeRow(item: TlsChangeItem, onTrust: (TlsChangeItem) -> Unit) {
+    var expanded by remember { mutableStateOf(!item.trusted) }
+    val fp = item.fingerprint
+    val (bg, fg) = if (item.trusted) PgInfoDim to PgInfo else PgWarningDim to PgWarning
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(bg, RoundedCornerShape(10.dp))
+            .clickable { expanded = !expanded }
+            .padding(10.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.tls_fp_alert_title, item.appLabel),
+                style = MaterialTheme.typography.titleSmall,
+                color = fg,
+                modifier = Modifier.weight(1f),
+            )
+            if (item.trusted) StatusPill(stringResource(R.string.tls_fp_trusted), bg, fg)
+        }
+        Text(formatAgo(fp.firstSeen), style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+        if (expanded) {
+            Spacer(modifier = Modifier.height(8.dp))
+            val what = if (fp.firstSni.isNullOrBlank())
+                stringResource(R.string.tls_fp_alert_what_no_domain, item.appLabel)
+            else stringResource(R.string.tls_fp_alert_what_domain, item.appLabel, fp.firstSni)
+            Text(what, style = MaterialTheme.typography.bodySmall, color = PgText)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(stringResource(R.string.tls_fp_alert_reasons), style = MaterialTheme.typography.bodySmall, color = PgText)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(stringResource(R.string.tls_fp_alert_actions), style = MaterialTheme.typography.bodySmall, color = PgText)
+            Spacer(modifier = Modifier.height(8.dp))
+            DetailLine("JA4", fp.ja4)
+            DetailLine("JA3", fp.ja3)
+            if (!item.trusted) {
+                Spacer(modifier = Modifier.height(8.dp))
+                androidx.compose.material3.OutlinedButton(onClick = { onTrust(item) }) {
+                    Text(stringResource(R.string.tls_fp_trust))
+                }
+            }
+        }
     }
 }
 

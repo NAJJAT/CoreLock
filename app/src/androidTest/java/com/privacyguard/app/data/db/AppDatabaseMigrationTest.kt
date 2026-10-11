@@ -83,4 +83,22 @@ class AppDatabaseMigrationTest {
         }
         db.close()
     }
+
+    @Test
+    fun migrate7To8_addsTlsBaselineTablesAndKeepsAlerts() {
+        helper.createDatabase(dbName, 7).use { db ->
+            db.execSQL("INSERT INTO tls_alerts (timestamp, alertType, severity) VALUES (1, 'WEAK_CIPHER', 6)")
+        }
+
+        // Validates both new tables and the unique index against 8.json.
+        val db = helper.runMigrationsAndValidate(dbName, 8, true, AppDatabase.MIGRATION_7_8)
+
+        db.query("SELECT COUNT(*) FROM tls_alerts").use { c -> c.moveToFirst(); assertEquals(1, c.getInt(0)) }
+        val insert = "INSERT OR IGNORE INTO tls_fingerprints (uid, packageName, ja4, ja3, firstSeen, lastSeen, seenCount, origin, versionCode) " +
+            "VALUES (10123, 'com.example', 't13d1516h2_a_b', 'x', 1, 1, 1, 'BASELINE', 1)"
+        db.execSQL(insert)
+        db.execSQL(insert) // the unique index must swallow the duplicate
+        db.query("SELECT COUNT(*) FROM tls_fingerprints").use { c -> c.moveToFirst(); assertEquals(1, c.getInt(0)) }
+        db.close()
+    }
 }

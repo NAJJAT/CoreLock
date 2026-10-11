@@ -199,6 +199,7 @@ private data class AlertAppearance(val bg: Color, val fg: Color, val icon: Image
 
 private fun alertAppearance(alert: AlertItem): AlertAppearance = when {
     alert.type == AlertType.JA3_THREAT  -> AlertAppearance(PgDangerDim, PgDanger, Icons.Default.Fingerprint)
+    alert.type == AlertType.TLS_FP_CHANGE -> AlertAppearance(PgWarningDim, PgWarning, Icons.Default.Fingerprint)
     alert.type == AlertType.WEAK_CIPHER -> AlertAppearance(PgWarningDim, PgWarning, Icons.Default.Key)
     alert.type == AlertType.CT_EVENT    -> AlertAppearance(PgInfoDim, PgInfo, Icons.Default.VerifiedUser)
     alert.type == AlertType.CLEARTEXT   -> AlertAppearance(PgWarningDim, PgWarning, Icons.Default.Lock)

@@ -119,6 +119,29 @@
     <string name="restriction_mitm_siem_signing_key_desc" translatable="false">Separate HMAC-SHA256 key for the X-PrivacyGuard-Sig body signature. Leave empty to send no signature.</string>
     <string name="restriction_mitm_siem_pin_title" translatable="false">SIEM Certificate Pin</string>
     <string name="restriction_mitm_siem_pin_desc" translatable="false">Optional SPKI pin for the SIEM host, in the form sha256/BASE64.</string>
+
+    <!-- TLS fingerprint baseline -->
+    <string name="tls_fp_settings_explainer">A TLS fingerprint is the pattern of encryption options an app offers when it opens a secure connection, and each app\'s network library has its own. For the first 7 days the app learns which fingerprints every app normally uses, without reading any content. If an app later connects in a way it never has before and was not updated, that can reveal a hidden SDK, a tampered app, or interception.</string>
+    <string name="tls_fp_alert_title">%1$s is connecting in a new way</string>
+    <string name="tls_fp_alert_short">New TLS fingerprint without an app update. Tap for details.</string>
+    <string name="tls_fp_alert_what_domain">What changed: %1$s opened an encrypted connection to %2$s using a TLS fingerprint it has never used on this phone before. The app was not updated, so an update does not explain it.</string>
+    <string name="tls_fp_alert_what_no_domain">What changed: %1$s opened an encrypted connection using a TLS fingerprint it has never used on this phone before. The app was not updated, so an update does not explain it.</string>
+    <string name="tls_fp_alert_reasons">Possible reasons:\n• A hidden SDK or library inside the app started making its own connections.\n• Something is impersonating the app, such as a modified copy or code injected into it.\n• A tool on this phone is intercepting the app\'s connections (a proxy, debugging or “security” app).\n• Harmless: the app switched to a built-in browser or a different network library.</string>
+    <string name="tls_fp_alert_actions">What to do: If you recently installed a proxy, ad blocker, antivirus or debugging tool, it is the likely cause. Otherwise update the app from the Play Store, check its permissions, and uninstall it if you don\'t trust it. If you recognise the change, tap Trust.</string>
+    <string name="tls_fp_trust">Trust</string>
+    <string name="tls_fp_trusted">Trusted</string>
+    <string name="tls_fp_section_title">App TLS fingerprints</string>
+    <string name="tls_fp_section_body">Each app\'s encrypted connections are fingerprinted (JA4, with JA3 for compatibility) from the unencrypted handshake. Nothing is decrypted.</string>
+    <plurals name="tls_fp_apps_learning">
+        <item quantity="one">%d app is still in its 7-day learning period</item>
+        <item quantity="other">%d apps are still in their 7-day learning period</item>
+    </plurals>
+    <plurals name="tls_fp_known_count">
+        <item quantity="one">%d fingerprint learned</item>
+        <item quantity="other">%d fingerprints learned</item>
+    </plurals>
+    <string name="tls_fp_no_changes">No unexplained fingerprint changes</string>
+    <string name="tls_fp_no_apps_yet">No apps fingerprinted yet. Turn on protection and use your apps; learning starts with each app\'s first encrypted connection.</string>
 </resources>
 
 

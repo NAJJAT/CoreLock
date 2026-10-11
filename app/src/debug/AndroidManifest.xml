@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only: test hooks that must never reach a release APK. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- DUMP is held by adb shell but not grantable to normal apps, so only
+             `adb shell am broadcast` can trigger this. -->
+        <receiver
+            android:name="com.privacyguard.app.debug.DebugHooksReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="com.privacyguard.debug.TLS_END_LEARNING" />
+                <action android:name="com.privacyguard.debug.ALLOW_SCREENSHOTS" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

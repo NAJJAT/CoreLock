@@ -71,6 +71,12 @@ public class MainActivity extends Activity {
         root.addView(send, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
+        // TLS fingerprint baseline test: each button uses a different TLS client,
+        // so PrivacyGuard sees a different JA4 fingerprint from the same app UID.
+        addButton(root, "TLS test: OkHttp", () -> TlsClients.okHttp(TLS_TEST_URL));
+        addButton(root, "TLS test: BouncyCastle TLS", () -> TlsClients.bouncyCastle(TLS_TEST_HOST));
+        addButton(root, "TLS test: HttpsURLConnection", () -> TlsClients.platform(TLS_TEST_URL));
+
         status = new TextView(this);
         status.setText("Idle.");
         status.setTextColor(Color.BLACK);
@@ -121,6 +127,29 @@ public class MainActivity extends Activity {
             final String out = result;
             main.post(() -> status.setText(out));
         }).start();
+    }
+
+    private static final String TLS_TEST_HOST = "www.example.com";
+    private static final String TLS_TEST_URL = "https://" + TLS_TEST_HOST + "/";
+
+    private void addButton(LinearLayout root, String label, TlsClients.Call call) {
+        Button b = new Button(this);
+        b.setText(label);
+        b.setOnClickListener(v -> {
+            status.setText(label + "...");
+            new Thread(() -> {
+                String out;
+                try {
+                    out = label + "\n" + call.run();
+                } catch (Exception e) {
+                    out = label + " FAILED: " + e.getClass().getSimpleName() + ": " + e.getMessage();
+                }
+                final String text = out;
+                main.post(() -> status.setText(text));
+            }).start();
+        });
+        root.addView(b, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
     }
 
     private int dp(int v) {
