@@ -26,3 +26,6 @@ compile-log.txt
 
 # Rust build output
 rust/target/
+
+# Test app build output (was committed by mistake)
+/testapp/build/

@@ -1,8 +1,0 @@
-com.privacyguard.testapp-pngs-0 C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\build\generated\res\pngs\debug
-com.privacyguard.testapp-updated_navigation_xml-1 C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\build\generated\updated_navigation_xml\debug
-com.privacyguard.testapp-packageDebugResources-2 C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\build\intermediates\incremental\debug\packageDebugResources\merged.dir
-com.privacyguard.testapp-packageDebugResources-3 C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
-com.privacyguard.testapp-debug-4 C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\build\intermediates\merged_res\debug\mergeDebugResources
-com.privacyguard.testapp-debug-5 C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\debug\res
-com.privacyguard.testapp-main-6 C:\Users\ooo77\AndroidStudioProjects\privacyguard\testapp\src\main\res
-gradleHome-0 C:\Users\ooo77\.gradle
