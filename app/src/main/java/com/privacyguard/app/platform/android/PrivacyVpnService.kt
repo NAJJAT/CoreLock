@@ -90,6 +90,7 @@ class PrivacyVpnService : VpnService() {
     // Touched from the TCP forwarder thread.
     private val ja3NotifiedHashes = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private lateinit var tlsFingerprintMonitor: com.privacyguard.app.vpn.TlsFingerprintMonitor
+    private lateinit var sensorWatcher: com.privacyguard.app.adprivacy.SensorUsageWatcher
     private val cleartextNotifiedPackages = mutableSetOf<String>()
     private val backgroundBlockNotifiedPackages = mutableSetOf<String>()
     @Volatile private var blockCleartextRuleActive = false
@@ -252,6 +253,7 @@ class PrivacyVpnService : VpnService() {
             protectSocket = { sock -> protect(sock) },
             protectTcpSocket = { sock -> protect(sock) },
             domainFilter = domainFilter,
+            adSdkPolicy = com.privacyguard.app.adprivacy.AdSdkPolicy(enabled = { settings.adSdkBlockingEnabled.value }),
         ).also { h ->
             h.resolvedListener = DnsHandler.ResolvedListener { ip, hostname ->
                 sessionTable.allSessions()
@@ -321,6 +323,12 @@ class PrivacyVpnService : VpnService() {
         if (com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(this).ctMonitoringEnabled.value) ctMonitor.startMonitoring()
         // HTTPS inspection exists only in enterprise builds; consumer gets a no-op.
         interception = TlsInterceptionFactory.create(this, db, ::protect)
+        sensorWatcher = com.privacyguard.app.adprivacy.SensorUsageWatcher(
+            context = this,
+            dao = buildDatabase().sensorEventDao(),
+            scope = scope,
+            foreground = com.privacyguard.platform.android.ForegroundAppDetector(this),
+        ).also { it.start() }
         tlsFingerprintMonitor = com.privacyguard.app.vpn.TlsFingerprintMonitor(
             context = this,
             db = buildDatabase(),
@@ -842,6 +850,7 @@ class PrivacyVpnService : VpnService() {
         if (::ctMonitor.isInitialized) ctMonitor.stop()
         tunReader.stop()
         tunWriter.stop()
+        if (::sensorWatcher.isInitialized) sensorWatcher.stop()
         tcpForwarder.stop()
         udpForwarder.stop()
         sessionTable.clear()

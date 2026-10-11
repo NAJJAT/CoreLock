@@ -231,6 +231,10 @@ fun AppNavHost(
                 AdsScreen()
             }
 
+            composable("adPrivacy") {
+                com.privacyguard.app.adprivacy.AdPrivacyScreen()
+            }
+
             composable("rules") {
                 com.privacyguard.app.ui.rules.RulesScreen()
             }
@@ -264,6 +268,7 @@ fun AppNavHost(
                     onLanguageChanged = {},
                     onOpenSecurityAnalysis = { navController.navigate("crypto") },
                     onOpenAds = { navController.navigate("ads") },
+                    onOpenAdPrivacy = { navController.navigate("adPrivacy") },
                     onOpenRules = { navController.navigate("rules") },
                     onOpenPayloads = if (BuildConfig.MITM_AVAILABLE) {
                         { navController.navigate("payloads") }

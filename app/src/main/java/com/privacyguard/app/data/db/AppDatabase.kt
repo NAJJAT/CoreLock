@@ -27,8 +27,9 @@ import com.privacyguard.app.core.security.DatabaseEncryption
         DnsQueryEntity::class,
         TlsAppProfileEntity::class,
         TlsFingerprintEntity::class,
+        SensorEventEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -43,6 +44,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tlsAlertDao(): TlsAlertDao
     abstract fun dnsQueryDao(): DnsQueryDao
     abstract fun tlsBaselineDao(): TlsBaselineDao
+    abstract fun sensorEventDao(): SensorEventDao
 
     companion object {
         const val DATABASE_NAME = "privacyguard.db"
@@ -133,6 +135,19 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Camera & Mic Watch: periods during which the mic or a camera was in use.
+        internal val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `sensor_events` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `sensor` TEXT NOT NULL, `startedAt` INTEGER NOT NULL, `endedAt` INTEGER,
+                        `screenOnAtStart` INTEGER NOT NULL, `likelyPackage` TEXT, `detail` TEXT)
+                """)
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_sensor_events_startedAt` ON `sensor_events` (`startedAt`)")
+            }
+        }
+
         /**
          * Debug builds wipe on any schema mismatch so local iteration never gets stuck.
          * Release builds only wipe where no migration can exist (version 1, which
@@ -156,7 +171,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     DATABASE_NAME
-                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                     .openHelperFactory(DatabaseEncryption.openHelperFactory(context, DATABASE_NAME))
                     .applyFallback()
                     .build().also {

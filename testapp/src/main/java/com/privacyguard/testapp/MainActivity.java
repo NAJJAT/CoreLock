@@ -77,6 +77,11 @@ public class MainActivity extends Activity {
         addButton(root, "TLS test: BouncyCastle TLS", () -> TlsClients.bouncyCastle(TLS_TEST_HOST));
         addButton(root, "TLS test: HttpsURLConnection", () -> TlsClients.platform(TLS_TEST_URL));
 
+        // Ad-privacy tests: a known mic use for the timeline, and what DNS returns
+        // to a non-Meta app for ad SDK hosts versus login/push hosts.
+        addButton(root, "Record mic 5 s", PrivacyProbes::recordMic);
+        addButton(root, "Resolve ad/login hosts", PrivacyProbes::resolveHosts);
+
         status = new TextView(this);
         status.setText("Idle.");
         status.setTextColor(Color.BLACK);

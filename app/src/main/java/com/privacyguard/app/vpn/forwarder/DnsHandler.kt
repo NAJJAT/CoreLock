@@ -48,6 +48,7 @@ class DnsHandler(
     private val protectSocket:     ((DatagramSocket) -> Boolean)? = null,
     private val protectTcpSocket:  ((Socket) -> Boolean)? = null,
     private val domainFilter:      DomainFilter? = null,
+    private val adSdkPolicy:       com.privacyguard.app.adprivacy.AdSdkPolicy? = null,
 ) {
     // ─────────────────────────────────────────────────────────────────────────
     // Listeners
@@ -105,9 +106,15 @@ class DnsHandler(
         anomalies.forEach { anomalyListener?.onAnomaly(it) }
 
         // ── Layer 1: Blocklist ───────────────────────────────────────────────
-        val isBlockedByDomainFilter = domainFilter?.isBlocked(queryName) == true
+        // Ad-SDK policy is per app (DomainFilter is not): it blocks SDK hosts in
+        // other apps, and keeps login/push/deep-link hosts open even when a
+        // downloaded list contains them. The user's own rules still win.
+        val sdkVerdict = adSdkPolicy?.decide(ownerPackage, queryName)
+        val isBlockedByDomainFilter = sdkVerdict !is com.privacyguard.app.adprivacy.AdSdkVerdict.KeepOpen &&
+            domainFilter?.isBlocked(queryName) == true
         val isBlockedByRuleEngine = filterEngine.isDomainBlocked(queryName)
-        if (isBlockedByDomainFilter || isBlockedByRuleEngine) {
+        val isBlockedAsAdSdk = sdkVerdict is com.privacyguard.app.adprivacy.AdSdkVerdict.Block
+        if (isBlockedByDomainFilter || isBlockedByRuleEngine || isBlockedAsAdSdk) {
             queryListener?.onQuery(ownerPackage, queryName, true)
             blockedCount.incrementAndGet()
             val nxdomain = DnsPacket.buildBlockedResponse(dns)

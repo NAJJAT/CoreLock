@@ -101,4 +101,15 @@ class AppDatabaseMigrationTest {
         db.query("SELECT COUNT(*) FROM tls_fingerprints").use { c -> c.moveToFirst(); assertEquals(1, c.getInt(0)) }
         db.close()
     }
+
+    @Test
+    fun migrate8To9_addsSensorEvents() {
+        helper.createDatabase(dbName, 8).close()
+        val db = helper.runMigrationsAndValidate(dbName, 9, true, AppDatabase.MIGRATION_8_9)
+        db.execSQL("INSERT INTO sensor_events (sensor, startedAt, endedAt, screenOnAtStart) VALUES ('MIC', 1, NULL, 0)")
+        db.query("SELECT COUNT(*) FROM sensor_events WHERE endedAt IS NULL").use { c ->
+            c.moveToFirst(); assertEquals(1, c.getInt(0))
+        }
+        db.close()
+    }
 }

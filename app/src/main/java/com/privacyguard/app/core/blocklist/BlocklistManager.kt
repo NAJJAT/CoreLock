@@ -223,18 +223,17 @@ object BlocklistManager {
                 "adsafeprotected.com",
                 "serving-sys.com",
             ) + CuratedAdDomains.snapchatAds,
+            // Login (graph.facebook.com), push (firebaseinstallations) and deep-link
+            // (branch.io) hosts are deliberately absent: see AdSdkCatalog.neverBlock.
             BlocklistRepo.CAT_TRACKERS to listOf(
                 "analytics.google.com",
                 "google-analytics.com",
                 "ssl.google-analytics.com",
                 "analytics.facebook.com",
                 "connect.facebook.net",
-                "graph.facebook.com",
                 "app-measurement.com",
-                "firebaseinstallations.googleapis.com",
                 "appsflyer.com",
                 "adjust.com",
-                "branch.io",
                 "segment.io",
                 "mixpanel.com",
                 "api.mixpanel.com",
@@ -248,7 +247,6 @@ object BlocklistManager {
                 "pixel.facebook.com",
                 "sdk.iad-05.braze.com",
                 "braze.com",
-                "api2.branch.io",
             ) + CuratedAdDomains.snapchatTrackers,
             BlocklistRepo.CAT_MALWARE to listOf(
                 "malware.testcategory.com",

@@ -113,6 +113,7 @@ class PruneWorker(
 
             // Small tables: one statement each is fine.
             db.tlsAlertDao().pruneOld(cutoff)
+            db.sensorEventDao().pruneOld(cutoff)
             db.dnsAnomalyDao().deleteOlderThan(cutoff)
             db.connectionProfileDao().deleteOlderThan(cutoff)
         }

@@ -141,6 +141,90 @@
         <item quantity="other">%d fingerprints learned</item>
     </plurals>
     <string name="tls_fp_no_changes">No unexplained fingerprint changes</string>
+    <!-- Why am I seeing this ad? -->
+    <string name="adp_title">Why am I seeing this ad?</string>
+    <string name="adp_nav_subtitle">Mic and camera timeline, location audit, ad-tracking checklist</string>
+    <string name="adp_honest_title">What this can and can\'t do</string>
+    <string name="adp_honest_body">Ads inside Facebook and Instagram come from Meta\'s own servers, the same ones that load your feed. Blocking them would break those apps, so this app doesn\'t try. What it can do: show which apps used your mic or camera, which apps can see your location, block ad SDKs inside other apps, and walk you through the settings that feed ad targeting.</string>
+    <string name="adp_explainer_title">How ads find you</string>
+    <string name="adp_explainer_location">Location: GPS, nearby Wi-Fi networks and your IP address tell ad networks where you are and where you have been.</string>
+    <string name="adp_explainer_wifi">Same Wi-Fi as friends: people sharing an internet connection share an IP address, so platforms link them and show one person ads based on what another searched.</string>
+    <string name="adp_explainer_pixels">Website pixels: shops and sites send your visits back to Meta and Google with tracking pixels, even if you never tap an ad.</string>
+    <string name="adp_explainer_searches">Searches and accounts: what you search, watch and buy while signed in feeds the same ad profile.</string>
+    <string name="adp_explainer_mic">What the mic timeline proves: if no app used the microphone while you talked about something, the ad came from these other signals. It only covers time when protection was on, and Android also shows a green dot whenever the mic or camera is in use.</string>
+
+    <string name="adp_sensors_title">Mic and camera timeline</string>
+    <string name="adp_sensors_body">Recorded while protection is on. Android does not say which app is using the mic or camera, so the app that was on screen when it started is shown as the likely one.</string>
+    <string name="adp_usage_access_needed">Allow Usage Access so the likely app can be named. Without it, uses are still recorded but shown as “Unknown app”.</string>
+    <string name="adp_usage_access_button">Allow Usage Access</string>
+    <string name="adp_sensor_mic">Microphone</string>
+    <string name="adp_sensor_camera">Camera</string>
+    <string name="adp_unknown_app">Unknown app</string>
+    <string name="adp_screen_on">Screen on</string>
+    <string name="adp_screen_off">Screen off</string>
+    <string name="adp_ongoing">in use now</string>
+    <string name="adp_end_unknown">end not recorded</string>
+    <string name="adp_time_range">%1$s – %2$s</string>
+    <string name="adp_sensors_empty">No mic or camera use recorded yet. Uses are only recorded while protection is on.</string>
+    <string name="adp_search_title">Did any app use my mic?</string>
+    <string name="adp_search_today">Today</string>
+    <string name="adp_search_yesterday">Yesterday</string>
+    <string name="adp_search_from">From %1$s</string>
+    <string name="adp_search_to">To %1$s</string>
+    <string name="adp_search_button">Check</string>
+    <string name="adp_search_none">No app used the microphone between %1$s and %2$s while protection was on.</string>
+    <plurals name="adp_search_found">
+        <item quantity="one">The microphone was used %1$d time between %2$s and %3$s:</item>
+        <item quantity="other">The microphone was used %1$d times between %2$s and %3$s:</item>
+    </plurals>
+    <plurals name="adp_uses_count">
+        <item quantity="one">%d use</item>
+        <item quantity="other">%d uses</item>
+    </plurals>
+
+    <string name="adp_location_title">Location audit</string>
+    <string name="adp_location_body">Apps that can see your location. Tap one to change its permission.</string>
+    <string name="adp_location_always">Always</string>
+    <string name="adp_location_while_in_use">While in use</string>
+    <string name="adp_location_legacy">Allowed (always on this Android version)</string>
+    <string name="adp_location_precise">Precise</string>
+    <string name="adp_location_approximate">Approximate</string>
+    <string name="adp_location_last_use">Android only shows when an app last used your location in its own Privacy dashboard.</string>
+    <string name="adp_open_privacy_dashboard">Open Privacy dashboard</string>
+    <string name="adp_location_empty">No app has location permission.</string>
+    <string name="adp_show_system_apps">Show system apps</string>
+    <string name="adp_system">System</string>
+
+    <string name="adp_checklist_title">Reduce ad tracking</string>
+    <string name="adp_checklist_body">Settings outside this app that feed ad targeting. Mark each one once you have done it; this app can\'t check them for you.</string>
+    <string name="adp_step_ad_id">Delete your Android advertising ID</string>
+    <string name="adp_step_ad_id_desc">Settings → Google → Ads → Delete advertising ID. Apps lose the ID that links your activity across them.</string>
+    <string name="adp_step_meta">Turn off Meta “Your activity off Meta technologies”</string>
+    <string name="adp_step_meta_desc">Accounts Center → Your information and permissions. Disconnect past activity and turn off future activity from other apps and websites.</string>
+    <string name="adp_step_ad_center">Turn off personalised ads in My Ad Center</string>
+    <string name="adp_step_ad_center_desc">Google stops using your activity to choose ads; you still see ads, just less targeted.</string>
+    <string name="adp_step_timeline">Review Google Timeline</string>
+    <string name="adp_step_timeline_desc">Timeline is stored on your phone in Google Maps. Turn it off or set auto-delete.</string>
+    <string name="adp_step_mic">Revoke the mic from apps that don\'t need it</string>
+    <plurals name="adp_step_mic_desc">
+        <item quantity="one">%d app can use your microphone. Tap one to change it.</item>
+        <item quantity="other">%d apps can use your microphone. Tap one to change it.</item>
+    </plurals>
+    <string name="adp_open">Open</string>
+    <string name="adp_open_failed">That screen isn\'t available on this phone.</string>
+    <plurals name="adp_checklist_progress">
+        <item quantity="one">%1$d of %2$d done</item>
+        <item quantity="other">%1$d of %2$d done</item>
+    </plurals>
+
+    <string name="adp_sdk_title">Ad SDKs in other apps</string>
+    <string name="adp_sdk_toggle">Block ad and attribution SDKs</string>
+    <string name="adp_sdk_body">Blocks these companies\' ad and tracking servers inside other apps. Their own apps are left alone, so the Facebook app still works.</string>
+    <string name="adp_sdk_exceptions_title">Never blocked, and why</string>
+    <string name="adp_reason_login">needed for “Continue with Facebook/Google” sign-in</string>
+    <string name="adp_reason_push">needed for push notifications in many apps</string>
+    <string name="adp_reason_deep_links">needed for links that open inside apps</string>
+    <string name="adp_sdk_meta_limit">Meta app events and most Audience Network ads use graph.facebook.com, the same server as Facebook Login. Blocking by server name can\'t separate them, so they are not blocked.</string>
     <string name="tls_fp_no_apps_yet">No apps fingerprinted yet. Turn on protection and use your apps; learning starts with each app\'s first encrypted connection.</string>
 </resources>
 

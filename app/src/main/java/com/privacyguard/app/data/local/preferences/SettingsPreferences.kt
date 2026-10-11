@@ -26,6 +26,8 @@ class SettingsPreferences private constructor(context: Context) {
         private const val KEY_DOH_ENABLED                = "doh_enabled"
         // Features that send data to a third party are opt-in (README: no external servers).
         private const val KEY_CT_MONITORING_ENABLED      = "ct_monitoring_enabled"
+        private const val KEY_AD_SDK_BLOCKING_ENABLED    = "ad_sdk_blocking_enabled"
+        private const val KEY_AD_CHECKLIST_DONE          = "ad_checklist_done"
         private const val KEY_EXTERNAL_IP_CHECK_ENABLED  = "external_ip_check_enabled"
         private const val KEY_DOH_PROVIDER               = "doh_provider"
         private const val KEY_RETENTION_DAYS             = "retention_days"
@@ -120,6 +122,14 @@ class SettingsPreferences private constructor(context: Context) {
     /** Sends the registrable domain of each TLS server the device contacts to crt.sh. */
     private val _ctMonitoringEnabled = MutableStateFlow(prefs.getBoolean(KEY_CT_MONITORING_ENABLED, false))
     val ctMonitoringEnabled: StateFlow<Boolean> = _ctMonitoringEnabled.asStateFlow()
+
+    /** Blocks third-party ad/attribution SDK hosts inside other apps (see AdSdkPolicy). */
+    private val _adSdkBlockingEnabled = MutableStateFlow(prefs.getBoolean(KEY_AD_SDK_BLOCKING_ENABLED, true))
+    val adSdkBlockingEnabled: StateFlow<Boolean> = _adSdkBlockingEnabled.asStateFlow()
+
+    /** IDs of "Reduce ad tracking" checklist steps the user marked done. */
+    private val _adChecklistDone = MutableStateFlow(prefs.getStringSet(KEY_AD_CHECKLIST_DONE, emptySet()).orEmpty().toSet())
+    val adChecklistDone: StateFlow<Set<String>> = _adChecklistDone.asStateFlow()
 
     /** Diagnostics asks api.ipify.org for the public IP. */
     private val _externalIpCheckEnabled = MutableStateFlow(prefs.getBoolean(KEY_EXTERNAL_IP_CHECK_ENABLED, false))
@@ -280,6 +290,17 @@ class SettingsPreferences private constructor(context: Context) {
     fun setCtMonitoringEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_CT_MONITORING_ENABLED, enabled).apply()
         _ctMonitoringEnabled.value = enabled
+    }
+
+    fun setAdSdkBlockingEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AD_SDK_BLOCKING_ENABLED, enabled).apply()
+        _adSdkBlockingEnabled.value = enabled
+    }
+
+    fun setAdChecklistDone(id: String, done: Boolean) {
+        val next = if (done) _adChecklistDone.value + id else _adChecklistDone.value - id
+        prefs.edit().putStringSet(KEY_AD_CHECKLIST_DONE, next).apply()
+        _adChecklistDone.value = next
     }
 
     fun setExternalIpCheckEnabled(enabled: Boolean) {

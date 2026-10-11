@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Language
@@ -74,6 +75,7 @@ fun SettingsScreen(
     onLanguageChanged: () -> Unit,
     onOpenSecurityAnalysis: () -> Unit = {},
     onOpenAds: () -> Unit = {},
+    onOpenAdPrivacy: () -> Unit = {},
     onOpenRules: () -> Unit = {},
     onOpenPayloads: (() -> Unit)? = null,
     onOpenFlutterUi: (() -> Unit)? = null,
@@ -409,6 +411,12 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 NavRow("Ads & Trackers", "Per-app tracker detection and SDK inventory", Icons.Default.MonetizationOn, PgWarning, onOpenAds)
+                Spacer(modifier = Modifier.height(12.dp))
+                NavRow(
+                    androidx.compose.ui.res.stringResource(com.privacyguard.app.R.string.adp_title),
+                    androidx.compose.ui.res.stringResource(com.privacyguard.app.R.string.adp_nav_subtitle),
+                    androidx.compose.material.icons.Icons.Filled.Mic, PgInfo, onOpenAdPrivacy,
+                )
                 Spacer(modifier = Modifier.height(12.dp))
                 NavRow("Firewall Rules", "View, add, disable and delete all your block and allow rules", Icons.Default.Block, PgDanger, onOpenRules)
                 if (onOpenPayloads != null) {
