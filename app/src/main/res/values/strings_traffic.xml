@@ -26,7 +26,8 @@
     <string name="trf_r_background">the app was not on screen</string>
     <string name="trf_r_cleartext">sent without encryption (plain HTTP)</string>
     <string name="trf_r_anomaly">DNS anomaly: %1$s</string>
-    <string name="trf_reason_sep">; </string>
+    <string name="trf_reason_sep">"; "</string>
+    <string name="trf_dns_attribution">Apps look names up through Android’s shared resolver, which hides who asked. We credit a lookup to the app that connects to the answer within a minute; blocked or unused lookups stay unattributed.</string>
     <string name="trf_company_unknown">Unknown owner</string>
 
     <!-- Purpose -->
@@ -92,6 +93,7 @@
     <string name="trf_empty_list">Nothing in this list: %1$s</string>
 
     <!-- Domain detail -->
+    <string name="trf_pd_service_domain">Run by %1$s. Whether it is first-party or a third party depends on the app using it: see the apps below.</string>
     <string name="trf_owner">Owner</string>
     <string name="trf_owner_unknown">Unknown: not in our lists</string>
     <string name="trf_purpose">Purpose</string>

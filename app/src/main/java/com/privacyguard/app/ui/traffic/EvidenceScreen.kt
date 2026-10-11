@@ -126,7 +126,7 @@ fun EvidenceScreen(
                     AppLine(b.packageName, onOpenApp)
                     Text(b.host, style = MaterialTheme.typography.titleSmall, color = PgText)
                     Text(
-                        stringResource(R.string.ev_beacon_row, b.count.toString(), android.text.format.DateUtils.formatElapsedTime(b.meanIntervalMs / 1000)),
+                        stringResource(R.string.ev_beacon_row, java.text.NumberFormat.getIntegerInstance().format(b.count), android.text.format.DateUtils.formatElapsedTime(b.meanIntervalMs / 1000)),
                         style = MaterialTheme.typography.bodySmall, color = PgTextMuted,
                     )
                 }
@@ -164,7 +164,7 @@ private fun evidenceTitle(kind: EvidenceKind, ev: Evidence?): Pair<String, Strin
     EvidenceKind.ENCRYPTION_24H -> {
         val rows = (ev as? Evidence.Rows)?.rows.orEmpty()
         val encrypted = rows.count { it.encrypted }
-        stringResource(R.string.ev_encryption_24h) to stringResource(R.string.ev_encryption_24h_def, encrypted.toString(), rows.size.toString())
+        stringResource(R.string.ev_encryption_24h) to stringResource(R.string.ev_encryption_24h_def, java.text.NumberFormat.getIntegerInstance().format(encrypted), java.text.NumberFormat.getIntegerInstance().format(rows.size))
     }
     EvidenceKind.NIGHT_24H -> stringResource(R.string.ev_night_24h) to stringResource(R.string.ev_night_24h_def)
     EvidenceKind.BACKGROUND_24H -> stringResource(R.string.ev_background_24h) to stringResource(R.string.ev_background_24h_def)

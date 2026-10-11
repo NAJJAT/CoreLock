@@ -19,4 +19,10 @@
     <string name="nd_failed">Inspection could not start for this connection (CA not ready yet, or a local proxy error). It was passed through; later connections to this host may be decrypted.</string>
     <string name="nd_other">This connection was not inspected. Make sure the inspection CA is installed and HTTPS inspection is on.</string>
     <string name="common_all">All</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_apps">Apps</string>
+    <string name="nav_traffic">Traffic</string>
+    <string name="nav_stats">Stats</string>
+    <string name="nav_payload">Payload</string>
+    <string name="nav_settings">Settings</string>
 </resources>

@@ -71,7 +71,10 @@ data class Ipv6Packet(
                         append("::")
                         i += bestLen
                     } else {
-                        if (i > 0 && (i != bestStart + bestLen)) append(":")
+                        // No separator right after "::". A single zero group is not compressed, so
+                        // it must not suppress the separator (that turned "b00c:0:2" into "b00c:02",
+                        // an invalid address, and IPv6 connections to it failed).
+                        if (i > 0 && !(bestLen > 1 && i == bestStart + bestLen)) append(":")
                         append(groups[i].toString(16))
                         i++
                     }

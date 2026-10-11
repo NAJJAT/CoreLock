@@ -160,7 +160,13 @@ fun DomainDetailScreen(
                     StatusPill(purposeChip(context, cls.purpose), bg, fg)
                 }
                 Spacer(Modifier.height(4.dp))
-                Text(purposeExplanation(context, cls.purpose), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                // No app context here: a service domain can be first-party for one app and third-party for another.
+                Text(
+                    if (cls.purpose == com.privacyguard.app.core.tracker.DomainPurpose.SERVICE && cls.company != null)
+                        stringResource(R.string.trf_pd_service_domain, cls.company)
+                    else purposeExplanation(context, cls.purpose),
+                    style = MaterialTheme.typography.bodySmall, color = PgTextMuted,
+                )
                 Spacer(Modifier.height(6.dp))
                 if (cls.trackerName != null && cls.trackerCategory != null) {
                     Text(

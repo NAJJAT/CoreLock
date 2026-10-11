@@ -118,7 +118,8 @@ fun DashboardScreen(
                 badge = (if (uiState.isVpnActive) stringResource(R.string.dash_badge_live) else stringResource(R.string.dash_badge_offline)).uppercase()
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    // Room for a "99+" badge, which hangs past the bell icon.
+                    modifier = Modifier.fillMaxWidth().padding(end = 12.dp),
                     horizontalArrangement = Arrangement.End
                 ) {
                     IconButton(onClick = onOpenSettings) {

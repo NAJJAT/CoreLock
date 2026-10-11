@@ -138,6 +138,8 @@ fun SleepReportScreen(
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(stringResource(R.string.sleep_definition), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(stringResource(R.string.trf_dns_attribution), style = MaterialTheme.typography.bodySmall, color = PgTextFaint)
                 Spacer(modifier = Modifier.height(14.dp))
                 PanelCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -176,7 +178,7 @@ fun SleepReportScreen(
         }
 
         // Apps: one row per app counted in "Apps"; the idle counts add up to "Idle lookups".
-        item { Header("${stringResource(R.string.sleep_top_apps)} (${state.apps.size})") }
+        item { Header("${stringResource(R.string.sleep_top_apps)} (${java.text.NumberFormat.getIntegerInstance().format(state.apps.size)})") }
         if (state.apps.isEmpty()) {
             item { EmptyPanel(stringResource(R.string.sleep_no_apps)) }
         } else {
@@ -186,7 +188,7 @@ fun SleepReportScreen(
         }
 
         // Exactly the domains counted in "Tracking".
-        item { Header("${stringResource(R.string.sleep_tracking)} (${state.blockedDomains.size})") }
+        item { Header("${stringResource(R.string.sleep_tracking)} (${java.text.NumberFormat.getIntegerInstance().format(state.blockedDomains.size)})") }
         if (state.blockedDomains.isEmpty()) {
             item { EmptyPanel(stringResource(R.string.sleep_no_domains)) }
         } else {

@@ -259,12 +259,19 @@ class DnsHandler(
         val path = if (url.query.isNullOrBlank()) url.path else "${url.path}?${url.query}"
 
         Socket().use { rawSocket ->
+            // An unconnected Socket has no file descriptor yet, so protect() always
+            // returned false and every DoH query silently fell back to plain DNS.
+            // Binding creates the descriptor.
+            rawSocket.bind(null)
             val protected = protectTcpSocket?.invoke(rawSocket) ?: true
             if (!protected) {
                 Log.e(TAG, "VpnService.protect() returned false for DoH socket to $host")
                 return null
             }
-            rawSocket.connect(InetSocketAddress(host, port), upstreamTimeoutMs)
+            // Connect by address: resolving the DoH host would go back through this
+            // tunnel to this same DoH path. TLS below still verifies the hostname.
+            val address = DOH_BOOTSTRAP[host]?.let { InetAddress.getByName(it) }
+            rawSocket.connect(if (address != null) InetSocketAddress(address, port) else InetSocketAddress(host, port), upstreamTimeoutMs)
             rawSocket.soTimeout = upstreamTimeoutMs
 
             val sslFactory = SSLSocketFactory.getDefault() as SSLSocketFactory
@@ -394,5 +401,12 @@ class DnsHandler(
         const val DOH_CLOUDFLARE = "https://cloudflare-dns.com/dns-query"
         const val DOH_GOOGLE     = "https://dns.google/dns-query"
         const val DOH_QUAD9      = "https://dns.quad9.net/dns-query"
+
+        /** Published anycast addresses of the built-in providers (literal IPs: no lookup). */
+        private val DOH_BOOTSTRAP = mapOf(
+            "cloudflare-dns.com" to "1.1.1.1",
+            "dns.google" to "8.8.8.8",
+            "dns.quad9.net" to "9.9.9.9",
+        )
     }
 }

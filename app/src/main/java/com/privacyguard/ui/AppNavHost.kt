@@ -56,7 +56,7 @@ import com.privacyguard.app.ui.theme.PgTextMuted
 import com.privacyguard.ui.flavor.PayloadInspectorUi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
-private data class NavTab(val route: String, val label: String, val icon: ImageVector)
+private data class NavTab(val route: String, @androidx.annotation.StringRes val labelRes: Int, val icon: ImageVector)
 
 @Composable
 fun AppNavHost(
@@ -68,14 +68,14 @@ fun AppNavHost(
 
     val tabs = remember {
         buildList {
-            add(NavTab("dashboard", "Home",    Icons.Default.Home))
-            add(NavTab("apps",      "Apps",    Icons.Default.Apps))
-            add(NavTab("connections","Traffic", Icons.Default.Wifi))
-            add(NavTab("statistics","Stats",   Icons.Default.BarChart))
+            add(NavTab("dashboard", com.privacyguard.app.R.string.nav_home,    Icons.Default.Home))
+            add(NavTab("apps",      com.privacyguard.app.R.string.nav_apps,    Icons.Default.Apps))
+            add(NavTab("connections",com.privacyguard.app.R.string.nav_traffic, Icons.Default.Wifi))
+            add(NavTab("statistics",com.privacyguard.app.R.string.nav_stats,   Icons.Default.BarChart))
             if (BuildConfig.MITM_AVAILABLE) {
-                add(NavTab("payloads",  "Payload", Icons.AutoMirrored.Filled.ManageSearch))
+                add(NavTab("payloads",  com.privacyguard.app.R.string.nav_payload, Icons.AutoMirrored.Filled.ManageSearch))
             }
-            add(NavTab("settings",  "Settings",Icons.Default.Settings))
+            add(NavTab("settings",  com.privacyguard.app.R.string.nav_settings,Icons.Default.Settings))
         }
     }
 
@@ -132,19 +132,20 @@ fun AppNavHost(
                                 }
                             },
                             icon = {
+                                val tabLabel = androidx.compose.ui.res.stringResource(tab.labelRes)
                                 if (tab.route == "settings" && ja3ThreatCount > 0) {
                                     BadgedBox(badge = {
-                                        Badge { Text(ja3ThreatCount.coerceAtMost(99).toString()) }
+                                        Badge { Text(if (ja3ThreatCount > 99) "99+" else ja3ThreatCount.toString()) }
                                     }) {
-                                        Icon(tab.icon, contentDescription = tab.label)
+                                        Icon(tab.icon, contentDescription = tabLabel)
                                     }
                                 } else {
-                                    Icon(tab.icon, contentDescription = tab.label)
+                                    Icon(tab.icon, contentDescription = tabLabel)
                                 }
                             },
                             label = {
                                 Text(
-                                    text = tab.label,
+                                    text = androidx.compose.ui.res.stringResource(tab.labelRes),
                                     maxLines = 1,
                                     overflow = TextOverflow.Clip,
                                     softWrap = false,

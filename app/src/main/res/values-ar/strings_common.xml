@@ -19,4 +19,10 @@
     <string name="nd_failed">تعذّر بدء الفحص لهذا الاتصال (الشهادة غير جاهزة بعد أو خطأ في الوكيل المحلي). مُرّر الاتصال، وقد يُفكّ تشفير الاتصالات اللاحقة بهذا المضيف.</string>
     <string name="nd_other">لم يُفحص هذا الاتصال. تأكّد من تثبيت شهادة الفحص وتفعيل فحص HTTPS.</string>
     <string name="common_all">الكل</string>
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_apps">التطبيقات</string>
+    <string name="nav_traffic">الحركة</string>
+    <string name="nav_stats">الإحصاءات</string>
+    <string name="nav_payload">المحتوى</string>
+    <string name="nav_settings">الإعدادات</string>
 </resources>

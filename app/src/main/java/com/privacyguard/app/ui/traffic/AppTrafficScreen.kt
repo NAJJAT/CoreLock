@@ -42,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.privacyguard.app.R
+import com.privacyguard.app.core.tracker.DomainPurpose
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.ui.components.AppIconImage
 import com.privacyguard.app.ui.components.PanelCard
@@ -227,7 +228,7 @@ fun AppTrafficScreen(
                 }
             }
             else -> {
-                item { CountHeader(pluralStringResource(R.plurals.trf_tab_dns, state.lookups.size, state.lookups.size), stringResource(R.string.trf_dns_note)) }
+                item { CountHeader(pluralStringResource(R.plurals.trf_tab_dns, state.lookups.size, state.lookups.size), stringResource(R.string.trf_dns_note) + "\n" + stringResource(R.string.trf_dns_attribution)) }
                 items(state.lookups, key = { it.id }) { row ->
                     RawLookupLine(row, onOpenDomain)
                 }
@@ -269,13 +270,14 @@ private fun PurposeGroupCard(group: PurposeGroup, appName: String, onOpenDomain:
                     Text(
                         listOfNotNull(
                             d.classification.company,
-                            d.classification.trackerName,
+                            // "Facebook SDK" describes the SDK inside other apps, not Facebook itself.
+                            d.classification.trackerName.takeIf { d.classification.purpose != DomainPurpose.FIRST_PARTY },
                         ).joinToString(" · ").ifBlank { stringResource(R.string.trf_company_unknown) },
                         style = MaterialTheme.typography.labelSmall, color = PgTextFaint, maxLines = 1,
                     )
                 }
                 Text(
-                    "${d.connections + d.lookups}",
+                    java.text.NumberFormat.getIntegerInstance().format(d.connections + d.lookups),
                     style = MaterialTheme.typography.titleSmall, color = PgAccent, fontWeight = FontWeight.SemiBold,
                 )
             }

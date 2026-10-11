@@ -29,12 +29,16 @@ import kotlinx.coroutines.launch
  * handshake and data relay, writing back proper IPv6 TCP packets to TUN.
  *
  * UDP uses a stateless per-source-port relay via DatagramSocket.
+ *
+ * Every relayed flow is reported once through [onFlowClosed] when it ends, so
+ * IPv6 traffic shows up in history like IPv4 does (it used to be invisible).
  */
 class Ipv6Proxy(
     private val tunWriter: TunWriter,
     private val protectSocket: (java.net.Socket) -> Boolean,
     private val protectUdpSocket: (java.net.DatagramSocket) -> Boolean,
     private val scope: CoroutineScope,
+    private val onFlowClosed: ((Ipv6Flow) -> Unit)? = null,
 ) {
     companion object {
         private const val TAG = "Ipv6Proxy"
@@ -116,6 +120,7 @@ class Ipv6Proxy(
                     serverSeqInit  = (Math.random() * Int.MAX_VALUE).toLong(),
                     clientSeqInit  = tcp.sequenceNumber + 1,
                     tunWriter      = tunWriter,
+                    onClosed       = onFlowClosed,
                 )
                 tcpSessions[key] = session
 
@@ -164,6 +169,7 @@ class Ipv6Proxy(
                 tunWriter = tunWriter,
                 relayKey  = relayKey,
                 relays    = udpRelays,
+                onClosed  = onFlowClosed,
             )
             scope.launch(Dispatchers.IO) { r.startReceiveLoop() }
             r
@@ -183,9 +189,17 @@ private class TcpRelaySession(
     serverSeqInit:         Long,
     clientSeqInit:         Long,
     private val tunWriter: TunWriter,
+    private val onClosed:  ((Ipv6Flow) -> Unit)? = null,
 ) {
     private var serverSeq = serverSeqInit
     private var clientSeq = clientSeqInit
+    private val startedAt = System.currentTimeMillis()
+    private val sent = java.util.concurrent.atomic.AtomicLong()
+    private val received = java.util.concurrent.atomic.AtomicLong()
+    private val reported = java.util.concurrent.atomic.AtomicBoolean(false)
+    // First client bytes, kept until the TLS server name is found (ClientHellos can span segments).
+    @Volatile private var helloBuf: ByteArray? = ByteArray(0)
+    @Volatile private var sni: String? = null
     fun sendSynAck() {
         val pkt = Ipv6Packet.buildTcp(
             srcAddr = srcIp, srcPort = srcPort,
@@ -198,6 +212,13 @@ private class TcpRelaySession(
     }
 
     fun sendToRemote(data: ByteArray) {
+        sent.addAndGet(data.size.toLong())
+        helloBuf?.let { buf ->
+            val joined = buf + data
+            val name = com.privacyguard.core.tls.ClientHelloParser.parse(joined)?.sni
+            helloBuf = if (name != null || joined.size >= 4096) null else joined
+            if (name != null) sni = name
+        }
         runCatching { channel.write(ByteBuffer.wrap(data)) }
     }
 
@@ -209,6 +230,7 @@ private class TcpRelaySession(
             if (n <= 0) break
             buf.flip()
             val bytes = ByteArray(n).also { buf.get(it) }
+            received.addAndGet(n.toLong())
             val pkt = Ipv6Packet.buildTcp(
                 srcAddr = srcIp, srcPort = srcPort,
                 dstAddr = dstIp, dstPort = dstPort,
@@ -230,7 +252,14 @@ private class TcpRelaySession(
         close()
     }
 
-    fun close() { runCatching { channel.close() } }
+    fun close() {
+        runCatching { channel.close() }
+        if (reported.compareAndSet(false, true)) {
+            runCatching {
+                onClosed?.invoke(Ipv6Flow(dstIp, dstPort, srcIp, srcPort, "TCP", startedAt, sent.get(), received.get(), sni))
+            }
+        }
+    }
 }
 
 // ── UDP relay ─────────────────────────────────────────────────────────────────
@@ -244,8 +273,14 @@ private class UdpRelay(
     private val tunWriter: TunWriter,
     private val relayKey:  String,
     private val relays:    ConcurrentHashMap<String, UdpRelay>,
+    private val onClosed:  ((Ipv6Flow) -> Unit)? = null,
 ) {
+    private val startedAt = System.currentTimeMillis()
+    private val sent = java.util.concurrent.atomic.AtomicLong()
+    private val received = java.util.concurrent.atomic.AtomicLong()
+
     fun send(data: ByteArray, host: String, port: Int) {
+        sent.addAndGet(data.size.toLong())
         runCatching {
             val addr = Inet6Address.getByName(host)
             socket.send(DatagramPacket(data, data.size, addr, port))
@@ -259,6 +294,7 @@ private class UdpRelay(
                 val dp = DatagramPacket(buf, buf.size)
                 socket.receive(dp)   // throws SocketTimeoutException when soTimeout fires
                 val data = dp.data.copyOf(dp.length)
+                received.addAndGet(dp.length.toLong())
                 tunWriter.enqueue(Ipv6Packet.buildUdp(
                     srcAddr = dstIp, srcPort = dstPort,
                     dstAddr = srcIp, dstPort = srcPort,
@@ -272,6 +308,22 @@ private class UdpRelay(
         } finally {
             socket.close()
             relays.remove(relayKey, this)
+            runCatching {
+                onClosed?.invoke(Ipv6Flow(srcIp, srcPort, dstIp, dstPort, "UDP", startedAt, sent.get(), received.get(), null))
+            }
         }
     }
 }
+
+/** One finished IPv6 flow, from the device's point of view. */
+data class Ipv6Flow(
+    val sourceIp: String,
+    val sourcePort: Int,
+    val destinationIp: String,
+    val destinationPort: Int,
+    val protocol: String,
+    val startedAt: Long,
+    val bytesSent: Long,
+    val bytesReceived: Long,
+    val sni: String?,
+)

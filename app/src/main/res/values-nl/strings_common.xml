@@ -19,4 +19,10 @@
     <string name="nd_failed">De inspectie kon voor deze verbinding niet starten (CA nog niet klaar of een fout in de lokale proxy). Hij is doorgelaten; latere verbindingen met deze host kunnen wel worden ontsleuteld.</string>
     <string name="nd_other">Deze verbinding is niet geïnspecteerd. Controleer of de inspectie-CA is geïnstalleerd en HTTPS-inspectie aanstaat.</string>
     <string name="common_all">Alle</string>
+    <string name="nav_home">Start</string>
+    <string name="nav_apps">Apps</string>
+    <string name="nav_traffic">Verkeer</string>
+    <string name="nav_stats">Statistiek</string>
+    <string name="nav_payload">Payload</string>
+    <string name="nav_settings">Instellingen</string>
 </resources>

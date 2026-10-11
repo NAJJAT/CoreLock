@@ -152,8 +152,12 @@ object DomainClassifier {
                 TrackerCategory.ADVERTISING -> DomainPurpose.ADS
                 TrackerCategory.ANALYTICS, TrackerCategory.CRASH_REPORTING -> DomainPurpose.ANALYTICS
                 // The Facebook SDK inside Facebook is just Facebook.
-                TrackerCategory.SOCIAL, TrackerCategory.OTHER ->
-                    if (sameMaker) DomainPurpose.FIRST_PARTY else DomainPurpose.TRACKING
+                // Without an app we can't tell the SDK from the maker's own app: say "service".
+                TrackerCategory.SOCIAL, TrackerCategory.OTHER -> when {
+                    sameMaker -> DomainPurpose.FIRST_PARTY
+                    appPackage == null -> DomainPurpose.SERVICE
+                    else -> DomainPurpose.TRACKING
+                }
                 TrackerCategory.FINGERPRINTING, TrackerCategory.PROFILING -> DomainPurpose.TRACKING
             }
             return DomainClass(h, base, purpose, hostOwner?.company ?: tracker.company, tracker.name, tracker.category)

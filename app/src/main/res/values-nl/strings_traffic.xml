@@ -23,7 +23,8 @@
     <string name="trf_r_background">de app stond niet op het scherm</string>
     <string name="trf_r_cleartext">onversleuteld verzonden (gewoon HTTP)</string>
     <string name="trf_r_anomaly">DNS-afwijking: %1$s</string>
-    <string name="trf_reason_sep">; </string>
+    <string name="trf_reason_sep">"; "</string>
+    <string name="trf_dns_attribution">Apps zoeken namen op via de gedeelde resolver van Android, die verbergt wie het vroeg. We schrijven een opzoeking toe aan de app die binnen een minuut verbinding maakt met het antwoord; geblokkeerde of ongebruikte opzoekingen blijven zonder app.</string>
     <string name="trf_company_unknown">Onbekende eigenaar</string>
     <string name="trf_c_first">Eigen dienst</string>
     <string name="trf_c_ads">Advertenties</string>
@@ -81,6 +82,7 @@
     <string name="trf_empty_unattributed">Android vertelde ons niet welke app deze opzoekingen deed. Dat komt vaak voor bij systeemdiensten en apps die een proces delen.</string>
     <string name="trf_empty_history">De geschiedenis gaat maar terug tot %1$s, dus het begin van deze periode ontbreekt.</string>
     <string name="trf_empty_list">Niets in deze lijst: %1$s</string>
+    <string name="trf_pd_service_domain">Beheerd door %1$s. Of het een eigen dienst of een derde partij is, hangt af van de app die het gebruikt: zie de apps hieronder.</string>
     <string name="trf_owner">Eigenaar</string>
     <string name="trf_owner_unknown">Onbekend: niet in onze lijsten</string>
     <string name="trf_purpose">Doel</string>

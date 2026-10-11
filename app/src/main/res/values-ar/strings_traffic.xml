@@ -23,7 +23,8 @@
     <string name="trf_r_background">لم يكن التطبيق ظاهرًا على الشاشة</string>
     <string name="trf_r_cleartext">أُرسل دون تشفير (HTTP عادي)</string>
     <string name="trf_r_anomaly">حالة شاذة في DNS: %1$s</string>
-    <string name="trf_reason_sep">؛ </string>
+    <string name="trf_reason_sep">"؛ "</string>
+    <string name="trf_dns_attribution">تبحث التطبيقات عن الأسماء عبر المحلّل المشترك في Android، وهو يُخفي من طلب. ننسب الطلب إلى التطبيق الذي يتصل بالإجابة خلال دقيقة؛ وتبقى الطلبات المحظورة أو غير المستخدمة دون نسبة.</string>
     <string name="trf_company_unknown">مالك غير معروف</string>
     <string name="trf_c_first">خدمة التطبيق نفسه</string>
     <string name="trf_c_ads">إعلانات</string>
@@ -97,6 +98,7 @@
     <string name="trf_empty_unattributed">لم يُخبرنا Android بالتطبيق الذي أجرى هذه الطلبات. هذا شائع في خدمات النظام والتطبيقات التي تتشارك عملية واحدة.</string>
     <string name="trf_empty_history">السجلّ يعود فقط إلى %1$s، لذا بداية هذه الفترة غير مشمولة.</string>
     <string name="trf_empty_list">لا شيء في هذه القائمة: %1$s</string>
+    <string name="trf_pd_service_domain">تديره %1$s. كونه خدمة للتطبيق نفسه أو لطرف ثالث يعتمد على التطبيق الذي يستخدمه: راجع التطبيقات أدناه.</string>
     <string name="trf_owner">المالك</string>
     <string name="trf_owner_unknown">غير معروف: ليس في قوائمنا</string>
     <string name="trf_purpose">الغرض</string>

@@ -100,6 +100,7 @@ class PrivacyVpnService : VpnService() {
         /** Virtual resolver inside the tunnel subnet; see DnsHandler. */
         private const val TUNNEL_DNS_V4 = "10.0.0.1"
         const val ACTION_STOP = "com.privacyguard.action.STOP_VPN"
+        private const val DNS_ATTRIBUTION_WINDOW_MS = 60_000L
 
         private val _isRunningFlow = MutableStateFlow(false)
         val isRunningFlow: StateFlow<Boolean> = _isRunningFlow.asStateFlow()
@@ -256,6 +257,7 @@ class PrivacyVpnService : VpnService() {
             adSdkPolicy = com.privacyguard.app.adprivacy.AdSdkPolicy(enabled = { settings.adSdkBlockingEnabled.value }),
         ).also { h ->
             h.resolvedListener = DnsHandler.ResolvedListener { ip, hostname ->
+                rememberHost(ip, hostname)
                 sessionTable.allSessions()
                     .filter { it.key.destinationIp == ip && it.resolvedHostname == null }
                     .forEach { it.resolvedHostname = hostname }
@@ -353,6 +355,7 @@ class PrivacyVpnService : VpnService() {
             protectSocket      = { sock -> protect(sock) },
             protectUdpSocket   = { sock -> protect(sock) },
             scope              = scope,
+            onFlowClosed       = { flow -> logIpv6Flow(flow) },
         )
 
         tunReader = TunReader(tunInterface).also {
@@ -407,6 +410,14 @@ class PrivacyVpnService : VpnService() {
         )
         val pkg          = appTracker.packageForUid(uid)
         val isBackground = isKnownBackground(pkg)
+        if (isTransport) {
+            val proto = if (ipv6.nextHeader == com.privacyguard.core.packet.Ipv6Packet.PROTO_TCP) "TCP" else "UDP"
+            val flowKey = ipv6FlowKey(ipv6.sourceIp, srcPort, ipv6.destinationIp, dstPort, proto)
+            if (!ipv6Owners.containsKey(flowKey)) {
+                if (ipv6Owners.size > 4_096) ipv6Owners.clear()
+                ipv6Owners[flowKey] = Ipv6Owner(uid, pkg, pkg?.let { foregroundDetector.stateOf(it) }, !isPhoneIdle())
+            }
+        }
 
         // Register in live connection list
         if (pkg != null) {
@@ -738,6 +749,17 @@ class PrivacyVpnService : VpnService() {
                     screenOn = snapshot.screenOnAtStart,
                 ))
 
+                // Credit resolver lookups to the app that used the answer (see attributeRecent).
+                val lookedUp = snapshot.hostname
+                if (!lookedUp.isNullOrBlank() && resolvedPackage.isNotBlank() && snapshot.bytesFromDevice + snapshot.bytesToDevice > 0) {
+                    runCatching {
+                        buildDatabase().dnsQueryDao().attributeRecent(
+                            lookedUp, resolvedPackage, appLabel,
+                            snapshot.createdAt - DNS_ATTRIBUTION_WINDOW_MS, snapshot.createdAt + 2_000L,
+                        )
+                    }
+                }
+
                 if (metadataEngine.totalRecorded.get() % 10 == 0L) {
                     val pkg = resolvedPackage.takeIf { it.isNotBlank() } ?: return@launch
                     val profiles = metadataEngine.profilesForApp(pkg)
@@ -780,6 +802,77 @@ class PrivacyVpnService : VpnService() {
             ?: ""
 
     private val foregroundDetector by lazy { com.privacyguard.platform.android.ForegroundAppDetector(this) }
+
+    // ── IPv6 history ─────────────────────────────────────────────────────────
+    // Ipv6Proxy relays raw flows outside the session table, so their owner (known
+    // when the first packet arrives) and DNS names are kept here until they close.
+
+    private data class Ipv6Owner(val uid: Int, val pkg: String?, val foreground: Boolean?, val screenOn: Boolean)
+
+    private val ipv6Owners = java.util.concurrent.ConcurrentHashMap<String, Ipv6Owner>()
+    private val hostByIp = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    private fun ipv6FlowKey(src: String, srcPort: Int, dst: String, dstPort: Int, proto: String) =
+        "$proto|${normalizeIp(src)}|$srcPort|${normalizeIp(dst)}|$dstPort"
+
+    /** One spelling per address ("2a03:2880::1" vs the expanded form) so lookups match. */
+    // Textual only: InetAddress.getByName would start a DNS lookup for anything malformed.
+    private fun normalizeIp(ip: String): String {
+        if (!ip.contains(':')) return ip
+        return runCatching {
+            val bytes = ByteArray(16)
+            com.privacyguard.core.packet.Ipv6Packet.writeAddress(bytes, 0, ip)
+            com.privacyguard.core.packet.Ipv6Packet.parseAddress(bytes, 0)
+        }.getOrDefault(ip)
+    }
+
+    private fun rememberHost(ip: String, hostname: String) {
+        if (hostByIp.size > 8_192) hostByIp.clear()
+        hostByIp[normalizeIp(ip)] = hostname
+    }
+
+    private fun logIpv6Flow(flow: com.privacyguard.vpn.forwarder.Ipv6Flow) {
+        val owner = ipv6Owners.remove(ipv6FlowKey(flow.sourceIp, flow.sourcePort, flow.destinationIp, flow.destinationPort, flow.protocol))
+        if (flow.bytesSent + flow.bytesReceived == 0L) return
+        val pkg = owner?.pkg.orEmpty()
+        val uid = owner?.uid ?: -1
+        val host = hostByIp[normalizeIp(flow.destinationIp)]
+        val label = resolvedAppLabel(uid, pkg)
+        val encryption = when {
+            flow.sni != null -> EncryptionStatus.TLS.name
+            flow.protocol == "TCP" && flow.destinationPort == 80 -> EncryptionStatus.CLEARTEXT.name
+            else -> EncryptionStatus.UNKNOWN.name
+        }
+        connectionLogger.log(ConnectionEntity(
+            appUid = uid,
+            appName = label,
+            packageName = pkg,
+            domain = host,
+            destinationIp = flow.destinationIp,
+            destinationPort = flow.destinationPort,
+            destinationIpv6 = flow.destinationIp,
+            isIPv6 = true,
+            sniHostname = flow.sni,
+            protocol = flow.protocol,
+            bytesSent = flow.bytesSent,
+            bytesReceived = flow.bytesReceived,
+            timestamp = flow.startedAt,
+            durationMs = System.currentTimeMillis() - flow.startedAt,
+            encryptionStatus = encryption,
+            wasBackground = owner?.foreground == false,
+            foreground = owner?.foreground,
+            screenOn = owner?.screenOn,
+        ))
+        if (host != null && pkg.isNotBlank()) {
+            scope.launch {
+                runCatching {
+                    buildDatabase().dnsQueryDao().attributeRecent(
+                        host, pkg, label, flow.startedAt - DNS_ATTRIBUTION_WINDOW_MS, flow.startedAt + 2_000L,
+                    )
+                }
+            }
+        }
+    }
 
     /**
      * True only when Usage Access confirms the app is not on screen. Unknown counts as

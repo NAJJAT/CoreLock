@@ -233,6 +233,17 @@ interface DnsQueryDao {
     """)
     suspend fun topIdleDomainsBetween(from: Long, to: Long, limit: Int): List<DnsDomainSummary>
 
+    /**
+     * Apps resolve names through Android's shared resolver, so a lookup's packet
+     * belongs to the resolver, not the app. When an app then connects to that name we
+     * know the app exactly; credit its unattributed lookups of the same name just before.
+     */
+    @Query("""
+        UPDATE dns_queries SET app_package = :packageName, app_name = :appName
+        WHERE app_package = 'Unknown' AND domain = :domain AND timestamp >= :from AND timestamp <= :to
+    """)
+    suspend fun attributeRecent(domain: String, packageName: String, appName: String, from: Long, to: Long): Int
+
     @Query("SELECT MIN(timestamp) FROM dns_queries")
     suspend fun oldestTimestamp(): Long?
 

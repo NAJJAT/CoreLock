@@ -23,7 +23,8 @@
     <string name="trf_r_background">l’app n’était pas à l’écran</string>
     <string name="trf_r_cleartext">envoyé sans chiffrement (HTTP simple)</string>
     <string name="trf_r_anomaly">anomalie DNS : %1$s</string>
-    <string name="trf_reason_sep"> ; </string>
+    <string name="trf_reason_sep">" ; "</string>
+    <string name="trf_dns_attribution">Les apps résolvent les noms via le résolveur partagé d’Android, qui masque qui a demandé. Nous attribuons une requête à l’app qui se connecte à la réponse dans la minute ; les requêtes bloquées ou inutilisées restent sans app.</string>
     <string name="trf_company_unknown">Propriétaire inconnu</string>
     <string name="trf_c_first">Propre service</string>
     <string name="trf_c_ads">Publicité</string>
@@ -85,6 +86,7 @@
     <string name="trf_empty_unattributed">Android ne nous a pas indiqué quelle app a fait ces requêtes. C’est fréquent pour les services système et les apps qui partagent un processus.</string>
     <string name="trf_empty_history">L’historique ne remonte qu’au %1$s ; le début de cette période n’est donc pas couvert.</string>
     <string name="trf_empty_list">Rien dans cette liste : %1$s</string>
+    <string name="trf_pd_service_domain">Exploité par %1$s. Selon l’app qui l’utilise, c’est son propre service ou un tiers : voir les apps ci-dessous.</string>
     <string name="trf_owner">Propriétaire</string>
     <string name="trf_owner_unknown">Inconnu : absent de nos listes</string>
     <string name="trf_purpose">Usage</string>

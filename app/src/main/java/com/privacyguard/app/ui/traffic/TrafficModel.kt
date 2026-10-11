@@ -90,7 +90,7 @@ object TrafficRows {
             blocked = c.wasBlocked,
             encryption = c.encryptionStatus,
             classification = cls,
-            reasons = reasons(cls, c.wasBlocked, screenOn, fg, c.encryptionStatus == "CLEARTEXT", host?.let { anomalies[it] }),
+            reasons = reasons(cls, c.wasBlocked, screenOn, fg, c.encryptionStatus == "CLEARTEXT", host?.let { near(anomalies[it], c.timestamp) }),
             encrypted = HomeEvidence.isEncrypted(c),
         )
     }
@@ -116,7 +116,7 @@ object TrafficRows {
             blocked = q.wasBlocked,
             encryption = null,
             classification = cls,
-            reasons = reasons(cls, q.wasBlocked, screenOn, q.appForeground, false, anomalies[q.domain]),
+            reasons = reasons(cls, q.wasBlocked, screenOn, q.appForeground, false, near(anomalies[q.domain], q.timestamp)),
         )
     }
 
@@ -136,6 +136,12 @@ object TrafficRows {
         if (cleartext) add(FlagReason.Cleartext)
         anomalies?.map { it.anomalyType }?.distinct()?.forEach { add(FlagReason.DnsAnomaly(it)) }
     }
+
+    /** Only anomalies around the row's own time explain that row (not one from another day). */
+    private fun near(list: List<DnsAnomalyEntity>?, time: Long): List<DnsAnomalyEntity>? =
+        list?.filter { kotlin.math.abs(it.timestamp - time) <= ANOMALY_WINDOW_MS }
+
+    private const val ANOMALY_WINDOW_MS = 10L * 60L * 1000L
 
     /** DnsHandler stores lookups it cannot attribute to an app under this name. */
     const val UNKNOWN_PACKAGE = "Unknown"

@@ -19,4 +19,10 @@
     <string name="nd_failed">L’inspection n’a pas pu démarrer pour cette connexion (autorité pas encore prête ou erreur du proxy local). Elle a été transmise ; les prochaines connexions vers cet hôte pourront être déchiffrées.</string>
     <string name="nd_other">Cette connexion n’a pas été inspectée. Vérifiez que l’autorité d’inspection est installée et que l’inspection HTTPS est activée.</string>
     <string name="common_all">Tout</string>
+    <string name="nav_home">Accueil</string>
+    <string name="nav_apps">Apps</string>
+    <string name="nav_traffic">Trafic</string>
+    <string name="nav_stats">Stats</string>
+    <string name="nav_payload">Contenu</string>
+    <string name="nav_settings">Réglages</string>
 </resources>
