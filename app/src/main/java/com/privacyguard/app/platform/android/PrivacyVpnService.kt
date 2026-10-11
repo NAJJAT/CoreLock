@@ -271,7 +271,7 @@ class PrivacyVpnService : VpnService() {
             h.queryListener = DnsHandler.QueryListener { ownerPackage, domain, wasBlocked ->
                 val pkg = ownerPackage?.takeIf { it.isNotBlank() } ?: "Unknown"
                 val appName = if (pkg != "Unknown") {
-                    appTracker.labelForPackage(pkg) ?: pkg.substringAfterLast('.')
+                    appTracker.labelForPackage(pkg).orEmpty()
                 } else {
                     "Unknown"
                 }
@@ -283,6 +283,7 @@ class PrivacyVpnService : VpnService() {
                         domain = domain,
                         wasBlocked = wasBlocked,
                         phoneWasIdle = isPhoneIdle(),
+                        appForeground = if (pkg != "Unknown") foregroundDetector.stateOf(pkg) else null,
                     ))
                 }
             }
@@ -327,7 +328,7 @@ class PrivacyVpnService : VpnService() {
             context = this,
             dao = buildDatabase().sensorEventDao(),
             scope = scope,
-            foreground = com.privacyguard.platform.android.ForegroundAppDetector(this),
+            foreground = foregroundDetector,
         ).also { it.start() }
         tlsFingerprintMonitor = com.privacyguard.app.vpn.TlsFingerprintMonitor(
             context = this,
@@ -405,7 +406,7 @@ class PrivacyVpnService : VpnService() {
             srcPort, ipv6.nextHeader, applicationInfo.uid
         )
         val pkg          = appTracker.packageForUid(uid)
-        val isBackground = if (pkg != null) !appTracker.isInForeground(pkg) else false
+        val isBackground = isKnownBackground(pkg)
 
         // Register in live connection list
         if (pkg != null) {
@@ -507,7 +508,7 @@ class PrivacyVpnService : VpnService() {
                 ).toString()
                 updateActiveConnectionIdentity(sessionId, resolvedAppLabel(uid, pkg), pkg)
                 if (dnsHandler.handle(ip, udp, pkg)) return
-                val isBackground = if (pkg != null) !appTracker.isInForeground(pkg) else false
+                val isBackground = isKnownBackground(pkg)
                 val decision = filterEngine.evaluate(uid, pkg, null, ip.destinationIp, udp.destinationPort, 17, isBackground = isBackground)
                 if (decision.isBlocked) {
                     recordBlock()
@@ -527,9 +528,7 @@ class PrivacyVpnService : VpnService() {
                     ip.sourceIp, udp.sourcePort, ip.destinationIp, udp.destinationPort, IpPacket.PROTO_UDP)
                 val isNewUdpSession = sessionTable.get(udpKey) == null
                 udpForwarder.handle(ip, udp, uid, pkg)
-                if (isNewUdpSession && pkg != null) {
-                    sessionTable.get(udpKey)?.wasBackground = !appTracker.isInForeground(pkg)
-                }
+                if (isNewUdpSession) sessionTable.get(udpKey)?.let { captureStartState(it, pkg) }
             }
             IpPacket.PROTO_TCP -> {
                 val tcp = TcpPacket.parse(ip) ?: return
@@ -557,7 +556,7 @@ class PrivacyVpnService : VpnService() {
                 ).toString()
                 updateActiveConnectionIdentity(sessionId, resolvedAppLabel(uid, pkg), pkg)
                 val isSynPacket = tcp.isSyn && !tcp.flagAck
-                val isBg = if (pkg != null) !appTracker.isInForeground(pkg) else false
+                val isBg = isKnownBackground(pkg)
                 val decision = filterEngine.evaluate(uid, pkg, null, ip.destinationIp, tcp.destinationPort, 6, isBackground = isBg)
                 if (decision.isBlocked) {
                     recordBlock()
@@ -569,11 +568,12 @@ class PrivacyVpnService : VpnService() {
                     return
                 }
                 tcpForwarder.handle(ip, tcp, uid, pkg)
-                // Keep session state aligned with current foreground/background status
-                if (pkg != null) {
-                    val tcpKey = com.privacyguard.core.session.SessionKey.of(
-                        ip.sourceIp, tcp.sourcePort, ip.destinationIp, tcp.destinationPort, IpPacket.PROTO_TCP)
-                    sessionTable.get(tcpKey)?.wasBackground = isBg
+                // Record app and screen state once, when the session opens; later
+                // packets used to overwrite it with whatever was true at the last packet.
+                val tcpKey = com.privacyguard.core.session.SessionKey.of(
+                    ip.sourceIp, tcp.sourcePort, ip.destinationIp, tcp.destinationPort, IpPacket.PROTO_TCP)
+                sessionTable.get(tcpKey)?.let { session ->
+                    if (!session.appStateCaptured) captureStartState(session, pkg)
                 }
             }
         }
@@ -734,6 +734,8 @@ class PrivacyVpnService : VpnService() {
                     encryptionStatus = snapshot.encryptionStatus.name,
                     tlsVersion = snapshot.tlsVersion?.name,
                     wasBackground = snapshot.wasBackground,
+                    foreground = snapshot.foregroundAtStart,
+                    screenOn = snapshot.screenOnAtStart,
                 ))
 
                 if (metadataEngine.totalRecorded.get() % 10 == 0L) {
@@ -776,6 +778,25 @@ class PrivacyVpnService : VpnService() {
         packageName?.takeIf { it.isNotBlank() }
             ?: appTracker.packageForUid(uid)
             ?: ""
+
+    private val foregroundDetector by lazy { com.privacyguard.platform.android.ForegroundAppDetector(this) }
+
+    /**
+     * True only when Usage Access confirms the app is not on screen. Unknown counts as
+     * foreground so "block in background" rules never block an app the user is using
+     * on a guess. (The old check used getRunningAppProcesses(), which only sees our
+     * own process since Android 5.1, so every other app looked like background.)
+     */
+    private fun isKnownBackground(pkg: String?): Boolean =
+        pkg != null && foregroundDetector.stateOf(pkg) == false
+
+    private fun captureStartState(session: com.privacyguard.core.session.Session, pkg: String?) {
+        val fg = pkg?.let { foregroundDetector.stateOf(it) }
+        session.foregroundAtStart = fg
+        session.wasBackground = fg == false
+        session.screenOnAtStart = !isPhoneIdle()
+        session.appStateCaptured = true
+    }
 
     private fun isPhoneIdle(): Boolean {
         val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager

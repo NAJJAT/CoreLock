@@ -89,5 +89,5 @@ class SecurityAnalysisViewModel(app: Application) : AndroidViewModel(app) {
     private fun labelFor(pkg: String): String = runCatching {
         val pm = getApplication<Application>().packageManager
         pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
-    }.getOrDefault(pkg)
+    }.getOrElse { com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), pkg) }
 }

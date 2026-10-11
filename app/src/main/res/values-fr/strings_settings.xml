@@ -66,8 +66,14 @@
     <string name="set_refresh_now">Actualiser</string>
     <string name="set_report_requested">Rapport hebdomadaire demandé</string>
     <string name="set_run_report">Générer le rapport</string>
-    <string name="set_list_size_steven">~145 000 domaines</string>
-    <string name="set_list_size_oisd">~180 000 domaines</string>
+    <plurals name="set_list_domains">
+        <item quantity="one">%d domaine chargé</item>
+        <item quantity="many">%d domaines chargés</item>
+        <item quantity="other">%d domaines chargés</item>
+    </plurals>
+    <string name="set_lists_none">Aucune liste téléchargée pour l’instant</string>
+    <string name="set_lists_none_desc">Seule la petite liste intégrée est active. Touchez « Actualiser ».</string>
+    <string name="set_lists_overlap">Un domaine présent dans plusieurs listes n’est compté qu’une fois dans le total.</string>
     <string name="set_data_management">Gestion des données</string>
     <plurals name="set_days_short">
         <item quantity="one">%d jour</item>

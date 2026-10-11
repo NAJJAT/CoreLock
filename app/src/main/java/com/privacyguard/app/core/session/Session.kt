@@ -124,6 +124,15 @@ class Session(
      */
     @Volatile var wasBackground: Boolean = false
 
+    /** App on screen when the session opened; null when unknown (no Usage Access). Set once. */
+    @Volatile var foregroundAtStart: Boolean? = null
+
+    /** Screen on when the session opened; null until captured. Set once. */
+    @Volatile var screenOnAtStart: Boolean? = null
+
+    /** True once [foregroundAtStart] / [screenOnAtStart] were recorded. */
+    @Volatile var appStateCaptured: Boolean = false
+
     // ─────────────────────────────────────────────────────────────────────────
     // ★ MITM (Man-in-the-Middle) Fields (Enterprise Feature)
     // ─────────────────────────────────────────────────────────────────────────
@@ -217,6 +226,8 @@ class Session(
         tlsVersion = tlsVersion,
         tlsSni = tlsSni,
         wasBackground = wasBackground,
+        foregroundAtStart = foregroundAtStart,
+        screenOnAtStart = screenOnAtStart,
         isClosed = isClosed,
         isMitmIntercepted = isMitmIntercepted,
         payloadCount = payloadCount.get()
@@ -247,6 +258,8 @@ data class SessionSnapshot(
     val tlsVersion: TlsVersion?,
     val tlsSni: String?,
     val wasBackground: Boolean,
+    val foregroundAtStart: Boolean? = null,
+    val screenOnAtStart: Boolean? = null,
     val isClosed: Boolean,
     // MITM fields in snapshot
     val isMitmIntercepted: Boolean,

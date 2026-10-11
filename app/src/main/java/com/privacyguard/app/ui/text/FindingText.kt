@@ -20,10 +20,9 @@ object FindingText {
 
     private fun pct(n: Long) = NumberFormat.getPercentInstance().format(n / 100.0)
 
-    fun appLabel(context: Context, packageName: String): String = runCatching {
-        val pm = context.packageManager
-        pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()
-    }.getOrDefault(packageName)
+    /** Friendly name; never the package name (see AppNames). */
+    fun appLabel(context: Context, packageName: String): String =
+        com.privacyguard.app.ui.traffic.AppNames.label(context, packageName)
 
     fun title(context: Context, f: BehaviorFinding): String = context.getString(
         when (f.kind) {

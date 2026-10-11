@@ -105,9 +105,12 @@ fun AppDetailScreen(
     packageName: String,
     appName: String,
     onBack: () -> Unit,
+    onOpenTraffic: () -> Unit = {},
+    onOpenDomain: (String) -> Unit = {},
     vm: AppDetailViewModel = viewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val labelContext = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
     var domainSort by remember { mutableStateOf(DomainSort.COUNT) }
 
@@ -119,8 +122,9 @@ fun AppDetailScreen(
     ) {
         item {
             ScreenScaffold(
-                title = state.appName.ifBlank { appName.ifBlank { packageName.substringAfterLast('.') } },
-                subtitle = state.packageName.ifBlank { packageName },
+                // Friendly name only; the package name is not shown.
+                title = com.privacyguard.app.ui.traffic.AppNames.label(labelContext, packageName, appName),
+                subtitle = null,
                 badge = (if (state.detectedSdks.isNotEmpty()) stringResource(R.string.appd_badge_trackers) else stringResource(R.string.appd_badge_app)).uppercase(),
             ) {
                 Row(
@@ -206,6 +210,17 @@ fun AppDetailScreen(
                     )
                     com.privacyguard.app.ui.components.ToggleChip(state.isBackgroundBlocked)
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(PgInfoDim, RoundedCornerShape(10.dp))
+                        .clickable(onClick = onOpenTraffic)
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(R.string.trf_see_all), style = MaterialTheme.typography.titleSmall, color = PgInfo)
+                }
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     DetailTab(stringResource(R.string.appd_tab_mismatch), selectedTab == 0) { selectedTab = 0 }
@@ -221,9 +236,9 @@ fun AppDetailScreen(
 
         when (selectedTab) {
             0 -> mismatchTab(state)
-            1 -> connectionsTab(state, domainSort) { domainSort = it }
+            1 -> connectionsTab(state, domainSort, onOpenDomain) { domainSort = it }
             2 -> sdkTab(state)
-            3 -> activityTab(state)
+            3 -> activityTab(state, onOpenDomain)
             4 -> if (BuildConfig.MITM_AVAILABLE) item { PayloadTabContent(state.packageName) }
         }
 
@@ -231,7 +246,7 @@ fun AppDetailScreen(
     }
 }
 
-private fun LazyListScope.activityTab(state: AppDetailState) {
+private fun LazyListScope.activityTab(state: AppDetailState, onOpenDomain: (String) -> Unit) {
     item {
         PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
             SectionLabel(stringResource(R.string.appd_activity_summary))
@@ -252,7 +267,7 @@ private fun LazyListScope.activityTab(state: AppDetailState) {
             } else {
                 state.dnsDomains.take(8).forEachIndexed { index, row ->
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().clickable { onOpenDomain(row.domain) },
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -418,6 +433,7 @@ private enum class DomainSort { COUNT, DATA, BACKGROUND }
 private fun LazyListScope.connectionsTab(
     state: AppDetailState,
     sort: DomainSort,
+    onOpenDomain: (String) -> Unit,
     onSortChange: (DomainSort) -> Unit,
 ) {
     if (state.hourlyActivity.any { it > 0 } && !state.isLoadingDomains) {
@@ -458,7 +474,7 @@ private fun LazyListScope.connectionsTab(
                 DomainSort.DATA       -> state.domains.sortedByDescending { it.bytesSent + it.bytesReceived }
                 DomainSort.BACKGROUND -> state.domains.sortedByDescending { it.backgroundCount }
             }
-            items(sorted, key = { "domain:${it.domain}" }) { row -> DomainCard(row) }
+            items(sorted, key = { "domain:${it.domain}" }) { row -> DomainCard(row) { onOpenDomain(row.domain) } }
         }
     }
 }
@@ -611,8 +627,8 @@ private fun DomainSortChip(label: String, selected: Boolean, onClick: () -> Unit
 }
 
 @Composable
-private fun DomainCard(row: DomainRow) {
-    PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+private fun DomainCard(row: DomainRow, onClick: () -> Unit) {
+    PanelCard(modifier = Modifier.padding(horizontal = 16.dp).clickable(onClick = onClick)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier

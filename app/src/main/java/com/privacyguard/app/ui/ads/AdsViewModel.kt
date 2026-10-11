@@ -93,8 +93,7 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
                 .filter { it.key.isNotBlank() }
                 .map { (pkg, conns) ->
                     TrackerAppUi(
-                        appName = conns.firstOrNull { it.appName.isNotBlank() }?.appName
-                            ?: pkg.substringAfterLast('.'),
+                        appName = com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), pkg, conns.firstOrNull { it.appName.isNotBlank() }?.appName),
                         packageName = pkg,
                         trackerHits = conns.size,
                     )

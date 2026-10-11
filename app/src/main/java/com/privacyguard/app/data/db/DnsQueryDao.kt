@@ -153,6 +153,89 @@ interface DnsQueryDao {
     """)
     suspend fun topBlockedAppsSince(since: Long, limit: Int): List<DnsAppSummary>
 
+    // ── Drill-down lists (see ConnectionDao) ─────────────────────────────────
+
+    @Query("""
+        SELECT * FROM dns_queries
+        WHERE app_package = :packageName AND timestamp >= :from AND timestamp <= :to
+        ORDER BY timestamp DESC
+    """)
+    suspend fun forPackageBetween(packageName: String, from: Long, to: Long): List<DnsQueryEntity>
+
+    @Query("SELECT * FROM dns_queries WHERE domain = :domain AND timestamp > :since ORDER BY timestamp DESC")
+    suspend fun forDomainSince(domain: String, since: Long): List<DnsQueryEntity>
+
+    @Query("SELECT * FROM dns_queries WHERE timestamp > :from AND timestamp <= :to AND was_blocked = 1 ORDER BY timestamp DESC")
+    suspend fun blockedBetween(from: Long, to: Long): List<DnsQueryEntity>
+
+    @Query("SELECT COUNT(*) FROM dns_queries WHERE timestamp > :from AND timestamp <= :to AND was_blocked = 1")
+    suspend fun countBlockedBetween(from: Long, to: Long): Int
+
+    /** Distinct blocked domains looked up while the screen was off (sleep report "tracking domains"). */
+    @Query("""
+        SELECT domain AS domain,
+               COUNT(*) AS totalQueries,
+               COUNT(*) AS idleQueries,
+               COUNT(*) AS blockedQueries
+        FROM dns_queries
+        WHERE timestamp >= :since AND phone_was_idle = 1 AND was_blocked = 1
+        GROUP BY domain
+        ORDER BY totalQueries DESC
+    """)
+    suspend fun idleBlockedDomainsSince(since: Long): List<DnsDomainSummary>
+
+    // ── Sleep report: the Home card and the report use these with the same window ──
+
+    @Query("SELECT COUNT(*) FROM dns_queries WHERE timestamp >= :from AND timestamp <= :to AND phone_was_idle = 1")
+    suspend fun countIdleBetween(from: Long, to: Long): Int
+
+    @Query("SELECT COUNT(DISTINCT app_package) FROM dns_queries WHERE timestamp >= :from AND timestamp <= :to AND phone_was_idle = 1")
+    suspend fun countIdleAppsBetween(from: Long, to: Long): Int
+
+    @Query("SELECT COUNT(DISTINCT domain) FROM dns_queries WHERE timestamp >= :from AND timestamp <= :to AND phone_was_idle = 1 AND was_blocked = 1")
+    suspend fun countIdleBlockedDomainsBetween(from: Long, to: Long): Int
+
+    @Query("""
+        SELECT app_package AS appPackage,
+               MAX(app_name) AS appName,
+               COUNT(*) AS totalQueries,
+               COUNT(*) AS idleQueries,
+               SUM(CASE WHEN was_blocked THEN 1 ELSE 0 END) AS blockedQueries
+        FROM dns_queries
+        WHERE timestamp >= :from AND timestamp <= :to AND phone_was_idle = 1
+        GROUP BY app_package
+        ORDER BY idleQueries DESC
+    """)
+    suspend fun idleAppsBetween(from: Long, to: Long): List<DnsAppSummary>
+
+    @Query("""
+        SELECT domain AS domain,
+               COUNT(*) AS totalQueries,
+               COUNT(*) AS idleQueries,
+               COUNT(*) AS blockedQueries
+        FROM dns_queries
+        WHERE timestamp >= :from AND timestamp <= :to AND phone_was_idle = 1 AND was_blocked = 1
+        GROUP BY domain
+        ORDER BY totalQueries DESC
+    """)
+    suspend fun idleBlockedDomainsBetween(from: Long, to: Long): List<DnsDomainSummary>
+
+    @Query("""
+        SELECT domain AS domain,
+               COUNT(*) AS totalQueries,
+               COUNT(*) AS idleQueries,
+               SUM(CASE WHEN was_blocked THEN 1 ELSE 0 END) AS blockedQueries
+        FROM dns_queries
+        WHERE timestamp >= :from AND timestamp <= :to AND phone_was_idle = 1
+        GROUP BY domain
+        ORDER BY totalQueries DESC
+        LIMIT :limit
+    """)
+    suspend fun topIdleDomainsBetween(from: Long, to: Long, limit: Int): List<DnsDomainSummary>
+
+    @Query("SELECT MIN(timestamp) FROM dns_queries")
+    suspend fun oldestTimestamp(): Long?
+
     @Query("DELETE FROM dns_queries WHERE timestamp < :cutoff")
     suspend fun pruneOld(cutoff: Long)
 

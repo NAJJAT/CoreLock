@@ -46,6 +46,22 @@ class ForegroundAppDetector(private val context: Context) {
     fun isInForeground(packageName: String): Boolean = foregroundPackage() == packageName
 
     /**
+     * true = [packageName] is on screen, false = it is not, null = we cannot tell
+     * (Usage Access not granted). Cheap enough for the packet path: the access check
+     * and the answer are both cached briefly.
+     */
+    fun stateOf(packageName: String): Boolean? {
+        if (packageName.isBlank()) return null
+        val now = System.currentTimeMillis()
+        val access = accessCache?.takeIf { now - it.first < ACCESS_CACHE_MS }?.second
+            ?: hasUsageAccess().also { accessCache = now to it }
+        if (!access || usm == null) return null
+        return foregroundPackage() == packageName
+    }
+
+    @Volatile private var accessCache: Pair<Long, Boolean>? = null
+
+    /**
      * The package on screen at [atMillis], from a fresh (non-incremental) read.
      * Usage events land a moment after the switch, so callers attributing an
      * event should ask a second or two after it happened.
@@ -92,6 +108,7 @@ class ForegroundAppDetector(private val context: Context) {
 
     private companion object {
         const val CACHE_MS = 2_000L
+        const val ACCESS_CACHE_MS = 30_000L
         // An app resumed long ago and still on screen is found as long as its
         // resume event is inside the window; 6 h covers a long session.
         const val LOOKBACK_MS = 6 * 60 * 60 * 1000L

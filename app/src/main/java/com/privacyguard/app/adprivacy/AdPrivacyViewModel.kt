@@ -86,5 +86,5 @@ class AdPrivacyViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun label(pkg: String): String = runCatching {
         pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
-    }.getOrDefault(pkg)
+    }.getOrElse { com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), pkg) }
 }

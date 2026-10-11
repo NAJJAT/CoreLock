@@ -29,10 +29,16 @@ object TrackerDatabase {
                 "adservice.google.com", "googleads.g.doubleclick.net"),
             listOf("com.google.android.gms.ads", "com.google.ads")),
 
+        // Only the ad-specific host: graph.facebook.com is also Facebook Login and the
+        // Facebook/Instagram apps' own API, and fbcdn.net / fbsbx.com are Meta's CDN.
         TrackerEntry("Facebook Audience Network", "Meta Platforms", TrackerCategory.ADVERTISING,
-            listOf("an.facebook.com", "graph.facebook.com", "connect.facebook.net",
-                "fbcdn.net", "fbsbx.com"),
+            listOf("an.facebook.com"),
             listOf("com.facebook.ads", "com.facebook.audiencenetwork")),
+
+        // Meta Pixel and the JavaScript SDK (fbevents.js) are served from here.
+        TrackerEntry("Meta Pixel", "Meta Platforms", TrackerCategory.ANALYTICS,
+            listOf("connect.facebook.net"),
+            emptyList()),
 
         TrackerEntry("AppLovin", "AppLovin Corporation", TrackerCategory.ADVERTISING,
             listOf("applovin.com", "applovin-api.com"),
@@ -101,13 +107,14 @@ object TrackerDatabase {
         // ── Analytics ─────────────────────────────────────────────────────────
 
         TrackerEntry("Google Analytics / Firebase Analytics", "Google LLC", TrackerCategory.ANALYTICS,
-            listOf("google-analytics.com", "analytics.google.com", "firebase.google.com",
-                "firebaseapp.com", "app-measurement.com", "firebaseinstallations.googleapis.com"),
+            // Not firebaseapp.com (apps' own Firebase Hosting backends) or
+            // firebaseinstallations.googleapis.com (needed for push messages).
+            listOf("google-analytics.com", "analytics.google.com", "app-measurement.com"),
             listOf("com.google.android.gms.analytics", "com.google.firebase.analytics",
                 "com.google.firebase.perf")),
 
         TrackerEntry("AppsFlyer", "AppsFlyer Ltd", TrackerCategory.ANALYTICS,
-            listOf("appsflyer.com", "onelink.me", "af-mam.com", "t3.appsflyer.com"),
+            listOf("appsflyer.com", "appsflyersdk.com", "onelink.me", "af-mam.com", "t3.appsflyer.com"),
             listOf("com.appsflyer")),
 
         TrackerEntry("Adjust", "Adjust GmbH", TrackerCategory.ANALYTICS,
@@ -173,7 +180,7 @@ object TrackerDatabase {
         // ── Crash Reporting ───────────────────────────────────────────────────
 
         TrackerEntry("Firebase Crashlytics", "Google LLC", TrackerCategory.CRASH_REPORTING,
-            listOf("firebase.google.com", "crashlytics.com", "api.crashlytics.com"),
+            listOf("crashlytics.com", "api.crashlytics.com", "firebase-settings.crashlytics.com"),
             listOf("com.google.firebase.crashlytics", "com.crashlytics.sdk.android",
                 "io.fabric.sdk.android")),
 

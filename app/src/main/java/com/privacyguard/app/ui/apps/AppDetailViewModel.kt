@@ -172,12 +172,13 @@ class AppDetailViewModel(
         viewModelScope.launch {
             StatsManager.snapshot.collectLatest { snapshot ->
                 val since = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
+                // Only this package's own traffic. Matching by keyword ("meta", "facebook")
+                // or GeoIP organisation credited other apps' connections to this one.
                 val persistedConnections = runCatching {
-                    db.connectionDao().getRecentConnections(since, 400)
+                    db.connectionDao().forPackageBetween(packageName, since, System.currentTimeMillis())
                 }.getOrElse { emptyList() }
-                    .filter { matchesSelectedApp(it.packageName, it.appName, it.domain ?: it.sniHostname, it.destinationIp) }
                 val liveConnections = snapshot.activeConnections
-                    .filter { matchesSelectedApp(it.packageName, it.appName, it.hostName, it.destinationIp) }
+                    .filter { it.packageName == packageName }
                     .map { it.toConnectionEntity() }
 
                 val mergedConnections = (liveConnections + persistedConnections)
@@ -200,7 +201,7 @@ class AppDetailViewModel(
                         DomainRow(
                             domain = domain,
                             count = connections.size,
-                            backgroundCount = connections.count { it.wasBackground },
+                            backgroundCount = connections.count { it.foreground == false },
                             bytesSent = connections.sumOf { it.bytesSent },
                             bytesReceived = connections.sumOf { it.bytesReceived },
                             trackerName = tracker?.name,
@@ -220,7 +221,7 @@ class AppDetailViewModel(
                         hourly[hour]++
                         when {
                             c.wasBlocked -> blockedByHour[hour]++
-                            c.wasBackground -> suspiciousByHour[hour]++
+                            c.foreground == false || c.screenOn == false -> suspiciousByHour[hour]++
                             else -> allowedByHour[hour]++
                         }
                     }
@@ -240,7 +241,7 @@ class AppDetailViewModel(
                         label = it.domain ?: it.sniHostname ?: it.destinationIp,
                         detail = "${it.protocol} ${it.destinationPort}",
                         blocked = it.wasBlocked,
-                        idle = it.wasBackground,
+                        idle = it.screenOn == false,
                     )
                 }
                 _state.value = _state.value.copy(
@@ -258,7 +259,7 @@ class AppDetailViewModel(
                     dnsQueryCount = db.dnsQueryDao().countForApp(packageName, since),
                     idleDnsQueryCount = db.dnsQueryDao().idleCountForApp(packageName, since),
                     connectionCount = mergedConnections.size,
-                    idleConnectionCount = mergedConnections.count { it.wasBackground },
+                    idleConnectionCount = mergedConnections.count { it.foreground == false },
                     dnsDomains = dnsDomains,
                     recentActivity = recentActivity,
                 )
@@ -272,8 +273,7 @@ class AppDetailViewModel(
             val requestedPermissions = permissionsLookup.await()
             val observedDomains = runCatching {
                 val since = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
-                db.connectionDao().getRecentConnections(since, 400)
-                    .filter { matchesSelectedApp(it.packageName, it.appName, it.domain ?: it.sniHostname, it.destinationIp) }
+                db.connectionDao().forPackageBetween(packageName, since, System.currentTimeMillis())
                     .mapNotNull { it.domain ?: it.sniHostname }
                     .distinct()
             }.getOrElse { emptyList() }
@@ -344,54 +344,8 @@ class AppDetailViewModel(
 
     private suspend fun loadObservedProfiles() =
         runCatching {
-            metadataRepo.recent()
-                .filter {
-                    matchesSelectedApp(
-                        observedPackage = it.packageName,
-                        observedAppName = it.packageName.substringAfterLast('.'),
-                        observedHost = it.hostname.ifBlank { it.sniHostname },
-                        destinationIp = it.destinationIp,
-                    )
-                }
+            metadataRepo.profilesForApp(packageName)
         }.getOrElse { emptyList() }
-
-    private fun matchesSelectedApp(
-        observedPackage: String,
-        observedAppName: String,
-        observedHost: String?,
-        destinationIp: String,
-    ): Boolean {
-        if (observedPackage == packageName) return true
-
-        val selectedFamily = packageFamily(packageName)
-        val observedFamily = packageFamily(observedPackage)
-        if (selectedFamily != null && observedFamily == selectedFamily) return true
-
-        val host = observedHost.orEmpty().lowercase(Locale.ROOT)
-        val app = observedAppName.lowercase(Locale.ROOT)
-        val keywords = relatedKeywords(packageName)
-        if (keywords.any { keyword -> host.contains(keyword) || app.contains(keyword) }) return true
-
-        val geoOrg = GeoIpResolver.lookup(destinationIp)?.org.orEmpty().lowercase(Locale.ROOT)
-        return keywords.any { keyword -> geoOrg.contains(keyword) }
-    }
-
-    private fun packageFamily(value: String): String? {
-        if (value.isBlank() || !value.contains('.')) return null
-        return when {
-            value.startsWith("com.facebook.") -> "com.facebook"
-            value.startsWith("com.instagram.") -> "com.instagram"
-            value == "com.whatsapp" -> "com.whatsapp"
-            else -> null
-        }
-    }
-
-    private fun relatedKeywords(value: String): List<String> = when {
-        value.startsWith("com.facebook.") -> listOf("facebook", "meta", "messenger", "fbcdn", "fbsbx")
-        value.startsWith("com.instagram.") -> listOf("instagram", "meta", "cdninstagram")
-        value == "com.whatsapp" -> listOf("whatsapp", "whatsapp.net", "meta")
-        else -> listOf(value.substringAfterLast('.').lowercase(Locale.ROOT))
-    }
 
     private fun ActiveConnectionInfo.toConnectionEntity(): ConnectionEntity =
         ConnectionEntity(

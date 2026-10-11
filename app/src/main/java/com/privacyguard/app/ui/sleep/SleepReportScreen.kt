@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bedtime
-import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.db.DnsAppSummary
 import com.privacyguard.app.data.db.DnsDomainSummary
+import com.privacyguard.app.ui.components.AppIconImage
 import com.privacyguard.app.ui.components.PanelCard
 import com.privacyguard.app.ui.components.ScreenScaffold
 import com.privacyguard.app.ui.components.SectionLabel
@@ -59,6 +59,7 @@ import com.privacyguard.app.ui.theme.PgTextFaint
 import com.privacyguard.app.ui.theme.PgTextMuted
 import com.privacyguard.app.ui.theme.PgWarning
 import com.privacyguard.app.ui.theme.PgWarningDim
+import com.privacyguard.app.ui.traffic.AppNames
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -67,30 +68,49 @@ data class SleepReportState(
     val idleApps: Int = 0,
     val trackingDomains: Int = 0,
     val suspiciousApps: Int = 0,
-    val topApps: List<DnsAppSummary> = emptyList(),
+    /** Every app with idle lookups: its size is the "Apps" number. */
+    val apps: List<DnsAppSummary> = emptyList(),
+    /** Every blocked domain looked up while idle: its size is the "Tracking" number. */
+    val blockedDomains: List<DnsDomainSummary> = emptyList(),
     val topDomains: List<DnsDomainSummary> = emptyList(),
+    val from: Long = 0,
+    val to: Long = 0,
 )
 
+/**
+ * "While you slept": DNS lookups made while the screen was off.
+ * [at] is when Home computed its card; the 7-day view uses the same window so the
+ * card and this report show the same numbers.
+ */
 @Composable
 fun SleepReportScreen(
+    at: Long? = null,
     onBack: () -> Unit,
+    onOpenApp: (packageName: String, from: Long, to: Long) -> Unit = { _, _, _ -> },
+    onOpenDomain: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     var selectedDays by remember { mutableIntStateOf(7) }
     var state by remember { mutableStateOf(SleepReportState()) }
+    val anchor = remember { at ?: System.currentTimeMillis() }
 
     LaunchedEffect(selectedDays) {
         state = withContext(Dispatchers.IO) {
-            val db = AppDatabase.getInstance(context)
-            val since = System.currentTimeMillis() - selectedDays.toLong() * 24L * 60L * 60L * 1000L
-            val apps = db.dnsQueryDao().idleAppSummariesSince(since, 20)
+            val dao = AppDatabase.getInstance(context).dnsQueryDao()
+            val to = anchor
+            val from = to - selectedDays.toLong() * 24L * 60L * 60L * 1000L
+            val apps = dao.idleAppsBetween(from, to)
+            val blocked = dao.idleBlockedDomainsBetween(from, to)
             SleepReportState(
-                idleDnsQueries = db.dnsQueryDao().countIdleSince(since),
-                idleApps = db.dnsQueryDao().countIdleAppsSince(since),
-                trackingDomains = db.dnsQueryDao().countIdleBlockedDomainsSince(since),
-                suspiciousApps = apps.count { it.idleQueries >= 5 && it.totalQueries == it.idleQueries },
-                topApps = apps,
-                topDomains = db.dnsQueryDao().topIdleDomainsSince(since, 20),
+                idleDnsQueries = dao.countIdleBetween(from, to),
+                idleApps = dao.countIdleAppsBetween(from, to),
+                trackingDomains = dao.countIdleBlockedDomainsBetween(from, to),
+                suspiciousApps = apps.count { it.idleQueries >= 5 },
+                apps = apps,
+                blockedDomains = blocked,
+                topDomains = dao.topIdleDomainsBetween(from, to, 20),
+                from = from,
+                to = to,
             )
         }
     }
@@ -116,6 +136,8 @@ fun SleepReportScreen(
                     Spacer(modifier = Modifier.size(8.dp))
                     RangeChip(pluralStringResource(R.plurals.sleep_badge_days, 30, 30), selectedDays == 30) { selectedDays = 30 }
                 }
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(stringResource(R.string.sleep_definition), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
                 Spacer(modifier = Modifier.height(14.dp))
                 PanelCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -153,33 +175,37 @@ fun SleepReportScreen(
             }
         }
 
-        item {
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                SectionLabel(stringResource(R.string.sleep_top_apps))
-            }
-        }
-        if (state.topApps.isEmpty()) {
+        // Apps: one row per app counted in "Apps"; the idle counts add up to "Idle lookups".
+        item { Header("${stringResource(R.string.sleep_top_apps)} (${state.apps.size})") }
+        if (state.apps.isEmpty()) {
             item { EmptyPanel(stringResource(R.string.sleep_no_apps)) }
         } else {
-            items(state.topApps, key = { it.appPackage }) { app ->
-                AppSleepRow(app)
+            items(state.apps, key = { it.appPackage }) { app ->
+                AppSleepRow(app) { onOpenApp(app.appPackage, state.from, state.to) }
             }
         }
 
-        item {
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                SectionLabel(stringResource(R.string.sleep_top_domains))
-            }
+        // Exactly the domains counted in "Tracking".
+        item { Header("${stringResource(R.string.sleep_tracking)} (${state.blockedDomains.size})") }
+        if (state.blockedDomains.isEmpty()) {
+            item { EmptyPanel(stringResource(R.string.sleep_no_domains)) }
+        } else {
+            items(state.blockedDomains, key = { "b_" + it.domain }) { DomainSleepRow(it) { onOpenDomain(it.domain) } }
         }
+
+        item { Header(stringResource(R.string.sleep_top_domains)) }
         if (state.topDomains.isEmpty()) {
             item { EmptyPanel(stringResource(R.string.sleep_no_domains)) }
         } else {
-            items(state.topDomains, key = { it.domain }) { domain ->
-                DomainSleepRow(domain)
-            }
+            items(state.topDomains, key = { "t_" + it.domain }) { DomainSleepRow(it) { onOpenDomain(it.domain) } }
         }
         item { Spacer(modifier = Modifier.height(8.dp)) }
     }
+}
+
+@Composable
+private fun Header(text: String) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp)) { SectionLabel(text) }
 }
 
 @Composable
@@ -195,34 +221,27 @@ private fun RangeChip(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun AppSleepRow(row: DnsAppSummary) {
-    PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+private fun AppSleepRow(row: DnsAppSummary, onClick: () -> Unit) {
+    val context = LocalContext.current
+    PanelCard(modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth().clickable(onClick = onClick)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .background(if (row.blockedQueries > 0) PgDangerDim else PgInfoDim, RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Default.Dns, contentDescription = null, tint = if (row.blockedQueries > 0) PgDanger else PgInfo, modifier = Modifier.size(18.dp))
-            }
+            AppIconImage(row.appPackage, size = 38.dp)
             Spacer(modifier = Modifier.size(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(row.appName, style = MaterialTheme.typography.titleMedium, color = PgText, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Spacer(modifier = Modifier.height(3.dp))
-                Text(row.appPackage, style = MaterialTheme.typography.bodySmall, color = PgTextMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(AppNames.label(context, row.appPackage, row.appName), style = MaterialTheme.typography.titleMedium, color = PgText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (row.blockedQueries > 0) {
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Text(pluralStringResource(R.plurals.dash_blocked_count, row.blockedQueries, row.blockedQueries), style = MaterialTheme.typography.bodySmall, color = PgDanger)
+                }
             }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(pluralStringResource(R.plurals.sleep_idle_n, row.idleQueries, row.idleQueries), style = MaterialTheme.typography.titleSmall, color = PgWarning, fontWeight = FontWeight.SemiBold)
-                Text(pluralStringResource(R.plurals.sleep_total_n, row.totalQueries, row.totalQueries), style = MaterialTheme.typography.labelSmall, color = PgTextFaint)
-            }
+            Text(pluralStringResource(R.plurals.sleep_idle_n, row.idleQueries, row.idleQueries), style = MaterialTheme.typography.titleSmall, color = PgWarning, fontWeight = FontWeight.SemiBold)
         }
     }
 }
 
 @Composable
-private fun DomainSleepRow(row: DnsDomainSummary) {
-    PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+private fun DomainSleepRow(row: DnsDomainSummary, onClick: () -> Unit) {
+    PanelCard(modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth().clickable(onClick = onClick)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier

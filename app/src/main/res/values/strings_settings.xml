@@ -66,8 +66,13 @@
     <string name="set_refresh_now">Refresh now</string>
     <string name="set_report_requested">Weekly report requested</string>
     <string name="set_run_report">Run report</string>
-    <string name="set_list_size_steven">~145K domains</string>
-    <string name="set_list_size_oisd">~180K domains</string>
+    <plurals name="set_list_domains">
+        <item quantity="one">%d domain loaded</item>
+        <item quantity="other">%d domains loaded</item>
+    </plurals>
+    <string name="set_lists_none">No list downloaded yet</string>
+    <string name="set_lists_none_desc">Only the small built-in list is active. Tap “Refresh now”.</string>
+    <string name="set_lists_overlap">A domain on several lists counts once in the total.</string>
     <string name="set_data_management">Data management</string>
     <plurals name="set_days_short">
         <item quantity="one">%d day</item>

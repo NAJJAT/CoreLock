@@ -175,7 +175,7 @@ private fun AlertCard(alert: AlertItem) {
                     if (!alert.packageName.isNullOrBlank()) {
                         Text("·", style = MaterialTheme.typography.labelSmall, color = PgTextFaint)
                         Text(
-                            alert.packageName.substringAfterLast('.'),
+                            com.privacyguard.app.ui.traffic.AppNames.label(androidx.compose.ui.platform.LocalContext.current, alert.packageName),
                             style = MaterialTheme.typography.labelSmall,
                             color = PgTextFaint,
                             maxLines = 1,

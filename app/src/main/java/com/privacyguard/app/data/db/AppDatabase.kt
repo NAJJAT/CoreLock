@@ -29,7 +29,7 @@ import com.privacyguard.app.core.security.DatabaseEncryption
         TlsFingerprintEntity::class,
         SensorEventEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -148,6 +148,17 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Home drill-downs: per-connection screen state and a real foreground flag,
+        // plus a per-app index for the app traffic screen.
+        internal val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `connections` ADD COLUMN `foreground` INTEGER")
+                db.execSQL("ALTER TABLE `connections` ADD COLUMN `screenOn` INTEGER")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_connections_packageName_timestamp` ON `connections` (`packageName`, `timestamp`)")
+                db.execSQL("ALTER TABLE `dns_queries` ADD COLUMN `app_foreground` INTEGER")
+            }
+        }
+
         /**
          * Debug builds wipe on any schema mismatch so local iteration never gets stuck.
          * Release builds only wipe where no migration can exist (version 1, which
@@ -171,7 +182,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     DATABASE_NAME
-                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
                     .openHelperFactory(DatabaseEncryption.openHelperFactory(context, DATABASE_NAME))
                     .applyFallback()
                     .build().also {

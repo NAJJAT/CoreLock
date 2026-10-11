@@ -25,7 +25,11 @@ data class DnsQueryEntity(
     val domain: String,
     @ColumnInfo(name = "was_blocked")
     val wasBlocked: Boolean,
+    /** Screen was off ("phone idle") when the lookup happened. */
     @ColumnInfo(name = "phone_was_idle")
     val phoneWasIdle: Boolean,
+    /** Asking app was on screen: null when unknown (no Usage Access, or older rows). */
+    @ColumnInfo(name = "app_foreground")
+    val appForeground: Boolean? = null,
 )
 

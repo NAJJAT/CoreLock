@@ -191,17 +191,9 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
 
-        val candidate = appName.takeIf { it.isNotBlank() && it != "Unknown" } ?: resolvedPackage.orEmpty()
-        if (candidate.isBlank()) return str(R.string.conn_unknown_app)
-        if (!candidate.contains('.')) return candidate
-
-        return candidate
-            .substringAfterLast('.')
-            .replace('_', ' ')
-            .replace('-', ' ')
-            .replaceFirstChar { ch ->
-                if (ch.isLowerCase()) ch.titlecase(Locale.getDefault()) else ch.toString()
-            }
+        if (resolvedPackage == null && appName.isBlank()) return str(R.string.conn_unknown_app)
+        // Never a package name or a fragment of one ("katana"): see AppNames.
+        return com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), resolvedPackage.orEmpty(), appName)
     }
 
     private fun isPrivacyGuardPackage(packageName: String?): Boolean {

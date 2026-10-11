@@ -33,9 +33,7 @@ data class AlertInboxState(
 )
 
 class AlertInboxViewModel(app: Application) : AndroidViewModel(app) {
-    private fun str(id: Int, vararg a: Any): String = getApplication<Application>().getString(id, *a)
-
-    private val db = AppDatabase.getInstance(app)
+    private val feed = AlertFeed(app)
     private val _state = MutableStateFlow(AlertInboxState())
     val state: StateFlow<AlertInboxState> = _state.asStateFlow()
 
@@ -55,15 +53,28 @@ class AlertInboxViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private suspend fun refresh() {
-        val since = System.currentTimeMillis() - 7L * 24L * 60L * 60L * 1000L
+        _state.value = _state.value.copy(items = feed.loadItems(), isLoading = false)
+    }
+}
 
-        val dnsItems = db.dnsAnomalyDao().recent(60).map { it.toAlertItem() }
-        val tlsItems = db.tlsAlertDao().recent(60).map { it.toAlertItem() }
+/** Builds the alert inbox; also used for the Home bell badge so both always agree. */
+class AlertFeed(private val app: Application) {
+    private fun str(id: Int, vararg a: Any): String = app.getString(id, *a)
+    private fun getApplication(): Application = app
+    private val db = AppDatabase.getInstance(app)
+
+    /**
+     * Everything in the inbox: the last 7 days of DNS anomalies and TLS alerts, plus
+     * one cleartext entry per app. The Home bell badge shows the size of this list.
+     */
+    suspend fun loadItems(): List<AlertItem> {
+        val since = System.currentTimeMillis() - WINDOW_MS
+
+        val dnsItems = db.dnsAnomalyDao().since(since).map { it.toAlertItem() }
+        val tlsItems = db.tlsAlertDao().since(since).map { it.toAlertItem() }
         val cleartextItems = db.connectionDao()
-            .getRecentConnections(since, 300)
-            .filter { it.encryptionStatus == "CLEARTEXT" && !it.wasBlocked }
+            .cleartextSince(since)
             .distinctBy { it.packageName }
-            .take(25)
             .map { conn ->
                 AlertItem(
                     id = "cleartext_${conn.id}",
@@ -76,8 +87,11 @@ class AlertInboxViewModel(app: Application) : AndroidViewModel(app) {
                 )
             }
 
-        val all = (dnsItems + tlsItems + cleartextItems).sortedByDescending { it.timestamp }
-        _state.value = _state.value.copy(items = all, isLoading = false)
+        return (dnsItems + tlsItems + cleartextItems).sortedByDescending { it.timestamp }
+    }
+
+    companion object {
+        const val WINDOW_MS = 7L * 24L * 60L * 60L * 1000L
     }
 
     private fun DnsAnomalyEntity.toAlertItem() = AlertItem(
@@ -91,9 +105,9 @@ class AlertInboxViewModel(app: Application) : AndroidViewModel(app) {
     )
 
     private fun appLabel(pkg: String): String = runCatching {
-        val pm = getApplication<Application>().packageManager
+        val pm = getApplication().packageManager
         pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
-    }.getOrDefault(pkg)
+    }.getOrElse { com.privacyguard.app.ui.traffic.AppNames.label(app, pkg) }
 
     private fun TlsAlertEntity.toAlertItem() = AlertItem(
         id = "tls_$id",
@@ -106,7 +120,7 @@ class AlertInboxViewModel(app: Application) : AndroidViewModel(app) {
         title = when (alertType) {
             "JA3_THREAT"  -> str(com.privacyguard.app.R.string.alerts_ja3, malwareName ?: category ?: str(com.privacyguard.app.R.string.alerts_unknown_malware))
             "WEAK_CIPHER" -> str(com.privacyguard.app.R.string.alerts_weak_cipher)
-            TlsAlertEntity.TYPE_TLS_FP_CHANGE -> getApplication<Application>().getString(
+            TlsAlertEntity.TYPE_TLS_FP_CHANGE -> getApplication().getString(
                 com.privacyguard.app.R.string.tls_fp_alert_title,
                 packageName?.let { appLabel(it) } ?: "?",
             )

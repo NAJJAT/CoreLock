@@ -38,6 +38,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -99,6 +100,11 @@ fun SettingsScreen(
     val upstreamDns by settingsPreferences.upstreamDns.collectAsStateWithLifecycle()
     val protectionLevel by settingsPreferences.protectionLevel.collectAsStateWithLifecycle()
     val blocklistSize by BlocklistManager.size.collectAsStateWithLifecycle()
+    val blocklistSources by produceState(emptyList<com.privacyguard.app.data.db.SourceStats>(), blocklistSize) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { com.privacyguard.app.data.db.AppDatabase.getInstance(context).blocklistDao().getStatsBySource() }.getOrDefault(emptyList())
+        }
+    }
     val securityState by settingsViewModel.securityState.collectAsStateWithLifecycle()
     val diagnosticsState by settingsViewModel.diagnosticsState.collectAsStateWithLifecycle()
     val runProtectedAction = rememberProtectedActionRunner()
@@ -356,6 +362,9 @@ fun SettingsScreen(
                 footer = {
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(stringResource(R.string.set_domains_loaded, java.text.NumberFormat.getIntegerInstance().format(blocklistSize)), style = MaterialTheme.typography.titleMedium, color = PgAccent)
+                    if (blocklistSources.size > 1) {
+                        Text(stringResource(R.string.set_lists_overlap), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                    }
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         PanelCard(
@@ -380,10 +389,13 @@ fun SettingsScreen(
                         }
                     }
                 },
-                items = listOf(
-                    SettingUiItem("StevenBlack Unified", stringResource(R.string.set_list_size_steven), true, Icons.Default.Storage, onClick = { }),
-                    SettingUiItem("OISD Full", stringResource(R.string.set_list_size_oisd), true, Icons.Default.Storage, onClick = { })
-                )
+                // Real per-source counts from the database (they used to be hardcoded
+                // "~145K / ~180K" next to a total of 80 when the lists had not downloaded).
+                items = if (blocklistSources.isEmpty()) listOf(
+                    SettingUiItem(stringResource(R.string.set_lists_none), stringResource(R.string.set_lists_none_desc), false, Icons.Default.Storage, onClick = { })
+                ) else blocklistSources.map { src ->
+                    SettingUiItem(src.source, pluralStringResource(R.plurals.set_list_domains, src.count, src.count), true, Icons.Default.Storage, onClick = { })
+                }
             )
         }
 

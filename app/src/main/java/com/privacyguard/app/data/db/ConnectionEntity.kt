@@ -9,12 +9,13 @@ import androidx.room.PrimaryKey
  * Field definitions follow the BRD §8.1 Connection Entity spec.
  */
 // Nearly every query filters by timestamp; per-app history filters by appUid
-// and sorts by timestamp. Keep in sync with AppDatabase.MIGRATION_4_5.
+// and sorts by timestamp. Keep in sync with AppDatabase.MIGRATION_4_5 / MIGRATION_9_10.
 @Entity(
     tableName = "connections",
     indices = [
         Index("timestamp"),
         Index("appUid", "timestamp"),
+        Index("packageName", "timestamp"),
     ],
 )
 data class ConnectionEntity(
@@ -59,6 +60,13 @@ data class ConnectionEntity(
     val tlsVersion:       String? = null,
 
     // ── Behavioral context (feeds MetadataEngine) ─────────────────────────────
-    /** True if the owning app was in the background when this session opened. */
+    /** True if the owning app was known to be in the background when this session opened. */
     val wasBackground:    Boolean = false,
+    /**
+     * Whether the owning app was on screen when the session opened: null when unknown
+     * (no Usage Access, or rows recorded before this was tracked).
+     */
+    val foreground:       Boolean? = null,
+    /** Whether the screen was on when the session opened; null for older rows. */
+    val screenOn:         Boolean? = null,
 )

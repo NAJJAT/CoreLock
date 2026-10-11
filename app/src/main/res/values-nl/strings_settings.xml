@@ -66,8 +66,13 @@
     <string name="set_refresh_now">Nu vernieuwen</string>
     <string name="set_report_requested">Weekrapport aangevraagd</string>
     <string name="set_run_report">Rapport maken</string>
-    <string name="set_list_size_steven">~145.000 domeinen</string>
-    <string name="set_list_size_oisd">~180.000 domeinen</string>
+    <plurals name="set_list_domains">
+        <item quantity="one">%d domein geladen</item>
+        <item quantity="other">%d domeinen geladen</item>
+    </plurals>
+    <string name="set_lists_none">Nog geen lijst gedownload</string>
+    <string name="set_lists_none_desc">Alleen de kleine ingebouwde lijst is actief. Tik op ‘Nu vernieuwen’.</string>
+    <string name="set_lists_overlap">Een domein dat op meerdere lijsten staat, telt één keer mee in het totaal.</string>
     <string name="set_data_management">Gegevensbeheer</string>
     <plurals name="set_days_short">
         <item quantity="one">%d dag</item>

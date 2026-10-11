@@ -84,6 +84,7 @@ import com.privacyguard.app.ui.theme.PgTextMuted
 import com.privacyguard.app.ui.theme.PgWarning
 import com.privacyguard.app.ui.theme.PgWarningDim
 import java.io.File
+import com.privacyguard.app.ui.traffic.EvidenceKind
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
@@ -93,13 +94,17 @@ fun DashboardScreen(
     onOpenAlerts: () -> Unit = {},
     onOpenConnections: () -> Unit = {},
     onOpenApps: () -> Unit = {},
-    onOpenSleepReport: () -> Unit = {},
+    onOpenSleepReport: (at: Long) -> Unit = {},
+    onOpenEvidence: (EvidenceKind, at: Long) -> Unit = { _, _ -> },
+    onOpenStatistics: () -> Unit = {},
     viewModel: DashboardViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val runProtectedAction = rememberProtectedActionRunner()
+    // Lists open for the same window the numbers were computed for.
+    val open: (EvidenceKind) -> Unit = { kind -> onOpenEvidence(kind, uiState.evidenceAt) }
 
 
     LazyColumn(
@@ -122,7 +127,7 @@ fun DashboardScreen(
                     IconButton(onClick = onOpenAlerts) {
                         if (uiState.alertBadgeCount > 0) {
                             BadgedBox(badge = {
-                                Badge { Text(uiState.alertBadgeCount.coerceAtMost(99).toString()) }
+                                Badge { Text(if (uiState.alertBadgeCount > 99) "99+" else uiState.alertBadgeCount.toString()) }
                             }) {
                                 Icon(Icons.Default.Notifications, contentDescription = stringResource(R.string.dash_alerts), tint = PgTextMuted)
                             }
@@ -199,6 +204,7 @@ fun DashboardScreen(
                             }
                             Spacer(modifier = Modifier.height(20.dp))
                             LabeledProgress(
+                                modifier = Modifier.clickable { open(EvidenceKind.ENCRYPTION_24H) },
                                 label = stringResource(R.string.dash_encryption_health),
                                 valueText = stringResource(R.string.dash_tls_percent, (uiState.encryptionHealth * 100).toInt()),
                                 progress = uiState.encryptionHealth,
@@ -210,9 +216,9 @@ fun DashboardScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatTile(stringResource(R.string.dash_trackers_blocked), formatCount(uiState.trackersBlocked), PgAccent, Modifier.weight(1f))
-                    StatTile(stringResource(R.string.dash_cleartext_conns), formatCount(uiState.cleartextCount), PgDanger, Modifier.weight(1f))
-                    StatTile(stringResource(R.string.dash_privacy_score), formatCount(uiState.privacyScore.score), PgInfo, Modifier.weight(1f))
+                    StatTile(stringResource(R.string.dash_blocked_24h), formatCount(uiState.trackersBlocked), PgAccent, Modifier.weight(1f).clickable { open(EvidenceKind.BLOCKED_24H) })
+                    StatTile(stringResource(R.string.dash_cleartext_24h), formatCount(uiState.cleartextCount), PgDanger, Modifier.weight(1f).clickable { open(EvidenceKind.CLEARTEXT_24H) })
+                    StatTile(stringResource(R.string.dash_privacy_score), formatCount(uiState.privacyScore.score), PgInfo, Modifier.weight(1f).clickable(onClick = onOpenStatistics))
                 }
                 if (uiState.isVpnActive) {
                     Spacer(modifier = Modifier.height(10.dp))
@@ -227,7 +233,8 @@ fun DashboardScreen(
                             stringResource(R.string.dash_active_conns),
                             formatCount(uiState.activeConnectionCount),
                             PgInfo,
-                            Modifier.weight(1f),
+                            // Live sessions: the Connections screen lists the same live table.
+                            Modifier.weight(1f).clickable(onClick = onOpenConnections),
                         )
                     }
                 }
@@ -235,7 +242,7 @@ fun DashboardScreen(
                 Spacer(modifier = Modifier.height(18.dp))
                 SleepActivityCard(
                     summary = uiState.sleepActivity,
-                    onClick = onOpenSleepReport,
+                    onClick = { onOpenSleepReport(uiState.evidenceAt) },
                 )
 
                 Spacer(modifier = Modifier.height(18.dp))
@@ -254,19 +261,19 @@ fun DashboardScreen(
                     // Only Android can block traffic once the tunnel is gone; send the user there.
                     onToggleKillSwitch = { KillSwitch.openAlwaysOnSettings(context) },
                     onCardClick = { card ->
+                        val evidence = card.evidence
                         when {
-                            card.kind == CardKind.CLEARTEXT -> onOpenConnections()
-                            card.kind == CardKind.BEHAVIOR  -> onOpenAlerts()
-                            card.kind == CardKind.ENTROPY   -> onOpenAlerts()
-                            card.severity == CardSeverity.CRITICAL ||
-                            card.severity == CardSeverity.WARNING              -> onOpenAlerts()
+                            evidence != null -> open(evidence)
+                            card.kind == CardKind.KILL_SWITCH -> KillSwitch.openAlwaysOnSettings(context)
+                            card.kind == CardKind.TRUST -> onOpenStatistics()
+                            // "No decryption" states a fact about the app, not a count: nothing to list.
                             else -> {}
                         }
                     },
                 )
 
                 Spacer(modifier = Modifier.height(18.dp))
-                WeeklyPrivacyReportCard(uiState.weeklyReport)
+                WeeklyPrivacyReportCard(uiState.weeklyReport, onOpen = { open(it) }, onOpenScore = onOpenStatistics)
 
                 Spacer(modifier = Modifier.height(14.dp))
                 PcapExportCard(
@@ -510,7 +517,11 @@ private fun SecuritySystemCard(
 }
 
 @Composable
-private fun WeeklyPrivacyReportCard(report: WeeklyPrivacyReport) {
+private fun WeeklyPrivacyReportCard(
+    report: WeeklyPrivacyReport,
+    onOpen: (EvidenceKind) -> Unit,
+    onOpenScore: () -> Unit,
+) {
     PanelCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -531,16 +542,20 @@ private fun WeeklyPrivacyReportCard(report: WeeklyPrivacyReport) {
         }
         Spacer(modifier = Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatTile(stringResource(R.string.dash_connections), formatCount(report.totalConnections), PgInfo, Modifier.weight(1f))
-            StatTile(stringResource(R.string.dash_blocked), formatCount(report.blockedConnections), PgDanger, Modifier.weight(1f))
+            StatTile(stringResource(R.string.dash_connections), formatCount(report.totalConnections), PgInfo, Modifier.weight(1f).clickable { onOpen(EvidenceKind.CONNECTIONS_7D) })
+            StatTile(stringResource(R.string.dash_blocked), formatCount(report.blockedConnections), PgDanger, Modifier.weight(1f).clickable { onOpen(EvidenceKind.BLOCKED_7D) })
         }
         Spacer(modifier = Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatTile(stringResource(R.string.dash_behavior), formatCount(report.behaviorAlerts), PgWarning, Modifier.weight(1f))
-            StatTile(stringResource(R.string.dash_score), formatCount(report.privacyScore), PgAccent, Modifier.weight(1f))
+            StatTile(stringResource(R.string.dash_behavior), formatCount(report.behaviorAlerts), PgWarning, Modifier.weight(1f).clickable { onOpen(EvidenceKind.BEHAVIOR) })
+            StatTile(stringResource(R.string.dash_score), formatCount(report.privacyScore), PgAccent, Modifier.weight(1f).clickable(onClick = onOpenScore))
         }
         Spacer(modifier = Modifier.height(12.dp))
-        Text(stringResource(R.string.dash_transferred, report.dataTransferred), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+        Text(
+            stringResource(R.string.dash_transferred, report.dataTransferred),
+            style = MaterialTheme.typography.bodySmall, color = PgTextMuted,
+            modifier = Modifier.clickable { onOpen(EvidenceKind.DATA_7D) },
+        )
     }
 }
 

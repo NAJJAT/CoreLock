@@ -39,6 +39,9 @@ interface TlsAlertDao {
     @Query("SELECT * FROM tls_alerts WHERE severity >= :minSeverity ORDER BY timestamp DESC LIMIT :limit")
     suspend fun recentHighSeverity(minSeverity: Int, limit: Int): List<TlsAlertEntity>
 
+    @Query("SELECT * FROM tls_alerts WHERE timestamp > :since ORDER BY timestamp DESC")
+    suspend fun since(since: Long): List<TlsAlertEntity>
+
     @Query("DELETE FROM tls_alerts WHERE timestamp < :before")
     suspend fun pruneOld(before: Long)
 }

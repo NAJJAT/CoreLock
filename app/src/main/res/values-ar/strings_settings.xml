@@ -66,8 +66,17 @@
     <string name="set_refresh_now">تحديث الآن</string>
     <string name="set_report_requested">طُلب التقرير الأسبوعي</string>
     <string name="set_run_report">إنشاء التقرير</string>
-    <string name="set_list_size_steven">نحو 145 ألف نطاق</string>
-    <string name="set_list_size_oisd">نحو 180 ألف نطاق</string>
+    <plurals name="set_list_domains">
+        <item quantity="zero">لم يُحمَّل أي نطاق</item>
+        <item quantity="one">نطاق واحد محمَّل</item>
+        <item quantity="two">نطاقان محمَّلان</item>
+        <item quantity="few">%d نطاقات محمَّلة</item>
+        <item quantity="many">%d نطاقًا محمَّلًا</item>
+        <item quantity="other">%d نطاق محمَّل</item>
+    </plurals>
+    <string name="set_lists_none">لم تُنزَّل أي قائمة بعد</string>
+    <string name="set_lists_none_desc">القائمة المدمجة الصغيرة وحدها مفعّلة. اضغط «تحديث الآن».</string>
+    <string name="set_lists_overlap">يُحسب النطاق الموجود في عدة قوائم مرة واحدة في الإجمالي.</string>
     <string name="set_data_management">إدارة البيانات</string>
     <plurals name="set_days_short">
         <item quantity="zero">%d يوم</item>

@@ -20,6 +20,9 @@ import com.privacyguard.app.data.repository.MetadataRepo
 import com.privacyguard.app.core.behavior.BehaviorSeverity
 import com.privacyguard.app.ui.components.formatBytes
 import com.privacyguard.app.vpn.KillSwitch
+import com.privacyguard.app.ui.alerts.AlertFeed
+import com.privacyguard.app.ui.traffic.EvidenceKind
+import com.privacyguard.app.ui.traffic.HomeEvidence
 import com.privacyguard.platform.android.NotificationHelper
 import com.privacyguard.platform.android.PrivacyVpnService
 import kotlinx.coroutines.delay
@@ -30,10 +33,13 @@ import kotlinx.coroutines.launch
 
 data class DashboardUiState(
     val isVpnActive: Boolean = false,
+    /** DNS lookups blocked in the 24 h before [evidenceAt]; opens [EvidenceKind.BLOCKED_24H]. */
     val trackersBlocked: Int = 0,
     val cleartextCount: Int = 0,
     val blocklistDomains: Int = 0,
     val encryptionHealth: Float = 0f,
+    val encryptedCount: Int = 0,
+    val connectionCount24h: Int = 0,
     val anomalies: List<DnsAnomalyEntity> = emptyList(),
     val securityCards: List<SecurityCardState> = emptyList(),
     val recommendations: List<String> = emptyList(),
@@ -46,6 +52,11 @@ data class DashboardUiState(
     val alertBadgeCount: Int = 0,
     val protectionLevel: String = "STANDARD",
     val sleepActivity: SleepActivitySummary = SleepActivitySummary(),
+    /**
+     * When the numbers were computed. Drill-downs load their lists for the window
+     * ending here, so a list always has exactly as many rows as the number showed.
+     */
+    val evidenceAt: Long = 0L,
 )
 
 data class SleepActivitySummary(
@@ -64,10 +75,13 @@ data class SecurityCardState(
     val status: String,
     val severity: CardSeverity,
     val value: String,
+    /** The list behind [value], or null for cards that state a setting rather than a count. */
+    val evidence: EvidenceKind? = null,
 )
 
 data class WeeklyPrivacyReport(
     val totalConnections: Int = 0,
+    /** DNS lookups blocked in the week (connections are never logged as blocked). */
     val blockedConnections: Int = 0,
     val anomalies: Int = 0,
     val dataTransferred: String = "0 B",
@@ -86,23 +100,17 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     private val metadataRepo = MetadataRepo(db.connectionProfileDao())
     private val notifHelper = NotificationHelper(app)
     private val notifiedBehaviorKeys = mutableSetOf<String>()
+    private val evidence = HomeEvidence(db)
+    private val alertFeed = AlertFeed(app)
 
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
-    // Cached slow-path data; refreshed every 30s to avoid heavy DB reads every 1s
-    @Volatile private var cachedProfiles: List<com.privacyguard.core.metadata.ConnectionProfile> = emptyList()
-    @Volatile private var cachedAnomalies: List<com.privacyguard.app.data.db.DnsAnomalyEntity> = emptyList()
-    @Volatile private var cachedBehaviorSummaries: List<com.privacyguard.app.core.behavior.AppBehaviorSummary> = emptyList()
-    @Volatile private var cachedBehaviorAlerts: Int = 0
-    @Volatile private var cachedWeeklyConnections: List<ConnectionEntity> = emptyList()
-    @Volatile private var cachedTlsAlertCount: Int = 0
-    @Volatile private var cachedSleepActivity: SleepActivitySummary = SleepActivitySummary()
     @Volatile private var slowCacheReady: Boolean = false
     @Volatile private var prevActiveBytesTotal: Long = 0L
 
     init {
-        // Fast path: live stats + connection counts — runs every 1s
+        // Fast path: live values only (VPN state, throughput, active sessions) — every 1 s.
         viewModelScope.launch {
             while (true) {
                 try {
@@ -116,14 +124,15 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
                   catch (_: Exception) { delay(1_000) }
             }
         }
-        // Slow path: full DB profiles + behavior DNA — runs every 30s
+        // Slow path: every number that opens a list is computed here from complete
+        // queries (no LIMIT), anchored at one timestamp.
         viewModelScope.launch {
             while (true) {
                 try {
                     refreshSlow()
                 } catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                  catch (_: Exception) { /* log silently */ }
-                delay(30_000)
+                  catch (_: Exception) { /* keep the last good numbers */ }
+                delay(15_000)
             }
         }
     }
@@ -155,20 +164,72 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private suspend fun refreshSlow() {
-        val now = System.currentTimeMillis()
-        val weekSince = now - 7L * 24L * 60L * 60L * 1000L
+        val at = System.currentTimeMillis()
+        val weekSince = at - HomeEvidence.WEEK_MS
+        val day = db.connectionDao().between(at - HomeEvidence.DAY_MS, at)
+        val weekAnomalies = db.dnsAnomalyDao().since(weekSince).filter { it.timestamp <= at }
         val profiles = db.connectionProfileDao().allProfiles().map { metadataRepo.toDomainForDashboard(it) }
         val summaries = BehaviorDnaAnalyzer.summarizeAll(profiles)
-        cachedProfiles = profiles
-        cachedAnomalies = db.dnsAnomalyDao().recent(20)
-        cachedBehaviorSummaries = summaries
-        cachedBehaviorAlerts = summaries.sumOf { it.findings.size }
-        cachedWeeklyConnections = db.connectionDao().getRecentConnections(weekSince, 2_000)
-        cachedTlsAlertCount = db.tlsAlertDao().countJa3Threats() + db.tlsAlertDao().countWeakCipher()
-        cachedSleepActivity = SleepActivitySummary(
-            activeApps = db.dnsQueryDao().countIdleAppsSince(weekSince),
-            dnsQueries = db.dnsQueryDao().countIdleSince(weekSince),
-            trackingDomains = db.dnsQueryDao().countIdleBlockedDomainsSince(weekSince),
+        val behaviorAlerts = summaries.sumOf { it.findings.size }
+
+        val trustSummary = NetworkTrustAnalyzer.summarize(getApplication(), day, weekAnomalies)
+        db.networkTrustDao().upsert(
+            NetworkTrustEntity(
+                networkKey = trustSummary.networkKey,
+                networkLabel = trustSummary.networkLabel,
+                trustScore = trustSummary.score,
+                trustLevel = trustSummary.level,
+                cleartextCount = trustSummary.cleartextCount,
+                dnsAnomalyCount = trustSummary.dnsAnomalyCount,
+                weakTlsCount = trustSummary.weakTlsCount,
+                blockedCount = trustSummary.blockedCount,
+                lastSeen = at,
+            )
+        )
+        if (trustSummary.shouldRecommendStrict && prefs.protectionLevel.value != com.privacyguard.core.filter.FilterEngine.BlockLevel.STRICT.name) {
+            prefs.setProtectionLevel(com.privacyguard.core.filter.FilterEngine.BlockLevel.STRICT.name)
+        }
+
+        val encrypted = day.count { HomeEvidence.isEncrypted(it) }
+        val blocked24h = evidence.blockedCount(EvidenceKind.BLOCKED_24H, at)
+        val cards = buildSecurityCards(day, weekAnomalies, behaviorAlerts, trustSummary)
+        val privacyScore = PrivacyScoreCalculator.calculate(
+            connections = day,
+            profiles = profiles,
+            trackersBlocked = blocked24h,
+            blocklistDomains = BlocklistManager.size.value,
+        )
+        val weekly = WeeklyPrivacyReport(
+            totalConnections = evidence.connectionCount(EvidenceKind.CONNECTIONS_7D, at),
+            blockedConnections = evidence.blockedCount(EvidenceKind.BLOCKED_7D, at),
+            anomalies = weekAnomalies.size,
+            dataTransferred = formatBytes(evidence.bytes(EvidenceKind.DATA_7D, at)),
+            trustLevel = trustSummary.level,
+            privacyScore = privacyScore.score,
+            behaviorAlerts = behaviorAlerts,
+        )
+        val sleepSince = at - SLEEP_WINDOW_MS
+        val sleep = SleepActivitySummary(
+            activeApps = db.dnsQueryDao().countIdleAppsBetween(sleepSince, at),
+            dnsQueries = db.dnsQueryDao().countIdleBetween(sleepSince, at),
+            trackingDomains = db.dnsQueryDao().countIdleBlockedDomainsBetween(sleepSince, at),
+        )
+
+        _uiState.value = _uiState.value.copy(
+            trackersBlocked = blocked24h,
+            cleartextCount = HomeEvidence.select(EvidenceKind.CLEARTEXT_24H, day).size,
+            blocklistDomains = BlocklistManager.size.value,
+            encryptionHealth = if (day.isEmpty()) 0f else (encrypted.toFloat() / day.size).coerceIn(0f, 1f),
+            encryptedCount = encrypted,
+            connectionCount24h = day.size,
+            anomalies = weekAnomalies.take(5),
+            securityCards = cards,
+            recommendations = recommendationsFor(cards, trustSummary, behaviorAlerts),
+            weeklyReport = weekly,
+            privacyScore = privacyScore,
+            alertBadgeCount = alertFeed.loadItems().size,
+            sleepActivity = sleep,
+            evidenceAt = at,
         )
         slowCacheReady = true
 
@@ -194,69 +255,18 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private suspend fun refreshFast() {
+    private fun refreshFast() {
         val snapshot = StatsManager.snapshot.value
-        val now = System.currentTimeMillis()
-        val daySince = now - 24L * 60L * 60L * 1000L
-        val recentConnections = db.connectionDao().getRecentConnections(daySince, 500)
-        val weeklyConnections = cachedWeeklyConnections
-        val recentAnomalies = cachedAnomalies
-        val profiles = cachedProfiles
-        val behaviorSummaries = cachedBehaviorSummaries
-        val behaviorAlerts = cachedBehaviorAlerts
-
-        val trustSummary = NetworkTrustAnalyzer.summarize(getApplication(), recentConnections, recentAnomalies)
-        db.networkTrustDao().upsert(
-            NetworkTrustEntity(
-                networkKey = trustSummary.networkKey,
-                networkLabel = trustSummary.networkLabel,
-                trustScore = trustSummary.score,
-                trustLevel = trustSummary.level,
-                cleartextCount = trustSummary.cleartextCount,
-                dnsAnomalyCount = trustSummary.dnsAnomalyCount,
-                weakTlsCount = trustSummary.weakTlsCount,
-                blockedCount = trustSummary.blockedCount,
-                lastSeen = now,
-            )
-        )
-        if (trustSummary.shouldRecommendStrict && prefs.protectionLevel.value != com.privacyguard.core.filter.FilterEngine.BlockLevel.STRICT.name) {
-            prefs.setProtectionLevel(com.privacyguard.core.filter.FilterEngine.BlockLevel.STRICT.name)
-        }
-        val cleartextCount = recentConnections.count {
-            !it.wasBlocked && (it.encryptionStatus == "CLEARTEXT" || it.encryptionStatus == "UNKNOWN")
-        }
-        val secureCount = recentConnections.count { it.encryptionStatus == "TLS" || it.tlsVersion?.startsWith("TLS_1_") == true }
-        val encryptionHealth = if (recentConnections.isEmpty()) 0f
-            else secureCount.toFloat() / recentConnections.size.toFloat()
-
-        val cards = buildSecurityCards(recentConnections, recentAnomalies, behaviorAlerts, trustSummary)
-        val privacyScore = PrivacyScoreCalculator.calculate(
-            connections = recentConnections,
-            profiles = profiles,
-            trackersBlocked = snapshot.totalTrackersBlocked,
-            blocklistDomains = BlocklistManager.size.value,
-        )
         val currentActiveBytes = snapshot.activeConnections.sumOf { it.bytesTransferred }
         val throughput = (currentActiveBytes - prevActiveBytesTotal).coerceAtLeast(0L)
         prevActiveBytesTotal = currentActiveBytes
-        _uiState.value = DashboardUiState(
+        _uiState.value = _uiState.value.copy(
             isVpnActive = PrivacyVpnService.isRunning,
-            trackersBlocked = snapshot.totalTrackersBlocked,
-            cleartextCount = cleartextCount,
-            blocklistDomains = BlocklistManager.size.value,
-            encryptionHealth = encryptionHealth.coerceIn(0f, 1f),
-            anomalies = recentAnomalies.take(5),
-            securityCards = cards,
-            recommendations = recommendationsFor(cards, trustSummary, behaviorAlerts),
-            weeklyReport = buildWeeklyReport(weeklyConnections, recentAnomalies, privacyScore.score, behaviorAlerts, trustSummary.level),
-            privacyScore = privacyScore,
             isPcapCapturing = PcapWriter.isCapturing(),
             pcapPath = PcapWriter.getCurrentFilePath() ?: PcapWriter.getLastCompletedFile()?.absolutePath,
             throughputBytesPerSec = throughput,
             activeConnectionCount = snapshot.activeConnections.size,
-            alertBadgeCount = recentAnomalies.size + cachedTlsAlertCount,
             protectionLevel = prefs.protectionLevel.value,
-            sleepActivity = cachedSleepActivity,
         )
     }
 
@@ -266,25 +276,19 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         behaviorAlerts: Int,
         trustSummary: com.privacyguard.app.core.network.NetworkTrustSummary,
     ): List<SecurityCardState> {
+        // Each value below is the size of (or read from) the list its card opens.
         val snapshot = StatsManager.snapshot.value
-        val ipv6Sessions = connections.count { it.isIPv6 || it.destinationIpv6 != null || it.destinationIp.contains(':') }
+        val ipv6Sessions = HomeEvidence.select(EvidenceKind.IPV6_24H, connections).size
         val blockedIpv6Packets = snapshot.ipv6PacketsBlocked
-        val ipv6Leak = PrivacyVpnService.isRunning && ipv6Sessions > 0 && blockedIpv6Packets == 0L
-        val nightConnections = connections.count { isNightActivity(it.timestamp) }
-        val largeUpload = connections.maxOfOrNull { it.bytesSent } ?: 0L
-        val beaconDomains = connections
-            .groupBy { "${it.packageName}|${it.domain ?: it.sniHostname ?: it.destinationIp}" }
-            .values
-            .count { isBeaconLike(it) }
+        val nightConnections = HomeEvidence.select(EvidenceKind.NIGHT_24H, connections).size
+        val largeUpload = HomeEvidence.select(EvidenceKind.UPLOADS_24H, connections).firstOrNull()?.bytesSent ?: 0L
+        val beaconDomains = HomeEvidence.beacons(connections).size
         val highEntropy = anomalies.count { it.anomalyType == "HIGH_ENTROPY" || it.anomalyType == "DGA_BEACON" }
-        val highSeverity = anomalies.count { it.severity >= 8 }
-        val backgroundCount = connections.count { it.wasBackground }
-        val backgroundApps = connections.filter { it.wasBackground }
-            .mapNotNull { it.packageName.takeIf { p -> p.isNotBlank() } }
-            .distinct().size
-        val cleartextUnblocked = connections.count {
-            !it.wasBlocked && (it.encryptionStatus == "CLEARTEXT" || it.encryptionStatus == "UNKNOWN")
-        }
+        val background = HomeEvidence.select(EvidenceKind.BACKGROUND_24H, connections)
+        val backgroundCount = background.size
+        val backgroundApps = background.mapNotNull { it.packageName.takeIf { p -> p.isNotBlank() } }.distinct().size
+        // Only what we saw in plain text; "unknown" used to be counted as cleartext too.
+        val cleartextUnblocked = HomeEvidence.select(EvidenceKind.CLEARTEXT_24H, connections).size
 
         return listOf(
             SecurityCardState(
@@ -302,18 +306,16 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
                     else -> CardSeverity.GOOD
                 },
                 value = plural(R.plurals.dash_alerts_count, behaviorAlerts),
+                evidence = EvidenceKind.BEHAVIOR,
             ),
             SecurityCardState(
                 kind = CardKind.IPV6,
                 title = str(R.string.dash_card_ipv6),
                 subtitle = str(R.string.dash_card_ipv6_desc),
-                status = when {
-                    ipv6Leak -> str(R.string.dash_status_critical)
-                    blockedIpv6Packets > 0 -> str(R.string.dash_status_blocked)
-                    else -> str(R.string.dash_status_contained)
-                },
-                severity = if (ipv6Leak) CardSeverity.CRITICAL else CardSeverity.GOOD,
-                value = if (blockedIpv6Packets > 0) plural(R.plurals.dash_blocked_count, blockedIpv6Packets) else plural(R.plurals.dash_ipv6_count, ipv6Sessions),
+                status = if (blockedIpv6Packets > 0) str(R.string.dash_status_blocked) else str(R.string.dash_status_contained),
+                severity = CardSeverity.GOOD,
+                value = plural(R.plurals.dash_ipv6_count, ipv6Sessions),
+                evidence = EvidenceKind.IPV6_24H,
             ),
             SecurityCardState(
                 kind = CardKind.KILL_SWITCH,
@@ -343,6 +345,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
                 status = if (highEntropy > 0) str(R.string.dash_status_high_value) else str(R.string.dash_status_normal),
                 severity = if (highEntropy > 0) CardSeverity.CRITICAL else CardSeverity.INFO,
                 value = plural(R.plurals.dash_signals_count, highEntropy),
+                evidence = EvidenceKind.ENTROPY_7D,
             ),
             SecurityCardState(
                 kind = CardKind.NIGHT,
@@ -351,6 +354,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
                 status = if (nightConnections > 0) str(R.string.dash_status_review) else str(R.string.dash_status_quiet),
                 severity = if (nightConnections > 0) CardSeverity.WARNING else CardSeverity.GOOD,
                 value = plural(R.plurals.dash_sessions_count, nightConnections),
+                evidence = EvidenceKind.NIGHT_24H,
             ),
             SecurityCardState(
                 kind = CardKind.BEACON,
@@ -359,6 +363,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
                 status = if (beaconDomains > 0) str(R.string.dash_status_apt) else str(R.string.dash_status_stable),
                 severity = if (beaconDomains > 0) CardSeverity.CRITICAL else CardSeverity.GOOD,
                 value = plural(R.plurals.dash_patterns_count, beaconDomains),
+                evidence = EvidenceKind.BEACONS_24H,
             ),
             SecurityCardState(
                 kind = CardKind.UPLOAD,
@@ -367,6 +372,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
                 status = if (largeUpload >= LARGE_UPLOAD_BYTES) str(R.string.dash_status_high_value) else str(R.string.dash_status_normal),
                 severity = if (largeUpload >= LARGE_UPLOAD_BYTES) CardSeverity.CRITICAL else CardSeverity.INFO,
                 value = formatBytes(largeUpload),
+                evidence = EvidenceKind.UPLOADS_24H,
             ),
             SecurityCardState(
                 kind = CardKind.TRUST,
@@ -399,6 +405,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
                     else                -> CardSeverity.GOOD
                 },
                 value = str(R.string.dash_background_value, plural(R.plurals.dash_connections_count, backgroundCount), plural(R.plurals.dash_apps_count, backgroundApps)),
+                evidence = EvidenceKind.BACKGROUND_24H,
             ),
             SecurityCardState(
                 kind = CardKind.CLEARTEXT,
@@ -415,27 +422,8 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
                     else                     -> CardSeverity.GOOD
                 },
                 value = plural(R.plurals.dash_today_count, cleartextUnblocked),
+                evidence = EvidenceKind.CLEARTEXT_24H,
             ),
-        )
-    }
-
-    private fun buildWeeklyReport(
-        connections: List<ConnectionEntity>,
-        anomalies: List<DnsAnomalyEntity>,
-        privacyScore: Int,
-        behaviorAlerts: Int,
-        trustLevel: String,
-    ): WeeklyPrivacyReport {
-        val blocked = connections.count { it.wasBlocked }
-        val totalBytes = connections.sumOf { it.bytesSent + it.bytesReceived }
-        return WeeklyPrivacyReport(
-            totalConnections = connections.size,
-            blockedConnections = blocked,
-            anomalies = anomalies.size,
-            dataTransferred = formatBytes(totalBytes),
-            trustLevel = trustLevel,
-            privacyScore = privacyScore,
-            behaviorAlerts = behaviorAlerts,
         )
     }
 
@@ -470,32 +458,10 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         return notes.take(4)
     }
 
-    private fun isNightActivity(timestamp: Long): Boolean {
-        val hour = java.util.Calendar.getInstance().apply { timeInMillis = timestamp }
-            .get(java.util.Calendar.HOUR_OF_DAY)
-        return hour in 0..5
-    }
-
-    private fun isBeaconLike(connections: List<ConnectionEntity>): Boolean {
-        if (connections.size < 6) return false
-        val sorted = connections.sortedBy { it.timestamp }
-        val intervals = sorted.zipWithNext { a, b -> b.timestamp - a.timestamp }
-            .filter { it in 5_000L..10L * 60L * 1000L }
-        if (intervals.size < 5) return false
-        val avg = intervals.average()
-        val variance = intervals.map { (it - avg) * (it - avg) }.average()
-        val stdDev = kotlin.math.sqrt(variance)
-        return stdDev / avg < 0.25
-    }
-
-    private fun trustLevel(highSeverity: Int, beaconPatterns: Int, largeUpload: Long): String = when {
-        highSeverity > 0 || beaconPatterns > 0 -> "Reduced"
-        largeUpload >= LARGE_UPLOAD_BYTES -> "Watch"
-        else -> "Trusted"
-    }
-
     companion object {
         const val LARGE_UPLOAD_BYTES = 5L * 1024L * 1024L
+        /** Window of the Home "while you slept" card; the sleep report opens with the same one. */
+        const val SLEEP_WINDOW_MS = 7L * 24L * 60L * 60L * 1000L
     }
 }
 

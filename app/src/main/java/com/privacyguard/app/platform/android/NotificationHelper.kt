@@ -29,7 +29,7 @@ class NotificationHelper(private val context: Context) {
         return runCatching {
             val pm = context.packageManager
             pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()
-        }.getOrDefault(packageName)
+        }.getOrElse { com.privacyguard.app.ui.traffic.AppNames.label(context, packageName) }
     }
 
     private fun quantity(id: Int, n: Long): String =

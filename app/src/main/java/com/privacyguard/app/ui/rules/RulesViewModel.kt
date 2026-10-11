@@ -93,8 +93,7 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
                 .filter { (_, n) -> n >= 3 }
                 .entries.sortedByDescending { it.value }.take(3)
                 .forEach { (pkg, n) ->
-                    val name = recentConns.firstOrNull { it.packageName == pkg }
-                        ?.appName?.ifBlank { pkg.substringAfterLast('.') } ?: pkg.substringAfterLast('.')
+                    val name = com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), pkg, recentConns.firstOrNull { it.packageName == pkg }?.appName)
                     list += SuggestedRule(
                         id = "suggest:cleartext:$pkg",
                         label = str(R.string.rule_block_app, name),
@@ -115,8 +114,7 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
             .entries.sortedByDescending { it.value }.take(2)
             .forEach { (pkg, n) ->
                 if (list.none { it.matchPackage == pkg }) {
-                    val name = recentConns.firstOrNull { it.packageName == pkg }
-                        ?.appName?.ifBlank { pkg.substringAfterLast('.') } ?: pkg.substringAfterLast('.')
+                    val name = com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), pkg, recentConns.firstOrNull { it.packageName == pkg }?.appName)
                     list += SuggestedRule(
                         id = "suggest:background:$pkg",
                         label = str(R.string.rule_block_app, name),

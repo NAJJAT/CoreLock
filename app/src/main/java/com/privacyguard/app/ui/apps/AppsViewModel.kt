@@ -160,7 +160,7 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
                     val stalkerware = assessStalkerware(pkg, permissionsByPackage[pkg].orEmpty(), rows)
                     val fallbackMetrics = connectionMetrics(connectionRows)
                     AppRiskItem(
-                        appName           = installedNames[pkg].orEmpty().ifBlank { pkg.substringAfterLast('.') },
+                        appName           = installedNames[pkg].orEmpty().ifBlank { com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), pkg) },
                         packageName       = pkg,
                         totalDestinations = rows.size.takeIf { it > 0 } ?: fallbackMetrics.totalDestinations,
                         suspiciousCount   = rows.count { it.riskScore >= 40 }.takeIf { it > 0 } ?: fallbackMetrics.suspiciousCount,
@@ -181,7 +181,7 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
             liveBuckets
                 .map { (pkg, stats) ->
                     val displayName = installedNames[pkg].orEmpty().ifBlank {
-                        stats.firstOrNull()?.appName?.takeIf { it.isNotBlank() } ?: pkg.substringAfterLast('.')
+                        com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), pkg, stats.firstOrNull()?.appName)
                     }
                     AppRiskItem(
                         appName           = displayName,

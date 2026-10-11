@@ -178,7 +178,7 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
             .groupBy { it.packageName.ifBlank { it.appName } }
             .map { (pkg, conns) ->
                 AppDataStat(
-                    appName = conns.firstOrNull { it.appName.isNotBlank() }?.appName ?: pkg.substringAfterLast('.'),
+                    appName = com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), pkg, conns.firstOrNull { it.appName.isNotBlank() }?.appName),
                     packageName = pkg,
                     totalBytes = conns.sumOf { it.bytesSent + it.bytesReceived },
                 )

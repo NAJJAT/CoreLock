@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App names -->
+    <string name="trf_unattributed">Not attributable to an app</string>
+    <string name="trf_removed_app">Removed app</string>
+
+    <!-- One connection / lookup -->
+    <string name="trf_source_sni">TLS SNI</string>
+    <string name="trf_source_dns">DNS</string>
+    <string name="trf_source_ip">IP only</string>
+    <string name="trf_screen_on">Screen on</string>
+    <string name="trf_screen_off">Screen off</string>
+    <string name="trf_screen_unknown">Screen not recorded</string>
+    <string name="trf_fg">Foreground</string>
+    <string name="trf_bg">Background</string>
+    <string name="trf_fg_unknown">Foreground unknown</string>
+    <string name="trf_allowed">Allowed</string>
+    <string name="trf_blocked">Blocked</string>
+    <string name="trf_bytes">↑ %1$s sent · ↓ %2$s received</string>
+    <string name="trf_lookup_only">DNS lookup, no data sent</string>
+    <string name="trf_why">Why flagged: %1$s</string>
+    <string name="trf_not_flagged">Not flagged</string>
+    <string name="trf_r_tracker">%1$s, a known %2$s tracker</string>
+    <string name="trf_r_blocked">blocked at DNS by your blocklists or rules</string>
+    <string name="trf_r_screen_off">the screen was off</string>
+    <string name="trf_r_background">the app was not on screen</string>
+    <string name="trf_r_cleartext">sent without encryption (plain HTTP)</string>
+    <string name="trf_r_anomaly">DNS anomaly: %1$s</string>
+    <string name="trf_reason_sep">; </string>
+    <string name="trf_company_unknown">Unknown owner</string>
+
+    <!-- Purpose -->
+    <string name="trf_c_first">First-party</string>
+    <string name="trf_c_ads">Ads</string>
+    <string name="trf_c_analytics">Analytics</string>
+    <string name="trf_c_tracking">Tracker</string>
+    <string name="trf_c_cdn">CDN</string>
+    <string name="trf_c_service">Service</string>
+    <string name="trf_c_unknown">Unknown</string>
+    <string name="trf_p_first">%1$s core</string>
+    <string name="trf_p_ads">%1$s ads</string>
+    <string name="trf_p_analytics">%1$s analytics</string>
+    <string name="trf_p_tracking">%1$s tracking</string>
+    <string name="trf_p_cdn">CDN (content delivery)</string>
+    <string name="trf_p_service">%1$s services</string>
+    <string name="trf_p_unknown">Other, owner unknown</string>
+    <string name="trf_pd_first">The app maker’s own servers: feed, messages, login. This can include the maker’s own usage logging, which runs on the same servers.</string>
+    <string name="trf_pd_ads">Chooses, shows and measures ads, and builds an ad profile of you.</string>
+    <string name="trf_pd_analytics">Records how you use the app and reports it to the developer or another company.</string>
+    <string name="trf_pd_tracking">Another company’s SDK: crash reports, social login and sharing, fingerprinting or profiling.</string>
+    <string name="trf_pd_cdn">Delivers images, video and app files from servers near you. Rarely used for tracking.</string>
+    <string name="trf_pd_service">Another company’s service the app relies on, such as maps, payments or push messages.</string>
+    <string name="trf_pd_unknown">Not in our lists. We don’t know who runs these; that alone doesn’t make them harmful.</string>
+
+    <!-- App traffic screen -->
+    <string name="trf_title">Every connection</string>
+    <string name="trf_window">%1$s – %2$s</string>
+    <string name="trf_idle_only">Only while the screen was off</string>
+    <string name="trf_all_activity">All activity</string>
+    <string name="trf_tab_purpose">By purpose</string>
+    <plurals name="trf_tab_conn">
+        <item quantity="one">%d connection</item>
+        <item quantity="other">%d connections</item>
+    </plurals>
+    <plurals name="trf_tab_dns">
+        <item quantity="one">%d DNS lookup</item>
+        <item quantity="other">%d DNS lookups</item>
+    </plurals>
+    <plurals name="trf_n_domains">
+        <item quantity="one">%d domain</item>
+        <item quantity="other">%d domains</item>
+    </plurals>
+    <plurals name="trf_n_entries">
+        <item quantity="one">%d entry</item>
+        <item quantity="other">%d entries</item>
+    </plurals>
+    <string name="trf_conn_note">Connections that carried data, plus DNS lookups that were blocked (a blocked lookup never becomes a connection).</string>
+    <string name="trf_dns_note">Every name this app looked up, newest first. Raw data, nothing removed.</string>
+    <string name="trf_purpose_note">Destinations grouped by what they are for, judged from the hostname only. Tap a domain for details.</string>
+    <string name="trf_group_counts">%1$s · %2$s · %3$s</string>
+    <string name="trf_usage_hint">Foreground and background need Usage Access. Without it we show “unknown” instead of guessing.</string>
+    <string name="trf_usage_grant">Grant Usage Access</string>
+    <string name="trf_see_all">See every connection (last 24 h)</string>
+
+    <!-- Empty states: always say why -->
+    <string name="trf_empty_vpn_off">Protection is off, so nothing is being recorded. Turn it on from Home.</string>
+    <string name="trf_empty_not_opened">%1$s was not opened in this period and made no connections we could see.</string>
+    <string name="trf_empty_no_traffic">No traffic observed for %1$s in this period.</string>
+    <string name="trf_empty_idle">%1$s did nothing we could see while the screen was off in this period.</string>
+    <string name="trf_empty_unattributed">Android did not tell us which app made these lookups. This is common for system services and apps that share a process.</string>
+    <string name="trf_empty_history">History only goes back to %1$s, so the start of this period is not covered.</string>
+    <string name="trf_empty_list">Nothing in this list: %1$s</string>
+
+    <!-- Domain detail -->
+    <string name="trf_owner">Owner</string>
+    <string name="trf_owner_unknown">Unknown: not in our lists</string>
+    <string name="trf_purpose">Purpose</string>
+    <string name="trf_tracker_db">Tracker database: %1$s (%2$s)</string>
+    <string name="trf_not_tracker">Not in the tracker database.</string>
+    <string name="trf_frequency">Last 7 days</string>
+    <string name="trf_per_day">about %1$s per day</string>
+    <string name="trf_apps_used">Apps that used it</string>
+    <string name="trf_first_seen">First seen</string>
+    <string name="trf_last_seen">Last seen</string>
+    <string name="trf_seen_note">Within the history we keep (since %1$s).</string>
+    <string name="trf_data">Data</string>
+    <string name="trf_honesty">We see when data goes to this domain, from which app and how much, not what is inside it. Encrypted content stays private, even from us.</string>
+    <string name="trf_no_domain_data">No lookups or connections to this domain in the last 7 days.</string>
+    <string name="trf_anomalies">DNS anomalies</string>
+
+    <!-- Home drill-downs -->
+    <string name="ev_blocked_24h">Blocked lookups · last 24 h</string>
+    <string name="ev_blocked_24h_def">DNS lookups your blocklists or rules answered with “not found”, so no connection was made.</string>
+    <string name="ev_cleartext_24h">Unencrypted connections · last 24 h</string>
+    <string name="ev_cleartext_24h_def">Connections where we saw plain HTTP. Anyone on the network path could read them.</string>
+    <string name="ev_encryption_24h">Encryption · last 24 h</string>
+    <string name="ev_encryption_24h_def">%1$s of %2$s connections were TLS-encrypted.</string>
+    <string name="ev_night_24h">Night activity · last 24 h</string>
+    <string name="ev_night_24h_def">Connections that started between 00:00 and 05:59.</string>
+    <string name="ev_background_24h">Background connections · last 24 h</string>
+    <string name="ev_background_24h_def">Connections that started while the app was not on screen. Needs Usage Access; connections we could not place are not counted.</string>
+    <string name="ev_ipv6_24h">IPv6 sessions · last 24 h</string>
+    <string name="ev_ipv6_24h_def">Sessions to IPv6 addresses. They went through PrivacyGuard’s tunnel like IPv4 traffic.</string>
+    <string name="ev_uploads_24h">Uploads · last 24 h</string>
+    <string name="ev_uploads_24h_def">Connections that sent data, largest upload first.</string>
+    <string name="ev_beacons_24h">Repeating patterns · last 24 h</string>
+    <string name="ev_beacons_24h_def">The same app contacting the same host at near-constant intervals (6 or more times, spread under 25 %), like a timer rather than a person.</string>
+    <string name="ev_entropy_7d">Random-looking domains · last 7 days</string>
+    <string name="ev_entropy_7d_def">DNS names that look machine-generated. Some CDNs do this too.</string>
+    <string name="ev_behavior">Behavior changes</string>
+    <string name="ev_behavior_def">Changes compared with each app’s learned pattern.</string>
+    <string name="ev_connections_7d">Connections · last 7 days</string>
+    <string name="ev_connections_7d_def">Every connection that carried data, newest first.</string>
+    <string name="ev_blocked_7d">Blocked lookups · last 7 days</string>
+    <string name="ev_anomalies_7d">DNS anomalies · last 7 days</string>
+    <string name="ev_anomalies_7d_def">Lookups that looked like tunnelling, beacons or generated names.</string>
+    <string name="ev_data_7d">Data transferred · last 7 days</string>
+    <string name="ev_data_7d_def">%1$s in total. Connections with the most data first.</string>
+    <string name="ev_beacon_row">%1$s times · about every %2$s</string>
+    <string name="ev_at">Counted at %1$s</string>
+    <string name="dash_blocked_24h">Blocked (24 h)</string>
+    <string name="dash_cleartext_24h">Unencrypted (24 h)</string>
+
+    <!-- Sleep report definition -->
+    <string name="sleep_definition">“Idle” means the screen was off. Apps are ranked by the DNS lookups they made while the screen was off in the chosen period. Tap an app to see every connection.</string>
+</resources>

@@ -31,6 +31,8 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.privacyguard.app.BuildConfig  // FIXED: Correct import path
@@ -199,7 +201,42 @@ fun AppNavHost(
                     onOpenAlerts = { navController.navigate("alerts") },
                     onOpenConnections = { navController.navigate("connections") },
                     onOpenApps = { navController.navigate("apps") },
-                    onOpenSleepReport = { navController.navigate("sleepReport") },
+                    onOpenSleepReport = { at -> navController.navigate("sleepReport?at=$at") },
+                    onOpenEvidence = { kind, at -> navController.navigate("evidence/${kind.name}?at=$at") },
+                    onOpenStatistics = { navController.navigate("statistics") },
+                )
+            }
+
+            // Drill-downs behind Home numbers: same window as the number, so the counts match.
+            composable(
+                "evidence/{kind}?at={at}",
+                arguments = listOf(navArgument("at") { type = NavType.StringType; nullable = true; defaultValue = null }),
+            ) {
+                com.privacyguard.app.ui.traffic.EvidenceScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenApp = { pkg -> navController.navigate(appTrafficRoute(pkg)) },
+                    onOpenDomain = { host -> navController.navigate("domain/${Uri.encode(host)}") },
+                )
+            }
+
+            composable(
+                "appTraffic/{packageName}?from={from}&to={to}&idle={idle}",
+                arguments = listOf(
+                    navArgument("from") { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument("to") { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument("idle") { type = NavType.StringType; nullable = true; defaultValue = null },
+                ),
+            ) {
+                com.privacyguard.app.ui.traffic.AppTrafficScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenDomain = { host -> navController.navigate("domain/${Uri.encode(host)}") },
+                )
+            }
+
+            composable("domain/{host}") {
+                com.privacyguard.app.ui.traffic.DomainDetailScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenApp = { pkg -> navController.navigate(appTrafficRoute(pkg)) },
                 )
             }
 
@@ -207,8 +244,16 @@ fun AppNavHost(
                 AlertInboxScreen(onBack = { navController.popBackStack() })
             }
 
-            composable("sleepReport") {
-                SleepReportScreen(onBack = { navController.popBackStack() })
+            composable(
+                "sleepReport?at={at}",
+                arguments = listOf(navArgument("at") { type = NavType.StringType; nullable = true; defaultValue = null }),
+            ) { backStack ->
+                SleepReportScreen(
+                    at = backStack.arguments?.getString("at")?.toLongOrNull(),
+                    onBack = { navController.popBackStack() },
+                    onOpenApp = { pkg, from, to -> navController.navigate(appTrafficRoute(pkg, from, to, idleOnly = true)) },
+                    onOpenDomain = { host -> navController.navigate("domain/${Uri.encode(host)}") },
+                )
             }
 
             composable("connections") {
@@ -284,8 +329,17 @@ fun AppNavHost(
                     packageName = pkg,
                     appName = appName,
                     onBack = { navController.popBackStack() },
+                    onOpenTraffic = { navController.navigate(appTrafficRoute(pkg)) },
+                    onOpenDomain = { host -> navController.navigate("domain/${Uri.encode(host)}") },
                 )
             }
         }
     }
+}
+
+/** Route to an app's traffic; a blank package (unattributed lookups) uses DnsHandler's "Unknown". */
+private fun appTrafficRoute(pkg: String, from: Long? = null, to: Long? = null, idleOnly: Boolean = false): String {
+    val p = Uri.encode(pkg.ifBlank { com.privacyguard.app.ui.traffic.TrafficRows.UNKNOWN_PACKAGE })
+    val q = listOfNotNull(from?.let { "from=$it" }, to?.let { "to=$it" }, if (idleOnly) "idle=1" else null)
+    return if (q.isEmpty()) "appTraffic/$p" else "appTraffic/$p?" + q.joinToString("&")
 }

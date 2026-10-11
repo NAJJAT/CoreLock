@@ -137,6 +137,42 @@ interface ConnectionDao {
     @Query("DELETE FROM connections")
     suspend fun deleteAll()
     
+    // ── Drill-down lists. Every Home number is the size of one of these lists,
+    //    so the number and the list it opens can never disagree. ─────────────────
+
+    @Query("SELECT * FROM connections WHERE timestamp > :since ORDER BY timestamp DESC")
+    suspend fun allSince(since: Long): List<ConnectionEntity>
+
+    @Query("SELECT * FROM connections WHERE timestamp > :from AND timestamp <= :to ORDER BY timestamp DESC")
+    suspend fun between(from: Long, to: Long): List<ConnectionEntity>
+
+    @Query("SELECT COUNT(*) FROM connections WHERE timestamp > :from AND timestamp <= :to")
+    suspend fun countBetween(from: Long, to: Long): Int
+
+    @Query("SELECT COALESCE(SUM(bytesSent + bytesReceived), 0) FROM connections WHERE timestamp > :from AND timestamp <= :to")
+    suspend fun bytesBetween(from: Long, to: Long): Long
+
+    @Query("""
+        SELECT * FROM connections
+        WHERE packageName = :packageName AND timestamp >= :from AND timestamp <= :to
+        ORDER BY timestamp DESC
+    """)
+    suspend fun forPackageBetween(packageName: String, from: Long, to: Long): List<ConnectionEntity>
+
+    @Query("""
+        SELECT * FROM connections
+        WHERE (domain = :host OR sniHostname = :host) AND timestamp > :since
+        ORDER BY timestamp DESC
+    """)
+    suspend fun forHostSince(host: String, since: Long): List<ConnectionEntity>
+
+    @Query("""
+        SELECT * FROM connections
+        WHERE encryptionStatus = 'CLEARTEXT' AND wasBlocked = 0 AND timestamp > :since
+        ORDER BY timestamp DESC
+    """)
+    suspend fun cleartextSince(since: Long): List<ConnectionEntity>
+
     /**
      * Gets rule count
      */

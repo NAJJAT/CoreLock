@@ -11,6 +11,12 @@ interface DnsAnomalyDao {
     @Query("SELECT * FROM dns_anomalies ORDER BY timestamp DESC LIMIT :limit")
     suspend fun recent(limit: Int): List<DnsAnomalyEntity>
 
+    @Query("SELECT * FROM dns_anomalies WHERE timestamp > :since ORDER BY timestamp DESC")
+    suspend fun since(since: Long): List<DnsAnomalyEntity>
+
+    @Query("SELECT * FROM dns_anomalies WHERE domain = :domain ORDER BY timestamp DESC")
+    suspend fun forDomain(domain: String): List<DnsAnomalyEntity>
+
     @Query("SELECT * FROM dns_anomalies WHERE packageName = :packageName ORDER BY timestamp DESC")
     suspend fun forPackage(packageName: String): List<DnsAnomalyEntity>
 

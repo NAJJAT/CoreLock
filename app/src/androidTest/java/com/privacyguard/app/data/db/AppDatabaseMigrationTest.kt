@@ -112,4 +112,22 @@ class AppDatabaseMigrationTest {
         }
         db.close()
     }
+
+    @Test
+    fun migrate9To10_keepsRowsAndLeavesNewStateUnknown() {
+        helper.createDatabase(dbName, 9).apply {
+            execSQL("INSERT INTO connections (appUid, appName, packageName, destinationIp, destinationPort, isIPv6, protocol, bytesSent, bytesReceived, timestamp, durationMs, wasBlocked, encryptionStatus, wasBackground) VALUES (10123, 'App', 'com.example', '1.2.3.4', 443, 0, 'TCP', 10, 20, 1000, 5, 0, 'TLS', 1)")
+            execSQL("INSERT INTO dns_queries (timestamp, app_package, app_name, domain, was_blocked, phone_was_idle) VALUES (1000, 'com.example', 'App', 'example.com', 0, 1)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(dbName, 10, true, AppDatabase.MIGRATION_9_10)
+        // Old rows predate the columns: unknown, never a guessed "foreground".
+        db.query("SELECT COUNT(*) FROM connections WHERE foreground IS NULL AND screenOn IS NULL AND wasBackground = 1").use { c ->
+            c.moveToFirst(); assertEquals(1, c.getInt(0))
+        }
+        db.query("SELECT COUNT(*) FROM dns_queries WHERE app_foreground IS NULL AND phone_was_idle = 1").use { c ->
+            c.moveToFirst(); assertEquals(1, c.getInt(0))
+        }
+        db.close()
+    }
 }
