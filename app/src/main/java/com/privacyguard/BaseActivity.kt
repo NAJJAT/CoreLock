@@ -2,14 +2,15 @@ package com.privacyguard
 
 import android.os.Bundle
 import android.view.WindowManager
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import com.privacyguard.app.core.security.AppSecurityMonitor
 import com.privacyguard.app.core.security.SecurityRiskLevel
 
 /**
- * Base activity for all PrivacyGuard activities.
+ * Base activity for all PrivacyGuard activities. AppCompatActivity so the per-app
+ * language (AppCompatDelegate.setApplicationLocales) applies on Android 12 and older.
  */
-open class BaseActivity : ComponentActivity() {
+open class BaseActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val posture = AppSecurityMonitor.refresh(this)

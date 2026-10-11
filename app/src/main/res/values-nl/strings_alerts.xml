@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="alerts_title">Meldingen</string>
+    <string name="alerts_subtitle">%1$s · afgelopen 7 dagen</string>
+    <plurals name="alerts_events">
+        <item quantity="one">%d gebeurtenis</item>
+        <item quantity="other">%d gebeurtenissen</item>
+    </plurals>
+    <string name="alerts_critical">Kritiek</string>
+    <string name="alerts_high">Hoog</string>
+    <string name="alerts_medium">Gemiddeld</string>
+    <string name="alerts_loading">Meldingen laden…</string>
+    <string name="alerts_none">Geen meldingen</string>
+    <string name="alerts_none_desc">Niets past bij dit filter. Meldingen worden verzameld terwijl de bescherming aanstaat.</string>
+    <string name="alerts_low">Laag</string>
+    <string name="alerts_cleartext">Onversleuteld verkeer</string>
+    <string name="alerts_ja3">JA3-overeenkomst · %1$s</string>
+    <string name="alerts_unknown_malware">onbekende malware</string>
+    <string name="alerts_weak_cipher">Zwakke versleuteling gevonden</string>
+    <string name="alerts_ct">Certificate Transparency-gebeurtenis</string>
+</resources>

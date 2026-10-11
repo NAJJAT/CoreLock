@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Behavior DNA -->
+    <string name="bdna_new_dest">New destination after the learning period</string>
+    <string name="bdna_new_dest_summary">%1$s was first contacted recently, after %2$s had already settled into a stable traffic pattern.</string>
+    <string name="bdna_unusual_hour">Unusual active hour</string>
+    <string name="bdna_unusual_hour_summary">%1$s is most active around %2$s, outside this app\'s usual rhythm.</string>
+    <string name="bdna_upload_spike">Upload spike</string>
+    <string name="bdna_upload_spike_summary">%2$s was uploaded to %1$s, much more than this app normally sends.</string>
+    <string name="bdna_beacon">Background beacon pattern</string>
+    <string name="bdna_beacon_summary">%1$s is contacted every %2$s, mostly while the app is in the background.</string>
+    <plurals name="bdna_seconds">
+        <item quantity="one">%d second</item>
+        <item quantity="other">%d seconds</item>
+    </plurals>
+
+    <!-- Permission vs traffic -->
+    <string name="pmm_location">Location-style traffic without location permission</string>
+    <string name="pmm_location_summary">%1$s contacts mapping or geolocation services even though it does not have Android location permission.</string>
+    <string name="pmm_social">Identity or social API traffic without contacts permission</string>
+    <string name="pmm_social_summary">%1$s reached social or identity services that often back login, social graph or contact sync, but it does not request contacts permission.</string>
+    <string name="pmm_utility">Utility-style app contacting tracker services</string>
+    <string name="pmm_utility_summary">%1$s looks like a utility app, but it contacts ad, analytics, social or profiling services that usually have nothing to do with its job.</string>
+    <string name="pmm_upload">Background uploads larger than its permissions suggest</string>
+    <string name="pmm_upload_summary">%1$s uploaded %2$s, mostly in the background and at night, while holding very few sensitive permissions.</string>
+    <string name="pmm_ev_hosts">Hosts seen: %1$s</string>
+    <string name="pmm_ev_no_location">Location permissions held: none</string>
+    <string name="pmm_ev_no_contacts">Contacts permissions held: none</string>
+    <string name="pmm_ev_trackers">Trackers: %1$s</string>
+    <string name="pmm_ev_tracker_hosts">Tracker hosts: %1$s</string>
+    <string name="pmm_ev_bg">Background share: %1$s</string>
+    <string name="pmm_ev_night">Night-time events: %1$s</string>
+    <string name="pmm_ev_sensitive">Sensitive permissions held: %1$s</string>
+    <string name="dns_tunneling">Possible DNS tunneling</string>
+    <string name="dns_tunneling_desc">Data may be hidden inside DNS lookups to get past filters.</string>
+    <string name="dns_dga_beacon">Repeated lookups (possible beaconing)</string>
+    <string name="dns_dga_beacon_desc">The same domain was looked up many times in a few seconds, as check-in malware does.</string>
+    <string name="dns_high_entropy">Random-looking domain</string>
+    <string name="dns_high_entropy_desc">The name looks machine-generated (DGA). Some CDNs do this too; malware often does.</string>
+    <string name="dns_high_frequency">Burst of DNS lookups</string>
+    <string name="dns_high_frequency_desc">Many lookups in 10 seconds from one app.</string>
+    <string name="dns_many_subdomains">Unusually many subdomains</string>
+    <string name="dns_many_subdomains_desc">Deeply nested names can carry hidden data.</string>
+    <string name="dns_long_label">Unusually long domain name</string>
+    <string name="dns_long_label_desc">Very long names can carry hidden data.</string>
+    <string name="dns_unknown">DNS anomaly</string>
+    <!-- Tracker categories -->
+    <string name="tcat_ads">Advertising</string>
+    <string name="tcat_ads_desc">Chooses, shows and measures ads, and builds an advertising profile of you across apps.</string>
+    <string name="tcat_analytics">Analytics</string>
+    <string name="tcat_analytics_desc">Records how you use the app (screens, taps, sessions) and sends it to the developer or a third party.</string>
+    <string name="tcat_crash">Crash reporting</string>
+    <string name="tcat_crash_desc">Sends error and crash reports, usually with device details, so the developer can fix bugs.</string>
+    <string name="tcat_fingerprinting">Fingerprinting</string>
+    <string name="tcat_fingerprinting_desc">Combines device details to recognise your phone even without an ID you can reset.</string>
+    <string name="tcat_social">Social</string>
+    <string name="tcat_social_desc">Social network SDK for login and sharing; it also tells the network which apps you use.</string>
+    <string name="tcat_profiling">Profiling</string>
+    <string name="tcat_profiling_desc">Links your activity to a profile used for targeting, attribution or data brokering.</string>
+    <string name="tcat_other">Other</string>
+    <string name="tcat_other_desc">A third-party service that receives data from the app.</string>
+</resources>

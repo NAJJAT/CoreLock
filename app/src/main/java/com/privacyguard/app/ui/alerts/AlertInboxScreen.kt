@@ -37,6 +37,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.privacyguard.app.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.privacyguard.app.ui.components.PanelCard
 import com.privacyguard.app.ui.components.ScreenScaffold
@@ -77,24 +80,24 @@ fun AlertInboxScreen(
     ) {
         item {
             ScreenScaffold(
-                title = "Alert Inbox",
-                subtitle = "${state.items.size} events · last 7 days",
-                badge = if (state.items.any { it.severity >= 9 }) "CRITICAL" else "${state.items.size}",
+                title = stringResource(R.string.alerts_title),
+                subtitle = stringResource(R.string.alerts_subtitle, pluralStringResource(R.plurals.alerts_events, state.items.size, state.items.size)),
+                badge = if (state.items.any { it.severity >= 9 }) stringResource(R.string.alerts_critical).uppercase() else java.text.NumberFormat.getIntegerInstance().format(state.items.size),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PgTextMuted)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.appd_back), tint = PgTextMuted)
                     }
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item { SeverityChip("All",      state.filter == AlertSeverityFilter.ALL)      { vm.setFilter(AlertSeverityFilter.ALL) } }
-                    item { SeverityChip("Critical", state.filter == AlertSeverityFilter.CRITICAL) { vm.setFilter(AlertSeverityFilter.CRITICAL) } }
-                    item { SeverityChip("High",     state.filter == AlertSeverityFilter.HIGH)     { vm.setFilter(AlertSeverityFilter.HIGH) } }
-                    item { SeverityChip("Medium",   state.filter == AlertSeverityFilter.MEDIUM)   { vm.setFilter(AlertSeverityFilter.MEDIUM) } }
+                    item { SeverityChip(stringResource(R.string.common_all),      state.filter == AlertSeverityFilter.ALL)      { vm.setFilter(AlertSeverityFilter.ALL) } }
+                    item { SeverityChip(stringResource(R.string.alerts_critical), state.filter == AlertSeverityFilter.CRITICAL) { vm.setFilter(AlertSeverityFilter.CRITICAL) } }
+                    item { SeverityChip(stringResource(R.string.alerts_high),     state.filter == AlertSeverityFilter.HIGH)     { vm.setFilter(AlertSeverityFilter.HIGH) } }
+                    item { SeverityChip(stringResource(R.string.alerts_medium),   state.filter == AlertSeverityFilter.MEDIUM)   { vm.setFilter(AlertSeverityFilter.MEDIUM) } }
                 }
             }
         }
@@ -102,15 +105,15 @@ fun AlertInboxScreen(
         when {
             state.isLoading -> item {
                 PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Text("Loading alerts…", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                    Text(stringResource(R.string.alerts_loading), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
                 }
             }
             visibleItems.isEmpty() -> item {
                 PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Text("No alerts", style = MaterialTheme.typography.titleMedium, color = PgText)
+                    Text(stringResource(R.string.alerts_none), style = MaterialTheme.typography.titleMedium, color = PgText)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "No events matched the selected filter. Run the VPN to start collecting data.",
+                        stringResource(R.string.alerts_none_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = PgTextMuted,
                     )
@@ -154,7 +157,7 @@ private fun AlertCard(alert: AlertItem) {
                         modifier = Modifier.weight(1f),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    StatusPill(severityLabel(alert.severity), bg, fg)
+                    StatusPill(stringResource(severityLabel(alert.severity)).uppercase(), bg, fg)
                 }
                 if (alert.detail.isNotBlank()) {
                     Spacer(modifier = Modifier.height(3.dp))
@@ -208,18 +211,18 @@ private fun alertAppearance(alert: AlertItem): AlertAppearance = when {
 }
 
 private fun severityLabel(s: Int) = when {
-    s >= 9 -> "CRITICAL"
-    s >= 7 -> "HIGH"
-    s >= 4 -> "MED"
-    else   -> "LOW"
+    s >= 9 -> R.string.alerts_critical
+    s >= 7 -> R.string.alerts_high
+    s >= 4 -> R.string.alerts_medium
+    else   -> R.string.alerts_low
 }
 
 private fun formatTs(ts: Long): String {
     val diff = System.currentTimeMillis() - ts
     return when {
-        diff < 60_000     -> "${diff / 1_000}s ago"
-        diff < 3_600_000  -> "${diff / 60_000}m ago"
-        diff < 86_400_000 -> "${diff / 3_600_000}h ago"
-        else              -> SimpleDateFormat("MMM d HH:mm", Locale.getDefault()).format(Date(ts))
+        diff < 86_400_000 -> android.text.format.DateUtils.getRelativeTimeSpanString(
+            ts, System.currentTimeMillis(), android.text.format.DateUtils.SECOND_IN_MILLIS,
+            android.text.format.DateUtils.FORMAT_ABBREV_RELATIVE).toString()
+        else -> java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT).format(Date(ts))
     }
 }

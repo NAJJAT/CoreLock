@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sleep_subtitle">DNS-opzoekingen terwijl het scherm uit was</string>
+    <plurals name="sleep_badge_days">
+        <item quantity="one">%d dag</item>
+        <item quantity="other">%d dagen</item>
+    </plurals>
+    <string name="sleep_activity">Activiteit met scherm uit</string>
+    <plurals name="sleep_idle_apps">
+        <item quantity="one">%d app deed DNS-opzoekingen terwijl het scherm uit was</item>
+        <item quantity="other">%d apps deden DNS-opzoekingen terwijl het scherm uit was</item>
+    </plurals>
+    <plurals name="sleep_review">
+        <item quantity="one">%d om te bekijken</item>
+        <item quantity="other">%d om te bekijken</item>
+    </plurals>
+    <string name="sleep_idle_dns">DNS met scherm uit</string>
+    <string name="sleep_apps">Apps</string>
+    <string name="sleep_tracking">Tracking</string>
+    <string name="sleep_top_apps">Meest actieve apps terwijl het scherm uit was</string>
+    <string name="sleep_no_apps">Geen DNS-opzoekingen terwijl het scherm uit was in deze periode.</string>
+    <string name="sleep_top_domains">Meest gecontacteerde domeinen terwijl het scherm uit was</string>
+    <string name="sleep_no_domains">Er zijn geen domeinen gecontacteerd terwijl het scherm uit was.</string>
+    <plurals name="sleep_idle_n">
+        <item quantity="one">%d met scherm uit</item>
+        <item quantity="other">%d met scherm uit</item>
+    </plurals>
+    <plurals name="sleep_total_n">
+        <item quantity="one">%d totaal</item>
+        <item quantity="other">%d totaal</item>
+    </plurals>
+    <plurals name="sleep_idle_queries">
+        <item quantity="one">%d DNS-opzoeking terwijl het scherm uit was</item>
+        <item quantity="other">%d DNS-opzoekingen terwijl het scherm uit was</item>
+    </plurals>
+</resources>

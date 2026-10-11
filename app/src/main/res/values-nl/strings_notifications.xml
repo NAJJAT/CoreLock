@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_unknown_app">Onbekende app</string>
+    <string name="notif_ch_status">Status van de bescherming</string>
+    <string name="notif_ch_status_desc">Toont of de bescherming aanstaat</string>
+    <string name="notif_ch_alerts">Privacywaarschuwingen</string>
+    <string name="notif_ch_alerts_desc">Waarschuwingen over verdachte of geblokkeerde verbindingen</string>
+    <string name="notif_ch_weekly">Weekrapport</string>
+    <string name="notif_ch_weekly_desc">Wekelijks privacyoverzicht</string>
+    <string name="notif_monitoring">Je verbindingen worden gevolgd…</string>
+    <plurals name="notif_blocked_n">
+        <item quantity="one">%d verbinding geblokkeerd</item>
+        <item quantity="other">%d verbindingen geblokkeerd</item>
+    </plurals>
+    <string name="notif_active">Bescherming aan</string>
+    <string name="notif_stop">Stoppen</string>
+    <string name="notif_suspicious_title">Verdachte verbinding geblokkeerd</string>
+    <string name="notif_app_to_domain">%1$s → %2$s</string>
+    <string name="notif_suspicious_body">%1$s probeerde verbinding te maken met %2$s, maar je privacyregels hebben dat geblokkeerd.</string>
+    <string name="notif_weekly_top">Meest gevolgde app deze week: %1$s</string>
+    <string name="notif_weekly_tap">Tik voor je privacyoverzicht.</string>
+    <string name="notif_weekly_title">Je wekelijkse privacyrapport</string>
+    <plurals name="notif_weekly_blocked">
+        <item quantity="one">%d verbinding geblokkeerd deze week</item>
+        <item quantity="other">%d verbindingen geblokkeerd deze week</item>
+    </plurals>
+    <string name="notif_ja3_title">TLS-vingerafdruk komt overeen: %1$s</string>
+    <string name="notif_ja3_body">%1$s maakte een TLS-verbinding die overeenkomt met de vingerafdruk ‘%2$s’. Tik om hem in de meldingen te bekijken.</string>
+    <string name="notif_behavior_title">Gedragswaarschuwing: %1$s</string>
+    <string name="notif_cleartext_title">Onversleutelde verbinding: %1$s</string>
+    <string name="notif_cleartext_text">%1$s → %2$s (HTTP, zonder TLS)</string>
+    <string name="notif_cleartext_body">%1$s maakte via onversleutelde HTTP verbinding met %2$s. Zet ‘Onversleuteld verkeer blokkeren’ aan in Instellingen om dit te voorkomen.</string>
+    <plurals name="notif_ct_body">
+        <item quantity="one">%1$d nieuw certificaat uitgegeven voor %2$s</item>
+        <item quantity="other">%1$d nieuwe certificaten uitgegeven voor %2$s</item>
+    </plurals>
+    <string name="notif_ct_title">Certificate Transparency: %1$s</string>
+    <string name="notif_ct_tap">%1$s. Tik om het in de meldingen te bekijken.</string>
+    <string name="notif_vpn_down_title">Bescherming gestopt</string>
+    <string name="notif_vpn_down_blocked">Android blokkeert alle verbindingen tot de bescherming weer verbonden is.</string>
+    <string name="notif_vpn_down_open">Verkeer wordt niet gefilterd tot de bescherming weer verbonden is. Zet ‘Verbindingen zonder VPN blokkeren’ aan in Android om het te blokkeren.</string>
+    <string name="notif_bg_title">Verbinding op de achtergrond geblokkeerd</string>
+    <string name="notif_bg_text">%1$s probeerde op de achtergrond verbinding te maken met %2$s</string>
+    <string name="notif_blocklist_updated">Blokkeerlijst bijgewerkt</string>
+    <string name="notif_blocklist_entries">%1$s: %2$s items geladen</string>
+    <string name="notif_ch_high">Kritieke privacywaarschuwingen</string>
+    <string name="notif_ch_high_desc">Kritieke waarschuwingen over je privacybescherming</string>
+    <string name="notif_ch_normal">Meldingen</string>
+    <string name="notif_ch_normal_desc">Gewone meldingen over geblokkeerde verbindingen</string>
+    <string name="notif_ch_updates">Updates</string>
+    <string name="notif_ch_updates_desc">Rapporten en updates</string>
+    <string name="notif_block_app">App blokkeren</string>
+    <string name="notif_dismiss">Sluiten</string>
+</resources>

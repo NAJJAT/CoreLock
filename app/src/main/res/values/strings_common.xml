@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="common_on">On</string>
+    <string name="common_off">Off</string>
+    <string name="common_canceled">%1$s canceled</string>
+    <string name="common_no_auth">Device authentication is not available for this action</string>
+    <string name="common_blocked_integrity">Sensitive actions are disabled because app integrity could not be verified</string>
+    <string name="common_blocked_lock">Set a screen lock before using sensitive actions on this device</string>
+    <string name="net_offline">Offline</string>
+    <string name="net_unknown">Unknown network</string>
+    <string name="net_wifi">Wi-Fi network</string>
+    <string name="net_cellular">Mobile network</string>
+    <string name="net_ethernet">Ethernet network</string>
+    <string name="net_vpn">VPN network</string>
+    <string name="net_wifi_named">Wi-Fi: %1$s</string>
+    <string name="nd_mitm_off">HTTPS inspection is off or its consent has expired, so this connection was passed through untouched.</string>
+    <string name="nd_bypass">This host is on the never-intercept list (DNS-over-HTTPS, Google or Samsung services). Decrypting it breaks name resolution or sign-in, so it is passed through.</string>
+    <string name="nd_pinned">This app pins its certificate or does not trust user-installed CAs (the default for apps targeting Android 7+). It rejected the inspection certificate, so the connection was passed through and only metadata is visible.</string>
+    <string name="nd_failed">Inspection could not start for this connection (CA not ready yet, or a local proxy error). It was passed through; later connections to this host may be decrypted.</string>
+    <string name="nd_other">This connection was not inspected. Make sure the inspection CA is installed and HTTPS inspection is on.</string>
+    <string name="common_all">All</string>
+</resources>

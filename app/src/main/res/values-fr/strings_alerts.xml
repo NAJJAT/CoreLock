@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="alerts_title">Boîte des alertes</string>
+    <string name="alerts_subtitle">%1$s · 7 derniers jours</string>
+    <plurals name="alerts_events">
+        <item quantity="one">%d événement</item>
+        <item quantity="many">%d événements</item>
+        <item quantity="other">%d événements</item>
+    </plurals>
+    <string name="alerts_critical">Critique</string>
+    <string name="alerts_high">Élevée</string>
+    <string name="alerts_medium">Moyenne</string>
+    <string name="alerts_loading">Chargement des alertes…</string>
+    <string name="alerts_none">Aucune alerte</string>
+    <string name="alerts_none_desc">Rien ne correspond à ce filtre. Les alertes sont collectées pendant que la protection est active.</string>
+    <string name="alerts_low">Faible</string>
+    <string name="alerts_cleartext">Trafic en clair</string>
+    <string name="alerts_ja3">Correspondance JA3 · %1$s</string>
+    <string name="alerts_unknown_malware">logiciel malveillant inconnu</string>
+    <string name="alerts_weak_cipher">Suite de chiffrement faible détectée</string>
+    <string name="alerts_ct">Événement Certificate Transparency</string>
+</resources>

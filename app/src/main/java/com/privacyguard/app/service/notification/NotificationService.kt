@@ -14,8 +14,8 @@ class NotificationService(private val context: Context) {
     fun blocklistUpdated(sourceName: String, totalEntries: Int) {
         val notification = NotificationCompat.Builder(context, CHANNEL_UPDATES)
             .setSmallIcon(android.R.drawable.ic_menu_info_details)
-            .setContentTitle("Blocklist Updated")
-            .setContentText("$sourceName: $totalEntries entries loaded")
+            .setContentTitle(context.getString(com.privacyguard.app.R.string.notif_blocklist_updated))
+            .setContentText(context.getString(com.privacyguard.app.R.string.notif_blocklist_entries, sourceName, java.text.NumberFormat.getIntegerInstance().format(totalEntries)))
             .setAutoCancel(true)
             .build()
         manager.notify(NOTIFICATION_ID_BLOCKLIST, notification)

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_unknown_app">App inconnue</string>
+    <string name="notif_ch_status">État de la protection</string>
+    <string name="notif_ch_status_desc">Indique si la protection est active</string>
+    <string name="notif_ch_alerts">Alertes de confidentialité</string>
+    <string name="notif_ch_alerts_desc">Alertes sur les connexions suspectes ou bloquées</string>
+    <string name="notif_ch_weekly">Rapport hebdomadaire</string>
+    <string name="notif_ch_weekly_desc">Résumé hebdomadaire de confidentialité</string>
+    <string name="notif_monitoring">Surveillance de vos connexions…</string>
+    <plurals name="notif_blocked_n">
+        <item quantity="one">%d connexion bloquée</item>
+        <item quantity="many">%d connexions bloquées</item>
+        <item quantity="other">%d connexions bloquées</item>
+    </plurals>
+    <string name="notif_active">Protection active</string>
+    <string name="notif_stop">Arrêter</string>
+    <string name="notif_suspicious_title">Connexion suspecte bloquée</string>
+    <string name="notif_app_to_domain">%1$s → %2$s</string>
+    <string name="notif_suspicious_body">%1$s a tenté de se connecter à %2$s, ce que vos règles de confidentialité ont bloqué.</string>
+    <string name="notif_weekly_top">App la plus pistée cette semaine : %1$s</string>
+    <string name="notif_weekly_tap">Touchez pour voir votre résumé de confidentialité.</string>
+    <string name="notif_weekly_title">Votre rapport de confidentialité hebdomadaire</string>
+    <plurals name="notif_weekly_blocked">
+        <item quantity="one">%d connexion bloquée cette semaine</item>
+        <item quantity="many">%d connexions bloquées cette semaine</item>
+        <item quantity="other">%d connexions bloquées cette semaine</item>
+    </plurals>
+    <string name="notif_ja3_title">Empreinte TLS reconnue : %1$s</string>
+    <string name="notif_ja3_body">%1$s a établi une connexion TLS correspondant à l’empreinte « %2$s ». Touchez pour la voir dans la boîte des alertes.</string>
+    <string name="notif_behavior_title">Alerte de comportement : %1$s</string>
+    <string name="notif_cleartext_title">Connexion non chiffrée : %1$s</string>
+    <string name="notif_cleartext_text">%1$s → %2$s (HTTP, sans TLS)</string>
+    <string name="notif_cleartext_body">%1$s s’est connectée à %2$s en HTTP non chiffré. Activez « Bloquer le trafic en clair » dans les paramètres pour l’empêcher.</string>
+    <plurals name="notif_ct_body">
+        <item quantity="one">%1$d nouveau certificat émis pour %2$s</item>
+        <item quantity="many">%1$d nouveaux certificats émis pour %2$s</item>
+        <item quantity="other">%1$d nouveaux certificats émis pour %2$s</item>
+    </plurals>
+    <string name="notif_ct_title">Certificate Transparency : %1$s</string>
+    <string name="notif_ct_tap">%1$s. Touchez pour le consulter dans la boîte des alertes.</string>
+    <string name="notif_vpn_down_title">Protection interrompue</string>
+    <string name="notif_vpn_down_blocked">Android bloque toutes les connexions jusqu’au rétablissement de la protection.</string>
+    <string name="notif_vpn_down_open">Le trafic n’est pas filtré jusqu’au rétablissement de la protection. Activez « Bloquer les connexions sans VPN » dans Android pour le bloquer.</string>
+    <string name="notif_bg_title">Connexion en arrière-plan bloquée</string>
+    <string name="notif_bg_text">%1$s a tenté de se connecter à %2$s en arrière-plan</string>
+    <string name="notif_blocklist_updated">Liste de blocage mise à jour</string>
+    <string name="notif_blocklist_entries">%1$s : %2$s entrées chargées</string>
+    <string name="notif_ch_high">Alertes critiques de confidentialité</string>
+    <string name="notif_ch_high_desc">Alertes critiques concernant votre protection</string>
+    <string name="notif_ch_normal">Notifications</string>
+    <string name="notif_ch_normal_desc">Notifications courantes sur les connexions bloquées</string>
+    <string name="notif_ch_updates">Mises à jour</string>
+    <string name="notif_ch_updates_desc">Rapports et mises à jour</string>
+    <string name="notif_block_app">Bloquer l’app</string>
+    <string name="notif_dismiss">Ignorer</string>
+</resources>

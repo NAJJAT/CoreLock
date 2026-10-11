@@ -1,6 +1,7 @@
 package com.privacyguard.app.ui.dashboard
 
 import android.app.Application
+import com.privacyguard.app.R
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.privacyguard.app.core.blocklist.BlocklistManager
@@ -53,7 +54,11 @@ data class SleepActivitySummary(
     val trackingDomains: Int = 0,
 )
 
+/** Stable identity of a card: navigation and rules key off this, never the (translated) title. */
+enum class CardKind { BEHAVIOR, IPV6, KILL_SWITCH, NO_DECRYPTION, ENTROPY, NIGHT, BEACON, UPLOAD, TRUST, BACKGROUND, CLEARTEXT }
+
 data class SecurityCardState(
+    val kind: CardKind,
     val title: String,
     val subtitle: String,
     val status: String,
@@ -74,6 +79,8 @@ data class WeeklyPrivacyReport(
 enum class CardSeverity { GOOD, INFO, WARNING, CRITICAL }
 
 class DashboardViewModel(app: Application) : AndroidViewModel(app) {
+    private fun str(id: Int, vararg args: Any): String = getApplication<Application>().getString(id, *args)
+    private fun plural(id: Int, n: Number): String = n.toInt().let { getApplication<Application>().resources.getQuantityString(id, it, it) }
     private val db = AppDatabase.getInstance(app)
     private val prefs = SettingsPreferences.getInstance(app)
     private val metadataRepo = MetadataRepo(db.connectionProfileDao())
@@ -174,8 +181,8 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
                     if (notifiedBehaviorKeys.add(key) && prefs.notificationsEnabled.value) {
                         notifHelper.postBehaviorAlert(
                             packageName = finding.packageName,
-                            title = finding.title,
-                            summary = finding.summary,
+                            title = com.privacyguard.app.ui.text.FindingText.title(getApplication(), finding),
+                            summary = com.privacyguard.app.ui.text.FindingText.summary(getApplication(), finding),
                             mainActivityClass = try {
                                 Class.forName("com.privacyguard.app.MainActivity")
                             } catch (_: ClassNotFoundException) {
@@ -281,82 +288,95 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
         return listOf(
             SecurityCardState(
-                title = "App Behavior DNA",
-                subtitle = "Learns normal app rhythm and flags deviations",
+                kind = CardKind.BEHAVIOR,
+                title = str(R.string.dash_card_behavior),
+                subtitle = str(R.string.dash_card_behavior_desc),
                 status = when {
-                    behaviorAlerts >= 3 -> "Anomalous"
-                    behaviorAlerts > 0 -> "Learning"
-                    else -> "Quiet"
+                    behaviorAlerts >= 3 -> str(R.string.dash_status_anomalous)
+                    behaviorAlerts > 0 -> str(R.string.dash_status_learning)
+                    else -> str(R.string.dash_status_quiet)
                 },
                 severity = when {
                     behaviorAlerts >= 3 -> CardSeverity.CRITICAL
                     behaviorAlerts > 0 -> CardSeverity.WARNING
                     else -> CardSeverity.GOOD
                 },
-                value = "$behaviorAlerts alerts",
+                value = plural(R.plurals.dash_alerts_count, behaviorAlerts),
             ),
             SecurityCardState(
-                title = "IPv6 Leak",
-                subtitle = "Dual-stack routing and bypass check",
+                kind = CardKind.IPV6,
+                title = str(R.string.dash_card_ipv6),
+                subtitle = str(R.string.dash_card_ipv6_desc),
                 status = when {
-                    ipv6Leak -> "Critical"
-                    blockedIpv6Packets > 0 -> "Blocked"
-                    else -> "Contained"
+                    ipv6Leak -> str(R.string.dash_status_critical)
+                    blockedIpv6Packets > 0 -> str(R.string.dash_status_blocked)
+                    else -> str(R.string.dash_status_contained)
                 },
                 severity = if (ipv6Leak) CardSeverity.CRITICAL else CardSeverity.GOOD,
-                value = if (blockedIpv6Packets > 0) "$blockedIpv6Packets blocked" else "$ipv6Sessions IPv6",
+                value = if (blockedIpv6Packets > 0) plural(R.plurals.dash_blocked_count, blockedIpv6Packets) else plural(R.plurals.dash_ipv6_count, ipv6Sessions),
             ),
             SecurityCardState(
-                title = "Kill Switch",
-                subtitle = if (KillSwitch.lockdownActive) "Android blocks traffic if the VPN drops"
-                    else "Turn on Always-on VPN and Block connections without VPN",
+                kind = CardKind.KILL_SWITCH,
+                title = str(R.string.dash_card_kill_switch),
+                subtitle = if (KillSwitch.lockdownActive) str(R.string.set_kill_switch_on)
+                    else str(R.string.dash_kill_switch_off_desc),
                 status = when {
-                    KillSwitch.lockdownActive -> "Blocking"
-                    prefs.killSwitchEnabled.value -> "Alert only"
-                    else -> "Off"
+                    KillSwitch.lockdownActive -> str(R.string.dash_status_blocking)
+                    prefs.killSwitchEnabled.value -> str(R.string.dash_status_alert_only)
+                    else -> str(R.string.diag_off)
                 },
                 severity = if (KillSwitch.lockdownActive) CardSeverity.GOOD else CardSeverity.WARNING,
-                value = if (PrivacyVpnService.isRunning) "VPN live" else "VPN off",
+                value = if (PrivacyVpnService.isRunning) str(R.string.dash_vpn_live) else str(R.string.dash_vpn_off),
             ),
             SecurityCardState(
-                title = "No Payload Decryption",
-                subtitle = "Metadata-only inspection; TLS contents stay private",
-                status = "Verified",
+                kind = CardKind.NO_DECRYPTION,
+                title = str(R.string.dash_card_no_decrypt),
+                subtitle = str(R.string.dash_card_no_decrypt_desc),
+                status = str(R.string.dash_status_verified),
                 severity = CardSeverity.GOOD,
-                value = "Headers only",
+                value = str(R.string.dash_headers_only),
             ),
             SecurityCardState(
-                title = "Shannon Entropy Detection",
-                subtitle = "DGA/C2 labels and tunneling-like DNS names",
-                status = if (highEntropy > 0) "High Value" else "Normal",
+                kind = CardKind.ENTROPY,
+                title = str(R.string.dash_card_entropy),
+                subtitle = str(R.string.dash_card_entropy_desc),
+                status = if (highEntropy > 0) str(R.string.dash_status_high_value) else str(R.string.dash_status_normal),
                 severity = if (highEntropy > 0) CardSeverity.CRITICAL else CardSeverity.INFO,
-                value = "$highEntropy signals",
+                value = plural(R.plurals.dash_signals_count, highEntropy),
             ),
             SecurityCardState(
-                title = "Night Activity Detection",
-                subtitle = "Unexpected sessions between 00:00 and 05:00",
-                status = if (nightConnections > 0) "Review" else "Quiet",
+                kind = CardKind.NIGHT,
+                title = str(R.string.dash_card_night),
+                subtitle = str(R.string.dash_card_night_desc),
+                status = if (nightConnections > 0) str(R.string.dash_status_review) else str(R.string.dash_status_quiet),
                 severity = if (nightConnections > 0) CardSeverity.WARNING else CardSeverity.GOOD,
-                value = "$nightConnections sessions",
+                value = plural(R.plurals.dash_sessions_count, nightConnections),
             ),
             SecurityCardState(
-                title = "Beacon Interval Analysis",
-                subtitle = "Repeated app x destination contact patterns",
-                status = if (beaconDomains > 0) "APT Pattern" else "Stable",
+                kind = CardKind.BEACON,
+                title = str(R.string.dash_card_beacon),
+                subtitle = str(R.string.dash_card_beacon_desc),
+                status = if (beaconDomains > 0) str(R.string.dash_status_apt) else str(R.string.dash_status_stable),
                 severity = if (beaconDomains > 0) CardSeverity.CRITICAL else CardSeverity.GOOD,
-                value = "$beaconDomains patterns",
+                value = plural(R.plurals.dash_patterns_count, beaconDomains),
             ),
             SecurityCardState(
-                title = "Large Upload Detection",
-                subtitle = "Possible data exfiltration by volume",
-                status = if (largeUpload >= LARGE_UPLOAD_BYTES) "High Value" else "Normal",
+                kind = CardKind.UPLOAD,
+                title = str(R.string.dash_card_upload),
+                subtitle = str(R.string.dash_card_upload_desc),
+                status = if (largeUpload >= LARGE_UPLOAD_BYTES) str(R.string.dash_status_high_value) else str(R.string.dash_status_normal),
                 severity = if (largeUpload >= LARGE_UPLOAD_BYTES) CardSeverity.CRITICAL else CardSeverity.INFO,
                 value = formatBytes(largeUpload),
             ),
             SecurityCardState(
-                title = "Network Trust Level",
+                kind = CardKind.TRUST,
+                title = str(R.string.dash_card_trust),
                 subtitle = trustSummary.networkLabel,
-                status = trustSummary.level,
+                status = str(when (trustSummary.level) {
+                    "Reduced" -> R.string.dash_trust_reduced
+                    "Watch" -> R.string.dash_trust_watch
+                    else -> R.string.dash_trust_trusted
+                }),
                 severity = when (trustSummary.level) {
                     "Reduced" -> CardSeverity.WARNING
                     "Watch" -> CardSeverity.INFO
@@ -365,34 +385,36 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
                 value = "${trustSummary.score}/100",
             ),
             SecurityCardState(
-                title = "Background Activity",
-                subtitle = "Connections made while app was not in foreground",
+                kind = CardKind.BACKGROUND,
+                title = str(R.string.dash_card_background),
+                subtitle = str(R.string.dash_card_background_desc),
                 status = when {
-                    backgroundApps >= 5 -> "High"
-                    backgroundApps > 0  -> "Moderate"
-                    else                -> "Quiet"
+                    backgroundApps >= 5 -> str(R.string.dash_status_high)
+                    backgroundApps > 0  -> str(R.string.dash_status_moderate)
+                    else                -> str(R.string.dash_status_quiet)
                 },
                 severity = when {
                     backgroundApps >= 5 -> CardSeverity.WARNING
                     backgroundApps > 0  -> CardSeverity.INFO
                     else                -> CardSeverity.GOOD
                 },
-                value = "$backgroundCount connections · $backgroundApps apps",
+                value = str(R.string.dash_background_value, plural(R.plurals.dash_connections_count, backgroundCount), plural(R.plurals.dash_apps_count, backgroundApps)),
             ),
             SecurityCardState(
-                title = "Cleartext Connections",
-                subtitle = "Unencrypted HTTP connections allowed through",
+                kind = CardKind.CLEARTEXT,
+                title = str(R.string.dash_card_cleartext),
+                subtitle = str(R.string.dash_card_cleartext_desc),
                 status = when {
-                    cleartextUnblocked >= 10 -> "Elevated"
-                    cleartextUnblocked > 0   -> "Present"
-                    else                     -> "None"
+                    cleartextUnblocked >= 10 -> str(R.string.dash_status_elevated)
+                    cleartextUnblocked > 0   -> str(R.string.dash_status_present)
+                    else                     -> str(R.string.dash_status_none)
                 },
                 severity = when {
                     cleartextUnblocked >= 10 -> CardSeverity.CRITICAL
                     cleartextUnblocked > 0   -> CardSeverity.WARNING
                     else                     -> CardSeverity.GOOD
                 },
-                value = "$cleartextUnblocked today",
+                value = plural(R.plurals.dash_today_count, cleartextUnblocked),
             ),
         )
     }
@@ -423,27 +445,27 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         behaviorAlerts: Int,
     ): List<String> {
         val notes = mutableListOf<String>()
-        if (cards.any { it.title == "Kill Switch" && it.severity == CardSeverity.WARNING }) {
-            notes += "Enable Kill Switch by default for Sara-level protection."
+        if (cards.any { it.kind == CardKind.KILL_SWITCH && it.severity == CardSeverity.WARNING }) {
+            notes += str(R.string.dash_rec_kill_switch)
         }
         if (behaviorAlerts > 0) {
-            notes += "Behavior DNA found $behaviorAlerts app deviations. New destinations and odd-hour uploads now deserve first-class review."
+            notes += plural(R.plurals.dash_rec_behavior, behaviorAlerts)
         }
-        if (cards.any { it.title == "IPv6 Leak" && it.severity == CardSeverity.CRITICAL }) {
-            notes += "IPv6 traffic detected while VPN is active. Add IPv6 routing support or disable IPv6 bypass."
+        if (cards.any { it.kind == CardKind.IPV6 && it.severity == CardSeverity.CRITICAL }) {
+            notes += str(R.string.dash_rec_ipv6)
         }
-        if (cards.any { it.title == "Shannon Entropy Detection" && it.severity == CardSeverity.CRITICAL }) {
-            notes += "High entropy DNS was detected. Save the behavior fingerprint even if the domain changes."
+        if (cards.any { it.kind == CardKind.ENTROPY && it.severity == CardSeverity.CRITICAL }) {
+            notes += str(R.string.dash_rec_entropy)
         }
-        if (cards.any { it.title == "Beacon Interval Analysis" && it.severity == CardSeverity.CRITICAL }) {
-            notes += "Beacon-like intervals found. Treat the app x destination pair as reduced trust."
+        if (cards.any { it.kind == CardKind.BEACON && it.severity == CardSeverity.CRITICAL }) {
+            notes += str(R.string.dash_rec_beacon)
         }
         if (trustSummary.level == "Reduced") {
-            notes += "Strict mode was recommended on ${trustSummary.networkLabel.lowercase()} because trust fell to ${trustSummary.score}/100."
+            notes += str(R.string.dash_rec_strict, trustSummary.networkLabel, trustSummary.score)
         }
         if (notes.isEmpty()) {
-            notes += "STANDARD blocking + Kill Switch gives most users the strongest default protection."
-            notes += "تحليل السلوك يعمل بدون فك تشفير المحتوى ويحافظ على خصوصية المستخدم."
+            notes += str(R.string.dash_rec_default)
+            notes += str(R.string.dash_rec_no_decrypt)
         }
         return notes.take(4)
     }

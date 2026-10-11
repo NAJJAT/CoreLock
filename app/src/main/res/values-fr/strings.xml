@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cancel">Annuler</string>
+
+    <!-- TLS fingerprint baseline -->
+    <string name="tls_fp_settings_explainer">Une empreinte TLS est l’ensemble des options de chiffrement qu’une app propose quand elle ouvre une connexion sécurisée, et chaque bibliothèque réseau a la sienne. Pendant les 7 premiers jours, l’app apprend quelles empreintes chaque app utilise normalement, sans lire aucun contenu. Si une app se connecte ensuite d’une façon inédite sans avoir été mise à jour, cela peut révéler un SDK caché, une app modifiée ou une interception.</string>
+    <string name="tls_fp_alert_title">%1$s se connecte d’une nouvelle façon</string>
+    <string name="tls_fp_alert_short">Nouvelle empreinte TLS sans mise à jour de l’app. Touchez pour en savoir plus.</string>
+    <string name="tls_fp_alert_what_domain">Ce qui a changé : %1$s a ouvert une connexion chiffrée vers %2$s avec une empreinte TLS jamais utilisée sur ce téléphone. L’app n’a pas été mise à jour, donc une mise à jour ne l’explique pas.</string>
+    <string name="tls_fp_alert_what_no_domain">Ce qui a changé : %1$s a ouvert une connexion chiffrée avec une empreinte TLS jamais utilisée sur ce téléphone. L’app n’a pas été mise à jour, donc une mise à jour ne l’explique pas.</string>
+    <string name="tls_fp_alert_reasons">Causes possibles :\n• Un SDK ou une bibliothèque caché dans l’app a commencé à établir ses propres connexions.\n• Quelque chose se fait passer pour l’app, par exemple une copie modifiée ou du code injecté.\n• Un outil sur ce téléphone intercepte les connexions de l’app (proxy, outil de débogage ou app de « sécurité »).\n• Sans danger : l’app est passée à un navigateur intégré ou à une autre bibliothèque réseau.</string>
+    <string name="tls_fp_alert_actions">Que faire : si vous avez récemment installé un proxy, un bloqueur de pubs, un antivirus ou un outil de débogage, c’est probablement la cause. Sinon, mettez l’app à jour depuis le Play Store, vérifiez ses autorisations et désinstallez-la si vous ne lui faites pas confiance. Si vous reconnaissez le changement, touchez Faire confiance.</string>
+    <string name="tls_fp_trust">Faire confiance</string>
+    <string name="tls_fp_trusted">Approuvée</string>
+    <string name="tls_fp_section_title">Empreintes TLS des apps</string>
+    <string name="tls_fp_section_body">Chaque connexion chiffrée d’une app reçoit une empreinte (JA4, avec JA3 pour la compatibilité) calculée à partir de la négociation non chiffrée. Rien n’est déchiffré.</string>
+    <plurals name="tls_fp_apps_learning">
+        <item quantity="one">%d app est encore dans sa période d’apprentissage de 7 jours</item>
+        <item quantity="many">%d apps sont encore dans leur période d’apprentissage de 7 jours</item>
+        <item quantity="other">%d apps sont encore dans leur période d’apprentissage de 7 jours</item>
+    </plurals>
+    <plurals name="tls_fp_known_count">
+        <item quantity="one">%d empreinte apprise</item>
+        <item quantity="many">%d empreintes apprises</item>
+        <item quantity="other">%d empreintes apprises</item>
+    </plurals>
+    <string name="tls_fp_no_changes">Aucun changement d’empreinte inexpliqué</string>
+    <string name="tls_fp_no_apps_yet">Aucune app n’a encore d’empreinte. Activez la protection et utilisez vos apps ; l’apprentissage commence à la première connexion chiffrée de chaque app.</string>
+
+    <!-- Why am I seeing this ad? -->
+    <string name="adp_title">Pourquoi je vois cette pub ?</string>
+    <string name="adp_nav_subtitle">Historique micro et caméra, contrôle de la localisation, liste anti-pistage publicitaire</string>
+    <string name="adp_honest_title">Ce que cela peut faire, et ce que cela ne peut pas faire</string>
+    <string name="adp_honest_body">Les pubs dans Facebook et Instagram viennent des propres serveurs de Meta, les mêmes qui chargent votre fil. Les bloquer casserait ces apps, donc cette app n’essaie pas. Ce qu’elle peut faire : montrer quelles apps ont utilisé votre micro ou votre caméra, lesquelles voient votre localisation, bloquer les SDK publicitaires dans les autres apps et vous guider dans les réglages qui alimentent le ciblage publicitaire.</string>
+    <string name="adp_explainer_title">Comment les pubs vous trouvent</string>
+    <string name="adp_explainer_location">Localisation : le GPS, les réseaux Wi-Fi proches et votre adresse IP indiquent aux régies où vous êtes et où vous êtes allé.</string>
+    <string name="adp_explainer_wifi">Même Wi-Fi que vos amis : les personnes qui partagent une connexion partagent une adresse IP, donc les plateformes les relient et montrent à l’une des pubs liées aux recherches de l’autre.</string>
+    <string name="adp_explainer_pixels">Pixels des sites : boutiques et sites renvoient vos visites à Meta et Google grâce à des pixels de suivi, même si vous ne touchez jamais une pub.</string>
+    <string name="adp_explainer_searches">Recherches et comptes : ce que vous cherchez, regardez et achetez en étant connecté alimente le même profil publicitaire.</string>
+    <string name="adp_explainer_mic">Ce que prouve l’historique du micro : si aucune app n’a utilisé le micro pendant que vous parliez de quelque chose, la pub venait de ces autres signaux. Il ne couvre que la période où la protection était active, et Android affiche aussi un point vert dès que le micro ou la caméra est utilisé.</string>
+
+    <string name="adp_sensors_title">Historique micro et caméra</string>
+    <string name="adp_sensors_body">Enregistré pendant que la protection est active. Android ne dit pas quelle app utilise le micro ou la caméra ; l’app affichée à l’écran au début est donc indiquée comme la plus probable.</string>
+    <string name="adp_usage_access_needed">Autorisez l’accès aux données d’utilisation pour que l’app probable puisse être nommée. Sans cela, les utilisations sont enregistrées mais affichées comme « App inconnue ».</string>
+    <string name="adp_usage_access_button">Autoriser l’accès aux données d’utilisation</string>
+    <string name="adp_sensor_mic">Micro</string>
+    <string name="adp_sensor_camera">Caméra</string>
+    <string name="adp_unknown_app">App inconnue</string>
+    <string name="adp_screen_on">Écran allumé</string>
+    <string name="adp_screen_off">Écran éteint</string>
+    <string name="adp_ongoing">en cours d’utilisation</string>
+    <string name="adp_end_unknown">fin non enregistrée</string>
+    <string name="adp_time_range">%1$s – %2$s</string>
+    <string name="adp_sensors_empty">Aucune utilisation du micro ou de la caméra enregistrée pour l’instant. Les utilisations ne sont enregistrées que lorsque la protection est active.</string>
+    <string name="adp_search_title">Une app a-t-elle utilisé mon micro ?</string>
+    <string name="adp_search_today">Aujourd’hui</string>
+    <string name="adp_search_yesterday">Hier</string>
+    <string name="adp_search_from">De %1$s</string>
+    <string name="adp_search_to">À %1$s</string>
+    <string name="adp_search_button">Vérifier</string>
+    <string name="adp_search_none">Aucune app n’a utilisé le micro entre %1$s et %2$s pendant que la protection était active.</string>
+    <plurals name="adp_search_found">
+        <item quantity="one">Le micro a été utilisé %1$d fois entre %2$s et %3$s :</item>
+        <item quantity="many">Le micro a été utilisé %1$d fois entre %2$s et %3$s :</item>
+        <item quantity="other">Le micro a été utilisé %1$d fois entre %2$s et %3$s :</item>
+    </plurals>
+    <plurals name="adp_uses_count">
+        <item quantity="one">%d utilisation</item>
+        <item quantity="many">%d utilisations</item>
+        <item quantity="other">%d utilisations</item>
+    </plurals>
+
+    <string name="adp_location_title">Contrôle de la localisation</string>
+    <string name="adp_location_body">Apps qui peuvent voir votre localisation. Touchez-en une pour modifier son autorisation.</string>
+    <string name="adp_location_always">Toujours</string>
+    <string name="adp_location_while_in_use">Pendant l’utilisation</string>
+    <string name="adp_location_legacy">Autorisée (toujours, sur cette version d’Android)</string>
+    <string name="adp_location_precise">Précise</string>
+    <string name="adp_location_approximate">Approximative</string>
+    <string name="adp_location_last_use">Android n’indique la dernière utilisation de votre localisation par une app que dans son propre tableau de bord de confidentialité.</string>
+    <string name="adp_open_privacy_dashboard">Ouvrir le tableau de bord de confidentialité</string>
+    <string name="adp_location_empty">Aucune app n’a l’autorisation de localisation.</string>
+    <string name="adp_show_system_apps">Afficher les apps système</string>
+    <string name="adp_system">Système</string>
+
+    <string name="adp_checklist_title">Réduire le pistage publicitaire</string>
+    <string name="adp_checklist_body">Des réglages hors de cette app qui alimentent le ciblage publicitaire. Cochez chacun une fois fait ; cette app ne peut pas les vérifier à votre place.</string>
+    <string name="adp_step_ad_id">Supprimer votre identifiant publicitaire Android</string>
+    <string name="adp_step_ad_id_desc">Paramètres → Google → Annonces → Supprimer l’identifiant publicitaire. Les apps perdent l’identifiant qui relie votre activité entre elles.</string>
+    <string name="adp_step_meta">Désactiver « Votre activité en dehors des technologies Meta »</string>
+    <string name="adp_step_meta_desc">Espace Comptes → Vos informations et autorisations. Dissociez l’activité passée et désactivez l’activité future provenant d’autres apps et sites.</string>
+    <string name="adp_step_ad_center">Désactiver les annonces personnalisées dans Mon Centre publicitaire</string>
+    <string name="adp_step_ad_center_desc">Google n’utilise plus votre activité pour choisir les annonces ; vous en voyez toujours, mais moins ciblées.</string>
+    <string name="adp_step_timeline">Vérifier la Chronologie Google</string>
+    <string name="adp_step_timeline_desc">La Chronologie est stockée sur votre téléphone dans Google Maps. Désactivez-la ou programmez sa suppression automatique.</string>
+    <string name="adp_step_mic">Retirer le micro aux apps qui n’en ont pas besoin</string>
+    <plurals name="adp_step_mic_desc">
+        <item quantity="one">%d app peut utiliser votre micro. Touchez-la pour modifier cela.</item>
+        <item quantity="many">%d apps peuvent utiliser votre micro. Touchez-en une pour modifier cela.</item>
+        <item quantity="other">%d apps peuvent utiliser votre micro. Touchez-en une pour modifier cela.</item>
+    </plurals>
+    <string name="adp_open">Ouvrir</string>
+    <string name="adp_open_failed">Cet écran n’est pas disponible sur ce téléphone.</string>
+    <plurals name="adp_checklist_progress">
+        <item quantity="one">%1$d sur %2$d effectué</item>
+        <item quantity="many">%1$d sur %2$d effectués</item>
+        <item quantity="other">%1$d sur %2$d effectués</item>
+    </plurals>
+
+    <string name="adp_sdk_title">SDK publicitaires dans les autres apps</string>
+    <string name="adp_sdk_toggle">Bloquer les SDK publicitaires et d’attribution</string>
+    <string name="adp_sdk_body">Bloque les serveurs publicitaires et de pistage de ces entreprises dans les autres apps. Leurs propres apps ne sont pas touchées, donc l’app Facebook fonctionne toujours.</string>
+    <string name="adp_sdk_exceptions_title">Jamais bloqués, et pourquoi</string>
+    <string name="adp_reason_login">nécessaire pour la connexion « Continuer avec Facebook/Google »</string>
+    <string name="adp_reason_push">nécessaire aux notifications push de nombreuses apps</string>
+    <string name="adp_reason_deep_links">nécessaire aux liens qui s’ouvrent dans les apps</string>
+    <string name="adp_sdk_meta_limit">Les événements d’app Meta et la plupart des pubs Audience Network utilisent graph.facebook.com, le même serveur que Facebook Login. Un blocage par nom de serveur ne peut pas les séparer, ils ne sont donc pas bloqués.</string>
+</resources>

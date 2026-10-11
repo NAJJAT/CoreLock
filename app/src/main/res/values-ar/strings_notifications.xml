@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_unknown_app">تطبيق غير معروف</string>
+    <string name="notif_ch_status">حالة الحماية</string>
+    <string name="notif_ch_status_desc">يُظهر ما إذا كانت الحماية مفعّلة</string>
+    <string name="notif_ch_alerts">تنبيهات الخصوصية</string>
+    <string name="notif_ch_alerts_desc">تنبيهات حول الاتصالات المريبة أو المحظورة</string>
+    <string name="notif_ch_weekly">التقرير الأسبوعي</string>
+    <string name="notif_ch_weekly_desc">ملخّص الخصوصية الأسبوعي</string>
+    <string name="notif_monitoring">جارٍ مراقبة اتصالاتك…</string>
+    <plurals name="notif_blocked_n">
+        <item quantity="zero">لم يُحظر أي اتصال</item>
+        <item quantity="one">حُظر اتصال واحد</item>
+        <item quantity="two">حُظر اتصالان</item>
+        <item quantity="few">حُظرت %d اتصالات</item>
+        <item quantity="many">حُظر %d اتصالًا</item>
+        <item quantity="other">حُظر %d اتصال</item>
+    </plurals>
+    <string name="notif_active">الحماية مفعّلة</string>
+    <string name="notif_stop">إيقاف</string>
+    <string name="notif_suspicious_title">حُظر اتصال مريب</string>
+    <string name="notif_app_to_domain">%1$s ← %2$s</string>
+    <string name="notif_suspicious_body">حاول %1$s الاتصال بـ %2$s، فحظرته قواعد الخصوصية لديك.</string>
+    <string name="notif_weekly_top">أكثر تطبيق تعرّض للتتبّع هذا الأسبوع: %1$s</string>
+    <string name="notif_weekly_tap">اضغط لعرض ملخّص الخصوصية.</string>
+    <string name="notif_weekly_title">تقرير الخصوصية الأسبوعي</string>
+    <plurals name="notif_weekly_blocked">
+        <item quantity="zero">لم يُحظر أي اتصال هذا الأسبوع</item>
+        <item quantity="one">حُظر اتصال واحد هذا الأسبوع</item>
+        <item quantity="two">حُظر اتصالان هذا الأسبوع</item>
+        <item quantity="few">حُظرت %d اتصالات هذا الأسبوع</item>
+        <item quantity="many">حُظر %d اتصالًا هذا الأسبوع</item>
+        <item quantity="other">حُظر %d اتصال هذا الأسبوع</item>
+    </plurals>
+    <string name="notif_ja3_title">تطابق بصمة TLS: %1$s</string>
+    <string name="notif_ja3_body">أجرى %1$s اتصال TLS يطابق البصمة «%2$s». اضغط لعرضه في صندوق التنبيهات.</string>
+    <string name="notif_behavior_title">تنبيه سلوكي: %1$s</string>
+    <string name="notif_cleartext_title">اتصال غير مشفّر: %1$s</string>
+    <string name="notif_cleartext_text">%1$s ← %2$s (HTTP، دون TLS)</string>
+    <string name="notif_cleartext_body">اتصل %1$s بـ %2$s عبر HTTP غير مشفّر. فعّل «حظر الاتصالات غير المشفّرة» في الإعدادات لمنع ذلك.</string>
+    <plurals name="notif_ct_body">
+        <item quantity="zero">لم تصدر شهادات جديدة لـ %2$s</item>
+        <item quantity="one">صدرت شهادة جديدة واحدة لـ %2$s</item>
+        <item quantity="two">صدرت شهادتان جديدتان لـ %2$s</item>
+        <item quantity="few">صدرت %1$d شهادات جديدة لـ %2$s</item>
+        <item quantity="many">صدرت %1$d شهادةً جديدة لـ %2$s</item>
+        <item quantity="other">صدرت %1$d شهادة جديدة لـ %2$s</item>
+    </plurals>
+    <string name="notif_ct_title">شفافية الشهادات: %1$s</string>
+    <string name="notif_ct_tap">%1$s. اضغط لمراجعتها في صندوق التنبيهات.</string>
+    <string name="notif_vpn_down_title">توقفت الحماية</string>
+    <string name="notif_vpn_down_blocked">يحظر Android جميع الاتصالات حتى تعود الحماية.</string>
+    <string name="notif_vpn_down_open">لا تُفلتر حركة البيانات حتى تعود الحماية. فعّل «حظر الاتصالات دون VPN» في Android لحظرها.</string>
+    <string name="notif_bg_title">حُظر اتصال في الخلفية</string>
+    <string name="notif_bg_text">حاول %1$s الاتصال بـ %2$s وهو في الخلفية</string>
+    <string name="notif_blocklist_updated">حُدّثت قائمة الحظر</string>
+    <string name="notif_blocklist_entries">%1$s: حُمّل %2$s إدخال</string>
+    <string name="notif_ch_high">تنبيهات الخصوصية الحرجة</string>
+    <string name="notif_ch_high_desc">تنبيهات حرجة حول حماية خصوصيتك</string>
+    <string name="notif_ch_normal">الإشعارات</string>
+    <string name="notif_ch_normal_desc">إشعارات عادية حول الاتصالات المحظورة</string>
+    <string name="notif_ch_updates">التحديثات</string>
+    <string name="notif_ch_updates_desc">التقارير والتحديثات</string>
+    <string name="notif_block_app">حظر التطبيق</string>
+    <string name="notif_dismiss">تجاهل</string>
+</resources>

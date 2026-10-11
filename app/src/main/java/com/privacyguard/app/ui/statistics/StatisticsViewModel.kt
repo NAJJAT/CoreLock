@@ -21,7 +21,7 @@ data class StatisticsData(
     val totalConnections: Int = 0,
     val blockedToday: Int = 0,
     val cleartextToday: Int = 0,
-    val dataTransferredToday: String = "0 MB",
+    val dataTransferredToday: String = "",
     val blockRate: Float = 0f,
     val encryptionHealth: Float = 0.87f,
     val privacyScore: Int = 50,
@@ -167,7 +167,7 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
                 set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
             }.timeInMillis
             val dayEnd = dayStart + 86_400_000L
-            val label = if (daysAgo == 0) "Today"
+            val label = if (daysAgo == 0) getApplication<android.app.Application>().getString(com.privacyguard.app.R.string.stats_today)
                 else java.text.SimpleDateFormat("EEE", java.util.Locale.getDefault()).format(java.util.Date(dayStart))
             val dayConns = db.connectionDao().getRecentConnections(dayStart, 2_000)
                 .filter { it.timestamp < dayEnd }
@@ -205,7 +205,7 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
             ThreatTimelineItem(
                 timestamp = it.timestamp,
                 title = it.domain,
-                subtitle = "${it.packageName} · ${it.anomalyType}",
+                subtitle = "${com.privacyguard.app.ui.text.FindingText.appLabel(getApplication(), it.packageName)} · ${com.privacyguard.app.ui.text.FindingText.dnsAnomalyTitle(getApplication(), it.anomalyType)}",
                 severity = if (it.severity >= 8) "CRITICAL" else "WARN",
             )
         }
@@ -216,7 +216,7 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
                 ThreatTimelineItem(
                     timestamp = it.timestamp,
                     title = it.domain ?: it.destinationIp,
-                    subtitle = "${it.appName} · blocked ${it.destinationPort}",
+                    subtitle = getApplication<android.app.Application>().getString(com.privacyguard.app.R.string.stats_blocked_port, it.appName, it.destinationPort),
                     severity = "BLOCKED",
                 )
             }
@@ -226,7 +226,7 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
                     ThreatTimelineItem(
                         timestamp = profiles.firstOrNull { it.packageName == finding.packageName && it.hostname == finding.hostname }?.lastSeen ?: now,
                         title = finding.hostname,
-                        subtitle = "${finding.packageName} · ${finding.title}",
+                        subtitle = "${com.privacyguard.app.ui.text.FindingText.appLabel(getApplication(), finding.packageName)} · ${com.privacyguard.app.ui.text.FindingText.title(getApplication(), finding)}",
                         severity = finding.severity.label,
                     )
                 }
@@ -302,10 +302,8 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun formatBytes(bytes: Long): String {
         return when {
-            bytes >= 1024 * 1024 * 1024 -> String.format(Locale.US, "%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0))
-            bytes >= 1024 * 1024 -> String.format(Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0))
-            bytes >= 1024 -> String.format(Locale.US, "%.1f KB", bytes / 1024.0)
-            else -> "$bytes B"
+            // Locale-aware units, digits and decimal separator.
+            else -> android.text.format.Formatter.formatShortFileSize(getApplication(), bytes)
         }
     }
 }

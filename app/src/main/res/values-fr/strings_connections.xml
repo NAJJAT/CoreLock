@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="conn_unknown_app">App inconnue</string>
+    <string name="conn_no_records">Aucun enregistrement DNS reçu</string>
+    <string name="conn_lookup_failed">Échec de la recherche DNS</string>
+    <string name="conn_title">Connexions</string>
+    <string name="conn_subtitle">Trafic réseau en direct et chiffrement</string>
+    <string name="conn_cleartext">En clair</string>
+    <string name="conn_no_match">Aucune connexion correspondante</string>
+    <string name="conn_none_yet">Aucune connexion pour l’instant</string>
+    <string name="conn_no_match_desc">Rien dans la liste ne correspond à ce filtre ou à cette recherche. Touchez Tout pour l’effacer.</string>
+    <string name="conn_none_yet_desc">Ouvrez une autre app pendant que la protection est active. Ses connexions s’afficheront ici dès qu’elle utilisera le réseau.</string>
+    <string name="conn_unknown_package">Paquet inconnu</string>
+    <string name="conn_unblock">Débloquer</string>
+    <string name="conn_bg_short">AP</string>
+    <string name="conn_app">App</string>
+    <string name="conn_package">Paquet</string>
+    <string name="conn_dns_name">Nom DNS</string>
+    <string name="conn_resolving">Résolution…</string>
+    <string name="conn_unknown">Inconnu</string>
+    <string name="conn_security">Sécurité</string>
+    <string name="conn_transferred">Transféré</string>
+    <string name="conn_up_down">%1$s envoyés · %2$s reçus</string>
+    <string name="conn_route">Trajet</string>
+    <string name="conn_route_country">Cet appareil → %1$s (%2$s)</string>
+    <string name="conn_route_unknown">Cet appareil → pays inconnu</string>
+    <string name="conn_no_geo">Aucune correspondance GeoIP locale pour cette adresse</string>
+    <string name="conn_view_app">Voir l’app →</string>
+    <string name="conn_close">Fermer</string>
+    <string name="conn_dns_lookup">Recherche DNS</string>
+    <string name="conn_no_result">Aucun résultat</string>
+    <string name="conn_ok">OK</string>
+    <string name="conn_search">Rechercher un hôte, une app, une IP…</string>
+</resources>

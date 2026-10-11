@@ -2,6 +2,7 @@ package com.privacyguard.app.ui.settings
 
 import com.privacyguard.app.core.utils.readUtf8Capped
 import android.app.Application
+import com.privacyguard.app.R
 import android.content.pm.PackageManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -54,6 +55,8 @@ data class NetworkDiagnosticsState(
 )
 
 class SettingsViewModel(app: Application) : AndroidViewModel(app) {
+
+    private fun str(id: Int, vararg args: Any): String = getApplication<Application>().getString(id, *args)
     private val db = AppDatabase.getInstance(app)
     private val configDb = ConfigDatabase.getInstance(app)
     private val settingsPreferences = SettingsPreferences.getInstance(app)
@@ -87,7 +90,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 rulesRepo.upsertRule(
                     FilterRule(
                         id = RULE_ID_BLOCK_CLEARTEXT,
-                        label = "Block all HTTP (cleartext)",
+                        label = str(R.string.diag_rule_block_http),
                         action = FilterRule.Action.DENY,
                         source = FilterRule.Source.USER,
                         priority = FilterRule.HIGH_PRIORITY,
@@ -107,7 +110,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 rulesRepo.upsertRule(
                     FilterRule(
                         id = RULE_ID_BLOCK_WEAK_TLS,
-                        label = "Block deprecated TLS versions",
+                        label = str(R.string.diag_rule_block_weak_tls),
                         action = FilterRule.Action.DENY,
                         source = FilterRule.Source.USER,
                         priority = FilterRule.HIGH_PRIORITY,
@@ -127,7 +130,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun privateDnsCheck(): DiagnosticCheck {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-            return DiagnosticCheck("Private DNS", DiagnosticStatus.PASS, "Not available before Android 9")
+            return DiagnosticCheck(str(R.string.diag_private_dns), DiagnosticStatus.PASS, str(R.string.diag_private_dns_pre9))
         }
         val cm = getApplication<android.app.Application>()
             .getSystemService(android.net.ConnectivityManager::class.java)
@@ -139,13 +142,13 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         val strict = props.firstOrNull { !it.privateDnsServerName.isNullOrBlank() }
         return when {
             strict != null -> DiagnosticCheck(
-                "Private DNS", DiagnosticStatus.WARN,
-                "Strict mode (${strict.privateDnsServerName}) bypasses the blocklist and is blocked; set Private DNS to Off or Automatic",
+                str(R.string.diag_private_dns), DiagnosticStatus.WARN,
+                str(R.string.diag_private_dns_strict, strict.privateDnsServerName.orEmpty()),
             )
             props.any { it.isPrivateDnsActive } -> DiagnosticCheck(
-                "Private DNS", DiagnosticStatus.PASS, "Automatic: falls back to filtered DNS",
+                str(R.string.diag_private_dns), DiagnosticStatus.PASS, str(R.string.diag_private_dns_auto),
             )
-            else -> DiagnosticCheck("Private DNS", DiagnosticStatus.PASS, "Off")
+            else -> DiagnosticCheck(str(R.string.diag_private_dns), DiagnosticStatus.PASS, str(R.string.diag_off))
         }
     }
 
@@ -173,7 +176,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         if (_diagnosticsState.value.isRunning) return
         _diagnosticsState.value = NetworkDiagnosticsState(
             isRunning = true,
-            checks = listOf(DiagnosticCheck("Diagnostics", DiagnosticStatus.RUNNING, "Running network checks...")),
+            checks = listOf(DiagnosticCheck(str(R.string.diag_diagnostics), DiagnosticStatus.RUNNING, str(R.string.diag_running))),
         )
         viewModelScope.launch {
             val checks = withContext(Dispatchers.IO) { buildDiagnostics() }
@@ -225,38 +228,38 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
         return listOf(
             DiagnosticCheck(
-                label = "VPN tunnel",
+                label = str(R.string.diag_vpn_tunnel),
                 status = if (PrivacyVpnService.isRunning) DiagnosticStatus.PASS else DiagnosticStatus.WARN,
-                detail = if (PrivacyVpnService.isRunning) "VPN service reports active" else "VPN is not running",
+                detail = if (PrivacyVpnService.isRunning) str(R.string.diag_vpn_active) else str(R.string.diag_vpn_inactive),
             ),
             DiagnosticCheck(
-                label = "Kill switch",
+                label = str(R.string.set_kill_switch),
                 status = if (KillSwitch.lockdownActive) DiagnosticStatus.PASS else DiagnosticStatus.WARN,
                 detail = when {
-                    KillSwitch.lockdownActive -> "Always-on VPN with lockdown is active"
-                    Build.VERSION.SDK_INT < Build.VERSION_CODES.Q -> "Lockdown state cannot be read before Android 10"
-                    else -> "Not blocking: enable Always-on VPN and Block connections without VPN"
+                    KillSwitch.lockdownActive -> str(R.string.diag_lockdown_on)
+                    Build.VERSION.SDK_INT < Build.VERSION_CODES.Q -> str(R.string.diag_lockdown_unknown)
+                    else -> str(R.string.diag_lockdown_off)
                 },
             ),
             privateDnsCheck(),
-            resolveHostCheck("DNS resolution", "google.com"),
-            tcpReachabilityCheck("Upstream DNS TCP", settingsPreferences.upstreamDns.value, 53),
+            resolveHostCheck(str(R.string.diag_dns_resolution), "google.com"),
+            tcpReachabilityCheck(str(R.string.diag_upstream_tcp), settingsPreferences.upstreamDns.value, 53),
             externalIpCheck(),
             dnsLeakCheck(),
             DiagnosticCheck(
-                label = "IPv6 leak prevention",
+                label = str(R.string.diag_ipv6),
                 status = DiagnosticStatus.PASS,
-                detail = "${snapshot.ipv6PacketsBlocked} IPv6 packets blocked/tracked",
+                detail = getApplication<Application>().resources.getQuantityString(R.plurals.diag_ipv6_detail, snapshot.ipv6PacketsBlocked.toInt().coerceAtLeast(0), snapshot.ipv6PacketsBlocked.toInt()),
             ),
             DiagnosticCheck(
-                label = "App inventory",
+                label = str(R.string.diag_inventory),
                 status = if (installedNetworkApps > 0) DiagnosticStatus.PASS else DiagnosticStatus.WARN,
-                detail = "$installedNetworkApps network-capable apps visible",
+                detail = getApplication<Application>().resources.getQuantityString(R.plurals.diag_inventory_detail, installedNetworkApps, installedNetworkApps),
             ),
             DiagnosticCheck(
-                label = "Captured traffic",
+                label = str(R.string.diag_captured),
                 status = if (snapshot.totalPackets > 0) DiagnosticStatus.PASS else DiagnosticStatus.WARN,
-                detail = "${snapshot.totalPackets} packets observed in current session",
+                detail = getApplication<Application>().resources.getQuantityString(R.plurals.diag_captured_detail, snapshot.totalPackets.toInt().coerceAtLeast(0), snapshot.totalPackets.toInt()),
             ),
         )
     }
@@ -267,10 +270,10 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             DiagnosticCheck(
                 label = label,
                 status = if (addresses.isNotEmpty()) DiagnosticStatus.PASS else DiagnosticStatus.FAIL,
-                detail = addresses.take(3).joinToString(", ").ifBlank { "No records returned" },
+                detail = addresses.take(3).joinToString(", ").ifBlank { str(R.string.diag_no_records) },
             )
         }.getOrElse { error ->
-            DiagnosticCheck(label, DiagnosticStatus.FAIL, error.message ?: "DNS failed")
+            DiagnosticCheck(label, DiagnosticStatus.FAIL, error.message ?: str(R.string.diag_dns_failed))
         }
     }
 
@@ -279,15 +282,15 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             Socket().use { socket ->
                 socket.connect(InetSocketAddress(host, port), 2_500)
             }
-            DiagnosticCheck(label, DiagnosticStatus.PASS, "$host:$port reachable")
+            DiagnosticCheck(label, DiagnosticStatus.PASS, str(R.string.diag_reachable, "$host:$port"))
         }.getOrElse { error ->
-            DiagnosticCheck(label, DiagnosticStatus.WARN, "$host:$port ${error.message ?: "unreachable"}")
+            DiagnosticCheck(label, DiagnosticStatus.WARN, "$host:$port ${error.message ?: str(R.string.diag_unreachable)}")
         }
     }
 
     private fun externalIpCheck(): DiagnosticCheck {
         if (!settingsPreferences.externalIpCheckEnabled.value) {
-            return DiagnosticCheck("External IP", DiagnosticStatus.PASS, "Skipped: turn on \"External IP check\" to ask api.ipify.org")
+            return DiagnosticCheck(str(R.string.diag_external_ip), DiagnosticStatus.PASS, str(R.string.diag_external_ip_skipped, str(R.string.set_external_ip)))
         }
         return runCatching {
             val url = java.net.URL("https://api.ipify.org?format=text")
@@ -299,12 +302,12 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             val isPrivate = ip.startsWith("10.") || ip.startsWith("192.168.") ||
                 ip.startsWith("172.16.") || ip.startsWith("172.17.") || ip == "10.0.0.2"
             DiagnosticCheck(
-                label = "External IP",
+                label = str(R.string.diag_external_ip),
                 status = if (isPrivate) DiagnosticStatus.WARN else DiagnosticStatus.PASS,
-                detail = if (isPrivate) "Shows VPN address $ip — tunnel may be transparent" else ip,
+                detail = if (isPrivate) str(R.string.diag_external_ip_vpn, ip) else ip,
             )
         }.getOrElse { error ->
-            DiagnosticCheck("External IP", DiagnosticStatus.WARN, error.message ?: "Could not reach ipify.org")
+            DiagnosticCheck(str(R.string.diag_external_ip), DiagnosticStatus.WARN, error.message ?: str(R.string.diag_ipify_failed))
         }
     }
 
@@ -316,12 +319,12 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         // is visible to whoever operates the upstream server.
         val isLeakFree = dohEnabled
         return DiagnosticCheck(
-            label = "DNS privacy",
+            label = str(R.string.diag_dns_privacy),
             status = if (isLeakFree) DiagnosticStatus.PASS else DiagnosticStatus.WARN,
             detail = if (isLeakFree)
-                "DoH encrypted queries → $upstreamDns"
+                str(R.string.diag_doh_on, upstreamDns)
             else
-                "Plaintext DNS to $upstreamDns — enable DoH for encrypted queries",
+                str(R.string.diag_doh_off, upstreamDns),
         )
     }
 

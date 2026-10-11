@@ -40,6 +40,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.privacyguard.app.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.privacyguard.app.ui.components.PanelCard
 import com.privacyguard.app.ui.components.ScreenScaffold
@@ -72,9 +75,9 @@ fun AdsScreen(
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             ScreenScaffold(
-                title = "Ad Blocker",
-                subtitle = "DNS-level · works across all apps",
-                badge = if (state.masterEnabled) "LIVE" else "OFF",
+                title = stringResource(R.string.ads_title),
+                subtitle = stringResource(R.string.ads_subtitle),
+                badge = (if (state.masterEnabled) stringResource(R.string.dash_badge_live) else stringResource(R.string.diag_off)).uppercase(),
             ) {
                 MasterBlockCard(
                     state = state,
@@ -85,7 +88,7 @@ fun AdsScreen(
 
         item {
             PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                SectionLabel("Block categories")
+                SectionLabel(stringResource(R.string.ads_block_categories))
                 Spacer(modifier = Modifier.height(12.dp))
                 state.categories.forEachIndexed { index, category ->
                     CategoryCard(
@@ -106,14 +109,14 @@ fun AdsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SectionLabel("Custom rules")
+                    SectionLabel(stringResource(R.string.ads_custom_rules))
                     IconButton(onClick = { dialogOpen = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add domain", tint = PgAccent)
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.ads_add_domain), tint = PgAccent)
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 if (state.customRules.isEmpty()) {
-                    Text("No custom domain rules yet.", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                    Text(stringResource(R.string.ads_no_rules), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
                 } else {
                     state.customRules.forEachIndexed { index, rule ->
                         CustomRuleRow(
@@ -135,8 +138,8 @@ fun AdsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SectionLabel("Blocklists active")
-                    StatusPill("${state.totalDomainsLoaded} domains", PgAccentDim, PgAccent)
+                    SectionLabel(stringResource(R.string.ads_blocklists_active))
+                    StatusPill(pluralStringResource(R.plurals.appd_domains, state.totalDomainsLoaded, state.totalDomainsLoaded), PgAccentDim, PgAccent)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 state.sources.forEachIndexed { index, source ->
@@ -156,7 +159,7 @@ fun AdsScreen(
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(if (state.isRefreshing) "Refreshing..." else "Refresh now")
+                    Text(if (state.isRefreshing) stringResource(R.string.ads_refreshing) else stringResource(R.string.set_refresh_now))
                 }
             }
         }
@@ -164,7 +167,7 @@ fun AdsScreen(
         if (state.topTrackerApps.isNotEmpty()) {
             item {
                 PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    SectionLabel("Top apps contacting trackers (24h)")
+                    SectionLabel(stringResource(R.string.ads_top_apps))
                     Spacer(modifier = Modifier.height(12.dp))
                     val maxHits = state.topTrackerApps.first().trackerHits.coerceAtLeast(1)
                     state.topTrackerApps.forEachIndexed { index, app ->
@@ -189,7 +192,7 @@ fun AdsScreen(
                                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                 )
                                 Text(
-                                    "${app.trackerHits} hits",
+                                    pluralStringResource(R.plurals.ads_hits, app.trackerHits, app.trackerHits),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = PgDanger,
                                 )
@@ -219,26 +222,26 @@ fun AdsScreen(
     if (dialogOpen) {
         AlertDialog(
             onDismissRequest = { dialogOpen = false },
-            title = { Text("Add custom rule") },
+            title = { Text(stringResource(R.string.ads_add_rule)) },
             text = {
                 Column {
                     OutlinedTextField(
                         value = customDomain,
                         onValueChange = { customDomain = it },
-                        label = { Text("Domain") },
+                        label = { Text(stringResource(R.string.ads_domain)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ChoicePill(
-                            label = "Block",
+                            label = stringResource(R.string.ads_block),
                             active = !customAllow,
                             tint = PgDanger,
                             onClick = { customAllow = false },
                         )
                         ChoicePill(
-                            label = "Allow",
+                            label = stringResource(R.string.ads_allow),
                             active = customAllow,
                             tint = PgAccent,
                             onClick = { customAllow = true },
@@ -256,7 +259,7 @@ fun AdsScreen(
                     },
                     enabled = customDomain.isNotBlank(),
                 ) {
-                    Text("Save")
+                    Text(stringResource(R.string.ads_save))
                 }
             },
             dismissButton = {
@@ -264,7 +267,7 @@ fun AdsScreen(
                     onClick = { dialogOpen = false },
                     colors = ButtonDefaults.buttonColors(containerColor = PgBackgroundAlt, contentColor = PgTextMuted),
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(android.R.string.cancel))
                 }
             },
         )
@@ -308,10 +311,10 @@ private fun MasterBlockCard(
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Ad blocking", style = MaterialTheme.typography.titleMedium, color = PgText, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.ads_ad_blocking), style = MaterialTheme.typography.titleMedium, color = PgText, fontWeight = FontWeight.SemiBold)
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            if (state.masterEnabled) "${state.blockedToday} ads blocked today" else "Ad blocking is off",
+                            if (state.masterEnabled) pluralStringResource(R.plurals.ads_blocked_today_n, state.blockedToday, state.blockedToday) else stringResource(R.string.ads_off),
                             style = MaterialTheme.typography.bodySmall,
                             color = PgTextMuted,
                         )
@@ -322,9 +325,8 @@ private fun MasterBlockCard(
                 }
                 Spacer(modifier = Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MiniStat(value = state.blockedToday.toString(), label = "Blocked today", tint = PgAccent, modifier = Modifier.weight(1f))
-                    MiniStat(value = "${state.blockRate}%", label = "Block rate", tint = PgWarning, modifier = Modifier.weight(1f))
-                    MiniStat(value = "${state.timeSavedMs}ms", label = "Time saved", tint = PgInfo, modifier = Modifier.weight(1f))
+                    MiniStat(value = java.text.NumberFormat.getIntegerInstance().format(state.blockedToday), label = stringResource(R.string.ads_blocked_today), tint = PgAccent, modifier = Modifier.weight(1f))
+                    MiniStat(value = java.text.NumberFormat.getPercentInstance().format(state.blockRate / 100.0), label = stringResource(R.string.stats_block_rate), tint = PgWarning, modifier = Modifier.weight(1f))
                 }
             }
         }
@@ -358,7 +360,7 @@ private fun CategoryCard(
                 Text(category.title, style = MaterialTheme.typography.titleSmall, color = PgText, fontWeight = FontWeight.SemiBold)
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    "${category.enabledCount} active · ${category.totalCount} domains",
+                    stringResource(R.string.ads_cat_counts, category.enabledCount, pluralStringResource(R.plurals.appd_domains, category.totalCount, category.totalCount)),
                     style = MaterialTheme.typography.bodySmall,
                     color = PgTextMuted,
                 )
@@ -402,15 +404,15 @@ private fun CustomRuleRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(rule.domain, style = MaterialTheme.typography.titleSmall, color = PgText, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(modifier = Modifier.height(2.dp))
-            Text(if (rule.isAllow) "Custom allow" else "Custom block", style = MaterialTheme.typography.bodySmall, color = PgTextFaint)
+            Text(if (rule.isAllow) stringResource(R.string.ads_custom_allow) else stringResource(R.string.ads_custom_block), style = MaterialTheme.typography.bodySmall, color = PgTextFaint)
         }
         StatusPill(
-            if (rule.isAllow) "ALLOW" else "BLOCK",
+            (if (rule.isAllow) stringResource(R.string.ads_allow) else stringResource(R.string.ads_block)).uppercase(),
             if (rule.isAllow) PgAccentDim else PgDangerDim,
             if (rule.isAllow) PgAccent else PgDanger,
         )
         IconButton(onClick = onDelete) {
-            Icon(Icons.Default.DeleteOutline, contentDescription = "Delete rule", tint = PgTextMuted)
+            Icon(Icons.Default.DeleteOutline, contentDescription = stringResource(R.string.ads_delete_rule), tint = PgTextMuted)
         }
     }
 }
@@ -431,11 +433,11 @@ private fun SourceRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(source.source, style = MaterialTheme.typography.titleSmall, color = PgText)
             Spacer(modifier = Modifier.height(2.dp))
-            Text("${source.enabledCount}/${source.totalCount} domains enabled", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+            Text(stringResource(R.string.ads_source_counts, source.enabledCount, pluralStringResource(R.plurals.appd_domains, source.totalCount, source.totalCount)), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
         }
         Box(modifier = Modifier.clickable(onClick = onToggle)) {
             StatusPill(
-                if (source.isEnabled) "ON" else "OFF",
+                (if (source.isEnabled) stringResource(R.string.ads_on) else stringResource(R.string.diag_off)).uppercase(),
                 if (source.isEnabled) PgAccentDim else PgBackgroundAlt,
                 if (source.isEnabled) PgAccent else PgTextMuted,
             )

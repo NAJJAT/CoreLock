@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appd_tab_mismatch">عدم التطابق</string>
+    <string name="appd_tab_connections">الاتصالات</string>
+    <string name="appd_tab_sdks">حِزم SDK</string>
+    <string name="appd_tab_activity">النشاط</string>
+    <string name="appd_tab_payload">المحتوى</string>
+    <string name="appd_badge_trackers">متتبّعات</string>
+    <string name="appd_badge_app">تطبيق</string>
+    <string name="appd_back">رجوع</string>
+    <string name="appd_report_subject">تقرير التطبيق: %1$s</string>
+    <string name="appd_share_report">مشاركة تقرير التطبيق</string>
+    <plurals name="appd_flags">
+        <item quantity="zero">لا علامات</item>
+        <item quantity="one">علامة واحدة</item>
+        <item quantity="two">علامتان</item>
+        <item quantity="few">%d علامات</item>
+        <item quantity="many">%d علامةً</item>
+        <item quantity="other">%d علامة</item>
+    </plurals>
+    <plurals name="appd_domains">
+        <item quantity="zero">لا نطاقات</item>
+        <item quantity="one">نطاق واحد</item>
+        <item quantity="two">نطاقان</item>
+        <item quantity="few">%d نطاقات</item>
+        <item quantity="many">%d نطاقًا</item>
+        <item quantity="other">%d نطاق</item>
+    </plurals>
+    <plurals name="appd_sdks">
+        <item quantity="zero">لا حِزم SDK</item>
+        <item quantity="one">حزمة SDK واحدة</item>
+        <item quantity="two">حزمتا SDK</item>
+        <item quantity="few">%d حِزم SDK</item>
+        <item quantity="many">%d حزمةً SDK</item>
+        <item quantity="other">%d حزمة SDK</item>
+    </plurals>
+    <string name="appd_blocked_tap">التطبيق محظور — اضغط لإلغاء الحظر</string>
+    <string name="appd_active_tap">التطبيق مسموح — اضغط للحظر</string>
+    <string name="appd_block_bg">حظر الوصول إلى الشبكة في الخلفية</string>
+    <string name="appd_activity_summary">ملخّص النشاط</string>
+    <string name="appd_dns">DNS</string>
+    <plurals name="appd_idle_count">
+        <item quantity="zero">%d في وضع الخمول</item>
+        <item quantity="one">%d في وضع الخمول</item>
+        <item quantity="two">%d في وضع الخمول</item>
+        <item quantity="few">%d في وضع الخمول</item>
+        <item quantity="many">%d في وضع الخمول</item>
+        <item quantity="other">%d في وضع الخمول</item>
+    </plurals>
+    <plurals name="appd_bg_count">
+        <item quantity="zero">%d في الخلفية</item>
+        <item quantity="one">%d في الخلفية</item>
+        <item quantity="two">%d في الخلفية</item>
+        <item quantity="few">%d في الخلفية</item>
+        <item quantity="many">%d في الخلفية</item>
+        <item quantity="other">%d في الخلفية</item>
+    </plurals>
+    <string name="appd_top_dns">أكثر نطاقات DNS طلبًا</string>
+    <string name="appd_no_dns">لم تُسجَّل أي طلبات DNS لهذا التطبيق بعد.</string>
+    <plurals name="appd_times">
+        <item quantity="zero">%d×</item>
+        <item quantity="one">%d×</item>
+        <item quantity="two">%d×</item>
+        <item quantity="few">%d×</item>
+        <item quantity="many">%d×</item>
+        <item quantity="other">%d×</item>
+    </plurals>
+    <string name="appd_recent_activity">النشاط الأخير</string>
+    <string name="appd_no_recent">لم يُسجَّل أي نشاط حديث بعد.</string>
+    <string name="appd_timeline_24h">المخطط الزمني لـ 24 ساعة</string>
+    <string name="appd_hour">%1$d س</string>
+    <string name="appd_legend">أخضر: مسموح · أصفر: خمول أو خلفية · أحمر: محظور</string>
+    <string name="appd_loading_mismatch">جارٍ مقارنة الأذونات بحركة البيانات المرصودة…</string>
+    <string name="appd_no_mismatch">لا يوجد عدم تطابق في الأذونات</string>
+    <string name="appd_no_mismatch_desc">أذونات Android المعلنة وحركة البيانات المرصودة متوافقة حتى الآن لهذا التطبيق.</string>
+    <string name="appd_perm_vs_traffic">الأذونات مقابل حركة البيانات</string>
+    <string name="appd_perm_vs_traffic_desc">مقارنة الأذونات المعلنة بالوجهات الفعلية وخدمات التتبّع.</string>
+    <string name="appd_sort_count">العدد</string>
+    <string name="appd_sort_data">البيانات</string>
+    <string name="appd_sort_background">الخلفية</string>
+    <string name="appd_loading_connections">جارٍ تحميل سجل الاتصالات…</string>
+    <string name="appd_no_connections">لم تُسجَّل أي اتصالات بعد</string>
+    <string name="appd_no_connections_desc">شغّل الحماية وافتح هذا التطبيق. ستظهر هنا الوجهات وأسماء DNS وشركات التتبّع.</string>
+    <string name="appd_scanning">جارٍ فحص التطبيق بحثًا عن حِزم SDK للتتبّع…</string>
+    <string name="appd_no_sdks">لم تُرصد حِزم SDK تتبّع معروفة</string>
+    <string name="appd_no_sdks_desc">يفحص هذا البحث شيفرة التطبيق وبياناته الوصفية. يُقيَّم سلوك الشبكة بشكل منفصل.</string>
+    <string name="appd_activity_by_hour">النشاط حسب الساعة (24 س)</string>
+    <string name="appd_tracker_company">%1$s – %2$s</string>
+    <string name="appd_loading_payloads">جارٍ تحميل المحتوى المعترَض…</string>
+    <string name="appd_no_payloads">لم يُلتقط أي محتوى بعد</string>
+    <string name="appd_no_payloads_desc">فعّل فحص HTTPS من الإعدادات ← فاحص المحتوى، وأبقِ الحماية مفعّلة أثناء استخدام هذا التطبيق.</string>
+    <string name="appd_r_title">تقرير خصوصية التطبيق</string>
+    <string name="appd_r_app">التطبيق: %1$s</string>
+    <string name="appd_r_package">الحزمة: %1$s</string>
+    <string name="appd_r_traffic">حركة البيانات (24 س)</string>
+    <string name="appd_r_domains">  النطاقات المتصَل بها: %1$d</string>
+    <string name="appd_r_bg">  الاتصالات في الخلفية: %1$d</string>
+    <string name="appd_r_data">  البيانات المنقولة: %1$s</string>
+    <string name="appd_r_sdks">حِزم SDK للتتبّع المرصودة: %1$d</string>
+    <string name="appd_r_mismatches">حالات عدم تطابق الأذونات: %1$d</string>
+    <string name="appd_r_top">أهم النطاقات:</string>
+    <string name="appd_r_tracker_tag"> [متتبّع: %1$s]</string>
+    <string name="appd_r_generated">أُنشئ في %1$s</string>
+    <string name="rule_block_app_bg">حظر %1$s (في الخلفية)</string>
+    <string name="rule_block_app">حظر %1$s</string>
+    <string name="apps_title">التطبيقات</string>
+    <string name="apps_subtitle">مخاطر الخصوصية وحركة البيانات لكل تطبيق</string>
+    <plurals name="apps_high_risk_n">
+        <item quantity="zero">%d عالي الخطورة</item>
+        <item quantity="one">%d عالي الخطورة</item>
+        <item quantity="two">%d عاليا الخطورة</item>
+        <item quantity="few">%d عالية الخطورة</item>
+        <item quantity="many">%d عالي الخطورة</item>
+        <item quantity="other">%d عالي الخطورة</item>
+    </plurals>
+    <string name="apps_stalker_title">مؤشرات محتملة لبرامج التجسس</string>
+    <plurals name="apps_stalker_desc">
+        <item quantity="zero">لم يطابق أي تطبيق أنماط التثبيت المخفي أو النشاط الليلي أو التتبّع في الخلفية.</item>
+        <item quantity="one">طابق تطبيق واحد أنماط التثبيت المخفي أو النشاط الليلي أو التتبّع في الخلفية.</item>
+        <item quantity="two">طابق تطبيقان أنماط التثبيت المخفي أو النشاط الليلي أو التتبّع في الخلفية.</item>
+        <item quantity="few">طابقت %d تطبيقات أنماط التثبيت المخفي أو النشاط الليلي أو التتبّع في الخلفية.</item>
+        <item quantity="many">طابق %d تطبيقًا أنماط التثبيت المخفي أو النشاط الليلي أو التتبّع في الخلفية.</item>
+        <item quantity="other">طابق %d تطبيق أنماط التثبيت المخفي أو النشاط الليلي أو التتبّع في الخلفية.</item>
+    </plurals>
+    <string name="apps_all">كل التطبيقات</string>
+    <string name="apps_high_risk">عالي الخطورة</string>
+    <string name="apps_sort_risk">الخطورة</string>
+    <string name="apps_stalker">تجسس</string>
+    <plurals name="apps_destinations">
+        <item quantity="zero">لا وجهات</item>
+        <item quantity="one">وجهة واحدة</item>
+        <item quantity="two">وجهتان</item>
+        <item quantity="few">%d وجهات</item>
+        <item quantity="many">%d وجهةً</item>
+        <item quantity="other">%d وجهة</item>
+    </plurals>
+    <plurals name="apps_suspicious">
+        <item quantity="zero">%d مشبوه</item>
+        <item quantity="one">%d مشبوه</item>
+        <item quantity="two">%d مشبوهان</item>
+        <item quantity="few">%d مشبوهة</item>
+        <item quantity="many">%d مشبوهًا</item>
+        <item quantity="other">%d مشبوه</item>
+    </plurals>
+    <string name="apps_stalker_score">درجة التجسس %1$d</string>
+    <string name="apps_search">ابحث عن تطبيق أو حزمة…</string>
+</resources>

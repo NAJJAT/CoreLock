@@ -18,7 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Block
@@ -38,10 +38,15 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.privacyguard.app.R
 import com.privacyguard.app.vpn.KillSwitch
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -82,6 +87,7 @@ fun SettingsScreen(
     settingsViewModel: SettingsViewModel = viewModel(),
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val settingsPreferences = remember(context) { SettingsPreferences.getInstance(context) }
     val notificationsEnabled by settingsPreferences.notificationsEnabled.collectAsStateWithLifecycle()
     val weeklyReport by settingsPreferences.weeklyReport.collectAsStateWithLifecycle()
@@ -96,6 +102,8 @@ fun SettingsScreen(
     val securityState by settingsViewModel.securityState.collectAsStateWithLifecycle()
     val diagnosticsState by settingsViewModel.diagnosticsState.collectAsStateWithLifecycle()
     val runProtectedAction = rememberProtectedActionRunner()
+    var showLanguagePicker by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    if (showLanguagePicker) LanguagePickerDialog(onDismiss = { showLanguagePicker = false })
 
     // Dual VPN state
     val dualVpnEnabled by settingsPreferences.dualVpnEnabled.collectAsStateWithLifecycle()
@@ -111,25 +119,29 @@ fun SettingsScreen(
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             ScreenScaffold(
-                title = "Settings",
-                subtitle = "Protection controls and privacy defaults"
+                title = stringResource(R.string.set_title),
+                subtitle = stringResource(R.string.set_subtitle)
             ) {
-                SectionLabel("Protection level")
+                SectionLabel(stringResource(R.string.set_protection_level))
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SelectablePill("Minimal", protectionLevel == FilterEngine.BlockLevel.MINIMAL.name) {
+                    SelectablePill(stringResource(R.string.set_level_minimal), protectionLevel == FilterEngine.BlockLevel.MINIMAL.name) {
                         settingsPreferences.setProtectionLevel(FilterEngine.BlockLevel.MINIMAL.name)
                     }
-                    SelectablePill("Standard", protectionLevel == FilterEngine.BlockLevel.STANDARD.name) {
+                    SelectablePill(stringResource(R.string.set_level_standard), protectionLevel == FilterEngine.BlockLevel.STANDARD.name) {
                         settingsPreferences.setProtectionLevel(FilterEngine.BlockLevel.STANDARD.name)
                     }
-                    SelectablePill("Strict", protectionLevel == FilterEngine.BlockLevel.STRICT.name) {
+                    SelectablePill(stringResource(R.string.set_level_strict), protectionLevel == FilterEngine.BlockLevel.STRICT.name) {
                         settingsPreferences.setProtectionLevel(FilterEngine.BlockLevel.STRICT.name)
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Current engine level: ${protectionLevel.lowercase().replaceFirstChar { it.uppercase() }}",
+                    stringResource(R.string.set_current_level, stringResource(when (protectionLevel) {
+                        FilterEngine.BlockLevel.MINIMAL.name -> R.string.set_level_minimal
+                        FilterEngine.BlockLevel.STRICT.name -> R.string.set_level_strict
+                        else -> R.string.set_level_standard
+                    })),
                     style = MaterialTheme.typography.bodySmall,
                     color = PgTextMuted,
                 )
@@ -138,28 +150,28 @@ fun SettingsScreen(
 
         item {
             SettingBlock(
-                title = "Security rules",
+                title = stringResource(R.string.set_security_rules),
                 items = listOf(
-                    SettingUiItem("Block Cleartext (HTTP)", "Deny unencrypted connections", securityState.blockCleartext, Icons.Default.Lock, onClick = {
+                    SettingUiItem(stringResource(R.string.set_block_cleartext), stringResource(R.string.set_block_cleartext_desc), securityState.blockCleartext, Icons.Default.Lock, onClick = {
                         settingsViewModel.toggleBlockCleartext(!securityState.blockCleartext)
                     }),
-                    SettingUiItem("Block Weak TLS", "Deny deprecated TLS 1.0 and 1.1", securityState.blockWeakTls, Icons.Default.Lock, onClick = {
+                    SettingUiItem(stringResource(R.string.set_block_weak_tls), stringResource(R.string.set_block_weak_tls_desc), securityState.blockWeakTls, Icons.Default.Lock, onClick = {
                         settingsViewModel.toggleBlockWeakTls(!securityState.blockWeakTls)
                     }),
                     SettingUiItem(
-                        "Kill switch",
-                        if (KillSwitch.lockdownActive) "Android blocks traffic if the VPN drops"
-                        else "Off: open VPN settings, turn on Always-on and Block connections without VPN",
+                        stringResource(R.string.set_kill_switch),
+                        if (KillSwitch.lockdownActive) stringResource(R.string.set_kill_switch_on)
+                        else stringResource(R.string.set_kill_switch_off),
                         KillSwitch.lockdownActive, Icons.Default.Lock, onClick = {
                             KillSwitch.openAlwaysOnSettings(context)
                         }),
-                    SettingUiItem("VPN drop alert", "Notify and restart protection if the VPN drops (does not block traffic)", securityState.killSwitch, Icons.Default.Warning, onClick = {
+                    SettingUiItem(stringResource(R.string.set_vpn_drop_alert), stringResource(R.string.set_vpn_drop_alert_desc), securityState.killSwitch, Icons.Default.Warning, onClick = {
                         settingsViewModel.toggleKillSwitch(!securityState.killSwitch)
                     }),
-                    SettingUiItem("Notifications", "Alerts and summaries", notificationsEnabled, Icons.Default.Notifications, onClick = {
+                    SettingUiItem(stringResource(R.string.set_notifications), stringResource(R.string.set_notifications_desc), notificationsEnabled, Icons.Default.Notifications, onClick = {
                         settingsPreferences.setNotificationsEnabled(!notificationsEnabled)
                     }),
-                    SettingUiItem("Weekly report", "Deliver privacy summary", weeklyReport, Icons.Default.Notifications, onClick = {
+                    SettingUiItem(stringResource(R.string.set_weekly_report), stringResource(R.string.set_weekly_report_desc), weeklyReport, Icons.Default.Notifications, onClick = {
                         val enabled = !weeklyReport
                         settingsPreferences.setWeeklyReport(enabled)
                         if (enabled) {
@@ -168,13 +180,13 @@ fun SettingsScreen(
                             WeeklyReportWorker.cancelReports(context)
                         }
                     }),
-                    SettingUiItem("DNS over HTTPS", "Encrypt DNS queries", dohEnabled, Icons.Default.Lock, onClick = {
+                    SettingUiItem(stringResource(R.string.set_doh), stringResource(R.string.set_doh_desc), dohEnabled, Icons.Default.Lock, onClick = {
                         settingsPreferences.setDohEnabled(!dohEnabled)
                     }),
-                    SettingUiItem("Certificate Transparency checks", "Sends the domains you visit to crt.sh every 6 hours", ctMonitoringEnabled, Icons.Default.Warning, onClick = {
+                    SettingUiItem(stringResource(R.string.set_ct), stringResource(R.string.set_ct_desc), ctMonitoringEnabled, Icons.Default.Warning, onClick = {
                         settingsPreferences.setCtMonitoringEnabled(!ctMonitoringEnabled)
                     }),
-                    SettingUiItem("External IP check", "Diagnostics asks api.ipify.org for your public IP", externalIpCheckEnabled, Icons.Default.Warning, onClick = {
+                    SettingUiItem(stringResource(R.string.set_external_ip), stringResource(R.string.set_external_ip_desc), externalIpCheckEnabled, Icons.Default.Warning, onClick = {
                         settingsPreferences.setExternalIpCheckEnabled(!externalIpCheckEnabled)
                     })
                 )
@@ -184,32 +196,36 @@ fun SettingsScreen(
         item {
             val posture = securityState.posture
             SettingBlock(
-                title = "Runtime integrity",
+                title = stringResource(R.string.set_runtime_integrity),
                 footer = {
                     Spacer(modifier = Modifier.height(12.dp))
                     DiagnosticRow(
                         DiagnosticCheck(
-                            "Runtime posture",
+                            stringResource(R.string.set_runtime_posture),
                             when (posture.riskLevel.name) {
                                 "HIGH" -> DiagnosticStatus.FAIL
                                 "ELEVATED" -> DiagnosticStatus.WARN
                                 else -> DiagnosticStatus.PASS
                             },
-                            posture.summary,
+                            stringResource(when (posture.riskLevel.name) {
+                                "HIGH" -> R.string.set_posture_high
+                                "ELEVATED" -> R.string.set_posture_elevated
+                                else -> R.string.set_posture_low
+                            }),
                         )
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     DiagnosticRow(
                         DiagnosticCheck(
-                            "App signature",
+                            stringResource(R.string.set_app_signature),
                             if (posture.signatureValid) DiagnosticStatus.PASS else DiagnosticStatus.FAIL,
-                            if (posture.signatureValid) "Signature matches trusted signing certificate" else "Signature mismatch detected",
+                            if (posture.signatureValid) stringResource(R.string.set_signature_ok) else stringResource(R.string.set_signature_bad),
                         )
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     DiagnosticRow(
                         DiagnosticCheck(
-                            "Signing mode",
+                            stringResource(R.string.set_signing_mode),
                             if (BuildConfig.IS_RELEASE_SIGNING_CONFIGURED || BuildConfig.DEBUG) DiagnosticStatus.PASS else DiagnosticStatus.WARN,
                             BuildConfig.APP_SIGNING_MODE,
                         )
@@ -217,46 +233,46 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     DiagnosticRow(
                         DiagnosticCheck(
-                            "Root / tamper",
+                            stringResource(R.string.set_root_tamper),
                             if (!posture.rooted && posture.suspiciousPackages.isEmpty()) DiagnosticStatus.PASS else DiagnosticStatus.FAIL,
                             when {
                                 posture.rooted && posture.suspiciousPackages.isNotEmpty() ->
-                                    "Root indicators present · ${posture.suspiciousPackages.joinToString()}"
-                                posture.rooted -> "Root indicators present on this device"
-                                posture.suspiciousPackages.isNotEmpty() -> "Suspicious tooling detected: ${posture.suspiciousPackages.joinToString()}"
-                                else -> "No root or tamper tooling detected"
+                                    stringResource(R.string.set_root_and_tools, posture.suspiciousPackages.joinToString())
+                                posture.rooted -> stringResource(R.string.set_root)
+                                posture.suspiciousPackages.isNotEmpty() -> stringResource(R.string.set_tools, posture.suspiciousPackages.joinToString())
+                                else -> stringResource(R.string.set_no_root)
                             },
                         )
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     DiagnosticRow(
                         DiagnosticCheck(
-                            "Debugger",
+                            stringResource(R.string.set_debugger),
                             if (posture.debuggerAttached) DiagnosticStatus.FAIL else DiagnosticStatus.PASS,
-                            if (posture.debuggerAttached) "Debugger attached to process" else "No debugger detected",
+                            if (posture.debuggerAttached) stringResource(R.string.set_debugger_on) else stringResource(R.string.set_debugger_off),
                         )
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     DiagnosticRow(
                         DiagnosticCheck(
-                            "Emulator",
+                            stringResource(R.string.set_emulator),
                             if (posture.emulatorDetected) DiagnosticStatus.WARN else DiagnosticStatus.PASS,
-                            if (posture.emulatorDetected) "Emulator-like environment detected" else "Physical device heuristics look normal",
+                            if (posture.emulatorDetected) stringResource(R.string.set_emulator_on) else stringResource(R.string.set_emulator_off),
                         )
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     DiagnosticRow(
                         DiagnosticCheck(
-                            "Keystore backing",
+                            stringResource(R.string.set_keystore),
                             if (posture.hardwareBackedKeystore) DiagnosticStatus.PASS else DiagnosticStatus.WARN,
-                            if (posture.hardwareBackedKeystore) "Master key is backed by secure hardware" else "Hardware-backed keystore unavailable",
+                            if (posture.hardwareBackedKeystore) stringResource(R.string.set_keystore_hw) else stringResource(R.string.set_keystore_sw),
                         )
                     )
                 },
                 items = listOf(
                     SettingUiItem(
-                        "Memory-level hardening",
-                        "Keys stay in Android Keystore; risky runtimes get secure-window protection",
+                        stringResource(R.string.set_hardening),
+                        stringResource(R.string.set_hardening_desc),
                         securityState.posture.riskLevel.name != "HIGH",
                         Icons.Default.Security,
                         onClick = { settingsViewModel.runDiagnostics() }
@@ -267,7 +283,7 @@ fun SettingsScreen(
 
         item {
             SettingBlock(
-                title = "Upstream DNS",
+                title = stringResource(R.string.set_upstream_dns),
                 footer = {
                     OutlinedTextField(
                         value = upstreamDns,
@@ -280,7 +296,7 @@ fun SettingsScreen(
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
                         textStyle = MaterialTheme.typography.titleMedium,
-                        label = { Text("Resolver") }
+                        label = { Text(stringResource(R.string.set_resolver)) }
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -296,22 +312,22 @@ fun SettingsScreen(
                             settingsPreferences.setUpstreamDns("9.9.9.9")
                             settingsPreferences.setDohProvider(SettingsPreferences.DOH_QUAD9)
                         }
-                        SelectablePill("Custom", upstreamDns !in setOf("1.1.1.1", "8.8.8.8", "9.9.9.9")) { }
+                        SelectablePill(stringResource(R.string.set_custom), upstreamDns !in setOf("1.1.1.1", "8.8.8.8", "9.9.9.9")) { }
                     }
                     if (dohEnabled) {
                         Spacer(modifier = Modifier.height(10.dp))
-                        Text("DoH provider: ${providerLabel(dohProvider)}", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                        Text(stringResource(R.string.set_doh_provider, providerLabel(dohProvider)), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
                     }
                 },
                 items = listOf(
-                    SettingUiItem("Language", "English", true, Icons.Default.Language, onClick = { onLanguageChanged() })
+                    SettingUiItem(stringResource(R.string.settings_language), languageDisplayName(currentAppLanguageTag()), true, Icons.Default.Language, onClick = { showLanguagePicker = true })
                 )
             )
         }
 
         item {
             SettingBlock(
-                title = "Network diagnostics",
+                title = stringResource(R.string.set_diagnostics),
                 footer = {
                     Spacer(modifier = Modifier.height(12.dp))
                     diagnosticsState.checks.forEach { check ->
@@ -321,13 +337,13 @@ fun SettingsScreen(
                 },
                 items = listOf(
                     SettingUiItem(
-                        "Run connectivity checks",
-                        if (diagnosticsState.isRunning) "Checking VPN, DNS, IPv6, and app inventory" else "Validate VPN/DNS status on this device",
+                        stringResource(R.string.set_run_checks),
+                        if (diagnosticsState.isRunning) stringResource(R.string.set_checks_running) else stringResource(R.string.set_checks_idle),
                         !diagnosticsState.isRunning,
                         Icons.Default.NetworkCheck,
                         onClick = {
                             settingsViewModel.runDiagnostics()
-                            Toast.makeText(context, "Diagnostics started", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, resources.getString(R.string.set_diagnostics_started), Toast.LENGTH_SHORT).show()
                         }
                     )
                 )
@@ -336,10 +352,10 @@ fun SettingsScreen(
 
         item {
             SettingBlock(
-                title = "Blocklists",
+                title = stringResource(R.string.set_blocklists),
                 footer = {
                     Spacer(modifier = Modifier.height(10.dp))
-                    Text("Total domains loaded: $blocklistSize", style = MaterialTheme.typography.titleMedium, color = PgAccent)
+                    Text(stringResource(R.string.set_domains_loaded, java.text.NumberFormat.getIntegerInstance().format(blocklistSize)), style = MaterialTheme.typography.titleMedium, color = PgAccent)
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         PanelCard(
@@ -347,52 +363,52 @@ fun SettingsScreen(
                                 .weight(1f)
                                 .clickable {
                                     BlocklistUpdateWorker.updateNow(context)
-                                    Toast.makeText(context, "Blocklist refresh started", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, resources.getString(R.string.set_refresh_started), Toast.LENGTH_SHORT).show()
                                 }
                         ) {
-                            Text("Refresh Now", style = MaterialTheme.typography.titleMedium, color = PgAccent)
+                            Text(stringResource(R.string.set_refresh_now), style = MaterialTheme.typography.titleMedium, color = PgAccent)
                         }
                         PanelCard(
                             modifier = Modifier
                                 .weight(1f)
                                 .clickable {
                                     WeeklyReportWorker.generateNow(context)
-                                    Toast.makeText(context, "Weekly report requested", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, resources.getString(R.string.set_report_requested), Toast.LENGTH_SHORT).show()
                                 }
                         ) {
-                            Text("Run Report", style = MaterialTheme.typography.titleMedium, color = PgAccent)
+                            Text(stringResource(R.string.set_run_report), style = MaterialTheme.typography.titleMedium, color = PgAccent)
                         }
                     }
                 },
                 items = listOf(
-                    SettingUiItem("StevenBlack Unified", "~145K domains", true, Icons.Default.Storage, onClick = { }),
-                    SettingUiItem("OISD Full", "~180K domains", true, Icons.Default.Storage, onClick = { })
+                    SettingUiItem("StevenBlack Unified", stringResource(R.string.set_list_size_steven), true, Icons.Default.Storage, onClick = { }),
+                    SettingUiItem("OISD Full", stringResource(R.string.set_list_size_oisd), true, Icons.Default.Storage, onClick = { })
                 )
             )
         }
 
         item {
             SettingBlock(
-                title = "Data management",
+                title = stringResource(R.string.set_data_management),
                 footer = {
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(7, 14, 30, 90).forEach { days ->
-                            SelectablePill("${days}d", retentionDays == days) {
+                            SelectablePill(pluralStringResource(R.plurals.set_days_short, days, days), retentionDays == days) {
                                 settingsPreferences.setRetentionDays(days)
                             }
                         }
                     }
                 },
                 items = listOf(
-                    SettingUiItem("Data retention", "$retentionDays days", true, Icons.Default.Storage, onClick = { }),
-                    SettingUiItem("Clear all connection data", "Danger zone", false, Icons.Default.Warning, onClick = {
+                    SettingUiItem(stringResource(R.string.set_retention), pluralStringResource(R.plurals.set_days_short, retentionDays, retentionDays), true, Icons.Default.Storage, onClick = { }),
+                    SettingUiItem(stringResource(R.string.set_clear_data), stringResource(R.string.set_danger_zone), false, Icons.Default.Warning, onClick = {
                         runProtectedAction(
-                            "Clear connection data",
-                            "Confirm access before deleting local connection history",
+                            resources.getString(R.string.set_clear_confirm_title),
+                            resources.getString(R.string.set_clear_confirm_body),
                         ) {
                             settingsViewModel.clearConnectionData()
-                            Toast.makeText(context, "Connection history cleared", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, resources.getString(R.string.set_cleared), Toast.LENGTH_SHORT).show()
                         }
                     }, danger = true)
                 )
@@ -400,32 +416,32 @@ fun SettingsScreen(
         }
         item {
             PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                Text("ANALYSIS & INSIGHTS", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+                Text(stringResource(R.string.set_analysis).uppercase(), style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
                 Spacer(modifier = Modifier.height(12.dp))
-                NavRow("Security Analysis", "App TLS fingerprints, cipher alerts, certificate transparency", Icons.Default.Security, PgAccent, onOpenSecurityAnalysis)
+                NavRow(stringResource(R.string.set_nav_security), stringResource(R.string.set_nav_security_desc), Icons.Default.Security, PgAccent, onOpenSecurityAnalysis)
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    androidx.compose.ui.res.stringResource(com.privacyguard.app.R.string.tls_fp_settings_explainer),
+                    stringResource(R.string.tls_fp_settings_explainer),
                     style = MaterialTheme.typography.bodySmall,
                     color = PgTextMuted,
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                NavRow("Ads & Trackers", "Per-app tracker detection and SDK inventory", Icons.Default.MonetizationOn, PgWarning, onOpenAds)
+                NavRow(stringResource(R.string.set_nav_ads), stringResource(R.string.set_nav_ads_desc), Icons.Default.MonetizationOn, PgWarning, onOpenAds)
                 Spacer(modifier = Modifier.height(12.dp))
                 NavRow(
-                    androidx.compose.ui.res.stringResource(com.privacyguard.app.R.string.adp_title),
-                    androidx.compose.ui.res.stringResource(com.privacyguard.app.R.string.adp_nav_subtitle),
+                    stringResource(R.string.adp_title),
+                    stringResource(R.string.adp_nav_subtitle),
                     androidx.compose.material.icons.Icons.Filled.Mic, PgInfo, onOpenAdPrivacy,
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                NavRow("Firewall Rules", "View, add, disable and delete all your block and allow rules", Icons.Default.Block, PgDanger, onOpenRules)
+                NavRow(stringResource(R.string.set_nav_rules), stringResource(R.string.set_nav_rules_desc), Icons.Default.Block, PgDanger, onOpenRules)
                 if (onOpenPayloads != null) {
                     Spacer(modifier = Modifier.height(12.dp))
-                    NavRow("Payload Inspector", "Intercepted HTTPS traffic logs", Icons.Default.Search, PgInfo, onOpenPayloads)
+                    NavRow(stringResource(R.string.set_nav_payloads), stringResource(R.string.set_nav_payloads_desc), Icons.Default.Search, PgInfo, onOpenPayloads)
                 }
                 if (onOpenFlutterUi != null) {
                     Spacer(modifier = Modifier.height(12.dp))
-                    NavRow("Flutter UI (Preview)", "Cross-platform UI — tap to launch", Icons.Default.PhoneAndroid, PgAccent, onOpenFlutterUi)
+                    NavRow(stringResource(R.string.set_nav_flutter), stringResource(R.string.set_nav_flutter_desc), Icons.Default.PhoneAndroid, PgAccent, onOpenFlutterUi)
                 }
             }
         }
@@ -433,7 +449,7 @@ fun SettingsScreen(
         // Dual VPN section
         item {
             PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                Text("DUAL VPN", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+                Text(stringResource(R.string.set_dual_vpn).uppercase(), style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth().clickable { settingsPreferences.setDualVpnEnabled(!dualVpnEnabled) },
@@ -441,10 +457,10 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Enable Dual VPN", style = MaterialTheme.typography.titleMedium, color = PgText)
+                        Text(stringResource(R.string.set_dual_enable), style = MaterialTheme.typography.titleMedium, color = PgText)
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            "Chain two SOCKS5 hops. Neither server knows both who you are and your destination.",
+                            stringResource(R.string.set_dual_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = PgTextMuted,
                         )
@@ -454,13 +470,13 @@ fun SettingsScreen(
 
                 if (dualVpnEnabled) {
                     Spacer(modifier = Modifier.height(14.dp))
-                    Text("First Hop (Server 1)", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+                    Text(stringResource(R.string.set_hop1), style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = dualVpnHop1Host,
                             onValueChange = { settingsPreferences.setDualVpnHop1Host(it) },
-                            label = { Text("Host") },
+                            label = { Text(stringResource(R.string.set_host)) },
                             singleLine = true,
                             modifier = Modifier.weight(2f),
                             shape = RoundedCornerShape(12.dp),
@@ -468,7 +484,7 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = dualVpnHop1Port.toString(),
                             onValueChange = { settingsPreferences.setDualVpnHop1Port(it.toIntOrNull() ?: 1080) },
-                            label = { Text("Port") },
+                            label = { Text(stringResource(R.string.set_port)) },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
@@ -480,7 +496,7 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = dualVpnHop1User,
                             onValueChange = { settingsPreferences.setDualVpnHop1User(it) },
-                            label = { Text("Username (opt)") },
+                            label = { Text(stringResource(R.string.set_username_opt)) },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
@@ -488,7 +504,7 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = dualVpnHop1Pass,
                             onValueChange = { settingsPreferences.setDualVpnHop1Pass(it) },
-                            label = { Text("Password (opt)") },
+                            label = { Text(stringResource(R.string.set_password_opt)) },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
@@ -497,13 +513,13 @@ fun SettingsScreen(
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
-                    Text("Second Hop (Server 2)", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+                    Text(stringResource(R.string.set_hop2), style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = dualVpnHop2Host,
                             onValueChange = { settingsPreferences.setDualVpnHop2Host(it) },
-                            label = { Text("Host") },
+                            label = { Text(stringResource(R.string.set_host)) },
                             singleLine = true,
                             modifier = Modifier.weight(2f),
                             shape = RoundedCornerShape(12.dp),
@@ -511,7 +527,7 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = dualVpnHop2Port.toString(),
                             onValueChange = { settingsPreferences.setDualVpnHop2Port(it.toIntOrNull() ?: 1080) },
-                            label = { Text("Port") },
+                            label = { Text(stringResource(R.string.set_port)) },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
@@ -523,7 +539,7 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = dualVpnHop2User,
                             onValueChange = { settingsPreferences.setDualVpnHop2User(it) },
-                            label = { Text("Username (opt)") },
+                            label = { Text(stringResource(R.string.set_username_opt)) },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
@@ -531,7 +547,7 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = dualVpnHop2Pass,
                             onValueChange = { settingsPreferences.setDualVpnHop2Pass(it) },
-                            label = { Text("Password (opt)") },
+                            label = { Text(stringResource(R.string.set_password_opt)) },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
@@ -540,7 +556,7 @@ fun SettingsScreen(
                     }
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        "Traffic: You → Hop1 → Hop2 → Internet. Neither hop has the full picture.",
+                        stringResource(R.string.set_dual_flow),
                         style = MaterialTheme.typography.bodySmall,
                         color = PgAccent,
                     )
@@ -584,7 +600,7 @@ private fun NavRow(
                 Text(subtitle, style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
             }
         }
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = PgTextFaint, modifier = Modifier.size(18.dp))
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = PgTextFaint, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -606,7 +622,12 @@ private fun DiagnosticRow(check: DiagnosticCheck) {
             Spacer(modifier = Modifier.height(2.dp))
             Text(check.detail, style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
         }
-        StatusPill(check.status.name, background, content)
+        StatusPill(stringResource(when (check.status) {
+            DiagnosticStatus.PASS -> R.string.set_status_pass
+            DiagnosticStatus.WARN -> R.string.set_status_warn
+            DiagnosticStatus.FAIL -> R.string.set_status_fail
+            DiagnosticStatus.RUNNING -> R.string.set_status_running
+        }).uppercase(), background, content)
     }
 }
 
@@ -642,7 +663,7 @@ private fun SettingBlock(
                     Text(item.subtitle, style = MaterialTheme.typography.bodySmall, color = if (item.danger) PgDanger else PgTextMuted)
                 }
                 if (item.danger) {
-                    StatusPill("Danger", PgDangerDim, PgDanger)
+                    StatusPill(stringResource(R.string.set_danger), PgDangerDim, PgDanger)
                 } else {
                     ToggleChip(item.enabled)
                 }

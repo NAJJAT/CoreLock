@@ -10,6 +10,10 @@ enum class BehaviorSeverity(val label: String, val rank: Int) {
     HIGH("HIGH", 2),
 }
 
+/** Stable identity of a finding; the UI localizes from this plus [BehaviorFinding.values]. */
+enum class BehaviorKind { NEW_DESTINATION, UNUSUAL_HOUR, UPLOAD_SPIKE, BACKGROUND_BEACON }
+
+/** [title]/[summary]/[evidence] are English (logs, IT report, tests); screens use [kind] and [values]. */
 data class BehaviorFinding(
     val packageName: String,
     val hostname: String,
@@ -17,6 +21,8 @@ data class BehaviorFinding(
     val title: String,
     val summary: String,
     val evidence: List<String> = emptyList(),
+    val kind: BehaviorKind = BehaviorKind.NEW_DESTINATION,
+    val values: Map<String, Long> = emptyMap(),
 )
 
 data class AppBehaviorSummary(
@@ -93,6 +99,8 @@ object BehaviorDnaAnalyzer {
                             "First seen: ${((now - profile.firstSeen) / 3_600_000L).coerceAtLeast(0)}h ago",
                             "Connections: ${profile.connectionCount}",
                         ),
+                        kind = BehaviorKind.NEW_DESTINATION,
+                        values = mapOf("hours" to ((now - profile.firstSeen) / 3_600_000L).coerceAtLeast(0), "connections" to profile.connectionCount.toLong()),
                     )
                 }
         }
@@ -113,6 +121,8 @@ object BehaviorDnaAnalyzer {
                             "Background ratio: ${(profile.backgroundRatio * 100).roundToInt()}%",
                             "Package hour share: ${(packageHourRatio * 100).roundToInt()}%",
                         ),
+                        kind = BehaviorKind.UNUSUAL_HOUR,
+                        values = mapOf("hour" to dominantHour.toLong(), "bgPct" to (profile.backgroundRatio * 100).roundToInt().toLong(), "sharePct" to (packageHourRatio * 100).roundToInt().toLong()),
                     )
                 }
             }
@@ -139,6 +149,8 @@ object BehaviorDnaAnalyzer {
                             "Avg per destination: ${formatBytes(referenceAverage.roundToLongSafe())}",
                             "Background ratio: ${(profile.backgroundRatio * 100).roundToInt()}%",
                         ),
+                        kind = BehaviorKind.UPLOAD_SPIKE,
+                        values = mapOf("bytesOut" to profile.totalBytesOut, "avgBytes" to referenceAverage.roundToLongSafe(), "bgPct" to (profile.backgroundRatio * 100).roundToInt().toLong()),
                     )
                 }
             }
@@ -159,6 +171,8 @@ object BehaviorDnaAnalyzer {
                         "Connections: ${profile.connectionCount}",
                         "Background ratio: ${(profile.backgroundRatio * 100).roundToInt()}%",
                     ),
+                    kind = BehaviorKind.BACKGROUND_BEACON,
+                    values = mapOf("intervalSec" to profile.avgIntervalMs / 1000, "connections" to profile.connectionCount.toLong(), "bgPct" to (profile.backgroundRatio * 100).roundToInt().toLong()),
                 )
             }
 

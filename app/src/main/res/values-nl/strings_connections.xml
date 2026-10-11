@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="conn_unknown_app">Onbekende app</string>
+    <string name="conn_no_records">Geen DNS-records ontvangen</string>
+    <string name="conn_lookup_failed">DNS-opzoeking mislukt</string>
+    <string name="conn_title">Verbindingen</string>
+    <string name="conn_subtitle">Live netwerkverkeer en versleuteling</string>
+    <string name="conn_cleartext">Onversleuteld</string>
+    <string name="conn_no_match">Geen overeenkomende verbindingen</string>
+    <string name="conn_none_yet">Nog geen verbindingen</string>
+    <string name="conn_no_match_desc">Niets in de lijst past bij dit filter of deze zoekopdracht. Tik op Alle om het te wissen.</string>
+    <string name="conn_none_yet_desc">Open een andere app terwijl de bescherming aanstaat. Zijn verbindingen verschijnen hier zodra hij het netwerk gebruikt.</string>
+    <string name="conn_unknown_package">Onbekend pakket</string>
+    <string name="conn_unblock">Deblokkeren</string>
+    <string name="conn_bg_short">AG</string>
+    <string name="conn_app">App</string>
+    <string name="conn_package">Pakket</string>
+    <string name="conn_dns_name">DNS-naam</string>
+    <string name="conn_resolving">Bezig met opzoeken…</string>
+    <string name="conn_unknown">Onbekend</string>
+    <string name="conn_security">Beveiliging</string>
+    <string name="conn_transferred">Overgedragen</string>
+    <string name="conn_up_down">%1$s verzonden · %2$s ontvangen</string>
+    <string name="conn_route">Route</string>
+    <string name="conn_route_country">Dit toestel → %1$s (%2$s)</string>
+    <string name="conn_route_unknown">Dit toestel → onbekend land</string>
+    <string name="conn_no_geo">Geen lokale GeoIP-overeenkomst voor dit adres</string>
+    <string name="conn_view_app">App bekijken →</string>
+    <string name="conn_close">Sluiten</string>
+    <string name="conn_dns_lookup">DNS-opzoeking</string>
+    <string name="conn_no_result">Geen resultaat</string>
+    <string name="conn_ok">OK</string>
+    <string name="conn_search">Host, app of IP zoeken…</string>
+</resources>

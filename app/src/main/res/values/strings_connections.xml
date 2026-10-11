@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="conn_unknown_app">Unknown app</string>
+    <string name="conn_no_records">No DNS records returned</string>
+    <string name="conn_lookup_failed">DNS lookup failed</string>
+    <string name="conn_title">Connections</string>
+    <string name="conn_subtitle">Live network traffic and encryption</string>
+    <string name="conn_cleartext">Cleartext</string>
+    <string name="conn_no_match">No matching connections</string>
+    <string name="conn_none_yet">No connections yet</string>
+    <string name="conn_no_match_desc">Nothing in the list matches this filter or search. Tap All to clear it.</string>
+    <string name="conn_none_yet_desc">Open another app while protection is on. Its connections appear here as soon as it uses the network.</string>
+    <string name="conn_unknown_package">Unknown package</string>
+    <string name="conn_unblock">Unblock</string>
+    <string name="conn_bg_short">BG</string>
+    <string name="conn_app">App</string>
+    <string name="conn_package">Package</string>
+    <string name="conn_dns_name">DNS name</string>
+    <string name="conn_resolving">Resolving…</string>
+    <string name="conn_unknown">Unknown</string>
+    <string name="conn_security">Security</string>
+    <string name="conn_transferred">Transferred</string>
+    <string name="conn_up_down">%1$s sent · %2$s received</string>
+    <string name="conn_route">Route</string>
+    <string name="conn_route_country">This device → %1$s (%2$s)</string>
+    <string name="conn_route_unknown">This device → unknown country</string>
+    <string name="conn_no_geo">No local GeoIP match for this address</string>
+    <string name="conn_view_app">View app →</string>
+    <string name="conn_close">Close</string>
+    <string name="conn_dns_lookup">DNS lookup</string>
+    <string name="conn_no_result">No result</string>
+    <string name="conn_ok">OK</string>
+    <string name="conn_search">Search host, app, IP…</string>
+</resources>

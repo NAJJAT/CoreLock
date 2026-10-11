@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="conn_unknown_app">تطبيق غير معروف</string>
+    <string name="conn_no_records">لم تُرجع أي سجلات DNS</string>
+    <string name="conn_lookup_failed">فشل البحث في DNS</string>
+    <string name="conn_title">الاتصالات</string>
+    <string name="conn_subtitle">حركة الشبكة المباشرة والتشفير</string>
+    <string name="conn_cleartext">غير مشفّر</string>
+    <string name="conn_no_match">لا اتصالات مطابقة</string>
+    <string name="conn_none_yet">لا اتصالات بعد</string>
+    <string name="conn_no_match_desc">لا شيء في القائمة يطابق هذا المرشّح أو البحث. اضغط «الكل» لمسحه.</string>
+    <string name="conn_none_yet_desc">افتح تطبيقًا آخر والحماية مفعّلة. ستظهر اتصالاته هنا بمجرد أن يستخدم الشبكة.</string>
+    <string name="conn_unknown_package">حزمة غير معروفة</string>
+    <string name="conn_unblock">إلغاء الحظر</string>
+    <string name="conn_bg_short">خلفية</string>
+    <string name="conn_app">التطبيق</string>
+    <string name="conn_package">الحزمة</string>
+    <string name="conn_dns_name">اسم DNS</string>
+    <string name="conn_resolving">جارٍ البحث…</string>
+    <string name="conn_unknown">غير معروف</string>
+    <string name="conn_security">الأمان</string>
+    <string name="conn_transferred">البيانات المنقولة</string>
+    <string name="conn_up_down">أُرسل %1$s · استُقبل %2$s</string>
+    <string name="conn_route">المسار</string>
+    <string name="conn_route_country">هذا الجهاز ← %1$s (%2$s)</string>
+    <string name="conn_route_unknown">هذا الجهاز ← بلد غير معروف</string>
+    <string name="conn_no_geo">لا يوجد تطابق GeoIP محلي لهذا العنوان</string>
+    <string name="conn_view_app">عرض التطبيق ←</string>
+    <string name="conn_close">إغلاق</string>
+    <string name="conn_dns_lookup">بحث DNS</string>
+    <string name="conn_no_result">لا نتيجة</string>
+    <string name="conn_ok">سليم</string>
+    <string name="conn_search">ابحث عن مضيف أو تطبيق أو IP…</string>
+</resources>

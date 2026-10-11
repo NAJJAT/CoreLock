@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onb_1_title">Jouw toestel. Jouw regels.</string>
+    <string name="onb_1_body">De app draait een lokale VPN om elke verbinding van je apps te zien, zodat niets ongemerkt je toestel verlaat.</string>
+    <string name="onb_1_b1">Kijkt alleen naar verbindingsgegevens: er wordt geen inhoud ontsleuteld tenzij je HTTPS-inspectie aanzet</string>
+    <string name="onb_1_b2">Werkt op je toestel, zonder cloudaccount</string>
+    <string name="onb_1_b3">Android kan verkeer blokkeren als de bescherming wegvalt (Altijd-aan-VPN)</string>
+    <string name="onb_2_title">Wat het opspoort</string>
+    <string name="onb_2_body">Meerdere analyselagen tonen wat je telefoon normaal niet laat zien.</string>
+    <string name="onb_2_b1">Apps die plotseling op een nieuwe manier verbinden (TLS-vingerafdrukken)</string>
+    <string name="onb_2_b2">DNS-tunneling en willekeurig ogende (DGA-)domeinen</string>
+    <string name="onb_2_b3">Tracker-SDK’s die in je apps zijn ingebouwd</string>
+    <string name="onb_2_b4">Apps die op de achtergrond het netwerk gebruiken</string>
+    <string name="onb_2_b5">Onversleutelde verbindingen</string>
+    <string name="onb_3_title">Wat je zelf bepaalt</string>
+    <string name="onb_3_body">Blokkeer alles: per app, per domein, per IP of overal. Regels werken meteen.</string>
+    <string name="onb_3_b1">Specifieke apps, domeinen of IP-adressen blokkeren</string>
+    <string name="onb_3_b2">Alle onversleutelde of zwakke TLS blokkeren</string>
+    <string name="onb_3_b3">Voorgestelde regels op basis van wat je apps doen</string>
+    <string name="onb_3_b4">Logboeken exporteren als PCAP, CSV of IT-rapport</string>
+    <string name="onb_start">Begrepen: start de bewaking</string>
+    <string name="onb_continue">Doorgaan zonder de VPN aan te zetten</string>
+    <string name="onb_next">Volgende</string>
+    <string name="onb_consent_title">Wat deze app doet</string>
+    <string name="onb_consent_body">Lees en bevestig elk punt voordat je verdergaat.</string>
+    <string name="onb_c_net">Netwerkbewaking</string>
+    <string name="onb_c_net_body">Er wordt een lokale VPN op dit toestel gemaakt. Al het netwerkverkeer loopt erdoor, zodat de app kan tonen welke apps communiceren en met wie. Er verlaten geen gegevens je toestel.</string>
+    <string name="onb_c_https">Inspectie van HTTPS-verkeer (optioneel)</string>
+    <string name="onb_c_https_body">Om de inhoud van versleuteld verkeer te lezen, werkt de app als lokale HTTPS-proxy. Daarvoor moet een beveiligingscertificaat worden geïnstalleerd. Het certificaat staat alleen op dit toestel en wordt verwijderd als je de app verwijdert. Je kunt de app ook zonder deze functie gebruiken.</string>
+    <string name="onb_c_storage">Lokale opslag</string>
+    <string name="onb_c_storage_body">Verkeerslogboeken worden alleen in de privéopslag van de app op dit toestel bewaard. Ze worden nergens naartoe geüpload. Je kunt ze altijd wissen via Instellingen.</string>
+    <string name="onb_required_note">Vink de verplichte punten aan om verder te gaan.</string>
+    <string name="onb_required">Verplicht</string>
+    <string name="onb_optional">Optioneel</string>
+</resources>

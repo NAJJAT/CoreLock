@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rule_allow_domain">Autoriser %1$s</string>
+    <string name="rule_block_domain">Bloquer %1$s</string>
+    <string name="ads_cat_ads">Bannières publicitaires</string>
+    <string name="ads_cat_ads_desc">Domaines publicitaires des réseaux DNS et de contenu</string>
+    <string name="ads_cat_trackers">Scripts de pistage</string>
+    <string name="ads_cat_trackers_desc">Points d’accès comportementaux et d’analyse</string>
+    <string name="ads_cat_malware">Logiciels malveillants et hameçonnage</string>
+    <string name="ads_cat_malware_desc">Infrastructures malveillantes et d’hameçonnage connues</string>
+    <string name="ads_cat_telemetry">Télémétrie</string>
+    <string name="ads_cat_telemetry_desc">Points d’accès de télémétrie et de rapports en arrière-plan</string>
+    <string name="ads_title">Bloqueur de pubs</string>
+    <string name="ads_subtitle">Au niveau DNS · fonctionne dans toutes les apps</string>
+    <string name="ads_block_categories">Catégories à bloquer</string>
+    <string name="ads_custom_rules">Règles personnalisées</string>
+    <string name="ads_add_domain">Ajouter un domaine</string>
+    <string name="ads_no_rules">Aucune règle de domaine personnalisée pour l’instant.</string>
+    <string name="ads_blocklists_active">Listes de blocage actives</string>
+    <string name="ads_refreshing">Actualisation…</string>
+    <string name="ads_top_apps">Apps contactant le plus de traqueurs (24 h)</string>
+    <plurals name="ads_hits">
+        <item quantity="one">%d fois</item>
+        <item quantity="many">%d fois</item>
+        <item quantity="other">%d fois</item>
+    </plurals>
+    <string name="ads_add_rule">Ajouter une règle personnalisée</string>
+    <string name="ads_domain">Domaine</string>
+    <string name="ads_block">Bloquer</string>
+    <string name="ads_allow">Autoriser</string>
+    <string name="ads_save">Enregistrer</string>
+    <string name="ads_ad_blocking">Blocage des pubs</string>
+    <plurals name="ads_blocked_today_n">
+        <item quantity="one">%d connexion bloquée aujourd’hui</item>
+        <item quantity="many">%d connexions bloquées aujourd’hui</item>
+        <item quantity="other">%d connexions bloquées aujourd’hui</item>
+    </plurals>
+    <string name="ads_off">Le blocage des pubs est désactivé</string>
+    <string name="ads_blocked_today">Bloquées aujourd’hui</string>
+    <string name="ads_cat_counts">%1$d actifs · %2$s</string>
+    <string name="ads_custom_allow">Autorisation personnalisée</string>
+    <string name="ads_custom_block">Blocage personnalisé</string>
+    <string name="ads_delete_rule">Supprimer la règle</string>
+    <string name="ads_source_counts">%1$d sur %2$s activés</string>
+    <string name="ads_on">Activé</string>
+</resources>

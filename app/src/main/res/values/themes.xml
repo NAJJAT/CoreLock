@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.Privacyguard" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- AppCompat parent: the per-app language API recreates AppCompat activities
+         with the chosen locale on Android 12 and older. Compose draws the UI. -->
+    <style name="Theme.Privacyguard" parent="Theme.AppCompat.Light.NoActionBar" />
 </resources>

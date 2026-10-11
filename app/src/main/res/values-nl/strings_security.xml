@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sec_title">Versleutelingsanalyse</string>
+    <string name="sec_subtitle">TLS-vingerafdrukken · versleutelingsmethoden · CT-monitor</string>
+    <string name="sec_ja3_threats">JA3-overeenkomsten</string>
+    <string name="sec_weak_ciphers">Zwakke versleuteling</string>
+    <string name="sec_ct_events">CT-gebeurtenissen</string>
+    <string name="sec_ja3_section">Bekende kwaadaardige JA3-vingerafdrukken</string>
+    <string name="sec_ja3_desc">Elke TLS-handshake wordt ook vergeleken met een kleine ingebouwde lijst van JA3-hashes die bij malware zijn gemeld. JA3-overeenkomsten kunnen vals alarm zijn: zie er een als aanwijzing, niet als bewijs.</string>
+    <string name="sec_ja3_none">Geen overeenkomsten met de lijst</string>
+    <string name="sec_cipher_section">Analyse van versleutelingsmethoden</string>
+    <string name="sec_cipher_desc">Herkent FREAK (RSA_EXPORT), LOGJAM (DHE_EXPORT), NULL, RC4 en anonieme versleuteling die apps aanbieden.</string>
+    <string name="sec_cipher_none">Geen zwakke versleuteling gezien</string>
+    <string name="sec_ct_section">Certificate Transparency-monitor</string>
+    <string name="sec_ct_desc">Standaard uit. Als je hem in Instellingen aanzet, controleert hij elke 6 uur bij crt.sh of er nieuwe certificaten zijn uitgegeven voor domeinen waarmee je toestel verbindt; crt.sh ziet dan die domeinen.</string>
+    <string name="sec_ct_on">CT-monitor staat aan: nieuwe certificaatgebeurtenissen verschijnen hier</string>
+    <string name="sec_ct_off">CT-monitor staat uit: zet hem aan via Instellingen → Certificate Transparency-controles</string>
+    <string name="sec_dual_desc">Koppel twee SOCKS5-servers, zodat geen enkele server weet wie je bent én waar je naartoe gaat.</string>
+    <string name="sec_hop_you">Jij</string>
+    <string name="sec_hop_you_desc">Je echte IP-adres</string>
+    <string name="sec_hop_1">Server 1</string>
+    <string name="sec_hop_1_desc">Kent je IP-adres, niet je bestemming</string>
+    <string name="sec_hop_2">Server 2</string>
+    <string name="sec_hop_2_desc">Kent je bestemming, niet je IP-adres</string>
+    <string name="sec_hop_net">Internet</string>
+    <string name="sec_hop_net_desc">Geen enkele server heeft het volledige beeld</string>
+    <string name="sec_dual_config">Stel de servers in via Instellingen → Dubbele VPN.</string>
+    <string name="sec_native">Native verwerkingsengine</string>
+    <string name="sec_rust">Rust-kernengine</string>
+    <string name="sec_rust_on">Pakketten worden in native code verwerkt</string>
+    <string name="sec_rust_off">Kotlin-engine actief · bouw met NDK + Cargo om in te schakelen</string>
+    <string name="sec_active">Actief</string>
+    <string name="sec_sev">Ernst %1$d</string>
+    <string name="sec_ja3_hash">JA3-hash</string>
+    <string name="sec_ja3_string">JA3-tekenreeks</string>
+    <string name="sec_category">Categorie</string>
+    <string name="sec_detail">Details</string>
+    <string name="sec_detected">Gezien</string>
+    <plurals name="sec_view_all">
+        <item quantity="one">%d melding bekijken</item>
+        <item quantity="other">Alle %d meldingen bekijken</item>
+    </plurals>
+</resources>

@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dash_card_behavior">ADN comportemental des apps</string>
+    <string name="dash_card_behavior_desc">Apprend le rythme normal des apps et signale les écarts</string>
+    <string name="dash_status_anomalous">Anormal</string>
+    <string name="dash_status_learning">Apprentissage</string>
+    <string name="dash_status_quiet">Calme</string>
+    <plurals name="dash_alerts_count">
+        <item quantity="one">%d alerte</item>
+        <item quantity="many">%d alertes</item>
+        <item quantity="other">%d alertes</item>
+    </plurals>
+    <string name="dash_card_ipv6">Fuite IPv6</string>
+    <string name="dash_card_ipv6_desc">Contrôle du routage double pile et des contournements</string>
+    <string name="dash_status_critical">Critique</string>
+    <string name="dash_status_blocked">Bloqué</string>
+    <string name="dash_status_contained">Maîtrisé</string>
+    <plurals name="dash_blocked_count">
+        <item quantity="one">%d bloqué</item>
+        <item quantity="many">%d bloqués</item>
+        <item quantity="other">%d bloqués</item>
+    </plurals>
+    <plurals name="dash_ipv6_count">
+        <item quantity="one">%d IPv6</item>
+        <item quantity="many">%d IPv6</item>
+        <item quantity="other">%d IPv6</item>
+    </plurals>
+    <string name="dash_card_kill_switch">Kill switch</string>
+    <string name="dash_kill_switch_off_desc">Activez « VPN permanent » et « Bloquer les connexions sans VPN »</string>
+    <string name="dash_status_blocking">Bloque</string>
+    <string name="dash_status_alert_only">Alerte seule</string>
+    <string name="dash_vpn_live">VPN actif</string>
+    <string name="dash_vpn_off">VPN désactivé</string>
+    <string name="dash_card_no_decrypt">Aucun déchiffrement du contenu</string>
+    <string name="dash_card_no_decrypt_desc">Inspection des seules métadonnées ; le contenu TLS reste privé</string>
+    <string name="dash_status_verified">Vérifié</string>
+    <string name="dash_headers_only">En-têtes uniquement</string>
+    <string name="dash_card_entropy">Détection des noms aléatoires</string>
+    <string name="dash_card_entropy_desc">Noms DGA/C2 et noms DNS évoquant un tunnel</string>
+    <string name="dash_status_high_value">Important</string>
+    <string name="dash_status_normal">Normal</string>
+    <plurals name="dash_signals_count">
+        <item quantity="one">%d signal</item>
+        <item quantity="many">%d signaux</item>
+        <item quantity="other">%d signaux</item>
+    </plurals>
+    <string name="dash_card_night">Activité nocturne</string>
+    <string name="dash_card_night_desc">Sessions inattendues entre 00:00 et 05:00</string>
+    <string name="dash_status_review">À vérifier</string>
+    <plurals name="dash_sessions_count">
+        <item quantity="one">%d session</item>
+        <item quantity="many">%d sessions</item>
+        <item quantity="other">%d sessions</item>
+    </plurals>
+    <string name="dash_card_beacon">Analyse des intervalles de balise</string>
+    <string name="dash_card_beacon_desc">Contacts répétés entre une app et une destination</string>
+    <string name="dash_status_apt">Schéma APT</string>
+    <string name="dash_status_stable">Stable</string>
+    <plurals name="dash_patterns_count">
+        <item quantity="one">%d schéma</item>
+        <item quantity="many">%d schémas</item>
+        <item quantity="other">%d schémas</item>
+    </plurals>
+    <string name="dash_card_upload">Détection des gros envois</string>
+    <string name="dash_card_upload_desc">Possible fuite de données d’après le volume</string>
+    <string name="dash_card_trust">Confiance du réseau</string>
+    <string name="dash_trust_reduced">Réduite</string>
+    <string name="dash_trust_watch">À surveiller</string>
+    <string name="dash_trust_trusted">Fiable</string>
+    <string name="dash_card_background">Activité en arrière-plan</string>
+    <string name="dash_card_background_desc">Connexions établies alors que l’app n’était pas à l’écran</string>
+    <string name="dash_status_high">Élevée</string>
+    <string name="dash_status_moderate">Modérée</string>
+    <string name="dash_background_value">%1$s · %2$s</string>
+    <plurals name="dash_connections_count">
+        <item quantity="one">%d connexion</item>
+        <item quantity="many">%d connexions</item>
+        <item quantity="other">%d connexions</item>
+    </plurals>
+    <plurals name="dash_apps_count">
+        <item quantity="one">%d app</item>
+        <item quantity="many">%d apps</item>
+        <item quantity="other">%d apps</item>
+    </plurals>
+    <string name="dash_card_cleartext">Connexions en clair</string>
+    <string name="dash_card_cleartext_desc">Connexions HTTP non chiffrées autorisées</string>
+    <string name="dash_status_elevated">Élevé</string>
+    <string name="dash_status_present">Présent</string>
+    <string name="dash_status_none">Aucune</string>
+    <plurals name="dash_today_count">
+        <item quantity="one">%d aujourd’hui</item>
+        <item quantity="many">%d aujourd’hui</item>
+        <item quantity="other">%d aujourd’hui</item>
+    </plurals>
+    <string name="dash_rec_kill_switch">Activez le kill switch pour que rien ne fuie si la protection se coupe.</string>
+    <plurals name="dash_rec_behavior">
+        <item quantity="one">L’ADN comportemental a relevé %d écart d’app. Les nouvelles destinations et les envois à des heures inhabituelles méritent un examen.</item>
+        <item quantity="many">L’ADN comportemental a relevé %d écarts d’apps. Les nouvelles destinations et les envois à des heures inhabituelles méritent un examen.</item>
+        <item quantity="other">L’ADN comportemental a relevé %d écarts d’apps. Les nouvelles destinations et les envois à des heures inhabituelles méritent un examen.</item>
+    </plurals>
+    <string name="dash_rec_ipv6">Du trafic IPv6 a été vu alors que le VPN est actif. Ajoutez le routage IPv6 ou désactivez le contournement IPv6.</string>
+    <string name="dash_rec_entropy">Des noms DNS d’apparence aléatoire ont été détectés. Conservez l’empreinte comportementale même si le domaine change.</string>
+    <string name="dash_rec_beacon">Des intervalles de type balise ont été trouvés. Accordez moins de confiance à ce couple app/destination.</string>
+    <string name="dash_rec_strict">Le mode strict est conseillé sur %1$s, car la confiance est tombée à %2$d/100.</string>
+    <string name="dash_rec_default">Le blocage standard avec le kill switch offre à la plupart des gens la meilleure protection par défaut.</string>
+    <string name="dash_rec_no_decrypt">L’analyse comportementale fonctionne sans déchiffrer le contenu ; ce que vous envoyez reste privé.</string>
+    <string name="dash_title">Tableau de bord</string>
+    <string name="dash_subtitle_on">Tunnel protégé actif</string>
+    <string name="dash_subtitle_off">Protection en pause</string>
+    <string name="dash_badge_live">En direct</string>
+    <string name="dash_badge_offline">Hors ligne</string>
+    <string name="dash_alerts">Alertes</string>
+    <string name="dash_status">État</string>
+    <string name="dash_protected">Protégé</string>
+    <string name="dash_not_protected">Non protégé</string>
+    <string name="dash_privacy_score_n">Score de confidentialité %1$d</string>
+    <string name="dash_encryption_health">Niveau de chiffrement</string>
+    <string name="dash_tls_percent">%1$d %% TLS</string>
+    <string name="dash_trackers_blocked">Traqueurs bloqués</string>
+    <string name="dash_cleartext_conns">Connexions en clair</string>
+    <string name="dash_privacy_score">Score de confidentialité</string>
+    <string name="dash_throughput">Débit</string>
+    <string name="dash_active_conns">Connexions actives</string>
+    <string name="dash_security_systems">Systèmes de sécurité</string>
+    <string name="dash_pcap_stop">Arrêter la capture de paquets</string>
+    <string name="dash_pcap_start">Démarrer la capture de paquets</string>
+    <string name="dash_pcap_confirm">Confirmez votre identité pour accéder à la capture de paquets</string>
+    <string name="dash_pcap_share">Partager la capture PCAP</string>
+    <string name="dash_pcap_share_confirm">Confirmez votre identité avant d’exporter le trafic réseau brut</string>
+    <string name="dash_export_pcap">Exporter le PCAP</string>
+    <string name="dash_recommendations">Recommandations</string>
+    <string name="dash_recent_alerts">Alertes récentes</string>
+    <string name="dash_no_alerts">Aucune alerte pour l’instant</string>
+    <string name="dash_no_alerts_desc">Dès que du trafic passe, les anomalies et blocages récents s’affichent ici.</string>
+    <string name="dash_sleep_title">Pendant votre sommeil</string>
+    <string name="dash_sleep_summary">%1$s · %2$s</string>
+    <plurals name="dash_apps_active">
+        <item quantity="one">%d app active</item>
+        <item quantity="many">%d apps actives</item>
+        <item quantity="other">%d apps actives</item>
+    </plurals>
+    <plurals name="dash_dns_queries">
+        <item quantity="one">%d requête DNS</item>
+        <item quantity="many">%d requêtes DNS</item>
+        <item quantity="other">%d requêtes DNS</item>
+    </plurals>
+    <plurals name="dash_tracking_count">
+        <item quantity="one">%d traqueur</item>
+        <item quantity="many">%d traqueurs</item>
+        <item quantity="other">%d traqueurs</item>
+    </plurals>
+    <string name="dash_weekly_title">Rapport de confidentialité hebdomadaire</string>
+    <string name="dash_weekly_desc">Résumé comportemental des 7 derniers jours</string>
+    <string name="dash_connections">Connexions</string>
+    <string name="dash_blocked">Bloquées</string>
+    <string name="dash_behavior">Comportement</string>
+    <string name="dash_score">Score</string>
+    <string name="dash_transferred">Transféré : %1$s</string>
+    <string name="dash_pcap_title">Export PCAP</string>
+    <string name="dash_pcap_desc">Capturer les paquets IP bruts pour les analyser dans Wireshark</string>
+    <string name="dash_pcap_rec">Enreg.</string>
+    <string name="dash_pcap_ready">Prêt</string>
+    <string name="dash_stop_capture">Arrêter la capture</string>
+    <string name="dash_start_capture">Démarrer la capture</string>
+    <string name="dash_share_capture">Partager la dernière capture</string>
+    <string name="dash_protection">Protection</string>
+    <string name="dash_per_second">%1$s/s</string>
+</resources>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onb_1_title">Votre appareil. Vos règles.</string>
+    <string name="onb_1_body">L’app fait tourner un VPN local pour voir chaque connexion de vos apps, afin que rien ne quitte votre appareil à votre insu.</string>
+    <string name="onb_1_b1">N’examine que les détails des connexions : aucun contenu n’est déchiffré, sauf si vous activez l’inspection HTTPS</string>
+    <string name="onb_1_b2">Fonctionne sur votre appareil, sans compte cloud</string>
+    <string name="onb_1_b3">Android peut bloquer le trafic si la protection se coupe (VPN permanent)</string>
+    <string name="onb_2_title">Ce qu’elle détecte</string>
+    <string name="onb_2_body">Plusieurs couches d’analyse révèlent ce que votre téléphone ne montre pas d’habitude.</string>
+    <string name="onb_2_b1">Les apps qui se connectent soudain d’une nouvelle façon (empreintes TLS)</string>
+    <string name="onb_2_b2">Les tunnels DNS et les domaines d’apparence aléatoire (DGA)</string>
+    <string name="onb_2_b3">Les SDK de pistage intégrés à vos apps</string>
+    <string name="onb_2_b4">Les apps qui utilisent le réseau en arrière-plan</string>
+    <string name="onb_2_b5">Les connexions non chiffrées (en clair)</string>
+    <string name="onb_3_title">Ce que vous contrôlez</string>
+    <string name="onb_3_body">Bloquez ce que vous voulez : par app, par domaine, par IP ou partout. Les règles s’appliquent immédiatement.</string>
+    <string name="onb_3_b1">Bloquer des apps, domaines ou IP précis</string>
+    <string name="onb_3_b2">Bloquer tout le trafic en clair ou le TLS faible</string>
+    <string name="onb_3_b3">Des règles suggérées selon ce que font vos apps</string>
+    <string name="onb_3_b4">Exporter les journaux en PCAP, CSV ou rapport pour le service informatique</string>
+    <string name="onb_start">J’ai compris : lancer la surveillance</string>
+    <string name="onb_continue">Continuer sans activer le VPN</string>
+    <string name="onb_next">Suivant</string>
+    <string name="onb_consent_title">Ce que fait cette app</string>
+    <string name="onb_consent_body">Lisez et confirmez chaque point avant de continuer.</string>
+    <string name="onb_c_net">Surveillance du réseau</string>
+    <string name="onb_c_net_body">Un VPN local est créé sur cet appareil. Tout le trafic réseau le traverse pour que l’app puisse vous montrer quelles apps communiquent, et avec qui. Aucune donnée ne quitte votre appareil.</string>
+    <string name="onb_c_https">Inspection du trafic HTTPS (facultatif)</string>
+    <string name="onb_c_https_body">Pour lire le contenu du trafic chiffré, l’app agit comme un proxy HTTPS local. Cela nécessite d’installer un certificat de sécurité. Il reste uniquement sur cet appareil et est supprimé quand vous désinstallez l’app. Vous pouvez utiliser l’app sans cette fonction.</string>
+    <string name="onb_c_storage">Stockage local</string>
+    <string name="onb_c_storage_body">Les journaux de trafic sont conservés uniquement dans l’espace privé de l’app sur cet appareil. Ils ne sont jamais envoyés nulle part. Vous pouvez les effacer à tout moment depuis les paramètres.</string>
+    <string name="onb_required_note">Cochez les points obligatoires pour continuer.</string>
+    <string name="onb_required">Obligatoire</string>
+    <string name="onb_optional">Facultatif</string>
+</resources>

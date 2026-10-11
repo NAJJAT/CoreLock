@@ -6,6 +6,10 @@ data class GeoResult(
     val org: String,
 )
 
+/** Country name in the current UI language ("Belgium" / "België" / "بلجيكا"). */
+private fun displayCountry(code: String, fallback: String): String =
+    java.util.Locale("", code).displayCountry.takeIf { it.isNotBlank() && it != code } ?: fallback
+
 object GeoIpResolver {
 
     fun lookup(ip: String): GeoResult? {
@@ -18,17 +22,12 @@ object GeoIpResolver {
         for ((network, bits, country, countryName, org) in KNOWN_RANGES) {
             val mask = if (bits == 0) 0L else (0xFFFFFFFFL shl (32 - bits)) and 0xFFFFFFFFL
             if ((ipInt and mask) == (network and mask)) {
-                return GeoResult(country, countryName, org)
+                return GeoResult(country, displayCountry(country, countryName), org)
             }
         }
-        // Coarse continent-level fallback by first octet
-        val firstOctet = ip.substringBefore('.').toIntOrNull() ?: return null
-        return when (firstOctet) {
-            in 1..126   -> GeoResult("US", "United States", "Unknown")
-            in 128..191 -> GeoResult("US", "United States", "Unknown")
-            in 192..223 -> GeoResult("EU", "Europe", "Unknown")
-            else        -> null
-        }
+        // No match: say so. The old first-octet fallback labelled most of the
+        // internet "United States" or "Europe", which was simply wrong.
+        return null
     }
 
     private fun ipToInt(ip: String): Long? {

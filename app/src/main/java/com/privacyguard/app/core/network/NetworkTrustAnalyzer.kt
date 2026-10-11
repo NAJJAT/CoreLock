@@ -26,7 +26,7 @@ object NetworkTrustAnalyzer {
         connections: List<ConnectionEntity>,
         anomalies: List<DnsAnomalyEntity>,
     ): NetworkTrustSummary {
-        val networkLabel = detectNetworkLabel(context)
+        val (networkKey, networkLabel, isWifi) = detectNetwork(context)
         var penalty = 0
         val reasons = mutableListOf<String>()
 
@@ -62,11 +62,11 @@ object NetworkTrustAnalyzer {
         }
 
         return NetworkTrustSummary(
-            networkKey = networkLabel.lowercase(),
+            networkKey = networkKey,
             networkLabel = networkLabel,
             score = score,
             level = level,
-            shouldRecommendStrict = level == "Reduced" && networkLabel.contains("Wi", ignoreCase = true),
+            shouldRecommendStrict = level == "Reduced" && isWifi,
             reasons = if (reasons.isEmpty()) listOf("No cleartext, DNS, or weak TLS issues seen") else reasons.take(3),
             cleartextCount = cleartext,
             dnsAnomalyCount = rogueDns,
@@ -75,24 +75,34 @@ object NetworkTrustAnalyzer {
         )
     }
 
-    private fun detectNetworkLabel(context: Context): String {
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return "Offline"
-        val network = cm.activeNetwork ?: return "Offline"
-        val caps = cm.getNetworkCapabilities(network) ?: return "Unknown network"
+    /**
+     * Key, display label and whether it is Wi-Fi. The key keeps the original
+     * English-derived format so networks remembered before localization still
+     * match, and never changes with the UI language.
+     */
+    private fun detectNetwork(context: Context): Triple<String, String, Boolean> {
+        fun s(id: Int) = context.getString(id)
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            ?: return Triple("offline", s(com.privacyguard.app.R.string.net_offline), false)
+        val network = cm.activeNetwork ?: return Triple("offline", s(com.privacyguard.app.R.string.net_offline), false)
+        val caps = cm.getNetworkCapabilities(network)
+            ?: return Triple("unknown network", s(com.privacyguard.app.R.string.net_unknown), false)
         return when {
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> currentSsid(context) ?: "Wi-Fi network"
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "Cellular network"
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet network"
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) -> "VPN network"
-            else -> "Unknown network"
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> currentSsid(context)
+                ?.let { ssid -> Triple("wi-fi: ${ssid.lowercase()}", context.getString(com.privacyguard.app.R.string.net_wifi_named, ssid), true) }
+                ?: Triple("wi-fi network", s(com.privacyguard.app.R.string.net_wifi), true)
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> Triple("cellular network", s(com.privacyguard.app.R.string.net_cellular), false)
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> Triple("ethernet network", s(com.privacyguard.app.R.string.net_ethernet), false)
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) -> Triple("vpn network", s(com.privacyguard.app.R.string.net_vpn), false)
+            else -> Triple("unknown network", s(com.privacyguard.app.R.string.net_unknown), false)
         }
     }
 
     private fun currentSsid(context: Context): String? {
         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager ?: return null
-        val ssid = runCatching { wifiManager.connectionInfo?.ssid }.getOrNull()
+        @Suppress("DEPRECATION")
+        return runCatching { wifiManager.connectionInfo?.ssid }.getOrNull()
             ?.trim('"')
             ?.takeIf { it.isNotBlank() && it != "<unknown ssid>" }
-        return ssid?.let { "Wi-Fi: $it" }
     }
 }

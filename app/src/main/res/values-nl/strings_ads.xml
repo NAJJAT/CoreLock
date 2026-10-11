@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rule_allow_domain">%1$s toestaan</string>
+    <string name="rule_block_domain">%1$s blokkeren</string>
+    <string name="ads_cat_ads">Display-advertenties</string>
+    <string name="ads_cat_ads_desc">Advertentiedomeinen van DNS- en contentnetwerken</string>
+    <string name="ads_cat_trackers">Trackingscripts</string>
+    <string name="ads_cat_trackers_desc">Eindpunten voor gedrag en analyse</string>
+    <string name="ads_cat_malware">Malware en phishing</string>
+    <string name="ads_cat_malware_desc">Bekende kwaadaardige en phishinginfrastructuur</string>
+    <string name="ads_cat_telemetry">Telemetrie</string>
+    <string name="ads_cat_telemetry_desc">Eindpunten voor telemetrie en rapportage op de achtergrond</string>
+    <string name="ads_title">Adblocker</string>
+    <string name="ads_subtitle">Op DNS-niveau · werkt in alle apps</string>
+    <string name="ads_block_categories">Categorieën blokkeren</string>
+    <string name="ads_custom_rules">Eigen regels</string>
+    <string name="ads_add_domain">Domein toevoegen</string>
+    <string name="ads_no_rules">Nog geen eigen domeinregels.</string>
+    <string name="ads_blocklists_active">Actieve blokkeerlijsten</string>
+    <string name="ads_refreshing">Bezig met vernieuwen…</string>
+    <string name="ads_top_apps">Apps die het vaakst trackers benaderen (24 u)</string>
+    <plurals name="ads_hits">
+        <item quantity="one">%d keer</item>
+        <item quantity="other">%d keer</item>
+    </plurals>
+    <string name="ads_add_rule">Eigen regel toevoegen</string>
+    <string name="ads_domain">Domein</string>
+    <string name="ads_block">Blokkeren</string>
+    <string name="ads_allow">Toestaan</string>
+    <string name="ads_save">Opslaan</string>
+    <string name="ads_ad_blocking">Advertenties blokkeren</string>
+    <plurals name="ads_blocked_today_n">
+        <item quantity="one">%d verbinding vandaag geblokkeerd</item>
+        <item quantity="other">%d verbindingen vandaag geblokkeerd</item>
+    </plurals>
+    <string name="ads_off">Advertenties blokkeren staat uit</string>
+    <string name="ads_blocked_today">Vandaag geblokkeerd</string>
+    <string name="ads_cat_counts">%1$d actief · %2$s</string>
+    <string name="ads_custom_allow">Eigen toestaanregel</string>
+    <string name="ads_custom_block">Eigen blokkeerregel</string>
+    <string name="ads_delete_rule">Regel verwijderen</string>
+    <string name="ads_source_counts">%1$d van %2$s ingeschakeld</string>
+    <string name="ads_on">Aan</string>
+</resources>

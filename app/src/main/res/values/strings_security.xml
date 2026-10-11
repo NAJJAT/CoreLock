@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sec_title">Crypto analysis</string>
+    <string name="sec_subtitle">TLS fingerprints · cipher suites · CT monitor</string>
+    <string name="sec_ja3_threats">JA3 matches</string>
+    <string name="sec_weak_ciphers">Weak ciphers</string>
+    <string name="sec_ct_events">CT events</string>
+    <string name="sec_ja3_section">Known-bad JA3 fingerprints</string>
+    <string name="sec_ja3_desc">Each TLS handshake is also checked against a small built-in list of JA3 hashes reported for malware. JA3 matches can be false positives: treat one as a lead, not proof.</string>
+    <string name="sec_ja3_none">No matches with the known-bad list</string>
+    <string name="sec_cipher_section">Cipher suite analysis</string>
+    <string name="sec_cipher_desc">Detects FREAK (RSA_EXPORT), LOGJAM (DHE_EXPORT), NULL, RC4 and anonymous ciphers offered by apps.</string>
+    <string name="sec_cipher_none">No weak cipher suites observed</string>
+    <string name="sec_ct_section">Certificate Transparency monitor</string>
+    <string name="sec_ct_desc">Off by default. When turned on in Settings, it checks crt.sh every 6 hours for new certificates issued for domains your device contacts; crt.sh then sees those domains.</string>
+    <string name="sec_ct_on">CT monitor is on: new certificate events appear here</string>
+    <string name="sec_ct_off">CT monitor is off: turn it on in Settings → Certificate Transparency checks</string>
+    <string name="sec_dual_desc">Chain two SOCKS5 servers so no single server knows both who you are and where you go.</string>
+    <string name="sec_hop_you">You</string>
+    <string name="sec_hop_you_desc">Your real IP</string>
+    <string name="sec_hop_1">Server 1</string>
+    <string name="sec_hop_1_desc">Knows your IP, not your destination</string>
+    <string name="sec_hop_2">Server 2</string>
+    <string name="sec_hop_2_desc">Knows your destination, not your IP</string>
+    <string name="sec_hop_net">Internet</string>
+    <string name="sec_hop_net_desc">Neither server has the full picture</string>
+    <string name="sec_dual_config">Set up Dual VPN servers in Settings → Dual VPN.</string>
+    <string name="sec_native">Native processing engine</string>
+    <string name="sec_rust">Rust core engine</string>
+    <string name="sec_rust_on">Packet parsing runs in native code</string>
+    <string name="sec_rust_off">Kotlin engine active · build with NDK + Cargo to enable</string>
+    <string name="sec_active">Active</string>
+    <string name="sec_sev">Sev %1$d</string>
+    <string name="sec_ja3_hash">JA3 hash</string>
+    <string name="sec_ja3_string">JA3 string</string>
+    <string name="sec_category">Category</string>
+    <string name="sec_detail">Detail</string>
+    <string name="sec_detected">Detected</string>
+    <plurals name="sec_view_all">
+        <item quantity="one">View %d alert in the inbox</item>
+        <item quantity="other">View all %d alerts in the inbox</item>
+    </plurals>
+</resources>

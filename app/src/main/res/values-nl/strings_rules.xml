@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rules_title">Regels</string>
+    <string name="rules_add">Regel toevoegen</string>
+    <string name="rules_empty">Nog geen regels</string>
+    <string name="rules_empty_desc">Tik op + om een domein- of app-regel toe te voegen</string>
+    <string name="rules_search">Domein, app of IP zoeken…</string>
+    <string name="rules_clear">Wissen</string>
+    <string name="rules_suggested">Voorgesteld</string>
+    <string name="rules_active">Actieve regels · %1$d</string>
+    <plurals name="rules_count">
+        <item quantity="one">%d regel</item>
+        <item quantity="other">%d regels</item>
+    </plurals>
+    <string name="rules_d_domain">domein: %1$s</string>
+    <string name="rules_d_app">app: %1$s</string>
+    <string name="rules_d_ip">IP: %1$s</string>
+    <string name="rules_d_bg">alleen achtergrond</string>
+    <plurals name="rules_triggered">
+        <item quantity="one">%d keer toegepast</item>
+        <item quantity="other">%d keer toegepast</item>
+    </plurals>
+    <string name="rules_delete">Verwijderen</string>
+    <string name="rules_add_title">Regel toevoegen</string>
+    <string name="rules_type">Type:</string>
+    <string name="rules_hint_domain">Domein (bijv. ads.example.com)</string>
+    <string name="rules_hint_package">App-pakket (bijv. com.example.app)</string>
+    <string name="rules_hint_ip">IP of CIDR (bijv. 1.2.3.4 of 10.0.0.0/8)</string>
+    <string name="rules_action">Actie:</string>
+    <string name="rules_add_button">Toevoegen</string>
+    <string name="rules_skip">Overslaan</string>
+    <plurals name="rules_reason_cleartext">
+        <item quantity="one">%d onversleutelde verbinding (7 dagen)</item>
+        <item quantity="other">%d onversleutelde verbindingen (7 dagen)</item>
+    </plurals>
+    <plurals name="rules_reason_background">
+        <item quantity="one">%d verbinding op de achtergrond (7 dagen)</item>
+        <item quantity="other">%d verbindingen op de achtergrond (7 dagen)</item>
+    </plurals>
+</resources>

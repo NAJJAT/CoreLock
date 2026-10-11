@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cancel">Annuleren</string>
+
+    <!-- TLS fingerprint baseline -->
+    <string name="tls_fp_settings_explainer">Een TLS-vingerafdruk is het patroon van versleutelingsopties dat een app aanbiedt wanneer hij een beveiligde verbinding opent, en elke netwerkbibliotheek heeft er een eigen. De eerste 7 dagen leert de app welke vingerafdrukken elke app normaal gebruikt, zonder inhoud te lezen. Verbindt een app later op een manier die hij nooit eerder gebruikte zonder dat hij is bijgewerkt, dan kan dat wijzen op een verborgen SDK, een gemanipuleerde app of onderschepping.</string>
+    <string name="tls_fp_alert_title">%1$s maakt op een nieuwe manier verbinding</string>
+    <string name="tls_fp_alert_short">Nieuwe TLS-vingerafdruk zonder app-update. Tik voor details.</string>
+    <string name="tls_fp_alert_what_domain">Wat er veranderde: %1$s opende een versleutelde verbinding met %2$s met een TLS-vingerafdruk die hij nooit eerder op deze telefoon gebruikte. De app is niet bijgewerkt, dus een update verklaart het niet.</string>
+    <string name="tls_fp_alert_what_no_domain">Wat er veranderde: %1$s opende een versleutelde verbinding met een TLS-vingerafdruk die hij nooit eerder op deze telefoon gebruikte. De app is niet bijgewerkt, dus een update verklaart het niet.</string>
+    <string name="tls_fp_alert_reasons">Mogelijke oorzaken:\n• Een verborgen SDK of bibliotheek in de app is zelf verbindingen gaan maken.\n• Iets doet zich voor als de app, zoals een aangepaste kopie of code die erin is geïnjecteerd.\n• Een tool op deze telefoon onderschept de verbindingen van de app (een proxy-, debug- of ‘beveiligings’app).\n• Onschuldig: de app gebruikt een ingebouwde browser of een andere netwerkbibliotheek.</string>
+    <string name="tls_fp_alert_actions">Wat je kunt doen: heb je onlangs een proxy, adblocker, virusscanner of debugtool geïnstalleerd, dan is dat waarschijnlijk de oorzaak. Werk anders de app bij via de Play Store, controleer de machtigingen en verwijder de app als je hem niet vertrouwt. Herken je de wijziging, tik dan op Vertrouwen.</string>
+    <string name="tls_fp_trust">Vertrouwen</string>
+    <string name="tls_fp_trusted">Vertrouwd</string>
+    <string name="tls_fp_section_title">TLS-vingerafdrukken per app</string>
+    <string name="tls_fp_section_body">Van de versleutelde verbindingen van elke app wordt een vingerafdruk gemaakt (JA4, met JA3 voor compatibiliteit) op basis van de onversleutelde handshake. Er wordt niets ontsleuteld.</string>
+    <plurals name="tls_fp_apps_learning">
+        <item quantity="one">%d app zit nog in de leerperiode van 7 dagen</item>
+        <item quantity="other">%d apps zitten nog in de leerperiode van 7 dagen</item>
+    </plurals>
+    <plurals name="tls_fp_known_count">
+        <item quantity="one">%d vingerafdruk geleerd</item>
+        <item quantity="other">%d vingerafdrukken geleerd</item>
+    </plurals>
+    <string name="tls_fp_no_changes">Geen onverklaarde wijzigingen in vingerafdrukken</string>
+    <string name="tls_fp_no_apps_yet">Nog geen apps met een vingerafdruk. Zet de bescherming aan en gebruik je apps; het leren begint bij de eerste versleutelde verbinding van elke app.</string>
+
+    <!-- Why am I seeing this ad? -->
+    <string name="adp_title">Waarom zie ik deze advertentie?</string>
+    <string name="adp_nav_subtitle">Tijdlijn van microfoon en camera, locatiecontrole, checklist tegen advertentietracking</string>
+    <string name="adp_honest_title">Wat dit wel en niet kan</string>
+    <string name="adp_honest_body">Advertenties in Facebook en Instagram komen van de eigen servers van Meta, dezelfde die je feed laden. Ze blokkeren zou die apps breken, dus deze app probeert het niet. Wat hij wel kan: tonen welke apps je microfoon of camera gebruikten, welke apps je locatie kunnen zien, advertentie-SDK’s in andere apps blokkeren en je door de instellingen leiden die advertentietargeting voeden.</string>
+    <string name="adp_explainer_title">Hoe advertenties je vinden</string>
+    <string name="adp_explainer_location">Locatie: gps, wifinetwerken in de buurt en je IP-adres vertellen advertentienetwerken waar je bent en waar je bent geweest.</string>
+    <string name="adp_explainer_wifi">Hetzelfde wifi als vrienden: mensen die een internetverbinding delen, delen een IP-adres. Platforms koppelen hen en tonen de een advertenties op basis van wat de ander zocht.</string>
+    <string name="adp_explainer_pixels">Websitepixels: winkels en sites sturen je bezoeken via trackingpixels naar Meta en Google, ook als je nooit op een advertentie tikt.</string>
+    <string name="adp_explainer_searches">Zoekopdrachten en accounts: wat je zoekt, bekijkt en koopt terwijl je bent ingelogd, voedt hetzelfde advertentieprofiel.</string>
+    <string name="adp_explainer_mic">Wat de microfoontijdlijn bewijst: gebruikte geen enkele app de microfoon terwijl je over iets praatte, dan kwam de advertentie van deze andere signalen. Ze dekt alleen de tijd waarin de bescherming aanstond, en Android toont ook een groen stipje zolang de microfoon of camera in gebruik is.</string>
+
+    <string name="adp_sensors_title">Tijdlijn van microfoon en camera</string>
+    <string name="adp_sensors_body">Vastgelegd terwijl de bescherming aanstaat. Android vertelt niet welke app de microfoon of camera gebruikt, dus de app die op het scherm stond toen het begon, wordt getoond als de waarschijnlijke.</string>
+    <string name="adp_usage_access_needed">Sta gebruikstoegang toe zodat de waarschijnlijke app genoemd kan worden. Zonder toegang wordt het gebruik nog steeds vastgelegd, maar getoond als ‘Onbekende app’.</string>
+    <string name="adp_usage_access_button">Gebruikstoegang toestaan</string>
+    <string name="adp_sensor_mic">Microfoon</string>
+    <string name="adp_sensor_camera">Camera</string>
+    <string name="adp_unknown_app">Onbekende app</string>
+    <string name="adp_screen_on">Scherm aan</string>
+    <string name="adp_screen_off">Scherm uit</string>
+    <string name="adp_ongoing">nu in gebruik</string>
+    <string name="adp_end_unknown">einde niet vastgelegd</string>
+    <string name="adp_time_range">%1$s – %2$s</string>
+    <string name="adp_sensors_empty">Nog geen gebruik van microfoon of camera vastgelegd. Gebruik wordt alleen vastgelegd terwijl de bescherming aanstaat.</string>
+    <string name="adp_search_title">Heeft een app mijn microfoon gebruikt?</string>
+    <string name="adp_search_today">Vandaag</string>
+    <string name="adp_search_yesterday">Gisteren</string>
+    <string name="adp_search_from">Van %1$s</string>
+    <string name="adp_search_to">Tot %1$s</string>
+    <string name="adp_search_button">Controleren</string>
+    <string name="adp_search_none">Geen enkele app gebruikte de microfoon tussen %1$s en %2$s terwijl de bescherming aanstond.</string>
+    <plurals name="adp_search_found">
+        <item quantity="one">De microfoon werd %1$d keer gebruikt tussen %2$s en %3$s:</item>
+        <item quantity="other">De microfoon werd %1$d keer gebruikt tussen %2$s en %3$s:</item>
+    </plurals>
+    <plurals name="adp_uses_count">
+        <item quantity="one">%d keer</item>
+        <item quantity="other">%d keer</item>
+    </plurals>
+
+    <string name="adp_location_title">Locatiecontrole</string>
+    <string name="adp_location_body">Apps die je locatie kunnen zien. Tik op een app om de machtiging te wijzigen.</string>
+    <string name="adp_location_always">Altijd</string>
+    <string name="adp_location_while_in_use">Tijdens gebruik</string>
+    <string name="adp_location_legacy">Toegestaan (altijd, op deze Android-versie)</string>
+    <string name="adp_location_precise">Nauwkeurig</string>
+    <string name="adp_location_approximate">Bij benadering</string>
+    <string name="adp_location_last_use">Wanneer een app je locatie het laatst gebruikte, toont Android alleen in zijn eigen privacydashboard.</string>
+    <string name="adp_open_privacy_dashboard">Privacydashboard openen</string>
+    <string name="adp_location_empty">Geen enkele app heeft locatiemachtiging.</string>
+    <string name="adp_show_system_apps">Systeem-apps tonen</string>
+    <string name="adp_system">Systeem</string>
+
+    <string name="adp_checklist_title">Advertentietracking beperken</string>
+    <string name="adp_checklist_body">Instellingen buiten deze app die advertentietargeting voeden. Vink ze af zodra je ze hebt gedaan; deze app kan ze niet voor je controleren.</string>
+    <string name="adp_step_ad_id">Je Android-advertentie-ID verwijderen</string>
+    <string name="adp_step_ad_id_desc">Instellingen → Google → Advertenties → Advertentie-ID verwijderen. Apps verliezen de ID die je activiteit tussen hen koppelt.</string>
+    <string name="adp_step_meta">Meta ‘Je activiteit buiten Meta-technologieën’ uitzetten</string>
+    <string name="adp_step_meta_desc">Accountcentrum → Je gegevens en rechten. Ontkoppel eerdere activiteit en zet toekomstige activiteit van andere apps en websites uit.</string>
+    <string name="adp_step_ad_center">Gepersonaliseerde advertenties uitzetten in Mijn Advertentiecentrum</string>
+    <string name="adp_step_ad_center_desc">Google gebruikt je activiteit dan niet meer om advertenties te kiezen; je ziet nog steeds advertenties, maar minder gericht.</string>
+    <string name="adp_step_timeline">Google Tijdlijn controleren</string>
+    <string name="adp_step_timeline_desc">De Tijdlijn staat op je telefoon in Google Maps. Zet hem uit of stel automatisch verwijderen in.</string>
+    <string name="adp_step_mic">Microfoon afnemen van apps die hem niet nodig hebben</string>
+    <plurals name="adp_step_mic_desc">
+        <item quantity="one">%d app kan je microfoon gebruiken. Tik erop om dat te wijzigen.</item>
+        <item quantity="other">%d apps kunnen je microfoon gebruiken. Tik op een app om dat te wijzigen.</item>
+    </plurals>
+    <string name="adp_open">Openen</string>
+    <string name="adp_open_failed">Dat scherm is niet beschikbaar op deze telefoon.</string>
+    <plurals name="adp_checklist_progress">
+        <item quantity="one">%1$d van %2$d gedaan</item>
+        <item quantity="other">%1$d van %2$d gedaan</item>
+    </plurals>
+
+    <string name="adp_sdk_title">Advertentie-SDK’s in andere apps</string>
+    <string name="adp_sdk_toggle">Advertentie- en attributie-SDK’s blokkeren</string>
+    <string name="adp_sdk_body">Blokkeert de advertentie- en trackingservers van deze bedrijven in andere apps. Hun eigen apps blijven ongemoeid, dus de Facebook-app werkt nog.</string>
+    <string name="adp_sdk_exceptions_title">Nooit geblokkeerd, en waarom</string>
+    <string name="adp_reason_login">nodig voor inloggen met ‘Doorgaan met Facebook/Google’</string>
+    <string name="adp_reason_push">nodig voor pushmeldingen in veel apps</string>
+    <string name="adp_reason_deep_links">nodig voor links die in apps openen</string>
+    <string name="adp_sdk_meta_limit">Meta-app-events en de meeste Audience Network-advertenties gebruiken graph.facebook.com, dezelfde server als Facebook Login. Blokkeren op servernaam kan ze niet scheiden, dus ze worden niet geblokkeerd.</string>
+</resources>

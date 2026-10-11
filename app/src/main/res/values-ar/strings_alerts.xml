@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="alerts_title">صندوق التنبيهات</string>
+    <string name="alerts_subtitle">%1$s · آخر 7 أيام</string>
+    <plurals name="alerts_events">
+        <item quantity="zero">لا أحداث</item>
+        <item quantity="one">حدث واحد</item>
+        <item quantity="two">حدثان</item>
+        <item quantity="few">%d أحداث</item>
+        <item quantity="many">%d حدثًا</item>
+        <item quantity="other">%d حدث</item>
+    </plurals>
+    <string name="alerts_critical">حرج</string>
+    <string name="alerts_high">مرتفع</string>
+    <string name="alerts_medium">متوسط</string>
+    <string name="alerts_loading">جارٍ تحميل التنبيهات…</string>
+    <string name="alerts_none">لا تنبيهات</string>
+    <string name="alerts_none_desc">لا شيء يطابق هذا المرشّح. تُجمع التنبيهات ما دامت الحماية مفعّلة.</string>
+    <string name="alerts_low">منخفض</string>
+    <string name="alerts_cleartext">حركة بيانات غير مشفّرة</string>
+    <string name="alerts_ja3">تطابق JA3 · %1$s</string>
+    <string name="alerts_unknown_malware">برنامج ضار غير معروف</string>
+    <string name="alerts_weak_cipher">رُصدت مجموعة تشفير ضعيفة</string>
+    <string name="alerts_ct">حدث في شفافية الشهادات</string>
+</resources>

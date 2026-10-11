@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appd_tab_mismatch">Mismatch</string>
+    <string name="appd_tab_connections">Connections</string>
+    <string name="appd_tab_sdks">SDKs</string>
+    <string name="appd_tab_activity">Activity</string>
+    <string name="appd_tab_payload">Payload</string>
+    <string name="appd_badge_trackers">Trackers</string>
+    <string name="appd_badge_app">App</string>
+    <string name="appd_back">Back</string>
+    <string name="appd_report_subject">App report: %1$s</string>
+    <string name="appd_share_report">Share app report</string>
+    <plurals name="appd_flags">
+        <item quantity="one">%d flag</item>
+        <item quantity="other">%d flags</item>
+    </plurals>
+    <plurals name="appd_domains">
+        <item quantity="one">%d domain</item>
+        <item quantity="other">%d domains</item>
+    </plurals>
+    <plurals name="appd_sdks">
+        <item quantity="one">%d SDK</item>
+        <item quantity="other">%d SDKs</item>
+    </plurals>
+    <string name="appd_blocked_tap">App blocked — tap to unblock</string>
+    <string name="appd_active_tap">App allowed — tap to block</string>
+    <string name="appd_block_bg">Block background network access</string>
+    <string name="appd_activity_summary">Activity summary</string>
+    <string name="appd_dns">DNS</string>
+    <plurals name="appd_idle_count">
+        <item quantity="one">%d while idle</item>
+        <item quantity="other">%d while idle</item>
+    </plurals>
+    <plurals name="appd_bg_count">
+        <item quantity="one">%d in background</item>
+        <item quantity="other">%d in background</item>
+    </plurals>
+    <string name="appd_top_dns">Top DNS domains</string>
+    <string name="appd_no_dns">No DNS queries recorded for this app yet.</string>
+    <plurals name="appd_times">
+        <item quantity="one">%d×</item>
+        <item quantity="other">%d×</item>
+    </plurals>
+    <string name="appd_recent_activity">Recent activity</string>
+    <string name="appd_no_recent">No recent app activity recorded yet.</string>
+    <string name="appd_timeline_24h">24-hour timeline</string>
+    <string name="appd_hour">%1$d h</string>
+    <string name="appd_legend">Green: allowed · Yellow: idle or background · Red: blocked</string>
+    <string name="appd_loading_mismatch">Comparing permissions with observed traffic…</string>
+    <string name="appd_no_mismatch">No permission mismatch found</string>
+    <string name="appd_no_mismatch_desc">Declared Android permissions and observed traffic look consistent for this app so far.</string>
+    <string name="appd_perm_vs_traffic">Permissions vs traffic</string>
+    <string name="appd_perm_vs_traffic_desc">Cross-checking declared permissions against live destinations and tracker infrastructure.</string>
+    <string name="appd_sort_count">Count</string>
+    <string name="appd_sort_data">Data</string>
+    <string name="appd_sort_background">Background</string>
+    <string name="appd_loading_connections">Loading connection history…</string>
+    <string name="appd_no_connections">No connections recorded yet</string>
+    <string name="appd_no_connections_desc">Start protection and open this app. Destinations, DNS names and tracker companies will appear here.</string>
+    <string name="appd_scanning">Scanning the app for embedded tracker SDKs…</string>
+    <string name="appd_no_sdks">No known tracker SDKs detected</string>
+    <string name="appd_no_sdks_desc">This scan checks the app\'s code and metadata. Network behavior is evaluated separately.</string>
+    <string name="appd_activity_by_hour">Activity by hour (24 h)</string>
+    <string name="appd_tracker_company">%1$s – %2$s</string>
+    <string name="appd_loading_payloads">Loading intercepted payloads…</string>
+    <string name="appd_no_payloads">No payloads captured yet</string>
+    <string name="appd_no_payloads_desc">Turn on HTTPS inspection in Settings → Payload Inspector and keep protection on while you use this app.</string>
+    <string name="appd_r_title">App privacy report</string>
+    <string name="appd_r_app">App: %1$s</string>
+    <string name="appd_r_package">Package: %1$s</string>
+    <string name="appd_r_traffic">Traffic (24 h)</string>
+    <string name="appd_r_domains">  Domains contacted: %1$d</string>
+    <string name="appd_r_bg">  Background connections: %1$d</string>
+    <string name="appd_r_data">  Data transferred: %1$s</string>
+    <string name="appd_r_sdks">Tracker SDKs detected: %1$d</string>
+    <string name="appd_r_mismatches">Permission mismatches: %1$d</string>
+    <string name="appd_r_top">Top domains:</string>
+    <string name="appd_r_tracker_tag"> [tracker: %1$s]</string>
+    <string name="appd_r_generated">Generated on %1$s</string>
+    <string name="rule_block_app_bg">Block %1$s (background)</string>
+    <string name="rule_block_app">Block %1$s</string>
+    <string name="apps_title">Apps</string>
+    <string name="apps_subtitle">Per-app privacy risk and traffic</string>
+    <plurals name="apps_high_risk_n">
+        <item quantity="one">%d high risk</item>
+        <item quantity="other">%d high risk</item>
+    </plurals>
+    <string name="apps_stalker_title">Possible stalkerware signals</string>
+    <plurals name="apps_stalker_desc">
+        <item quantity="one">%d app matched hidden-install, night-activity or background-tracking patterns.</item>
+        <item quantity="other">%d apps matched hidden-install, night-activity or background-tracking patterns.</item>
+    </plurals>
+    <string name="apps_all">All apps</string>
+    <string name="apps_high_risk">High risk</string>
+    <string name="apps_sort_risk">Risk</string>
+    <string name="apps_stalker">Stalker</string>
+    <plurals name="apps_destinations">
+        <item quantity="one">%d destination</item>
+        <item quantity="other">%d destinations</item>
+    </plurals>
+    <plurals name="apps_suspicious">
+        <item quantity="one">%d suspicious</item>
+        <item quantity="other">%d suspicious</item>
+    </plurals>
+    <string name="apps_stalker_score">stalkerware score %1$d</string>
+    <string name="apps_search">Search app or package…</string>
+</resources>

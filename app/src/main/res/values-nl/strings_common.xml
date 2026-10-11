@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="common_on">Aan</string>
+    <string name="common_off">Uit</string>
+    <string name="common_canceled">%1$s geannuleerd</string>
+    <string name="common_no_auth">Apparaatverificatie is niet beschikbaar voor deze actie</string>
+    <string name="common_blocked_integrity">Gevoelige acties zijn uitgeschakeld omdat de integriteit van de app niet kon worden geverifieerd</string>
+    <string name="common_blocked_lock">Stel een schermvergrendeling in voordat je gevoelige acties op dit toestel gebruikt</string>
+    <string name="net_offline">Offline</string>
+    <string name="net_unknown">Onbekend netwerk</string>
+    <string name="net_wifi">Wifinetwerk</string>
+    <string name="net_cellular">Mobiel netwerk</string>
+    <string name="net_ethernet">Ethernetnetwerk</string>
+    <string name="net_vpn">VPN-netwerk</string>
+    <string name="net_wifi_named">Wifi: %1$s</string>
+    <string name="nd_mitm_off">HTTPS-inspectie staat uit of de toestemming is verlopen, dus deze verbinding is ongewijzigd doorgelaten.</string>
+    <string name="nd_bypass">Deze host staat op de lijst die nooit wordt onderschept (DNS via HTTPS, diensten van Google of Samsung). Ontsleutelen zou naamresolutie of inloggen breken, dus hij wordt doorgelaten.</string>
+    <string name="nd_pinned">Deze app pint zijn certificaat of vertrouwt geen door de gebruiker geïnstalleerde CA’s (standaard voor apps voor Android 7+). Hij weigerde het inspectiecertificaat, dus de verbinding is doorgelaten en alleen metagegevens zijn zichtbaar.</string>
+    <string name="nd_failed">De inspectie kon voor deze verbinding niet starten (CA nog niet klaar of een fout in de lokale proxy). Hij is doorgelaten; latere verbindingen met deze host kunnen wel worden ontsleuteld.</string>
+    <string name="nd_other">Deze verbinding is niet geïnspecteerd. Controleer of de inspectie-CA is geïnstalleerd en HTTPS-inspectie aanstaat.</string>
+    <string name="common_all">Alle</string>
+</resources>

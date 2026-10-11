@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.privacyguard.app.R
 
 /**
  * Centralized helper for creating and posting all notifications used by PrivacyGuard.
@@ -21,6 +22,18 @@ import androidx.core.app.NotificationManagerCompat
  * All channel creation is idempotent; safe to call multiple times.
  */
 class NotificationHelper(private val context: Context) {
+
+    /** The app's own label ("Facebook"), never a package fragment ("katana"). */
+    private fun appLabel(packageName: String?): String {
+        if (packageName.isNullOrBlank()) return context.getString(R.string.notif_unknown_app)
+        return runCatching {
+            val pm = context.packageManager
+            pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()
+        }.getOrDefault(packageName)
+    }
+
+    private fun quantity(id: Int, n: Long): String =
+        context.resources.getQuantityString(id, n.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), n)
 
     private val manager = context.getSystemService(Context.NOTIFICATION_SERVICE)
             as NotificationManager
@@ -40,25 +53,25 @@ class NotificationHelper(private val context: Context) {
         val channels = listOf(
             NotificationChannel(
                 CHANNEL_VPN_STATUS,
-                "VPN Status",
+                context.getString(R.string.notif_ch_status),
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = "Shows whether PrivacyGuard VPN is active"
+                description = context.getString(R.string.notif_ch_status_desc)
                 setShowBadge(false)
             },
             NotificationChannel(
                 CHANNEL_ALERTS,
-                "Privacy Alerts",
+                context.getString(R.string.notif_ch_alerts),
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
-                description = "Alerts for suspicious or blocked connections"
+                description = context.getString(R.string.notif_ch_alerts_desc)
             },
             NotificationChannel(
                 CHANNEL_WEEKLY_REPORT,
-                "Weekly Report",
+                context.getString(R.string.notif_ch_weekly),
                 NotificationManager.IMPORTANCE_MIN,
             ).apply {
-                description = "Weekly privacy summary"
+                description = context.getString(R.string.notif_ch_weekly_desc)
                 setShowBadge(false)
             },
         )
@@ -94,21 +107,21 @@ class NotificationHelper(private val context: Context) {
         )
 
         val body = when {
-            blockedCount == 0L -> "Monitoring your connections…"
-            blockedCount == 1L -> "1 tracker blocked"
-            else               -> "$blockedCount trackers blocked"
+            // Counts every block (trackers, ads, rules), so it says "connections".
+            blockedCount == 0L -> context.getString(R.string.notif_monitoring)
+            else               -> quantity(R.plurals.notif_blocked_n, blockedCount)
         }
 
         return NotificationCompat.Builder(context, CHANNEL_VPN_STATUS)
             .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
-            .setContentTitle("PrivacyGuard Active")
+            .setContentTitle(context.getString(R.string.notif_active))
             .setContentText(body)
             .setContentIntent(pendingTap)
             .setOngoing(true)
             .setShowWhen(false)
             .addAction(
                 android.R.drawable.ic_delete,
-                "Stop",
+                context.getString(R.string.notif_stop),
                 pendingStop,
             )
             .build()
@@ -145,11 +158,11 @@ class NotificationHelper(private val context: Context) {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("Suspicious connection blocked")
-            .setContentText("$appName → $domain")
+            .setContentTitle(context.getString(R.string.notif_suspicious_title))
+            .setContentText(context.getString(R.string.notif_app_to_domain, appName, domain))
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText("$appName tried to connect to $domain, which was blocked by your privacy rules.")
+                    .bigText(context.getString(R.string.notif_suspicious_body, appName, domain))
             )
             .setContentIntent(pendingTap)
             .setAutoCancel(true)
@@ -181,17 +194,17 @@ class NotificationHelper(private val context: Context) {
         )
 
         val detail = if (topApp != null)
-            "Most tracked app this week: $topApp"
+            context.getString(R.string.notif_weekly_top, appLabel(topApp))
         else
-            "Tap to see your privacy summary."
+            context.getString(R.string.notif_weekly_tap)
 
         val notification = NotificationCompat.Builder(context, CHANNEL_WEEKLY_REPORT)
             .setSmallIcon(android.R.drawable.ic_menu_info_details)
-            .setContentTitle("Your Weekly Privacy Report")
-            .setContentText("$totalBlocked trackers blocked this week")
+            .setContentTitle(context.getString(R.string.notif_weekly_title))
+            .setContentText(quantity(R.plurals.notif_weekly_blocked, totalBlocked))
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText("$totalBlocked trackers were blocked this week.\n$detail")
+                    .bigText(quantity(R.plurals.notif_weekly_blocked, totalBlocked) + "\n" + detail)
             )
             .setContentIntent(pendingTap)
             .setAutoCancel(true)
@@ -234,18 +247,18 @@ class NotificationHelper(private val context: Context) {
             context, NOTIFICATION_ID_JA3_THREAT, tapIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val appLabel = packageName?.substringAfterLast('.') ?: "Unknown app"
+        val appLabel = appLabel(packageName)
         val body = buildString {
             append(appLabel)
-            if (!sni.isNullOrBlank()) append(" → $sni")
+            if (!sni.isNullOrBlank()) append(" · $sni") // direction-neutral separator, reads correctly in RTL
         }
         val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("TLS Fingerprint Match: $malwareName")
+            .setContentTitle(context.getString(R.string.notif_ja3_title, malwareName))
             .setContentText(body)
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText("$appLabel made a TLS connection matching the \"$malwareName\" fingerprint. Tap to view in Alert Inbox.")
+                    .bigText(context.getString(R.string.notif_ja3_body, appLabel, malwareName))
             )
             .setContentIntent(pendingTap)
             .setAutoCancel(true)
@@ -307,10 +320,10 @@ class NotificationHelper(private val context: Context) {
             context, NOTIFICATION_ID_BEHAVIOR, tapIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val appLabel = packageName.substringAfterLast('.')
+        val appLabel = appLabel(packageName)
         val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("Behavior Alert: $appLabel")
+            .setContentTitle(context.getString(R.string.notif_behavior_title, appLabel))
             .setContentText(title)
             .setStyle(NotificationCompat.BigTextStyle().bigText(summary))
             .setContentIntent(pendingTap)
@@ -334,13 +347,13 @@ class NotificationHelper(private val context: Context) {
             context, NOTIFICATION_ID_CLEARTEXT, tapIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val appLabel = packageName.substringAfterLast('.')
+        val appLabel = appLabel(packageName)
         val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("Unencrypted connection: $appLabel")
-            .setContentText("$appLabel → $destination (HTTP, no TLS)")
+            .setContentTitle(context.getString(R.string.notif_cleartext_title, appLabel))
+            .setContentText(context.getString(R.string.notif_cleartext_text, appLabel, destination))
             .setStyle(NotificationCompat.BigTextStyle()
-                .bigText("$appLabel connected to $destination over unencrypted HTTP. Enable 'Block Cleartext' in Settings to prevent this."))
+                .bigText(context.getString(R.string.notif_cleartext_body, appLabel, destination)))
             .setContentIntent(pendingTap)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -362,13 +375,13 @@ class NotificationHelper(private val context: Context) {
             context, NOTIFICATION_ID_CT_CERT, tapIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val body = "$newCertCount new certificate${if (newCertCount > 1) "s" else ""} issued for $domain"
+        val body = context.resources.getQuantityString(R.plurals.notif_ct_body, newCertCount, newCertCount, domain)
         val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("Certificate Transparency: $domain")
+            .setContentTitle(context.getString(R.string.notif_ct_title, domain))
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle()
-                .bigText("$body. Tap to review in the Alert Inbox."))
+                .bigText(context.getString(R.string.notif_ct_tap, body)))
             .setContentIntent(pendingTap)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -395,8 +408,12 @@ class NotificationHelper(private val context: Context) {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
-            .setContentTitle("VPN Disconnected — Kill Switch Active")
-            .setContentText("All connections are blocked until VPN reconnects.")
+            .setContentTitle(context.getString(R.string.notif_vpn_down_title))
+            // Only Android's lockdown mode blocks traffic without the tunnel; say which applies.
+            .setContentText(context.getString(
+                if (com.privacyguard.app.vpn.KillSwitch.lockdownActive) R.string.notif_vpn_down_blocked
+                else R.string.notif_vpn_down_open
+            ))
             .setContentIntent(pendingTap)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -417,11 +434,11 @@ class NotificationHelper(private val context: Context) {
             context, NOTIFICATION_ID_BACKGROUND_BLOCK, tapIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val appLabel = packageName.substringAfterLast('.')
+        val appLabel = appLabel(packageName)
         val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("Background connection blocked")
-            .setContentText("$appLabel tried to connect to $destination while in background")
+            .setContentTitle(context.getString(R.string.notif_bg_title))
+            .setContentText(context.getString(R.string.notif_bg_text, appLabel, destination))
             .setContentIntent(pendingTap)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)

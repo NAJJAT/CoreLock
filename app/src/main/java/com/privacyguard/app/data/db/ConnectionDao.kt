@@ -142,6 +142,9 @@ interface ConnectionDao {
      */
     @Query("SELECT COUNT(*) FROM connections")
     suspend fun getCount(): Int
+
+    @Query("SELECT COUNT(*) FROM connections WHERE timestamp > :since")
+    suspend fun getCountSince(since: Long): Int
     
     /**
      * Gets hourly statistics for charts

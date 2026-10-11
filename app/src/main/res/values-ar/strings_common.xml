@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="common_on">مفعّل</string>
+    <string name="common_off">متوقف</string>
+    <string name="common_canceled">أُلغي %1$s</string>
+    <string name="common_no_auth">مصادقة الجهاز غير متاحة لهذا الإجراء</string>
+    <string name="common_blocked_integrity">الإجراءات الحساسة معطّلة لأنه تعذّر التحقق من سلامة التطبيق</string>
+    <string name="common_blocked_lock">اضبط قفل الشاشة قبل استخدام الإجراءات الحساسة على هذا الجهاز</string>
+    <string name="net_offline">غير متصل</string>
+    <string name="net_unknown">شبكة غير معروفة</string>
+    <string name="net_wifi">شبكة Wi-Fi</string>
+    <string name="net_cellular">شبكة الهاتف المحمول</string>
+    <string name="net_ethernet">شبكة إيثرنت</string>
+    <string name="net_vpn">شبكة VPN</string>
+    <string name="net_wifi_named">Wi-Fi: %1$s</string>
+    <string name="nd_mitm_off">فحص HTTPS متوقف أو انتهت صلاحية الموافقة عليه، لذلك مرّ هذا الاتصال دون تعديل.</string>
+    <string name="nd_bypass">هذا المضيف ضمن قائمة عدم الاعتراض (DNS عبر HTTPS أو خدمات Google أو Samsung). فك تشفيره يعطّل تحليل الأسماء أو تسجيل الدخول، لذلك يُمرَّر كما هو.</string>
+    <string name="nd_pinned">يثبّت هذا التطبيق شهادته أو لا يثق بالشهادات التي يثبّتها المستخدم (السلوك الافتراضي للتطبيقات الموجّهة إلى Android 7 وما بعده). رفض شهادة الفحص، لذلك مُرّر الاتصال ولا تظهر إلا البيانات الوصفية.</string>
+    <string name="nd_failed">تعذّر بدء الفحص لهذا الاتصال (الشهادة غير جاهزة بعد أو خطأ في الوكيل المحلي). مُرّر الاتصال، وقد يُفكّ تشفير الاتصالات اللاحقة بهذا المضيف.</string>
+    <string name="nd_other">لم يُفحص هذا الاتصال. تأكّد من تثبيت شهادة الفحص وتفعيل فحص HTTPS.</string>
+    <string name="common_all">الكل</string>
+</resources>

@@ -301,7 +301,7 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
                 rulesRepo.upsertRule(
                     FilterRule(
                         id = packageBlockRuleId(packageName),
-                        label = "Block $packageName",
+                        label = getApplication<android.app.Application>().getString(com.privacyguard.app.R.string.rule_block_app, getApplication<android.app.Application>().packageManager.let { pm -> runCatching { pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString() }.getOrDefault(packageName) }),
                         action = FilterRule.Action.DENY,
                         source = FilterRule.Source.USER,
                         priority = FilterRule.HIGH_PRIORITY,

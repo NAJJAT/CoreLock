@@ -26,29 +26,29 @@ object NotificationHelper {
 
         val highChannel = NotificationChannel(
             CHANNEL_HIGH,
-            "PrivacyGuard Alerts",
+            context.getString(com.privacyguard.app.R.string.notif_ch_high),
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "Critical alerts about your privacy protection"
+            description = context.getString(com.privacyguard.app.R.string.notif_ch_high_desc)
             setShowBadge(true)
             enableVibration(true)
         }
 
         val normalChannel = NotificationChannel(
             CHANNEL_NORMAL,
-            "PrivacyGuard Notifications",
+            context.getString(com.privacyguard.app.R.string.notif_ch_normal),
             NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
-            description = "Regular notifications about blocked connections"
+            description = context.getString(com.privacyguard.app.R.string.notif_ch_normal_desc)
             setShowBadge(true)
         }
 
         val lowChannel = NotificationChannel(
             CHANNEL_LOW,
-            "PrivacyGuard Updates",
+            context.getString(com.privacyguard.app.R.string.notif_ch_updates),
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "Reports and updates"
+            description = context.getString(com.privacyguard.app.R.string.notif_ch_updates_desc)
             setShowBadge(false)
         }
 
@@ -93,7 +93,7 @@ object NotificationHelper {
                 blockIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            builder.addAction(android.R.drawable.ic_menu_delete, "Block App", blockPendingIntent)
+            builder.addAction(android.R.drawable.ic_menu_delete, context.getString(com.privacyguard.app.R.string.notif_block_app), blockPendingIntent)
         }
 
         val dismissIntent = Intent(context, NotificationDismissReceiver::class.java).apply {
@@ -105,7 +105,7 @@ object NotificationHelper {
             dismissIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "Dismiss", dismissPendingIntent)
+        builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, context.getString(com.privacyguard.app.R.string.notif_dismiss), dismissPendingIntent)
 
         manager.notify(notification.id.hashCode(), builder.build())
     }

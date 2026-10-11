@@ -241,6 +241,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.navigation.compose)
+    // Per-app language (AppCompatDelegate.setApplicationLocales), back-ported below Android 13.
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     // SQLCipher: the Room database holds DNS history, connection logs and (enterprise)

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stats_title">Statistics</string>
+    <string name="stats_subtitle">Traffic analytics and anomaly trends</string>
+    <string name="stats_badge_today">Today</string>
+    <string name="stats_total_connections">Total connections</string>
+    <string name="stats_data_transferred">Data transferred</string>
+    <string name="stats_block_rate">Block rate</string>
+    <string name="stats_share_score_text">My privacy score is %1$d/100 today.</string>
+    <string name="stats_share_score">Share privacy score</string>
+    <string name="stats_gen_it">Generate IT report</string>
+    <string name="stats_gen_it_confirm">Confirm access before exporting security telemetry</string>
+    <string name="stats_share_it">Share with IT</string>
+    <string name="stats_csv_ready">CSV ready — tap to share</string>
+    <string name="stats_csv_export">Export 7-day CSV</string>
+    <string name="stats_share_log">Share connection log</string>
+    <string name="stats_share_csv">Share CSV</string>
+    <string name="stats_network_map">Network map</string>
+    <string name="stats_map_legend">Arcs: green = low volume · orange = medium · red = high</string>
+    <string name="stats_by_org">Traffic by organization</string>
+    <string name="stats_heatmap">Activity heatmap — 7 days × 24 hours</string>
+    <string name="stats_heatmap_legend">Darker green = more connections in that hour. Bright cells = peak activity.</string>
+    <string name="stats_it_ready">IT report ready</string>
+    <string name="stats_it_ready_desc">JSON and PDF exports were generated for the last 24 hours.</string>
+    <string name="stats_share_it_report">Share IT report</string>
+    <string name="stats_share_it_confirm">Confirm access before sharing JSON and PDF exports</string>
+    <string name="stats_share_json_pdf">Share JSON + PDF</string>
+    <string name="stats_threat_timeline">Threat timeline</string>
+    <plurals name="stats_dns_anomalies">
+        <item quantity="one">%d DNS anomaly detected</item>
+        <item quantity="other">%d DNS anomalies detected</item>
+    </plurals>
+    <string name="stats_dns_anomalies_desc">High-severity anomalies saved by the DNS shield</string>
+    <plurals name="stats_blocked_requests">
+        <item quantity="one">%d blocked request</item>
+        <item quantity="other">%d blocked requests</item>
+    </plurals>
+    <string name="stats_top_countries">Top destination countries</string>
+    <string name="stats_networks">Remembered networks</string>
+    <string name="stats_network_counts">%1$s · %2$s · %3$s</string>
+    <plurals name="stats_cleartext_n">
+        <item quantity="one">%d cleartext</item>
+        <item quantity="other">%d cleartext</item>
+    </plurals>
+    <plurals name="stats_dns_anomaly_n">
+        <item quantity="one">%d DNS anomaly</item>
+        <item quantity="other">%d DNS anomalies</item>
+    </plurals>
+    <plurals name="stats_weak_tls_n">
+        <item quantity="one">%d weak TLS</item>
+        <item quantity="other">%d weak TLS</item>
+    </plurals>
+    <string name="stats_trend">7-day connection trend</string>
+    <string name="stats_total">Total</string>
+    <string name="stats_top_apps">Top apps by data (24 h)</string>
+    <string name="stats_f_encryption">Encryption</string>
+    <string name="stats_f_encrypted">%1$s encrypted</string>
+    <string name="stats_f_blocked">%1$s blocked</string>
+    <string name="stats_f_cleartext">Cleartext</string>
+    <string name="stats_score_factors">Score factors</string>
+    <string name="stats_today">Today</string>
+    <string name="stats_blocked_port">%1$s · blocked port %2$d</string>
+</resources>

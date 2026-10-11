@@ -41,6 +41,18 @@ const val NOT_DECRYPTED_PREFIX = "not-decrypted:"
  * (decrypted traffic, or plain HTTP). A decrypted request with an empty body — e.g. a
  * GET — is NOT an encryption problem.
  */
+/** Same as [notDecryptedReason], as a string resource for the UI. */
+fun PayloadLogEntity.notDecryptedReasonRes(): Int? {
+    if (isMitmSuccess || destinationPort != 443) return null
+    return when (bodyEncoding.removePrefix(NOT_DECRYPTED_PREFIX)) {
+        "mitm-off" -> com.privacyguard.app.R.string.nd_mitm_off
+        "bypass" -> com.privacyguard.app.R.string.nd_bypass
+        "pinned" -> com.privacyguard.app.R.string.nd_pinned
+        "failed" -> com.privacyguard.app.R.string.nd_failed
+        else -> com.privacyguard.app.R.string.nd_other
+    }
+}
+
 fun PayloadLogEntity.notDecryptedReason(): String? {
     if (isMitmSuccess || destinationPort != 443) return null
     return when (bodyEncoding.removePrefix(NOT_DECRYPTED_PREFIX)) {

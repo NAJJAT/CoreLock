@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stats_title">Statistieken</string>
+    <string name="stats_subtitle">Verkeersanalyse en trends in afwijkingen</string>
+    <string name="stats_badge_today">Vandaag</string>
+    <string name="stats_total_connections">Verbindingen totaal</string>
+    <string name="stats_data_transferred">Overgedragen data</string>
+    <string name="stats_block_rate">Blokkeerpercentage</string>
+    <string name="stats_share_score_text">Mijn privacyscore is vandaag %1$d/100.</string>
+    <string name="stats_share_score">Privacyscore delen</string>
+    <string name="stats_gen_it">IT-rapport maken</string>
+    <string name="stats_gen_it_confirm">Bevestig je identiteit voordat beveiligingsgegevens worden geëxporteerd</string>
+    <string name="stats_share_it">Delen met IT</string>
+    <string name="stats_csv_ready">CSV klaar — tik om te delen</string>
+    <string name="stats_csv_export">CSV van 7 dagen exporteren</string>
+    <string name="stats_share_log">Verbindingslogboek delen</string>
+    <string name="stats_share_csv">CSV delen</string>
+    <string name="stats_network_map">Netwerkkaart</string>
+    <string name="stats_map_legend">Bogen: groen = weinig verkeer · oranje = gemiddeld · rood = veel</string>
+    <string name="stats_by_org">Verkeer per organisatie</string>
+    <string name="stats_heatmap">Activiteitskaart — 7 dagen × 24 uur</string>
+    <string name="stats_heatmap_legend">Donkerder groen = meer verbindingen in dat uur. Heldere vakjes = piekactiviteit.</string>
+    <string name="stats_it_ready">IT-rapport klaar</string>
+    <string name="stats_it_ready_desc">JSON- en PDF-exports zijn gemaakt voor de afgelopen 24 uur.</string>
+    <string name="stats_share_it_report">IT-rapport delen</string>
+    <string name="stats_share_it_confirm">Bevestig je identiteit voordat JSON- en PDF-exports worden gedeeld</string>
+    <string name="stats_share_json_pdf">JSON + PDF delen</string>
+    <string name="stats_threat_timeline">Tijdlijn van dreigingen</string>
+    <plurals name="stats_dns_anomalies">
+        <item quantity="one">%d DNS-afwijking gevonden</item>
+        <item quantity="other">%d DNS-afwijkingen gevonden</item>
+    </plurals>
+    <string name="stats_dns_anomalies_desc">Ernstige afwijkingen die het DNS-schild heeft bewaard</string>
+    <plurals name="stats_blocked_requests">
+        <item quantity="one">%d geblokkeerd verzoek</item>
+        <item quantity="other">%d geblokkeerde verzoeken</item>
+    </plurals>
+    <string name="stats_top_countries">Belangrijkste bestemmingslanden</string>
+    <string name="stats_networks">Bekende netwerken</string>
+    <string name="stats_network_counts">%1$s · %2$s · %3$s</string>
+    <plurals name="stats_cleartext_n">
+        <item quantity="one">%d onversleuteld</item>
+        <item quantity="other">%d onversleuteld</item>
+    </plurals>
+    <plurals name="stats_dns_anomaly_n">
+        <item quantity="one">%d DNS-afwijking</item>
+        <item quantity="other">%d DNS-afwijkingen</item>
+    </plurals>
+    <plurals name="stats_weak_tls_n">
+        <item quantity="one">%d zwakke TLS</item>
+        <item quantity="other">%d zwakke TLS</item>
+    </plurals>
+    <string name="stats_trend">Verbindingen over 7 dagen</string>
+    <string name="stats_total">Totaal</string>
+    <string name="stats_top_apps">Apps met de meeste data (24 u)</string>
+    <string name="stats_f_encryption">Versleuteling</string>
+    <string name="stats_f_encrypted">%1$s versleuteld</string>
+    <string name="stats_f_blocked">%1$s geblokkeerd</string>
+    <string name="stats_f_cleartext">Onversleuteld</string>
+    <string name="stats_score_factors">Factoren van de score</string>
+    <string name="stats_today">Vandaag</string>
+    <string name="stats_blocked_port">%1$s · poort %2$d geblokkeerd</string>
+</resources>

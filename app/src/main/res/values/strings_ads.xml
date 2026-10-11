@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rule_allow_domain">Allow %1$s</string>
+    <string name="rule_block_domain">Block %1$s</string>
+    <string name="ads_cat_ads">Display ads</string>
+    <string name="ads_cat_ads_desc">Ad domains for DNS and content networks</string>
+    <string name="ads_cat_trackers">Tracking scripts</string>
+    <string name="ads_cat_trackers_desc">Behavioral and analytics endpoints</string>
+    <string name="ads_cat_malware">Malware &amp; phishing</string>
+    <string name="ads_cat_malware_desc">Known malicious and phishing infrastructure</string>
+    <string name="ads_cat_telemetry">Telemetry</string>
+    <string name="ads_cat_telemetry_desc">Background telemetry and reporting endpoints</string>
+    <string name="ads_title">Ad blocker</string>
+    <string name="ads_subtitle">DNS-level · works across all apps</string>
+    <string name="ads_block_categories">Block categories</string>
+    <string name="ads_custom_rules">Custom rules</string>
+    <string name="ads_add_domain">Add domain</string>
+    <string name="ads_no_rules">No custom domain rules yet.</string>
+    <string name="ads_blocklists_active">Blocklists active</string>
+    <string name="ads_refreshing">Refreshing…</string>
+    <string name="ads_top_apps">Top apps contacting trackers (24 h)</string>
+    <plurals name="ads_hits">
+        <item quantity="one">%d hit</item>
+        <item quantity="other">%d hits</item>
+    </plurals>
+    <string name="ads_add_rule">Add custom rule</string>
+    <string name="ads_domain">Domain</string>
+    <string name="ads_block">Block</string>
+    <string name="ads_allow">Allow</string>
+    <string name="ads_save">Save</string>
+    <string name="ads_ad_blocking">Ad blocking</string>
+    <plurals name="ads_blocked_today_n">
+        <item quantity="one">%d connection blocked today</item>
+        <item quantity="other">%d connections blocked today</item>
+    </plurals>
+    <string name="ads_off">Ad blocking is off</string>
+    <string name="ads_blocked_today">Blocked today</string>
+    <string name="ads_cat_counts">%1$d active · %2$s</string>
+    <string name="ads_custom_allow">Custom allow</string>
+    <string name="ads_custom_block">Custom block</string>
+    <string name="ads_delete_rule">Delete rule</string>
+    <string name="ads_source_counts">%1$d of %2$s enabled</string>
+    <string name="ads_on">On</string>
+</resources>

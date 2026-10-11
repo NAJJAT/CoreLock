@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sec_title">تحليل التشفير</string>
+    <string name="sec_subtitle">بصمات TLS · مجموعات التشفير · مراقبة CT</string>
+    <string name="sec_ja3_threats">تطابقات JA3</string>
+    <string name="sec_weak_ciphers">تشفير ضعيف</string>
+    <string name="sec_ct_events">أحداث CT</string>
+    <string name="sec_ja3_section">بصمات JA3 معروفة بأنها ضارة</string>
+    <string name="sec_ja3_desc">تُقارن كل مصافحة TLS أيضًا بقائمة صغيرة مدمجة من بصمات JA3 المُبلَّغ عنها لبرامج ضارة. قد يكون تطابق JA3 إنذارًا كاذبًا: تعامل معه كدليل أولي لا كإثبات.</string>
+    <string name="sec_ja3_none">لا تطابقات مع القائمة</string>
+    <string name="sec_cipher_section">تحليل مجموعات التشفير</string>
+    <string name="sec_cipher_desc">يرصد FREAK ‏(RSA_EXPORT) وLOGJAM ‏(DHE_EXPORT) وNULL وRC4 والتشفير المجهول الذي تعرضه التطبيقات.</string>
+    <string name="sec_cipher_none">لم تُرصد مجموعات تشفير ضعيفة</string>
+    <string name="sec_ct_section">مراقبة شفافية الشهادات</string>
+    <string name="sec_ct_desc">متوقفة افتراضيًا. عند تفعيلها من الإعدادات تتحقق من crt.sh كل 6 ساعات من الشهادات الجديدة الصادرة للنطاقات التي يتصل بها جهازك؛ وعندها يرى crt.sh تلك النطاقات.</string>
+    <string name="sec_ct_on">مراقبة CT مفعّلة: تظهر هنا أحداث الشهادات الجديدة</string>
+    <string name="sec_ct_off">مراقبة CT متوقفة: فعّلها من الإعدادات ← فحوص شفافية الشهادات</string>
+    <string name="sec_dual_desc">اربط خادمي SOCKS5 بالتتابع حتى لا يعرف أي خادم هويتك ووجهتك معًا.</string>
+    <string name="sec_hop_you">أنت</string>
+    <string name="sec_hop_you_desc">عنوان IP الحقيقي</string>
+    <string name="sec_hop_1">الخادم 1</string>
+    <string name="sec_hop_1_desc">يعرف عنوانك لا وجهتك</string>
+    <string name="sec_hop_2">الخادم 2</string>
+    <string name="sec_hop_2_desc">يعرف وجهتك لا عنوانك</string>
+    <string name="sec_hop_net">الإنترنت</string>
+    <string name="sec_hop_net_desc">لا يملك أي خادم الصورة الكاملة</string>
+    <string name="sec_dual_config">اضبط الخوادم من الإعدادات ← VPN مزدوج.</string>
+    <string name="sec_native">محرّك المعالجة الأصلي</string>
+    <string name="sec_rust">محرّك Rust الأساسي</string>
+    <string name="sec_rust_on">تحليل الحزم يعمل بشيفرة أصلية</string>
+    <string name="sec_rust_off">محرّك Kotlin مفعّل · ابنِ التطبيق باستخدام NDK وCargo لتفعيله</string>
+    <string name="sec_active">مفعّل</string>
+    <string name="sec_sev">الخطورة %1$d</string>
+    <string name="sec_ja3_hash">بصمة JA3</string>
+    <string name="sec_ja3_string">سلسلة JA3</string>
+    <string name="sec_category">الفئة</string>
+    <string name="sec_detail">التفاصيل</string>
+    <string name="sec_detected">وقت الرصد</string>
+    <plurals name="sec_view_all">
+        <item quantity="zero">لا تنبيهات للعرض</item>
+        <item quantity="one">عرض التنبيه في الصندوق</item>
+        <item quantity="two">عرض التنبيهين في الصندوق</item>
+        <item quantity="few">عرض %d تنبيهات في الصندوق</item>
+        <item quantity="many">عرض %d تنبيهًا في الصندوق</item>
+        <item quantity="other">عرض %d تنبيه في الصندوق</item>
+    </plurals>
+</resources>

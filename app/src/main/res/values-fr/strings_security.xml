@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sec_title">Analyse du chiffrement</string>
+    <string name="sec_subtitle">Empreintes TLS · suites de chiffrement · moniteur CT</string>
+    <string name="sec_ja3_threats">Correspondances JA3</string>
+    <string name="sec_weak_ciphers">Chiffrements faibles</string>
+    <string name="sec_ct_events">Événements CT</string>
+    <string name="sec_ja3_section">Empreintes JA3 connues comme malveillantes</string>
+    <string name="sec_ja3_desc">Chaque négociation TLS est aussi comparée à une petite liste intégrée d’empreintes JA3 signalées pour des logiciels malveillants. Une correspondance JA3 peut être un faux positif : considérez-la comme une piste, pas comme une preuve.</string>
+    <string name="sec_ja3_none">Aucune correspondance avec la liste</string>
+    <string name="sec_cipher_section">Analyse des suites de chiffrement</string>
+    <string name="sec_cipher_desc">Détecte FREAK (RSA_EXPORT), LOGJAM (DHE_EXPORT), NULL, RC4 et les chiffrements anonymes proposés par les apps.</string>
+    <string name="sec_cipher_none">Aucune suite de chiffrement faible observée</string>
+    <string name="sec_ct_section">Moniteur Certificate Transparency</string>
+    <string name="sec_ct_desc">Désactivé par défaut. Une fois activé dans les paramètres, il interroge crt.sh toutes les 6 heures sur les nouveaux certificats émis pour les domaines contactés par votre appareil ; crt.sh voit alors ces domaines.</string>
+    <string name="sec_ct_on">Le moniteur CT est actif : les nouveaux certificats s’affichent ici</string>
+    <string name="sec_ct_off">Le moniteur CT est désactivé : activez-le dans Paramètres → Vérifications Certificate Transparency</string>
+    <string name="sec_dual_desc">Enchaînez deux serveurs SOCKS5 pour qu’aucun ne sache à la fois qui vous êtes et où vous allez.</string>
+    <string name="sec_hop_you">Vous</string>
+    <string name="sec_hop_you_desc">Votre véritable IP</string>
+    <string name="sec_hop_1">Serveur 1</string>
+    <string name="sec_hop_1_desc">Connaît votre IP, pas votre destination</string>
+    <string name="sec_hop_2">Serveur 2</string>
+    <string name="sec_hop_2_desc">Connaît votre destination, pas votre IP</string>
+    <string name="sec_hop_net">Internet</string>
+    <string name="sec_hop_net_desc">Aucun serveur n’a la vue complète</string>
+    <string name="sec_dual_config">Configurez les serveurs dans Paramètres → Double VPN.</string>
+    <string name="sec_native">Moteur de traitement natif</string>
+    <string name="sec_rust">Moteur Rust</string>
+    <string name="sec_rust_on">L’analyse des paquets s’exécute en code natif</string>
+    <string name="sec_rust_off">Moteur Kotlin actif · compilez avec NDK + Cargo pour l’activer</string>
+    <string name="sec_active">Actif</string>
+    <string name="sec_sev">Gravité %1$d</string>
+    <string name="sec_ja3_hash">Empreinte JA3</string>
+    <string name="sec_ja3_string">Chaîne JA3</string>
+    <string name="sec_category">Catégorie</string>
+    <string name="sec_detail">Détail</string>
+    <string name="sec_detected">Détecté</string>
+    <plurals name="sec_view_all">
+        <item quantity="one">Voir %d alerte dans la boîte</item>
+        <item quantity="many">Voir les %d alertes dans la boîte</item>
+        <item quantity="other">Voir les %d alertes dans la boîte</item>
+    </plurals>
+</resources>

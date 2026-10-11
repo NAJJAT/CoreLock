@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="alerts_title">Alert inbox</string>
+    <string name="alerts_subtitle">%1$s · last 7 days</string>
+    <plurals name="alerts_events">
+        <item quantity="one">%d event</item>
+        <item quantity="other">%d events</item>
+    </plurals>
+    <string name="alerts_critical">Critical</string>
+    <string name="alerts_high">High</string>
+    <string name="alerts_medium">Medium</string>
+    <string name="alerts_loading">Loading alerts…</string>
+    <string name="alerts_none">No alerts</string>
+    <string name="alerts_none_desc">Nothing matches this filter. Alerts are collected while protection is on.</string>
+    <string name="alerts_low">Low</string>
+    <string name="alerts_cleartext">Cleartext traffic</string>
+    <string name="alerts_ja3">JA3 match · %1$s</string>
+    <string name="alerts_unknown_malware">unknown malware</string>
+    <string name="alerts_weak_cipher">Weak cipher suite detected</string>
+    <string name="alerts_ct">Certificate Transparency event</string>
+</resources>

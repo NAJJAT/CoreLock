@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rules_title">Rules</string>
+    <string name="rules_add">Add rule</string>
+    <string name="rules_empty">No rules yet</string>
+    <string name="rules_empty_desc">Tap + to add a domain or app rule</string>
+    <string name="rules_search">Search domain, app, IP…</string>
+    <string name="rules_clear">Clear</string>
+    <string name="rules_suggested">Suggested</string>
+    <string name="rules_active">Active rules · %1$d</string>
+    <plurals name="rules_count">
+        <item quantity="one">%d rule</item>
+        <item quantity="other">%d rules</item>
+    </plurals>
+    <string name="rules_d_domain">domain: %1$s</string>
+    <string name="rules_d_app">app: %1$s</string>
+    <string name="rules_d_ip">IP: %1$s</string>
+    <string name="rules_d_bg">background only</string>
+    <plurals name="rules_triggered">
+        <item quantity="one">Triggered %d time</item>
+        <item quantity="other">Triggered %d times</item>
+    </plurals>
+    <string name="rules_delete">Delete</string>
+    <string name="rules_add_title">Add rule</string>
+    <string name="rules_type">Type:</string>
+    <string name="rules_hint_domain">Domain (e.g. ads.example.com)</string>
+    <string name="rules_hint_package">App package (e.g. com.example.app)</string>
+    <string name="rules_hint_ip">IP or CIDR (e.g. 1.2.3.4 or 10.0.0.0/8)</string>
+    <string name="rules_action">Action:</string>
+    <string name="rules_add_button">Add</string>
+    <string name="rules_skip">Skip</string>
+    <plurals name="rules_reason_cleartext">
+        <item quantity="one">%d cleartext connection (7 days)</item>
+        <item quantity="other">%d cleartext connections (7 days)</item>
+    </plurals>
+    <plurals name="rules_reason_background">
+        <item quantity="one">%d background connection (7 days)</item>
+        <item quantity="other">%d background connections (7 days)</item>
+    </plurals>
+</resources>

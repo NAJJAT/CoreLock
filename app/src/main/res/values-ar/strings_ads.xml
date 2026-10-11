@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rule_allow_domain">السماح بـ %1$s</string>
+    <string name="rule_block_domain">حظر %1$s</string>
+    <string name="ads_cat_ads">إعلانات العرض</string>
+    <string name="ads_cat_ads_desc">نطاقات إعلانية لشبكات DNS والمحتوى</string>
+    <string name="ads_cat_trackers">نصوص التتبّع</string>
+    <string name="ads_cat_trackers_desc">نقاط نهاية لتحليل السلوك والإحصاءات</string>
+    <string name="ads_cat_malware">البرامج الضارة والتصيّد</string>
+    <string name="ads_cat_malware_desc">بنية تحتية ضارة ومخصّصة للتصيّد معروفة</string>
+    <string name="ads_cat_telemetry">القياس عن بُعد</string>
+    <string name="ads_cat_telemetry_desc">نقاط نهاية للقياس عن بُعد والتقارير في الخلفية</string>
+    <string name="ads_title">مانع الإعلانات</string>
+    <string name="ads_subtitle">على مستوى DNS · يعمل في كل التطبيقات</string>
+    <string name="ads_block_categories">الفئات المحظورة</string>
+    <string name="ads_custom_rules">قواعد مخصّصة</string>
+    <string name="ads_add_domain">إضافة نطاق</string>
+    <string name="ads_no_rules">لا توجد قواعد نطاقات مخصّصة بعد.</string>
+    <string name="ads_blocklists_active">قوائم الحظر المفعّلة</string>
+    <string name="ads_refreshing">جارٍ التحديث…</string>
+    <string name="ads_top_apps">أكثر التطبيقات اتصالًا بالمتتبّعات (24 س)</string>
+    <plurals name="ads_hits">
+        <item quantity="zero">لا مرات</item>
+        <item quantity="one">مرة واحدة</item>
+        <item quantity="two">مرتان</item>
+        <item quantity="few">%d مرات</item>
+        <item quantity="many">%d مرةً</item>
+        <item quantity="other">%d مرة</item>
+    </plurals>
+    <string name="ads_add_rule">إضافة قاعدة مخصّصة</string>
+    <string name="ads_domain">النطاق</string>
+    <string name="ads_block">حظر</string>
+    <string name="ads_allow">سماح</string>
+    <string name="ads_save">حفظ</string>
+    <string name="ads_ad_blocking">حظر الإعلانات</string>
+    <plurals name="ads_blocked_today_n">
+        <item quantity="zero">لم يُحظر أي اتصال اليوم</item>
+        <item quantity="one">حُظر اتصال واحد اليوم</item>
+        <item quantity="two">حُظر اتصالان اليوم</item>
+        <item quantity="few">حُظرت %d اتصالات اليوم</item>
+        <item quantity="many">حُظر %d اتصالًا اليوم</item>
+        <item quantity="other">حُظر %d اتصال اليوم</item>
+    </plurals>
+    <string name="ads_off">حظر الإعلانات متوقف</string>
+    <string name="ads_blocked_today">المحظور اليوم</string>
+    <string name="ads_cat_counts">%1$d مفعّل · %2$s</string>
+    <string name="ads_custom_allow">سماح مخصّص</string>
+    <string name="ads_custom_block">حظر مخصّص</string>
+    <string name="ads_delete_rule">حذف القاعدة</string>
+    <string name="ads_source_counts">%1$d من %2$s مفعّلة</string>
+    <string name="ads_on">مفعّل</string>
+</resources>

@@ -30,6 +30,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.privacyguard.app.R
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.privacyguard.app.ui.components.AppIconImage
 import com.privacyguard.app.ui.components.PanelCard
@@ -85,9 +88,9 @@ fun AppsScreen(
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             ScreenScaffold(
-                title = "Apps",
-                subtitle = "Per-app privacy risk and traffic visibility",
-                badge = "${apps.count { it.maxRiskScore >= 70 || it.stalkerwareScore >= 70 }} HIGH RISK"
+                title = stringResource(R.string.apps_title),
+                subtitle = stringResource(R.string.apps_subtitle),
+                badge = apps.count { it.maxRiskScore >= 70 || it.stalkerwareScore >= 70 }.let { pluralStringResource(R.plurals.apps_high_risk_n, it, it) }.uppercase()
             ) {
                 val stalkerwareAlerts = apps.count { it.stalkerwareScore >= 70 }
                 if (stalkerwareAlerts > 0) {
@@ -96,9 +99,9 @@ fun AppsScreen(
                             Icon(Icons.Default.Visibility, contentDescription = null, tint = PgDanger, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.size(10.dp))
                             Column {
-                                Text("Potential stalkerware signals", style = MaterialTheme.typography.titleMedium, color = PgText)
+                                Text(stringResource(R.string.apps_stalker_title), style = MaterialTheme.typography.titleMedium, color = PgText)
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text("$stalkerwareAlerts apps matched hidden-install, night-activity, or background-tracking patterns.", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                                Text(pluralStringResource(R.plurals.apps_stalker_desc, stalkerwareAlerts, stalkerwareAlerts), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
                             }
                         }
                     }
@@ -109,33 +112,33 @@ fun AppsScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip("All apps", !highRiskOnly && !blockedOnly) {
+                    FilterChip(stringResource(R.string.apps_all), !highRiskOnly && !blockedOnly) {
                         viewModel.setHighRiskOnly(false)
                         viewModel.setBlockedOnly(false)
                     }
-                    FilterChip("High risk", highRiskOnly, PgDanger, PgDangerDim) {
+                    FilterChip(stringResource(R.string.apps_high_risk), highRiskOnly, PgDanger, PgDangerDim) {
                         viewModel.setHighRiskOnly(!highRiskOnly)
                     }
-                    FilterChip("Blocked", blockedOnly, PgWarning, PgWarningDim) {
+                    FilterChip(stringResource(R.string.dash_blocked), blockedOnly, PgWarning, PgWarningDim) {
                         viewModel.setBlockedOnly(!blockedOnly)
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip("Risk",        sortBy == AppSortBy.RISK,        PgDanger,  PgDangerDim)  { viewModel.setSortBy(AppSortBy.RISK) }
-                    FilterChip("Data",        sortBy == AppSortBy.DATA,        PgAccent,  PgAccentDim)  { viewModel.setSortBy(AppSortBy.DATA) }
-                    FilterChip("Connections", sortBy == AppSortBy.CONNECTIONS, PgInfo,    PgInfoDim)    { viewModel.setSortBy(AppSortBy.CONNECTIONS) }
-                    FilterChip("Background",  sortBy == AppSortBy.BACKGROUND,  PgWarning, PgWarningDim) { viewModel.setSortBy(AppSortBy.BACKGROUND) }
+                    FilterChip(stringResource(R.string.apps_sort_risk),        sortBy == AppSortBy.RISK,        PgDanger,  PgDangerDim)  { viewModel.setSortBy(AppSortBy.RISK) }
+                    FilterChip(stringResource(R.string.appd_sort_data),        sortBy == AppSortBy.DATA,        PgAccent,  PgAccentDim)  { viewModel.setSortBy(AppSortBy.DATA) }
+                    FilterChip(stringResource(R.string.appd_tab_connections), sortBy == AppSortBy.CONNECTIONS, PgInfo,    PgInfoDim)    { viewModel.setSortBy(AppSortBy.CONNECTIONS) }
+                    FilterChip(stringResource(R.string.appd_sort_background),  sortBy == AppSortBy.BACKGROUND,  PgWarning, PgWarningDim) { viewModel.setSortBy(AppSortBy.BACKGROUND) }
                 }
             }
         }
 
         items(filteredApps, key = { it.packageName }) { app ->
             val (riskLabel, tint, bg) = when {
-                app.stalkerwareScore >= 70 -> Triple("STALKER", PgDanger, PgDangerDim)
-                app.maxRiskScore >= 70 -> Triple("HIGH", PgDanger, PgDangerDim)
-                app.maxRiskScore >= 40 -> Triple("MED", PgWarning, PgWarningDim)
-                else -> Triple("LOW", PgAccent, PgAccentDim)
+                app.stalkerwareScore >= 70 -> Triple(stringResource(R.string.apps_stalker).uppercase(), PgDanger, PgDangerDim)
+                app.maxRiskScore >= 70 -> Triple(stringResource(R.string.alerts_high).uppercase(), PgDanger, PgDangerDim)
+                app.maxRiskScore >= 40 -> Triple(stringResource(R.string.alerts_medium).uppercase(), PgWarning, PgWarningDim)
+                else -> Triple(stringResource(R.string.alerts_low).uppercase(), PgAccent, PgAccentDim)
             }
             PanelCard(
                 modifier = Modifier
@@ -170,10 +173,13 @@ fun AppsScreen(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            "${app.totalDestinations} destinations · ${app.suspiciousCount} suspicious" +
-                                (if (app.cleartextCount > 0) " · ${app.cleartextCount} cleartext" else "") +
-                                (if (app.backgroundCount > 0) " · ${app.backgroundCount} bg" else "") +
-                                (if (app.stalkerwareScore >= 40) " · stalkerware ${app.stalkerwareScore}" else ""),
+                            listOfNotNull(
+                                pluralStringResource(R.plurals.apps_destinations, app.totalDestinations, app.totalDestinations),
+                                pluralStringResource(R.plurals.apps_suspicious, app.suspiciousCount, app.suspiciousCount),
+                                if (app.cleartextCount > 0) pluralStringResource(R.plurals.stats_cleartext_n, app.cleartextCount, app.cleartextCount) else null,
+                                if (app.backgroundCount > 0) pluralStringResource(R.plurals.appd_bg_count, app.backgroundCount, app.backgroundCount) else null,
+                                if (app.stalkerwareScore >= 40) stringResource(R.string.apps_stalker_score, app.stalkerwareScore) else null,
+                            ).joinToString(" · "),
                             style = MaterialTheme.typography.bodySmall,
                             color = PgTextMuted
                         )
@@ -217,7 +223,7 @@ private fun SearchShell(query: String, onValueChange: (String) -> Unit) {
         value = query,
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("Search app or package...", color = PgTextFaint) },
+        placeholder = { Text(stringResource(R.string.apps_search), color = PgTextFaint) },
         leadingIcon = {
             Icon(Icons.Default.Search, contentDescription = null, tint = PgTextFaint, modifier = Modifier.size(16.dp))
         },

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onb_1_title">جهازك. قواعدك.</string>
+    <string name="onb_1_body">يشغّل التطبيق شبكة VPN محلية ليرى كل اتصال تجريه تطبيقاتك، فلا يغادر جهازك شيء دون أن تعلم.</string>
+    <string name="onb_1_b1">يطّلع على تفاصيل الاتصالات فقط: لا يُفكّ تشفير أي محتوى ما لم تفعّل فحص HTTPS</string>
+    <string name="onb_1_b2">يعمل على جهازك، دون حساب سحابي</string>
+    <string name="onb_1_b3">يمكن لـ Android حظر حركة البيانات إذا توقفت الحماية (VPN دائم التشغيل)</string>
+    <string name="onb_2_title">ما الذي يرصده</string>
+    <string name="onb_2_body">عدة طبقات من التحليل تكشف ما لا يُظهره هاتفك عادةً.</string>
+    <string name="onb_2_b1">التطبيقات التي تتصل فجأة بطريقة جديدة (بصمات TLS)</string>
+    <string name="onb_2_b2">أنفاق DNS والنطاقات التي تبدو عشوائية (DGA)</string>
+    <string name="onb_2_b3">حِزم SDK للتتبّع المدمجة في تطبيقاتك</string>
+    <string name="onb_2_b4">التطبيقات التي تستخدم الشبكة في الخلفية</string>
+    <string name="onb_2_b5">الاتصالات غير المشفّرة</string>
+    <string name="onb_3_title">ما الذي تتحكم فيه</string>
+    <string name="onb_3_body">احظر ما تشاء: لكل تطبيق أو نطاق أو عنوان IP أو في كل مكان. تُطبَّق القواعد فورًا.</string>
+    <string name="onb_3_b1">حظر تطبيقات أو نطاقات أو عناوين IP محددة</string>
+    <string name="onb_3_b2">حظر كل الاتصالات غير المشفّرة أو TLS الضعيف</string>
+    <string name="onb_3_b3">قواعد مقترحة بحسب ما تفعله تطبيقاتك</string>
+    <string name="onb_3_b4">تصدير السجلات بصيغة PCAP أو CSV أو تقرير لقسم تقنية المعلومات</string>
+    <string name="onb_start">فهمت: ابدأ المراقبة</string>
+    <string name="onb_continue">المتابعة دون تفعيل VPN</string>
+    <string name="onb_next">التالي</string>
+    <string name="onb_consent_title">ما الذي يفعله هذا التطبيق</string>
+    <string name="onb_consent_body">يُرجى قراءة كل بند وتأكيده قبل المتابعة.</string>
+    <string name="onb_c_net">مراقبة الشبكة</string>
+    <string name="onb_c_net_body">تُنشأ شبكة VPN محلية على هذا الجهاز. تمرّ عبرها كل حركة الشبكة ليتمكّن التطبيق من إظهار التطبيقات التي تتواصل ومع من. لا تغادر أي بيانات جهازك.</string>
+    <string name="onb_c_https">فحص حركة HTTPS (اختياري)</string>
+    <string name="onb_c_https_body">لقراءة محتوى حركة البيانات المشفّرة، يعمل التطبيق كوكيل HTTPS محلي. يتطلب ذلك تثبيت شهادة أمان. تبقى الشهادة على هذا الجهاز فقط وتُحذف عند إزالة التطبيق. يمكنك استخدام التطبيق دون هذه الميزة.</string>
+    <string name="onb_c_storage">التخزين المحلي</string>
+    <string name="onb_c_storage_body">تُحفظ سجلات حركة البيانات في مساحة التخزين الخاصة بالتطبيق على هذا الجهاز فقط، ولا تُرفع إلى أي مكان. يمكنك حذفها في أي وقت من الإعدادات.</string>
+    <string name="onb_required_note">يجب تحديد البنود المطلوبة للمتابعة.</string>
+    <string name="onb_required">مطلوب</string>
+    <string name="onb_optional">اختياري</string>
+</resources>

@@ -20,52 +20,54 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.privacyguard.app.R
 import com.privacyguard.app.ui.theme.*
 import kotlinx.coroutines.launch
 
 private data class OnboardingPage(
     val icon: ImageVector,
     val iconTint: androidx.compose.ui.graphics.Color,
-    val title: String,
-    val body: String,
-    val bullets: List<String> = emptyList(),
+    val title: Int,
+    val body: Int,
+    val bullets: List<Int> = emptyList(),
 )
 
 private val infoPages = listOf(
     OnboardingPage(
         icon     = Icons.Default.Shield,
         iconTint = PgAccent,
-        title    = "Your device. Your rules.",
-        body     = "PrivacyGuard runs a local VPN to inspect every connection — no traffic leaves your device unmonitored.",
+        title    = R.string.onb_1_title,
+        body     = R.string.onb_1_body,
         bullets  = listOf(
-            "Zero-knowledge inspection — no payload decryption by default",
-            "Works entirely on-device, no cloud backend",
-            "Kill switch locks network if VPN drops",
+            R.string.onb_1_b1,
+            R.string.onb_1_b2,
+            R.string.onb_1_b3,
         ),
     ),
     OnboardingPage(
         icon     = Icons.Default.Fingerprint,
         iconTint = PgDanger,
-        title    = "What it detects",
-        body     = "Multiple analysis layers surface threats your device wouldn't normally show you.",
+        title    = R.string.onb_2_title,
+        body     = R.string.onb_2_body,
         bullets  = listOf(
-            "JA3 TLS fingerprints matched against 35+ malware signatures",
-            "DNS tunneling and DGA domain detection",
-            "Tracker SDK identification from APK metadata",
-            "Background app network activity",
-            "Cleartext (unencrypted) connections",
+            R.string.onb_2_b1,
+            R.string.onb_2_b2,
+            R.string.onb_2_b3,
+            R.string.onb_2_b4,
+            R.string.onb_2_b5,
         ),
     ),
     OnboardingPage(
         icon     = Icons.Default.Visibility,
         iconTint = PgWarning,
-        title    = "What you control",
-        body     = "Block anything — per app, per domain, per IP, or globally. Rules take effect instantly.",
+        title    = R.string.onb_3_title,
+        body     = R.string.onb_3_body,
         bullets  = listOf(
-            "Block specific apps, domains, or IPs",
-            "Block all cleartext or weak TLS globally",
-            "Suggested rules based on observed behaviour",
-            "Export logs as PCAP, CSV, or IT report",
+            R.string.onb_3_b1,
+            R.string.onb_3_b2,
+            R.string.onb_3_b3,
+            R.string.onb_3_b4,
         ),
     ),
 )
@@ -146,14 +148,14 @@ fun OnboardingScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
                 ) {
-                    Text("I understand — start monitoring", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.onb_start), fontWeight = FontWeight.SemiBold)
                 }
                 TextButton(
                     onClick = { if (canProceed) onGetStarted(tlsAccepted) },
                     enabled = canProceed,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Continue without enabling VPN", color = if (canProceed) PgTextMuted else PgTextFaint)
+                    Text(stringResource(R.string.onb_continue), color = if (canProceed) PgTextMuted else PgTextFaint)
                 }
             } else {
                 Button(
@@ -165,7 +167,7 @@ fun OnboardingScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
                 ) {
-                    Text("Next", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.onb_next), fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -198,7 +200,7 @@ private fun ConsentPageContent(
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            "What this app does",
+            stringResource(R.string.onb_consent_title),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = PgText,
@@ -206,7 +208,7 @@ private fun ConsentPageContent(
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
-            "Please read and confirm each item before continuing.",
+            stringResource(R.string.onb_consent_body),
             style = MaterialTheme.typography.bodyMedium,
             color = PgTextMuted,
             textAlign = TextAlign.Center,
@@ -217,10 +219,9 @@ private fun ConsentPageContent(
             checked   = vpnAccepted,
             onChecked = onVpnAccepted,
             required  = true,
-            title     = "Network monitoring",
-            body      = "A local VPN is created on this device. All network traffic passes through it " +
-                        "so the app can show you which apps are communicating and with whom. " +
-                        "No data leaves your device.",
+            title     = stringResource(R.string.onb_c_net),
+            body      = stringResource(R.string.onb_c_net_body),
+
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -229,11 +230,9 @@ private fun ConsentPageContent(
             checked   = tlsAccepted,
             onChecked = onTlsAccepted,
             required  = false,
-            title     = "HTTPS traffic inspection (optional)",
-            body      = "To read encrypted traffic contents, the app acts as a local HTTPS proxy. " +
-                        "This requires installing a security certificate. The certificate lives " +
-                        "only on this device and is deleted when you uninstall the app. " +
-                        "You can use the app without this feature.",
+            title     = stringResource(R.string.onb_c_https),
+            body      = stringResource(R.string.onb_c_https_body),
+
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -242,15 +241,15 @@ private fun ConsentPageContent(
             checked   = localStorageAck,
             onChecked = onLocalStorageAck,
             required  = true,
-            title     = "Local storage",
-            body      = "Traffic logs are stored in the app's private storage on this device only. " +
-                        "They are never uploaded anywhere. You can delete them at any time from Settings.",
+            title     = stringResource(R.string.onb_c_storage),
+            body      = stringResource(R.string.onb_c_storage_body),
+
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            "Required items must be checked to continue.",
+            stringResource(R.string.onb_required_note),
             style = MaterialTheme.typography.labelSmall,
             color = PgTextFaint,
             modifier = Modifier.padding(top = 4.dp),
@@ -300,10 +299,10 @@ private fun ConsentItem(
                     Text(title, fontWeight = FontWeight.SemiBold, color = PgText,
                         style = MaterialTheme.typography.bodyMedium)
                     if (required) {
-                        Text("Required", style = MaterialTheme.typography.labelSmall,
+                        Text(stringResource(R.string.onb_required), style = MaterialTheme.typography.labelSmall,
                             color = PgDanger)
                     } else {
-                        Text("Optional", style = MaterialTheme.typography.labelSmall,
+                        Text(stringResource(R.string.onb_optional), style = MaterialTheme.typography.labelSmall,
                             color = PgTextFaint)
                     }
                 }
@@ -335,13 +334,13 @@ private fun InfoPageContent(page: OnboardingPage) {
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        Text(page.title,
+        Text(stringResource(page.title),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold, color = PgText, textAlign = TextAlign.Center)
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Text(page.body,
+        Text(stringResource(page.body),
             style = MaterialTheme.typography.bodyLarge,
             color = PgTextMuted, textAlign = TextAlign.Center)
 
@@ -362,7 +361,7 @@ private fun InfoPageContent(page: OnboardingPage) {
                                 .size(6.dp)
                                 .background(page.iconTint, CircleShape),
                         )
-                        Text(bullet,
+                        Text(stringResource(bullet),
                             style = MaterialTheme.typography.bodyMedium, color = PgTextMuted)
                     }
                 }

@@ -47,7 +47,6 @@ data class AdsState(
     val masterEnabled: Boolean = true,
     val blockedToday: Int = 0,
     val blockRate: Int = 0,
-    val timeSavedMs: Long = 0L,
     val categories: List<AdCategoryUi> = emptyList(),
     val sources: List<BlocklistSourceUi> = emptyList(),
     val customRules: List<CustomDomainRuleUi> = emptyList(),
@@ -57,6 +56,7 @@ data class AdsState(
 )
 
 class AdsViewModel(app: Application) : AndroidViewModel(app) {
+    private fun str(id: Int): String = getApplication<android.app.Application>().getString(id)
     private val db = AppDatabase.getInstance(app)
     private val configDb = ConfigDatabase.getInstance(app)
     private val rulesRepo = RulesRepo(configDb.rulesDao(), FilterEngine())
@@ -78,7 +78,8 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
             val userRules = runCatching { rulesRepo.userRules() }.getOrDefault(emptyList())
             val since = System.currentTimeMillis() - 86_400_000L
             val blockedToday = runCatching { connectionDao.getBlockedCountToday(since) }.getOrDefault(0)
-            val totalToday = runCatching { connectionDao.getCount() }.getOrDefault(0)
+            // Same window as blockedToday; dividing by the all-time total understated the rate.
+            val totalToday = runCatching { connectionDao.getCountSince(since) }.getOrDefault(0)
 
             val recentConns = runCatching {
                 connectionDao.getRecentConnections(since, 1_000)
@@ -105,7 +106,6 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
                 masterEnabled = sourceStats.any { it.enabledCount > 0 } || categoryStats.any { it.enabledCount > 0 },
                 blockedToday = blockedToday,
                 blockRate = if (totalToday == 0) 0 else ((blockedToday * 100f) / totalToday).toInt(),
-                timeSavedMs = blockedToday * 340L,
                 categories = categoryStats.toCategoryUi(),
                 sources = sourceStats.toSourceUi(),
                 customRules = userRules
@@ -147,9 +147,9 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
         if (normalized.isBlank()) return
         viewModelScope.launch {
             val rule = if (allow) {
-                FilterRule.allowDomain(normalized, label = "Allow $normalized")
+                FilterRule.allowDomain(normalized, label = getApplication<android.app.Application>().getString(com.privacyguard.app.R.string.rule_allow_domain, normalized))
             } else {
-                FilterRule.blockDomain(normalized, label = "Block $normalized", source = FilterRule.Source.USER)
+                FilterRule.blockDomain(normalized, label = getApplication<android.app.Application>().getString(com.privacyguard.app.R.string.rule_block_domain, normalized), source = FilterRule.Source.USER)
             }
             rulesRepo.addRule(rule)
             refresh()
@@ -175,10 +175,10 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
     private fun List<CategoryToggleStats>.toCategoryUi(): List<AdCategoryUi> {
         val map = associateBy { it.category.lowercase() }
         val categoryMeta = listOf(
-            Triple("ads", "Display ads", "DNS and content network ad domains"),
-            Triple("trackers", "Tracking scripts", "Behavioral and analytics endpoints"),
-            Triple("malware", "Malware & phishing", "Known malicious and phishing infrastructure"),
-            Triple("telemetry", "Telemetry", "Background telemetry and reporting endpoints"),
+            Triple("ads", str(com.privacyguard.app.R.string.ads_cat_ads), str(com.privacyguard.app.R.string.ads_cat_ads_desc)),
+            Triple("trackers", str(com.privacyguard.app.R.string.ads_cat_trackers), str(com.privacyguard.app.R.string.ads_cat_trackers_desc)),
+            Triple("malware", str(com.privacyguard.app.R.string.ads_cat_malware), str(com.privacyguard.app.R.string.ads_cat_malware_desc)),
+            Triple("telemetry", str(com.privacyguard.app.R.string.ads_cat_telemetry), str(com.privacyguard.app.R.string.ads_cat_telemetry_desc)),
         )
         return categoryMeta.map { (id, title, subtitle) ->
             val stat = map[id]

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sleep_subtitle">DNS lookups while the screen was off</string>
+    <plurals name="sleep_badge_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <string name="sleep_activity">Screen-off activity</string>
+    <plurals name="sleep_idle_apps">
+        <item quantity="one">%d app made DNS lookups while the screen was off</item>
+        <item quantity="other">%d apps made DNS lookups while the screen was off</item>
+    </plurals>
+    <plurals name="sleep_review">
+        <item quantity="one">%d to review</item>
+        <item quantity="other">%d to review</item>
+    </plurals>
+    <string name="sleep_idle_dns">Screen-off DNS</string>
+    <string name="sleep_apps">Apps</string>
+    <string name="sleep_tracking">Tracking</string>
+    <string name="sleep_top_apps">Top apps active while the screen was off</string>
+    <string name="sleep_no_apps">No DNS lookups while the screen was off in this period.</string>
+    <string name="sleep_top_domains">Top domains contacted while the screen was off</string>
+    <string name="sleep_no_domains">No domains were contacted while the screen was off.</string>
+    <plurals name="sleep_idle_n">
+        <item quantity="one">%d while off</item>
+        <item quantity="other">%d while off</item>
+    </plurals>
+    <plurals name="sleep_total_n">
+        <item quantity="one">%d total</item>
+        <item quantity="other">%d total</item>
+    </plurals>
+    <plurals name="sleep_idle_queries">
+        <item quantity="one">%d DNS lookup while the screen was off</item>
+        <item quantity="other">%d DNS lookups while the screen was off</item>
+    </plurals>
+</resources>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rules_title">القواعد</string>
+    <string name="rules_add">إضافة قاعدة</string>
+    <string name="rules_empty">لا قواعد بعد</string>
+    <string name="rules_empty_desc">اضغط + لإضافة قاعدة لنطاق أو تطبيق</string>
+    <string name="rules_search">ابحث عن نطاق أو تطبيق أو IP…</string>
+    <string name="rules_clear">مسح</string>
+    <string name="rules_suggested">مقترحة</string>
+    <string name="rules_active">القواعد النشطة · %1$d</string>
+    <plurals name="rules_count">
+        <item quantity="zero">لا قواعد</item>
+        <item quantity="one">قاعدة واحدة</item>
+        <item quantity="two">قاعدتان</item>
+        <item quantity="few">%d قواعد</item>
+        <item quantity="many">%d قاعدةً</item>
+        <item quantity="other">%d قاعدة</item>
+    </plurals>
+    <string name="rules_d_domain">النطاق: %1$s</string>
+    <string name="rules_d_app">التطبيق: %1$s</string>
+    <string name="rules_d_ip">IP: %1$s</string>
+    <string name="rules_d_bg">في الخلفية فقط</string>
+    <plurals name="rules_triggered">
+        <item quantity="zero">لم تُطبَّق بعد</item>
+        <item quantity="one">طُبّقت مرة واحدة</item>
+        <item quantity="two">طُبّقت مرتين</item>
+        <item quantity="few">طُبّقت %d مرات</item>
+        <item quantity="many">طُبّقت %d مرةً</item>
+        <item quantity="other">طُبّقت %d مرة</item>
+    </plurals>
+    <string name="rules_delete">حذف</string>
+    <string name="rules_add_title">إضافة قاعدة</string>
+    <string name="rules_type">النوع:</string>
+    <string name="rules_hint_domain">النطاق (مثل ads.example.com)</string>
+    <string name="rules_hint_package">حزمة التطبيق (مثل com.example.app)</string>
+    <string name="rules_hint_ip">IP أو CIDR (مثل 1.2.3.4 أو 10.0.0.0/8)</string>
+    <string name="rules_action">الإجراء:</string>
+    <string name="rules_add_button">إضافة</string>
+    <string name="rules_skip">تخطٍّ</string>
+    <plurals name="rules_reason_cleartext">
+        <item quantity="zero">لا اتصالات غير مشفّرة (7 أيام)</item>
+        <item quantity="one">اتصال واحد غير مشفّر (7 أيام)</item>
+        <item quantity="two">اتصالان غير مشفّرين (7 أيام)</item>
+        <item quantity="few">%d اتصالات غير مشفّرة (7 أيام)</item>
+        <item quantity="many">%d اتصالًا غير مشفّر (7 أيام)</item>
+        <item quantity="other">%d اتصال غير مشفّر (7 أيام)</item>
+    </plurals>
+    <plurals name="rules_reason_background">
+        <item quantity="zero">لا اتصالات في الخلفية (7 أيام)</item>
+        <item quantity="one">اتصال واحد في الخلفية (7 أيام)</item>
+        <item quantity="two">اتصالان في الخلفية (7 أيام)</item>
+        <item quantity="few">%d اتصالات في الخلفية (7 أيام)</item>
+        <item quantity="many">%d اتصالًا في الخلفية (7 أيام)</item>
+        <item quantity="other">%d اتصال في الخلفية (7 أيام)</item>
+    </plurals>
+</resources>

@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dash_card_behavior">App Behavior DNA</string>
+    <string name="dash_card_behavior_desc">Learns normal app rhythm and flags deviations</string>
+    <string name="dash_status_anomalous">Anomalous</string>
+    <string name="dash_status_learning">Learning</string>
+    <string name="dash_status_quiet">Quiet</string>
+    <plurals name="dash_alerts_count">
+        <item quantity="one">%d alert</item>
+        <item quantity="other">%d alerts</item>
+    </plurals>
+    <string name="dash_card_ipv6">IPv6 leak</string>
+    <string name="dash_card_ipv6_desc">Dual-stack routing and bypass check</string>
+    <string name="dash_status_critical">Critical</string>
+    <string name="dash_status_blocked">Blocked</string>
+    <string name="dash_status_contained">Contained</string>
+    <plurals name="dash_blocked_count">
+        <item quantity="one">%d blocked</item>
+        <item quantity="other">%d blocked</item>
+    </plurals>
+    <plurals name="dash_ipv6_count">
+        <item quantity="one">%d IPv6</item>
+        <item quantity="other">%d IPv6</item>
+    </plurals>
+    <string name="dash_card_kill_switch">Kill switch</string>
+    <string name="dash_kill_switch_off_desc">Turn on Always-on VPN and Block connections without VPN</string>
+    <string name="dash_status_blocking">Blocking</string>
+    <string name="dash_status_alert_only">Alert only</string>
+    <string name="dash_vpn_live">VPN live</string>
+    <string name="dash_vpn_off">VPN off</string>
+    <string name="dash_card_no_decrypt">No payload decryption</string>
+    <string name="dash_card_no_decrypt_desc">Metadata-only inspection; TLS contents stay private</string>
+    <string name="dash_status_verified">Verified</string>
+    <string name="dash_headers_only">Headers only</string>
+    <string name="dash_card_entropy">Shannon entropy detection</string>
+    <string name="dash_card_entropy_desc">DGA/C2 labels and tunneling-like DNS names</string>
+    <string name="dash_status_high_value">High value</string>
+    <string name="dash_status_normal">Normal</string>
+    <plurals name="dash_signals_count">
+        <item quantity="one">%d signal</item>
+        <item quantity="other">%d signals</item>
+    </plurals>
+    <string name="dash_card_night">Night activity detection</string>
+    <string name="dash_card_night_desc">Unexpected sessions between 00:00 and 05:00</string>
+    <string name="dash_status_review">Review</string>
+    <plurals name="dash_sessions_count">
+        <item quantity="one">%d session</item>
+        <item quantity="other">%d sessions</item>
+    </plurals>
+    <string name="dash_card_beacon">Beacon interval analysis</string>
+    <string name="dash_card_beacon_desc">Repeated app × destination contact patterns</string>
+    <string name="dash_status_apt">APT pattern</string>
+    <string name="dash_status_stable">Stable</string>
+    <plurals name="dash_patterns_count">
+        <item quantity="one">%d pattern</item>
+        <item quantity="other">%d patterns</item>
+    </plurals>
+    <string name="dash_card_upload">Large upload detection</string>
+    <string name="dash_card_upload_desc">Possible data exfiltration by volume</string>
+    <string name="dash_card_trust">Network trust level</string>
+    <string name="dash_trust_reduced">Reduced</string>
+    <string name="dash_trust_watch">Watch</string>
+    <string name="dash_trust_trusted">Trusted</string>
+    <string name="dash_card_background">Background activity</string>
+    <string name="dash_card_background_desc">Connections made while the app was not on screen</string>
+    <string name="dash_status_high">High</string>
+    <string name="dash_status_moderate">Moderate</string>
+    <string name="dash_background_value">%1$s · %2$s</string>
+    <plurals name="dash_connections_count">
+        <item quantity="one">%d connection</item>
+        <item quantity="other">%d connections</item>
+    </plurals>
+    <plurals name="dash_apps_count">
+        <item quantity="one">%d app</item>
+        <item quantity="other">%d apps</item>
+    </plurals>
+    <string name="dash_card_cleartext">Cleartext connections</string>
+    <string name="dash_card_cleartext_desc">Unencrypted HTTP connections allowed through</string>
+    <string name="dash_status_elevated">Elevated</string>
+    <string name="dash_status_present">Present</string>
+    <string name="dash_status_none">None</string>
+    <plurals name="dash_today_count">
+        <item quantity="one">%d today</item>
+        <item quantity="other">%d today</item>
+    </plurals>
+    <string name="dash_rec_kill_switch">Turn on the kill switch so nothing leaks if protection drops.</string>
+    <plurals name="dash_rec_behavior">
+        <item quantity="one">Behavior DNA found %d app deviation. New destinations and odd-hour uploads deserve a review.</item>
+        <item quantity="other">Behavior DNA found %d app deviations. New destinations and odd-hour uploads deserve a review.</item>
+    </plurals>
+    <string name="dash_rec_ipv6">IPv6 traffic was seen while the VPN is active. Add IPv6 routing support or disable the IPv6 bypass.</string>
+    <string name="dash_rec_entropy">Random-looking DNS names were detected. Keep the behavior fingerprint even if the domain changes.</string>
+    <string name="dash_rec_beacon">Beacon-like intervals found. Treat that app and destination pair as reduced trust.</string>
+    <string name="dash_rec_strict">Strict mode is recommended on %1$s because trust fell to %2$d/100.</string>
+    <string name="dash_rec_default">Standard blocking plus the kill switch gives most people the strongest default protection.</string>
+    <string name="dash_rec_no_decrypt">Behavior analysis works without decrypting content, so what you send stays private.</string>
+    <string name="dash_title">Dashboard</string>
+    <string name="dash_subtitle_on">Protected tunnel running</string>
+    <string name="dash_subtitle_off">Protection is paused</string>
+    <string name="dash_badge_live">Live</string>
+    <string name="dash_badge_offline">Offline</string>
+    <string name="dash_alerts">Alerts</string>
+    <string name="dash_status">Status</string>
+    <string name="dash_protected">Protected</string>
+    <string name="dash_not_protected">Not protected</string>
+    <string name="dash_privacy_score_n">Privacy score %1$d</string>
+    <string name="dash_encryption_health">Encryption health</string>
+    <string name="dash_tls_percent">%1$d%% TLS</string>
+    <string name="dash_trackers_blocked">Trackers blocked</string>
+    <string name="dash_cleartext_conns">Cleartext connections</string>
+    <string name="dash_privacy_score">Privacy score</string>
+    <string name="dash_throughput">Throughput</string>
+    <string name="dash_active_conns">Active connections</string>
+    <string name="dash_security_systems">Security systems</string>
+    <string name="dash_pcap_stop">Stop packet capture</string>
+    <string name="dash_pcap_start">Start packet capture</string>
+    <string name="dash_pcap_confirm">Confirm access to raw packet capture controls</string>
+    <string name="dash_pcap_share">Share PCAP capture</string>
+    <string name="dash_pcap_share_confirm">Confirm access before exporting raw network traffic</string>
+    <string name="dash_export_pcap">Export PCAP</string>
+    <string name="dash_recommendations">Recommendations</string>
+    <string name="dash_recent_alerts">Recent alerts</string>
+    <string name="dash_no_alerts">No alerts yet</string>
+    <string name="dash_no_alerts_desc">Once traffic starts flowing, recent anomalies and blocks will appear here.</string>
+    <string name="dash_sleep_title">While you were sleeping</string>
+    <string name="dash_sleep_summary">%1$s · %2$s</string>
+    <plurals name="dash_apps_active">
+        <item quantity="one">%d app active</item>
+        <item quantity="other">%d apps active</item>
+    </plurals>
+    <plurals name="dash_dns_queries">
+        <item quantity="one">%d DNS query</item>
+        <item quantity="other">%d DNS queries</item>
+    </plurals>
+    <plurals name="dash_tracking_count">
+        <item quantity="one">%d tracking</item>
+        <item quantity="other">%d tracking</item>
+    </plurals>
+    <string name="dash_weekly_title">Weekly privacy report</string>
+    <string name="dash_weekly_desc">Behavioral summary from the last 7 days</string>
+    <string name="dash_connections">Connections</string>
+    <string name="dash_blocked">Blocked</string>
+    <string name="dash_behavior">Behavior</string>
+    <string name="dash_score">Score</string>
+    <string name="dash_transferred">Transferred %1$s</string>
+    <string name="dash_pcap_title">PCAP export</string>
+    <string name="dash_pcap_desc">Capture raw IP packets for Wireshark analysis</string>
+    <string name="dash_pcap_rec">Rec</string>
+    <string name="dash_pcap_ready">Ready</string>
+    <string name="dash_stop_capture">Stop capture</string>
+    <string name="dash_start_capture">Start capture</string>
+    <string name="dash_share_capture">Share last capture</string>
+    <string name="dash_protection">Protection</string>
+    <string name="dash_per_second">%1$s/s</string>
+</resources>

@@ -35,6 +35,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.privacyguard.app.R
 import androidx.compose.ui.platform.LocalContext
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.db.DnsAppSummary
@@ -98,20 +101,20 @@ fun SleepReportScreen(
     ) {
         item {
             ScreenScaffold(
-                title = "While You Were Sleeping",
-                subtitle = "Screen-off DNS and background activity",
-                badge = "${selectedDays}D",
+                title = stringResource(R.string.dash_sleep_title),
+                subtitle = stringResource(R.string.sleep_subtitle),
+                badge = pluralStringResource(R.plurals.sleep_badge_days, selectedDays, selectedDays).uppercase(),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PgTextMuted)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.appd_back), tint = PgTextMuted)
                     }
                     Spacer(modifier = Modifier.size(8.dp))
-                    RangeChip("Today", selectedDays == 1) { selectedDays = 1 }
+                    RangeChip(stringResource(R.string.stats_today), selectedDays == 1) { selectedDays = 1 }
                     Spacer(modifier = Modifier.size(8.dp))
-                    RangeChip("7 days", selectedDays == 7) { selectedDays = 7 }
+                    RangeChip(pluralStringResource(R.plurals.sleep_badge_days, 7, 7), selectedDays == 7) { selectedDays = 7 }
                     Spacer(modifier = Modifier.size(8.dp))
-                    RangeChip("30 days", selectedDays == 30) { selectedDays = 30 }
+                    RangeChip(pluralStringResource(R.plurals.sleep_badge_days, 30, 30), selectedDays == 30) { selectedDays = 30 }
                 }
                 Spacer(modifier = Modifier.height(14.dp))
                 PanelCard {
@@ -126,25 +129,25 @@ fun SleepReportScreen(
                         }
                         Spacer(modifier = Modifier.size(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Screen-off activity", style = MaterialTheme.typography.titleMedium, color = PgText)
+                            Text(stringResource(R.string.sleep_activity), style = MaterialTheme.typography.titleMedium, color = PgText)
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                "${state.idleApps} apps made DNS queries while the phone was idle",
+                                pluralStringResource(R.plurals.sleep_idle_apps, state.idleApps, state.idleApps),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = PgTextMuted,
                             )
                         }
                         StatusPill(
-                            if (state.suspiciousApps > 0) "${state.suspiciousApps} review" else "quiet",
+                            if (state.suspiciousApps > 0) pluralStringResource(R.plurals.sleep_review, state.suspiciousApps, state.suspiciousApps) else stringResource(R.string.dash_status_quiet),
                             if (state.suspiciousApps > 0) PgWarningDim else PgAccentDim,
                             if (state.suspiciousApps > 0) PgWarning else PgAccent,
                         )
                     }
                     Spacer(modifier = Modifier.height(14.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        StatTile("Idle DNS", state.idleDnsQueries.toString(), PgInfo, Modifier.weight(1f))
-                        StatTile("Apps", state.idleApps.toString(), PgAccent, Modifier.weight(1f))
-                        StatTile("Tracking", state.trackingDomains.toString(), PgDanger, Modifier.weight(1f))
+                        StatTile(stringResource(R.string.sleep_idle_dns), java.text.NumberFormat.getIntegerInstance().format(state.idleDnsQueries), PgInfo, Modifier.weight(1f))
+                        StatTile(stringResource(R.string.sleep_apps), java.text.NumberFormat.getIntegerInstance().format(state.idleApps), PgAccent, Modifier.weight(1f))
+                        StatTile(stringResource(R.string.sleep_tracking), java.text.NumberFormat.getIntegerInstance().format(state.trackingDomains), PgDanger, Modifier.weight(1f))
                     }
                 }
             }
@@ -152,11 +155,11 @@ fun SleepReportScreen(
 
         item {
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                SectionLabel("Top apps active while idle")
+                SectionLabel(stringResource(R.string.sleep_top_apps))
             }
         }
         if (state.topApps.isEmpty()) {
-            item { EmptyPanel("No screen-off DNS activity recorded yet.") }
+            item { EmptyPanel(stringResource(R.string.sleep_no_apps)) }
         } else {
             items(state.topApps, key = { it.appPackage }) { app ->
                 AppSleepRow(app)
@@ -165,11 +168,11 @@ fun SleepReportScreen(
 
         item {
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                SectionLabel("Top domains contacted while idle")
+                SectionLabel(stringResource(R.string.sleep_top_domains))
             }
         }
         if (state.topDomains.isEmpty()) {
-            item { EmptyPanel("No domains were contacted while the screen was off.") }
+            item { EmptyPanel(stringResource(R.string.sleep_no_domains)) }
         } else {
             items(state.topDomains, key = { it.domain }) { domain ->
                 DomainSleepRow(domain)
@@ -210,8 +213,8 @@ private fun AppSleepRow(row: DnsAppSummary) {
                 Text(row.appPackage, style = MaterialTheme.typography.bodySmall, color = PgTextMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text("${row.idleQueries} idle", style = MaterialTheme.typography.titleSmall, color = PgWarning, fontWeight = FontWeight.SemiBold)
-                Text("${row.totalQueries} total", style = MaterialTheme.typography.labelSmall, color = PgTextFaint)
+                Text(pluralStringResource(R.plurals.sleep_idle_n, row.idleQueries, row.idleQueries), style = MaterialTheme.typography.titleSmall, color = PgWarning, fontWeight = FontWeight.SemiBold)
+                Text(pluralStringResource(R.plurals.sleep_total_n, row.totalQueries, row.totalQueries), style = MaterialTheme.typography.labelSmall, color = PgTextFaint)
             }
         }
     }
@@ -233,10 +236,10 @@ private fun DomainSleepRow(row: DnsDomainSummary) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(row.domain, style = MaterialTheme.typography.titleMedium, color = PgText, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(modifier = Modifier.height(3.dp))
-                Text("${row.idleQueries} idle DNS queries", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                Text(pluralStringResource(R.plurals.sleep_idle_queries, row.idleQueries, row.idleQueries), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
             }
             if (row.blockedQueries > 0) {
-                StatusPill("${row.blockedQueries} blocked", PgDangerDim, PgDanger)
+                StatusPill(pluralStringResource(R.plurals.dash_blocked_count, row.blockedQueries, row.blockedQueries), PgDangerDim, PgDanger)
             }
         }
     }

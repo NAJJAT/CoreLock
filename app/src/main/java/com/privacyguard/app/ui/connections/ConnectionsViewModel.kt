@@ -1,6 +1,7 @@
 package com.privacyguard.app.ui.connections
 
 import android.app.Application
+import com.privacyguard.app.R
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.privacyguard.app.BuildConfig
@@ -68,6 +69,7 @@ data class ConnectionDetailState(
 )
 
 class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
+    private fun str(id: Int, vararg a: Any): String = getApplication<Application>().getString(id, *a)
     private val db = AppDatabase.getInstance(app)
     private val configDb = ConfigDatabase.getInstance(app)
     private val rulesRepo = RulesRepo(configDb.rulesDao(), FilterEngine())
@@ -190,7 +192,7 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         val candidate = appName.takeIf { it.isNotBlank() && it != "Unknown" } ?: resolvedPackage.orEmpty()
-        if (candidate.isBlank()) return "Unknown app"
+        if (candidate.isBlank()) return str(R.string.conn_unknown_app)
         if (!candidate.contains('.')) return candidate
 
         return candidate
@@ -226,7 +228,7 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
             if (_blockedRuleKeys.value.contains(id)) {
                 rulesRepo.deleteRule(id)
             } else {
-                rulesRepo.upsertRule(target.toRule())
+                rulesRepo.upsertRule(target.toRule(str(if (target.kind == BlockTargetKind.PACKAGE) R.string.rule_block_app else R.string.rule_block_domain, target.value)))
             }
             refreshBlockedRuleKeys()
             _selectedConnection.value = _selectedConnection.value?.let {
@@ -245,7 +247,7 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
             rulesRepo.upsertRule(
                 FilterRule(
                     id = AppsViewModel.packageBlockRuleId(packageName),
-                    label = "Block $packageName",
+                    label = str(R.string.rule_block_app, packageName),
                     action = FilterRule.Action.DENY,
                     source = FilterRule.Source.USER,
                     priority = FilterRule.HIGH_PRIORITY,
@@ -361,9 +363,9 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
             else -> "user:block:${kind.name.lowercase()}:$value"
         }
 
-        fun toRule(): FilterRule = FilterRule(
+        fun toRule(label: String): FilterRule = FilterRule(
             id = ruleId(),
-            label = "Block $value",
+            label = label,
             action = FilterRule.Action.DENY,
             source = FilterRule.Source.USER,
             priority = FilterRule.HIGH_PRIORITY,
@@ -376,8 +378,7 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
     private enum class BlockTargetKind { DOMAIN, IP, PACKAGE }
 
     private fun formatRate(bytes: Long): String {
-        if (bytes <= 0) return "0 KB/s"
-        return String.format(Locale.US, "%.1f KB/s", bytes / 1024.0)
+        return str(R.string.dash_per_second, android.text.format.Formatter.formatShortFileSize(getApplication(), bytes.coerceAtLeast(0)))
     }
 
     private fun resolveDnsIfHost(input: String) {
@@ -405,13 +406,13 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
                     DnsLookupState(
                         query = host,
                         addresses = addresses,
-                        error = if (addresses.isEmpty()) "No DNS records returned" else null
+                        error = if (addresses.isEmpty()) str(R.string.conn_no_records) else null
                     )
                 },
                 onFailure = { error ->
                     DnsLookupState(
                         query = host,
-                        error = error.message ?: "DNS lookup failed"
+                        error = error.message ?: str(R.string.conn_lookup_failed)
                     )
                 }
             )

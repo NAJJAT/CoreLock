@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sleep_subtitle">Recherches DNS pendant que l’écran était éteint</string>
+    <plurals name="sleep_badge_days">
+        <item quantity="one">%d jour</item>
+        <item quantity="many">%d jours</item>
+        <item quantity="other">%d jours</item>
+    </plurals>
+    <string name="sleep_activity">Activité écran éteint</string>
+    <plurals name="sleep_idle_apps">
+        <item quantity="one">%d app a fait des recherches DNS pendant que l’écran était éteint</item>
+        <item quantity="many">%d apps ont fait des recherches DNS pendant que l’écran était éteint</item>
+        <item quantity="other">%d apps ont fait des recherches DNS pendant que l’écran était éteint</item>
+    </plurals>
+    <plurals name="sleep_review">
+        <item quantity="one">%d à vérifier</item>
+        <item quantity="many">%d à vérifier</item>
+        <item quantity="other">%d à vérifier</item>
+    </plurals>
+    <string name="sleep_idle_dns">DNS écran éteint</string>
+    <string name="sleep_apps">Apps</string>
+    <string name="sleep_tracking">Pistage</string>
+    <string name="sleep_top_apps">Apps les plus actives écran éteint</string>
+    <string name="sleep_no_apps">Aucune recherche DNS écran éteint pendant cette période.</string>
+    <string name="sleep_top_domains">Domaines les plus contactés écran éteint</string>
+    <string name="sleep_no_domains">Aucun domaine n’a été contacté pendant que l’écran était éteint.</string>
+    <plurals name="sleep_idle_n">
+        <item quantity="one">%d écran éteint</item>
+        <item quantity="many">%d écran éteint</item>
+        <item quantity="other">%d écran éteint</item>
+    </plurals>
+    <plurals name="sleep_total_n">
+        <item quantity="one">%d au total</item>
+        <item quantity="many">%d au total</item>
+        <item quantity="other">%d au total</item>
+    </plurals>
+    <plurals name="sleep_idle_queries">
+        <item quantity="one">%d recherche DNS écran éteint</item>
+        <item quantity="many">%d recherches DNS écran éteint</item>
+        <item quantity="other">%d recherches DNS écran éteint</item>
+    </plurals>
+</resources>

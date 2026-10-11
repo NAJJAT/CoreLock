@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import com.privacyguard.app.R
 import com.privacyguard.app.data.db.TlsAlertEntity
 import com.privacyguard.app.ui.components.PanelCard
@@ -64,25 +65,25 @@ fun SecurityAnalysisScreen(
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             ScreenScaffold(
-                title = "Crypto Analysis",
-                subtitle = "TLS fingerprinting · Cipher suites · CT monitor",
-                badge = "LIVE"
+                title = stringResource(R.string.sec_title),
+                subtitle = stringResource(R.string.sec_subtitle),
+                badge = stringResource(R.string.dash_badge_live).uppercase()
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     StatTile(
-                        "JA3 Threats",
+                        stringResource(R.string.sec_ja3_threats),
                         state.ja3ThreatCount.toString(),
                         if (state.ja3ThreatCount > 0) PgDanger else PgAccent,
                         Modifier.weight(1f)
                     )
                     StatTile(
-                        "Weak Ciphers",
+                        stringResource(R.string.sec_weak_ciphers),
                         state.weakCipherCount.toString(),
                         if (state.weakCipherCount > 0) PgWarning else PgAccent,
                         Modifier.weight(1f)
                     )
                     StatTile(
-                        "CT Events",
+                        stringResource(R.string.sec_ct_events),
                         state.ctNewCertCount.toString(),
                         PgInfo,
                         Modifier.weight(1f)
@@ -104,17 +105,17 @@ fun SecurityAnalysisScreen(
         // JA3 threat list
         item {
             PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                SectionLabel("JA3 Fingerprint Threats")
+                SectionLabel(stringResource(R.string.sec_ja3_section))
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "Each TLS ClientHello is fingerprinted and checked against known malware C2 patterns.",
+                    stringResource(R.string.sec_ja3_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = PgTextMuted,
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
                 if (state.ja3Threats.isEmpty()) {
-                    EmptyBanner("No malicious JA3 fingerprints detected", isGood = true)
+                    EmptyBanner(stringResource(R.string.sec_ja3_none), isGood = true)
                 } else {
                     state.ja3Threats.forEachIndexed { index, alert ->
                         if (index > 0) Spacer(modifier = Modifier.height(10.dp))
@@ -127,17 +128,17 @@ fun SecurityAnalysisScreen(
         // Cipher Suite Analysis section
         item {
             PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                SectionLabel("Cipher Suite Analysis")
+                SectionLabel(stringResource(R.string.sec_cipher_section))
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "Detects FREAK (RSA_EXPORT), LOGJAM (DHE_EXPORT), NULL, RC4, and anonymous ciphers offered by apps.",
+                    stringResource(R.string.sec_cipher_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = PgTextMuted,
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
                 if (state.cipherAlerts.isEmpty()) {
-                    EmptyBanner("No weak cipher suites observed", isGood = true)
+                    EmptyBanner(stringResource(R.string.sec_cipher_none), isGood = true)
                 } else {
                     state.cipherAlerts.forEachIndexed { index, alert ->
                         if (index > 0) Spacer(modifier = Modifier.height(10.dp))
@@ -150,10 +151,10 @@ fun SecurityAnalysisScreen(
         // Certificate Transparency section
         item {
             PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                SectionLabel("Certificate Transparency Monitor")
+                SectionLabel(stringResource(R.string.sec_ct_section))
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "Off by default. When turned on in Settings, polls crt.sh every 6 hours for new certificates issued for domains your device contacts; crt.sh then sees those domains.",
+                    stringResource(R.string.sec_ct_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = PgTextMuted,
                 )
@@ -161,8 +162,8 @@ fun SecurityAnalysisScreen(
 
                 if (state.ctAlerts.isEmpty()) {
                     EmptyBanner(
-                        if (ctMonitoringEnabled) "CT monitor is on — new certificate events appear here"
-                        else "CT monitor is off — turn it on in Settings → Certificate Transparency checks",
+                        if (ctMonitoringEnabled) stringResource(R.string.sec_ct_on)
+                        else stringResource(R.string.sec_ct_off),
                         isGood = false,
                     )
                 } else {
@@ -177,10 +178,10 @@ fun SecurityAnalysisScreen(
         // Dual VPN info
         item {
             PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                SectionLabel("Dual VPN")
+                SectionLabel(stringResource(R.string.set_dual_vpn))
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "Chain two SOCKS5 servers so no single server knows both who you are and where you go.",
+                    stringResource(R.string.sec_dual_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = PgTextMuted,
                 )
@@ -192,18 +193,18 @@ fun SecurityAnalysisScreen(
                         .padding(12.dp)
                 ) {
                     Column {
-                        DualVpnHopRow("You", "Your real IP", isDevice = true)
+                        DualVpnHopRow(stringResource(R.string.sec_hop_you), stringResource(R.string.sec_hop_you_desc), isDevice = true)
                         HopArrow()
-                        DualVpnHopRow("Server 1", "Knows your IP, NOT your target")
+                        DualVpnHopRow(stringResource(R.string.sec_hop_1), stringResource(R.string.sec_hop_1_desc))
                         HopArrow()
-                        DualVpnHopRow("Server 2", "Knows your target, NOT your IP")
+                        DualVpnHopRow(stringResource(R.string.sec_hop_2), stringResource(R.string.sec_hop_2_desc))
                         HopArrow()
-                        DualVpnHopRow("Internet", "Neither server has the full picture")
+                        DualVpnHopRow(stringResource(R.string.sec_hop_net), stringResource(R.string.sec_hop_net_desc))
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Configure Dual VPN servers in Settings → Dual VPN.",
+                    stringResource(R.string.sec_dual_config),
                     style = MaterialTheme.typography.bodySmall,
                     color = PgTextMuted,
                 )
@@ -213,7 +214,7 @@ fun SecurityAnalysisScreen(
         // Rust engine status
         item {
             PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                SectionLabel("Native Processing Engine")
+                SectionLabel(stringResource(R.string.sec_native))
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -221,19 +222,19 @@ fun SecurityAnalysisScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Rust Core Engine", style = MaterialTheme.typography.titleSmall, color = PgText)
+                        Text(stringResource(R.string.sec_rust), style = MaterialTheme.typography.titleSmall, color = PgText)
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             if (com.privacyguard.core.native_engine.RustBridge.isAvailable)
-                                "5× faster packet processing · 40% less battery"
+                                stringResource(R.string.sec_rust_on)
                             else
-                                "Kotlin engine active · build with NDK+Cargo to enable",
+                                stringResource(R.string.sec_rust_off),
                             style = MaterialTheme.typography.bodySmall,
                             color = PgTextMuted,
                         )
                     }
                     StatusPill(
-                        text = if (com.privacyguard.core.native_engine.RustBridge.isAvailable) "ACTIVE" else "KOTLIN",
+                        text = if (com.privacyguard.core.native_engine.RustBridge.isAvailable) stringResource(R.string.sec_active).uppercase() else "KOTLIN",
                         background = if (com.privacyguard.core.native_engine.RustBridge.isAvailable) PgAccentDim else PgInfoDim,
                         content = if (com.privacyguard.core.native_engine.RustBridge.isAvailable) PgAccent else PgInfo,
                     )
@@ -364,7 +365,7 @@ private fun TlsAlertRow(alert: TlsAlertEntity) {
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                StatusPill("SEV ${alert.severity}", bg, fg)
+                StatusPill(stringResource(R.string.sec_sev, alert.severity).uppercase(), bg, fg)
                 Text(if (expanded) "▲" else "▼", style = MaterialTheme.typography.labelSmall, color = fg)
             }
         }
@@ -374,21 +375,21 @@ private fun TlsAlertRow(alert: TlsAlertEntity) {
             androidx.compose.material3.HorizontalDivider(color = fg.copy(alpha = 0.2f))
             Spacer(modifier = Modifier.height(8.dp))
             if (!alert.packageName.isNullOrBlank()) {
-                DetailLine("App", alert.packageName.substringAfterLast('.'))
+                DetailLine(stringResource(R.string.conn_app), LocalContext.current.packageManager.let { pm -> runCatching { pm.getApplicationLabel(pm.getApplicationInfo(alert.packageName, 0)).toString() }.getOrDefault(alert.packageName) })
             }
             if (!alert.hash.isNullOrBlank()) {
-                DetailLine("JA3 hash", alert.hash)
+                DetailLine(stringResource(R.string.sec_ja3_hash), alert.hash)
             }
             if (!alert.ja3String.isNullOrBlank()) {
-                DetailLine("JA3 string", alert.ja3String)
+                DetailLine(stringResource(R.string.sec_ja3_string), alert.ja3String)
             }
             if (!alert.category.isNullOrBlank()) {
-                DetailLine("Category", alert.category)
+                DetailLine(stringResource(R.string.sec_category), alert.category)
             }
             if (!alert.detail.isNullOrBlank()) {
-                DetailLine("Detail", alert.detail)
+                DetailLine(stringResource(R.string.sec_detail), alert.detail)
             }
-            DetailLine("Detected", formatAgo(alert.timestamp))
+            DetailLine(stringResource(R.string.sec_detected), formatAgo(alert.timestamp))
         }
     }
 }
@@ -458,7 +459,7 @@ private fun ViewAllAlertsButton(count: Int, onClick: () -> Unit) {
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
     ) {
         Text(
-            "View all $count alerts in inbox",
+            pluralStringResource(R.plurals.sec_view_all, count, count),
             style = MaterialTheme.typography.titleSmall,
             color = PgDanger,
         )

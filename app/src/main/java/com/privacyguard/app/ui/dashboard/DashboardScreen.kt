@@ -51,6 +51,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.privacyguard.app.R
 import com.privacyguard.app.vpn.KillSwitch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -93,6 +97,7 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val runProtectedAction = rememberProtectedActionRunner()
 
@@ -103,26 +108,26 @@ fun DashboardScreen(
     ) {
         item {
             ScreenScaffold(
-                title = "Dashboard",
-                subtitle = if (uiState.isVpnActive) "Protected tunnel running" else "Protection is paused",
-                badge = if (uiState.isVpnActive) "LIVE" else "OFFLINE"
+                title = stringResource(R.string.dash_title),
+                subtitle = if (uiState.isVpnActive) stringResource(R.string.dash_subtitle_on) else stringResource(R.string.dash_subtitle_off),
+                badge = (if (uiState.isVpnActive) stringResource(R.string.dash_badge_live) else stringResource(R.string.dash_badge_offline)).uppercase()
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
                     IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings", tint = PgTextMuted)
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.set_title), tint = PgTextMuted)
                     }
                     IconButton(onClick = onOpenAlerts) {
                         if (uiState.alertBadgeCount > 0) {
                             BadgedBox(badge = {
                                 Badge { Text(uiState.alertBadgeCount.coerceAtMost(99).toString()) }
                             }) {
-                                Icon(Icons.Default.Notifications, contentDescription = "Alerts", tint = PgTextMuted)
+                                Icon(Icons.Default.Notifications, contentDescription = stringResource(R.string.dash_alerts), tint = PgTextMuted)
                             }
                         } else {
-                            Icon(Icons.Default.Notifications, contentDescription = "Alerts", tint = PgTextMuted)
+                            Icon(Icons.Default.Notifications, contentDescription = stringResource(R.string.dash_alerts), tint = PgTextMuted)
                         }
                     }
                 }
@@ -148,16 +153,16 @@ fun DashboardScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column {
-                                    Text("STATUS", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+                                    Text(stringResource(R.string.dash_status).uppercase(), style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        if (uiState.isVpnActive) "Protected" else "Not protected",
+                                        if (uiState.isVpnActive) stringResource(R.string.dash_protected) else stringResource(R.string.dash_not_protected),
                                         style = MaterialTheme.typography.headlineMedium,
                                         color = if (uiState.isVpnActive) PgAccent else PgDanger
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        "Privacy Score ${uiState.privacyScore.score}",
+                                        stringResource(R.string.dash_privacy_score_n, uiState.privacyScore.score),
                                         style = MaterialTheme.typography.titleMedium,
                                         color = PgInfo,
                                     )
@@ -194,8 +199,8 @@ fun DashboardScreen(
                             }
                             Spacer(modifier = Modifier.height(20.dp))
                             LabeledProgress(
-                                label = "Encryption health",
-                                valueText = "${(uiState.encryptionHealth * 100).toInt()}% TLS",
+                                label = stringResource(R.string.dash_encryption_health),
+                                valueText = stringResource(R.string.dash_tls_percent, (uiState.encryptionHealth * 100).toInt()),
                                 progress = uiState.encryptionHealth,
                                 color = PgAccent
                             )
@@ -205,22 +210,22 @@ fun DashboardScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatTile("Trackers blocked", uiState.trackersBlocked.toString(), PgAccent, Modifier.weight(1f))
-                    StatTile("Cleartext conns", uiState.cleartextCount.toString(), PgDanger, Modifier.weight(1f))
-                    StatTile("Privacy score", uiState.privacyScore.score.toString(), PgInfo, Modifier.weight(1f))
+                    StatTile(stringResource(R.string.dash_trackers_blocked), formatCount(uiState.trackersBlocked), PgAccent, Modifier.weight(1f))
+                    StatTile(stringResource(R.string.dash_cleartext_conns), formatCount(uiState.cleartextCount), PgDanger, Modifier.weight(1f))
+                    StatTile(stringResource(R.string.dash_privacy_score), formatCount(uiState.privacyScore.score), PgInfo, Modifier.weight(1f))
                 }
                 if (uiState.isVpnActive) {
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         StatTile(
-                            "Throughput",
-                            formatThroughput(uiState.throughputBytesPerSec),
+                            stringResource(R.string.dash_throughput),
+                            formatThroughput(context, uiState.throughputBytesPerSec),
                             PgAccent,
                             Modifier.weight(1f),
                         )
                         StatTile(
-                            "Active conns",
-                            uiState.activeConnectionCount.toString(),
+                            stringResource(R.string.dash_active_conns),
+                            formatCount(uiState.activeConnectionCount),
                             PgInfo,
                             Modifier.weight(1f),
                         )
@@ -234,26 +239,25 @@ fun DashboardScreen(
                 )
 
                 Spacer(modifier = Modifier.height(18.dp))
-                SectionLabel("Protection level")
+                SectionLabel(stringResource(R.string.set_protection_level))
                 Spacer(modifier = Modifier.height(8.dp))
                 ProtectionLevelPicker(
                     current = uiState.protectionLevel,
                     onSelect = { viewModel.setProtectionLevel(it) },
                 )
                 Spacer(modifier = Modifier.height(18.dp))
-                SectionLabel("Security systems")
+                SectionLabel(stringResource(R.string.dash_security_systems))
                 Spacer(modifier = Modifier.height(10.dp))
                 SecuritySystemsGrid(
                     cards = uiState.securityCards,
-                    killSwitchEnabled = uiState.securityCards.firstOrNull { it.title == "Kill Switch" }?.status == "Blocking",
+                    killSwitchEnabled = KillSwitch.lockdownActive,
                     // Only Android can block traffic once the tunnel is gone; send the user there.
                     onToggleKillSwitch = { KillSwitch.openAlwaysOnSettings(context) },
                     onCardClick = { card ->
                         when {
-                            card.title.contains("Cleartext", ignoreCase = true) -> onOpenConnections()
-                            card.title.contains("Behavior", ignoreCase = true)  -> onOpenAlerts()
-                            card.title.contains("DNS", ignoreCase = true)       -> onOpenAlerts()
-                            card.title.contains("Tracker", ignoreCase = true)   -> onOpenApps()
+                            card.kind == CardKind.CLEARTEXT -> onOpenConnections()
+                            card.kind == CardKind.BEHAVIOR  -> onOpenAlerts()
+                            card.kind == CardKind.ENTROPY   -> onOpenAlerts()
                             card.severity == CardSeverity.CRITICAL ||
                             card.severity == CardSeverity.WARNING              -> onOpenAlerts()
                             else -> {}
@@ -270,16 +274,16 @@ fun DashboardScreen(
                     path = uiState.pcapPath,
                     onToggle = {
                         runProtectedAction(
-                            if (uiState.isPcapCapturing) "Stop packet capture" else "Start packet capture",
-                            "Confirm access to raw packet capture controls",
+                            if (uiState.isPcapCapturing) resources.getString(R.string.dash_pcap_stop) else resources.getString(R.string.dash_pcap_start),
+                            resources.getString(R.string.dash_pcap_confirm),
                         ) {
                             viewModel.togglePcapCapture()
                         }
                     },
                     onShare = { path ->
                         runProtectedAction(
-                            "Share PCAP capture",
-                            "Confirm access before exporting raw network traffic",
+                            resources.getString(R.string.dash_pcap_share),
+                            resources.getString(R.string.dash_pcap_share_confirm),
                         ) {
                             val file = File(path)
                             if (file.exists()) {
@@ -293,19 +297,19 @@ fun DashboardScreen(
                                     putExtra(Intent.EXTRA_STREAM, uri)
                                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
-                                context.startActivity(Intent.createChooser(share, "Export PCAP"))
+                                context.startActivity(Intent.createChooser(share, resources.getString(R.string.dash_export_pcap)))
                             }
                         }
                     }
                 )
 
                 Spacer(modifier = Modifier.height(18.dp))
-                SectionLabel("Recommendations / Security Notes")
+                SectionLabel(stringResource(R.string.dash_recommendations))
                 Spacer(modifier = Modifier.height(10.dp))
                 RecommendationsCard(uiState.recommendations)
 
                 Spacer(modifier = Modifier.height(18.dp))
-                SectionLabel("Recent alerts")
+                SectionLabel(stringResource(R.string.dash_recent_alerts))
                 Spacer(modifier = Modifier.height(10.dp))
             }
         }
@@ -315,9 +319,9 @@ fun DashboardScreen(
                 PanelCard(
                     modifier = Modifier.padding(horizontal = 16.dp).clickable(onClick = onOpenAlerts),
                 ) {
-                    Text("No alerts yet", style = MaterialTheme.typography.titleMedium, color = PgText)
+                    Text(stringResource(R.string.dash_no_alerts), style = MaterialTheme.typography.titleMedium, color = PgText)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Once traffic starts flowing, recent anomalies and blocks will appear here.", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                    Text(stringResource(R.string.dash_no_alerts_desc), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
                 }
             }
         } else {
@@ -344,7 +348,7 @@ fun DashboardScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(anomaly.domain, style = MaterialTheme.typography.titleMedium, color = PgText)
                             Spacer(modifier = Modifier.height(2.dp))
-                            Text("${anomaly.packageName} · ${anomaly.anomalyType}", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                            Text("${com.privacyguard.app.ui.text.FindingText.appLabel(context, anomaly.packageName)} · ${com.privacyguard.app.ui.text.FindingText.dnsAnomalyTitle(context, anomaly.anomalyType)}", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
                         }
                         Text(formatAgo(anomaly.timestamp), style = MaterialTheme.typography.labelMedium, color = PgTextFaint)
                     }
@@ -379,16 +383,16 @@ private fun SleepActivityCard(
                 }
                 Spacer(modifier = Modifier.size(12.dp))
                 Column {
-                    Text("While You Were Sleeping", style = MaterialTheme.typography.titleMedium, color = PgText)
+                    Text(stringResource(R.string.dash_sleep_title), style = MaterialTheme.typography.titleMedium, color = PgText)
                     Spacer(modifier = Modifier.height(3.dp))
                     Text(
-                        "${summary.activeApps} apps active · ${summary.dnsQueries} DNS queries",
+                        stringResource(R.string.dash_sleep_summary, pluralStringResource(R.plurals.dash_apps_active, summary.activeApps, summary.activeApps), pluralStringResource(R.plurals.dash_dns_queries, summary.dnsQueries, summary.dnsQueries)),
                         style = MaterialTheme.typography.bodySmall,
                         color = PgTextMuted,
                     )
                 }
             }
-            StatusPill("${summary.trackingDomains} tracking", PgWarningDim, PgWarning)
+            StatusPill(pluralStringResource(R.plurals.dash_tracking_count, summary.trackingDomains, summary.trackingDomains), PgWarningDim, PgWarning)
         }
     }
 }
@@ -396,9 +400,9 @@ private fun SleepActivityCard(
 @Composable
 private fun ProtectionLevelPicker(current: String, onSelect: (String) -> Unit) {
     val levels = listOf(
-        Triple("MINIMAL",  "Minimal",  PgInfo),
-        Triple("STANDARD", "Standard", PgAccent),
-        Triple("STRICT",   "Strict",   PgDanger),
+        Triple("MINIMAL",  stringResource(R.string.set_level_minimal),  PgInfo),
+        Triple("STANDARD", stringResource(R.string.set_level_standard), PgAccent),
+        Triple("STRICT",   stringResource(R.string.set_level_strict),   PgDanger),
     )
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         levels.forEach { (key, label, color) ->
@@ -479,7 +483,7 @@ private fun SecuritySystemCard(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (card.title.contains("Upload")) Icons.Default.Upload else Icons.Default.Security,
+                    imageVector = if (card.kind == CardKind.UPLOAD) Icons.Default.Upload else Icons.Default.Security,
                     contentDescription = null,
                     tint = tint,
                     modifier = Modifier.size(18.dp)
@@ -498,7 +502,7 @@ private fun SecuritySystemCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(card.status.uppercase(), style = MaterialTheme.typography.labelSmall, color = tint)
-            if (card.title == "Kill Switch") {
+            if (card.kind == CardKind.KILL_SWITCH) {
                 PrivacySwitch(checked = killSwitchEnabled, onToggle = { onToggleKillSwitch(!killSwitchEnabled) })
             }
         }
@@ -514,24 +518,29 @@ private fun WeeklyPrivacyReportCard(report: WeeklyPrivacyReport) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("Weekly Privacy Report", style = MaterialTheme.typography.titleLarge, color = PgText)
+                Text(stringResource(R.string.dash_weekly_title), style = MaterialTheme.typography.titleLarge, color = PgText)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("Behavioral summary from the last 7 days", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                Text(stringResource(R.string.dash_weekly_desc), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
             }
-            Text(report.trustLevel.uppercase(), style = MaterialTheme.typography.labelSmall, color = PgAccent)
+            Text(stringResource(when (report.trustLevel) {
+                "Reduced" -> R.string.dash_trust_reduced
+                "Watch" -> R.string.dash_trust_watch
+                "Learning" -> R.string.dash_status_learning
+                else -> R.string.dash_trust_trusted
+            }).uppercase(), style = MaterialTheme.typography.labelSmall, color = PgAccent)
         }
         Spacer(modifier = Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatTile("Connections", report.totalConnections.toString(), PgInfo, Modifier.weight(1f))
-            StatTile("Blocked", report.blockedConnections.toString(), PgDanger, Modifier.weight(1f))
+            StatTile(stringResource(R.string.dash_connections), formatCount(report.totalConnections), PgInfo, Modifier.weight(1f))
+            StatTile(stringResource(R.string.dash_blocked), formatCount(report.blockedConnections), PgDanger, Modifier.weight(1f))
         }
         Spacer(modifier = Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatTile("Behavior", report.behaviorAlerts.toString(), PgWarning, Modifier.weight(1f))
-            StatTile("Score", report.privacyScore.toString(), PgAccent, Modifier.weight(1f))
+            StatTile(stringResource(R.string.dash_behavior), formatCount(report.behaviorAlerts), PgWarning, Modifier.weight(1f))
+            StatTile(stringResource(R.string.dash_score), formatCount(report.privacyScore), PgAccent, Modifier.weight(1f))
         }
         Spacer(modifier = Modifier.height(12.dp))
-        Text("Transferred ${report.dataTransferred}", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+        Text(stringResource(R.string.dash_transferred, report.dataTransferred), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
     }
 }
 
@@ -546,9 +555,9 @@ private fun PcapExportCard(
         MetricRow(
             icon = Icons.Default.Router,
             tint = if (isCapturing) PgDanger else PgInfo,
-            title = "PCAP Export",
-            subtitle = path ?: "Capture raw IP packets for Wireshark analysis",
-            trailing = if (isCapturing) "REC" else "READY",
+            title = stringResource(R.string.dash_pcap_title),
+            subtitle = path ?: stringResource(R.string.dash_pcap_desc),
+            trailing = (if (isCapturing) stringResource(R.string.dash_pcap_rec) else stringResource(R.string.dash_pcap_ready)).uppercase(),
         )
         Spacer(modifier = Modifier.height(12.dp))
         Button(
@@ -559,7 +568,7 @@ private fun PcapExportCard(
                 contentColor = if (isCapturing) PgDanger else PgAccent
             )
         ) {
-            Text(if (isCapturing) "Stop Capture" else "Start Capture")
+            Text(if (isCapturing) stringResource(R.string.dash_stop_capture) else stringResource(R.string.dash_start_capture))
         }
         if (!isCapturing && path != null) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -571,7 +580,7 @@ private fun PcapExportCard(
                     contentColor = PgInfo
                 )
             ) {
-                Text("Share Last Capture")
+                Text(stringResource(R.string.dash_share_capture))
             }
         }
     }
@@ -582,7 +591,7 @@ private fun RecommendationsCard(notes: List<String>) {
     PanelCard {
         notes.forEachIndexed { index, note ->
             Row(verticalAlignment = Alignment.Top) {
-                Text("#${index + 1}", style = MaterialTheme.typography.labelMedium, color = PgAccent)
+                Text(formatCount(index + 1), style = MaterialTheme.typography.labelMedium, color = PgAccent)
                 Spacer(modifier = Modifier.size(10.dp))
                 Text(note, style = MaterialTheme.typography.bodySmall, color = PgTextMuted, modifier = Modifier.weight(1f))
             }
@@ -593,12 +602,13 @@ private fun RecommendationsCard(notes: List<String>) {
 
 @Composable
 private fun PrivacySwitch(checked: Boolean, onToggle: () -> Unit) {
+    val protectionLabel = stringResource(R.string.dash_protection)
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(999.dp))
             .background(if (checked) PgAccent else PgPanelStrong)
             .toggleable(value = checked, role = Role.Switch, onValueChange = { onToggle() })
-            .semantics { contentDescription = "Protection" }
+            .semantics { contentDescription = protectionLabel }
             .padding(horizontal = 4.dp, vertical = 4.dp)
     ) {
         Row(
@@ -623,10 +633,10 @@ private fun PrivacySwitch(checked: Boolean, onToggle: () -> Unit) {
     )
 }
 
-private fun formatThroughput(bytesPerSec: Long): String = when {
-    bytesPerSec >= 1_048_576 -> "${"%.1f".format(bytesPerSec / 1_048_576.0)} MB/s"
-    bytesPerSec >= 1_024     -> "${bytesPerSec / 1_024} KB/s"
-    else                     -> "$bytesPerSec B/s"
-}
+// Locale-aware units and digits (e.g. "1,2 MB/s" in Dutch, Arabic-Indic digits in Arabic).
+private fun formatThroughput(context: android.content.Context, bytesPerSec: Long): String =
+    context.getString(R.string.dash_per_second, android.text.format.Formatter.formatShortFileSize(context, bytesPerSec))
+
+private fun formatCount(n: Number): String = java.text.NumberFormat.getIntegerInstance().format(n)
 
 

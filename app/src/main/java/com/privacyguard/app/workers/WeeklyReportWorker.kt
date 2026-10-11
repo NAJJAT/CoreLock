@@ -222,20 +222,20 @@ data class WeeklyReport(
     
     val formattedDate: String
         get() {
-            val format = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-            return format.format(Date(date))
+            return java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(Date(date))
         }
     
     val formattedWeekRange: String
         get() {
-            val format = SimpleDateFormat("MMM dd", Locale.getDefault())
-            return "${format.format(Date(weekStart))} - ${format.format(Date(weekEnd))}"
+            // Default-locale dates and digits; no Context in this data class.
+            val format = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM)
+            return "${format.format(Date(weekStart))} – ${format.format(Date(weekEnd))}"
         }
     
     val formattedDataSaved: String
         get() = when {
-            totalDataSaved < 1024 -> "$totalDataSaved B"
-            totalDataSaved < 1024 * 1024 -> "${totalDataSaved / 1024} KB"
-            else -> String.format(Locale.US, "%.1f MB", totalDataSaved / (1024.0 * 1024.0))
+            totalDataSaved < 1024 -> "${java.text.NumberFormat.getIntegerInstance().format(totalDataSaved)} B"
+            totalDataSaved < 1024 * 1024 -> "${java.text.NumberFormat.getIntegerInstance().format(totalDataSaved / 1024)} KB"
+            else -> String.format(Locale.getDefault(), "%.1f MB", totalDataSaved / (1024.0 * 1024.0))
         }
 }

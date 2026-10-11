@@ -29,6 +29,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.privacyguard.app.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -65,6 +69,7 @@ fun StatisticsScreen(
     viewModel: StatisticsViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val runProtectedAction = rememberProtectedActionRunner()
     val stats by viewModel.stats.collectAsStateWithLifecycle()
     val topBlockedDomains by viewModel.topBlockedDomains.collectAsStateWithLifecycle()
@@ -82,23 +87,23 @@ fun StatisticsScreen(
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             ScreenScaffold(
-                title = "Statistics",
-                subtitle = "Traffic analytics and anomaly trends",
-                badge = "TODAY"
+                title = stringResource(R.string.stats_title),
+                subtitle = stringResource(R.string.stats_subtitle),
+                badge = stringResource(R.string.stats_badge_today).uppercase()
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatTile("Total connections", stats.totalConnections.toString(), PgText, Modifier.weight(1f))
-                    StatTile("Blocked", stats.blockedToday.toString(), PgDanger, Modifier.weight(1f))
+                    StatTile(stringResource(R.string.stats_total_connections), fmtCount(stats.totalConnections), PgText, Modifier.weight(1f))
+                    StatTile(stringResource(R.string.dash_blocked), fmtCount(stats.blockedToday), PgDanger, Modifier.weight(1f))
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatTile("Data transferred", stats.dataTransferredToday, PgInfo, Modifier.weight(1f))
-                    StatTile("Privacy score", stats.privacyScore.toString(), PgWarning, Modifier.weight(1f))
+                    StatTile(stringResource(R.string.stats_data_transferred), stats.dataTransferredToday, PgInfo, Modifier.weight(1f))
+                    StatTile(stringResource(R.string.dash_privacy_score), fmtCount(stats.privacyScore), PgWarning, Modifier.weight(1f))
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                LabeledProgress("Block rate", "${(stats.blockRate * 100).toInt()}%", stats.blockRate, PgAccent)
+                LabeledProgress(stringResource(R.string.stats_block_rate), fmtPercent(stats.blockRate), stats.blockRate, PgAccent)
                 Spacer(modifier = Modifier.height(14.dp))
-                LabeledProgress("Encryption health", "${(stats.encryptionHealth * 100).toInt()}% TLS", stats.encryptionHealth, PgAccent)
+                LabeledProgress(stringResource(R.string.dash_encryption_health), stringResource(R.string.dash_tls_percent, (stats.encryptionHealth * 100).toInt()), stats.encryptionHealth, PgAccent)
                 Spacer(modifier = Modifier.height(14.dp))
                 ScoreBreakdown(stats)
                 Spacer(modifier = Modifier.height(12.dp))
@@ -106,21 +111,21 @@ fun StatisticsScreen(
                     onClick = {
                         val share = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, "My PrivacyGuard score is ${stats.privacyScore}/100 today.")
+                            putExtra(Intent.EXTRA_TEXT, resources.getString(R.string.stats_share_score_text, stats.privacyScore))
                         }
-                        context.startActivity(Intent.createChooser(share, "Share Privacy Score"))
+                        context.startActivity(Intent.createChooser(share, resources.getString(R.string.stats_share_score)))
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = PgAccentDim, contentColor = PgAccent),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Share Privacy Score")
+                    Text(stringResource(R.string.stats_share_score))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = {
                         runProtectedAction(
-                            "Generate IT report",
-                            "Confirm access before exporting security telemetry",
+                            resources.getString(R.string.stats_gen_it),
+                            resources.getString(R.string.stats_gen_it_confirm),
                         ) {
                             viewModel.exportItReport()
                         }
@@ -128,7 +133,7 @@ fun StatisticsScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = PgInfoDim, contentColor = PgInfo),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Share with IT")
+                    Text(stringResource(R.string.stats_share_it))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
@@ -136,7 +141,7 @@ fun StatisticsScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = PgAccentDim, contentColor = PgAccent),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (csvExportPath != null) "CSV ready — tap to share" else "Export 7-day CSV")
+                    Text(if (csvExportPath != null) stringResource(R.string.stats_csv_ready) else stringResource(R.string.stats_csv_export))
                 }
                 csvExportPath?.let { path ->
                     Spacer(modifier = Modifier.height(6.dp))
@@ -149,12 +154,12 @@ fun StatisticsScreen(
                                 putExtra(Intent.EXTRA_STREAM, uri)
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
-                            context.startActivity(Intent.createChooser(share, "Share Connection Log"))
+                            context.startActivity(Intent.createChooser(share, resources.getString(R.string.stats_share_log)))
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = PgAccentDim, contentColor = PgAccent),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Share CSV")
+                        Text(stringResource(R.string.stats_share_csv))
                     }
                 }
             }
@@ -164,7 +169,7 @@ fun StatisticsScreen(
         if (topCountries.isNotEmpty()) {
             item {
                 PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    SectionLabel("Real-time Network Map")
+                    SectionLabel(stringResource(R.string.stats_network_map))
                     Spacer(modifier = Modifier.height(10.dp))
                     NetworkMapCanvas(
                         countries = topCountries,
@@ -174,7 +179,7 @@ fun StatisticsScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "Arcs: green = low volume · orange = medium · red = high",
+                        stringResource(R.string.stats_map_legend),
                         style = MaterialTheme.typography.labelSmall,
                         color = PgTextMuted,
                     )
@@ -186,7 +191,7 @@ fun StatisticsScreen(
         if (sunburstOrgs.isNotEmpty()) {
             item {
                 PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    SectionLabel("Traffic by Organization")
+                    SectionLabel(stringResource(R.string.stats_by_org))
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val palette = listOf(
@@ -237,7 +242,7 @@ fun StatisticsScreen(
         // Temporal Heatmap
         item {
             PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                SectionLabel("Activity Heatmap — 7d × 24h")
+                SectionLabel(stringResource(R.string.stats_heatmap))
                 Spacer(modifier = Modifier.height(10.dp))
                 TemporalHeatmap(
                     grid = heatmap,
@@ -245,7 +250,7 @@ fun StatisticsScreen(
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "Darker green = more connections in that hour. Bright cells = peak activity.",
+                    stringResource(R.string.stats_heatmap_legend),
                     style = MaterialTheme.typography.labelSmall,
                     color = PgTextMuted,
                 )
@@ -255,15 +260,15 @@ fun StatisticsScreen(
         lastItReportPaths?.let { paths ->
             item {
                 PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Text("IT report ready", style = MaterialTheme.typography.titleMedium, color = PgText)
+                    Text(stringResource(R.string.stats_it_ready), style = MaterialTheme.typography.titleMedium, color = PgText)
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text("JSON and PDF exports were generated for the last 24h.", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                    Text(stringResource(R.string.stats_it_ready_desc), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
                     Spacer(modifier = Modifier.height(10.dp))
                     Button(
                         onClick = {
                             runProtectedAction(
-                                "Share IT report",
-                                "Confirm access before sharing JSON and PDF exports",
+                                resources.getString(R.string.stats_share_it_report),
+                                resources.getString(R.string.stats_share_it_confirm),
                             ) {
                                 val jsonUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", java.io.File(paths.first))
                                 val pdfUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", java.io.File(paths.second))
@@ -272,13 +277,13 @@ fun StatisticsScreen(
                                     putParcelableArrayListExtra(Intent.EXTRA_STREAM, arrayListOf(jsonUri, pdfUri))
                                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
-                                context.startActivity(Intent.createChooser(share, "Share with IT"))
+                                context.startActivity(Intent.createChooser(share, resources.getString(R.string.stats_share_it)))
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = PgAccentDim, contentColor = PgAccent),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Share JSON + PDF")
+                        Text(stringResource(R.string.stats_share_json_pdf))
                     }
                 }
             }
@@ -287,7 +292,7 @@ fun StatisticsScreen(
         if (timeline.isNotEmpty()) {
             item {
                 PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    SectionLabel("Threat Timeline")
+                    SectionLabel(stringResource(R.string.stats_threat_timeline))
                     Spacer(modifier = Modifier.height(10.dp))
                     timeline.forEachIndexed { index, item ->
                         val tint = when (item.severity) {
@@ -326,9 +331,9 @@ fun StatisticsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("$highSeverityAnomalies DNS anomalies detected", style = MaterialTheme.typography.titleMedium, color = PgDanger)
+                        Text(pluralStringResource(R.plurals.stats_dns_anomalies, highSeverityAnomalies, highSeverityAnomalies), style = MaterialTheme.typography.titleMedium, color = PgDanger)
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("High-severity anomalies persisted from the DNS shield", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                        Text(stringResource(R.string.stats_dns_anomalies_desc), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
                     }
                 }
             }
@@ -338,15 +343,15 @@ fun StatisticsScreen(
             PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Row {
-                        Text("#${index + 1}", style = MaterialTheme.typography.labelMedium, color = PgTextMuted)
+                        Text(fmtCount(index + 1), style = MaterialTheme.typography.labelMedium, color = PgTextMuted)
                         Spacer(modifier = Modifier.padding(horizontal = 4.dp))
                         Column {
                             Text(item.domain, style = MaterialTheme.typography.titleMedium, color = PgText)
                             Spacer(modifier = Modifier.height(2.dp))
-                            Text("${item.count} blocked requests", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                            Text(pluralStringResource(R.plurals.stats_blocked_requests, item.count, item.count), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
                         }
                     }
-                    Text("${item.count}", style = MaterialTheme.typography.titleLarge, color = PgDanger)
+                    Text(fmtCount(item.count), style = MaterialTheme.typography.titleLarge, color = PgDanger)
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 Box(
@@ -371,7 +376,7 @@ fun StatisticsScreen(
             item {
                 PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Text(
-                        "Top Destination Countries",
+                        stringResource(R.string.stats_top_countries),
                         style = MaterialTheme.typography.titleMedium,
                         color = PgText,
                     )
@@ -391,7 +396,7 @@ fun StatisticsScreen(
                                 }
                             }
                             Text(
-                                "${item.connectionCount}",
+                                fmtCount(item.connectionCount),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = PgInfo,
                             )
@@ -421,7 +426,7 @@ fun StatisticsScreen(
         if (rememberedNetworks.isNotEmpty()) {
             item {
                 PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    SectionLabel("Remembered Networks")
+                    SectionLabel(stringResource(R.string.stats_networks))
                     Spacer(modifier = Modifier.height(10.dp))
                     rememberedNetworks.forEachIndexed { index, network ->
                         Row(
@@ -432,12 +437,12 @@ fun StatisticsScreen(
                                 Text(network.networkLabel, style = MaterialTheme.typography.titleSmall, color = PgText)
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    "${network.cleartextCount} cleartext · ${network.dnsAnomalyCount} DNS anomalies · ${network.weakTlsCount} weak TLS",
+                                    stringResource(R.string.stats_network_counts, pluralStringResource(R.plurals.stats_cleartext_n, network.cleartextCount, network.cleartextCount), pluralStringResource(R.plurals.stats_dns_anomaly_n, network.dnsAnomalyCount, network.dnsAnomalyCount), pluralStringResource(R.plurals.stats_weak_tls_n, network.weakTlsCount, network.weakTlsCount)),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = PgTextMuted,
                                 )
                             }
-                            Text("${network.trustScore}", style = MaterialTheme.typography.titleMedium, color = if (network.trustLevel == "Reduced") PgDanger else if (network.trustLevel == "Watch") PgWarning else PgInfo)
+                            Text(fmtCount(network.trustScore), style = MaterialTheme.typography.titleMedium, color = if (network.trustLevel == "Reduced") PgDanger else if (network.trustLevel == "Watch") PgWarning else PgInfo)
                         }
                         if (index != rememberedNetworks.lastIndex) Spacer(modifier = Modifier.height(10.dp))
                     }
@@ -448,7 +453,7 @@ fun StatisticsScreen(
         if (weeklyTrend.isNotEmpty()) {
             item {
                 PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    SectionLabel("7-day connection trend")
+                    SectionLabel(stringResource(R.string.stats_trend))
                     Spacer(modifier = Modifier.height(12.dp))
                     val peak = weeklyTrend.maxOf { it.total }.coerceAtLeast(1)
                     Row(
@@ -484,7 +489,7 @@ fun StatisticsScreen(
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(day.label, style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
-                                Text("${day.total}", style = MaterialTheme.typography.labelSmall, color = PgTextFaint)
+                                Text(fmtCount(day.total), style = MaterialTheme.typography.labelSmall, color = PgTextFaint)
                             }
                         }
                     }
@@ -492,11 +497,11 @@ fun StatisticsScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             Box(modifier = Modifier.size(8.dp).background(PgAccentDim, RoundedCornerShape(2.dp)))
-                            Text("Total", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+                            Text(stringResource(R.string.stats_total), style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
                         }
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             Box(modifier = Modifier.size(8.dp).background(PgDanger.copy(alpha = 0.6f), RoundedCornerShape(2.dp)))
-                            Text("Blocked", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+                            Text(stringResource(R.string.dash_blocked), style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
                         }
                     }
                 }
@@ -506,7 +511,7 @@ fun StatisticsScreen(
         if (topAppsByData.isNotEmpty()) {
             item {
                 PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    SectionLabel("Top apps by data (24h)")
+                    SectionLabel(stringResource(R.string.stats_top_apps))
                     Spacer(modifier = Modifier.height(12.dp))
                     val maxBytes = topAppsByData.firstOrNull()?.totalBytes?.coerceAtLeast(1L) ?: 1L
                     topAppsByData.forEachIndexed { index, app ->
@@ -574,16 +579,16 @@ private fun ScoreBreakdown(stats: StatisticsData) {
 
     val total = stats.totalConnections.coerceAtLeast(1)
     val factors = listOf(
-        Factor("Encryption",  "${(stats.encryptionHealth * 100).toInt()}% encrypted",
+        Factor(stringResource(R.string.stats_f_encryption), stringResource(R.string.stats_f_encrypted, fmtPercent(stats.encryptionHealth)),
             stats.encryptionHealth, PgAccent, true),
-        Factor("Block rate",  "${(stats.blockRate * 100).toInt()}% blocked",
+        Factor(stringResource(R.string.stats_block_rate), stringResource(R.string.stats_f_blocked, fmtPercent(stats.blockRate)),
             stats.blockRate, PgInfo, true),
-        Factor("Cleartext",   "${stats.cleartextToday} connections",
+        Factor(stringResource(R.string.stats_f_cleartext), pluralStringResource(R.plurals.dash_connections_count, stats.cleartextToday, stats.cleartextToday),
             (stats.cleartextToday.toFloat() / total).coerceIn(0f, 1f), PgDanger, false),
     )
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Score factors", style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+        Text(stringResource(R.string.stats_score_factors), style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
         factors.forEach { f ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -626,3 +631,8 @@ private fun countryFlag(countryCode: String): String {
     val offset = 0x1F1E6 - 'A'.code
     return countryCode.uppercase().map { Character.toChars(it.code + offset).concatToString() }.joinToString("")
 }
+
+// Locale digits and grouping (Arabic-Indic digits in Arabic, 1.234 in Dutch).
+private fun fmtCount(n: Number): String = java.text.NumberFormat.getIntegerInstance().format(n)
+
+private fun fmtPercent(fraction: Float): String = java.text.NumberFormat.getPercentInstance().format(fraction.toDouble())

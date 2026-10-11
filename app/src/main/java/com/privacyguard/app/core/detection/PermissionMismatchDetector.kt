@@ -18,6 +18,8 @@ data class PermissionMismatchFinding(
     val title: String,
     val summary: String,
     val evidence: List<String> = emptyList(),
+    // Values the UI needs to localize [id]; [title]/[summary]/[evidence] stay English for logs and tests.
+    val args: List<String> = emptyList(),
 )
 
 object PermissionMismatchDetector {
@@ -106,6 +108,7 @@ object PermissionMismatchDetector {
         if (missingLocationPermission && locationHosts.isNotEmpty()) {
             findings += PermissionMismatchFinding(
                 id = "location_without_permission",
+                args = listOf(appName, locationHosts.take(3).joinToString()),
                 severity = MismatchSeverity.HIGH,
                 title = "Location-style traffic without location permission",
                 summary = "$appName is contacting mapping or geolocation infrastructure even though it does not declare Android location permission.",
@@ -121,6 +124,7 @@ object PermissionMismatchDetector {
         if (missingContactsPermission && socialHosts.isNotEmpty()) {
             findings += PermissionMismatchFinding(
                 id = "social_identity_without_contacts",
+                args = listOf(appName, socialHosts.take(3).joinToString()),
                 severity = MismatchSeverity.MEDIUM,
                 title = "Identity or social API traffic without contacts permission",
                 summary = "$appName reached social or identity endpoints that often back login, graph, or contact-sync flows, but the app does not request contacts-related permission.",
@@ -142,6 +146,7 @@ object PermissionMismatchDetector {
         if (isUtilityApp && utilityTrackerEvidence.isNotEmpty()) {
             findings += PermissionMismatchFinding(
                 id = "utility_tracker_stack",
+                args = listOf(appName, utilityTrackerEvidence.take(4).joinToString { it.name }, observedTrackers.take(3).joinToString { it.domains.firstOrNull().orEmpty() }),
                 severity = if (utilityTrackerEvidence.size >= 2) MismatchSeverity.HIGH else MismatchSeverity.MEDIUM,
                 title = "Utility-style app contacting tracker infrastructure",
                 summary = "$appName looks like a utility app, but its network behavior includes ad, analytics, social, or profiling endpoints that usually do not match its core job.",
@@ -172,6 +177,7 @@ object PermissionMismatchDetector {
         ) {
             findings += PermissionMismatchFinding(
                 id = "background_upload_mismatch",
+                args = listOf(appName, totalBytesOut.toString(), (weightedBackgroundRatio * 100).roundToInt().toString(), nightEvents.toString(), sensitivePermissionCount.toString()),
                 severity = MismatchSeverity.HIGH,
                 title = "Background upload pattern exceeds declared capability",
                 summary = "$appName uploaded ${formatBytes(totalBytesOut)} with a strong background/night pattern, despite exposing very few sensitive Android permissions.",

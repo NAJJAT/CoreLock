@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appd_tab_mismatch">Afwijkingen</string>
+    <string name="appd_tab_connections">Verbindingen</string>
+    <string name="appd_tab_sdks">SDK’s</string>
+    <string name="appd_tab_activity">Activiteit</string>
+    <string name="appd_tab_payload">Inhoud</string>
+    <string name="appd_badge_trackers">Trackers</string>
+    <string name="appd_badge_app">App</string>
+    <string name="appd_back">Terug</string>
+    <string name="appd_report_subject">App-rapport: %1$s</string>
+    <string name="appd_share_report">App-rapport delen</string>
+    <plurals name="appd_flags">
+        <item quantity="one">%d signaal</item>
+        <item quantity="other">%d signalen</item>
+    </plurals>
+    <plurals name="appd_domains">
+        <item quantity="one">%d domein</item>
+        <item quantity="other">%d domeinen</item>
+    </plurals>
+    <plurals name="appd_sdks">
+        <item quantity="one">%d SDK</item>
+        <item quantity="other">%d SDK’s</item>
+    </plurals>
+    <string name="appd_blocked_tap">App geblokkeerd — tik om te deblokkeren</string>
+    <string name="appd_active_tap">App toegestaan — tik om te blokkeren</string>
+    <string name="appd_block_bg">Netwerktoegang op de achtergrond blokkeren</string>
+    <string name="appd_activity_summary">Overzicht van activiteit</string>
+    <string name="appd_dns">DNS</string>
+    <plurals name="appd_idle_count">
+        <item quantity="one">%d in rust</item>
+        <item quantity="other">%d in rust</item>
+    </plurals>
+    <plurals name="appd_bg_count">
+        <item quantity="one">%d op de achtergrond</item>
+        <item quantity="other">%d op de achtergrond</item>
+    </plurals>
+    <string name="appd_top_dns">Meest opgevraagde domeinen</string>
+    <string name="appd_no_dns">Nog geen DNS-verzoeken vastgelegd voor deze app.</string>
+    <plurals name="appd_times">
+        <item quantity="one">%d×</item>
+        <item quantity="other">%d×</item>
+    </plurals>
+    <string name="appd_recent_activity">Recente activiteit</string>
+    <string name="appd_no_recent">Nog geen recente activiteit vastgelegd.</string>
+    <string name="appd_timeline_24h">Tijdlijn van 24 uur</string>
+    <string name="appd_hour">%1$d u</string>
+    <string name="appd_legend">Groen: toegestaan · Geel: in rust of op de achtergrond · Rood: geblokkeerd</string>
+    <string name="appd_loading_mismatch">Machtigingen worden vergeleken met het waargenomen verkeer…</string>
+    <string name="appd_no_mismatch">Geen afwijking tussen machtigingen en verkeer</string>
+    <string name="appd_no_mismatch_desc">De gevraagde Android-machtigingen en het waargenomen verkeer passen tot nu toe bij elkaar.</string>
+    <string name="appd_perm_vs_traffic">Machtigingen tegenover verkeer</string>
+    <string name="appd_perm_vs_traffic_desc">Gevraagde machtigingen worden vergeleken met echte bestemmingen en trackerdiensten.</string>
+    <string name="appd_sort_count">Aantal</string>
+    <string name="appd_sort_data">Data</string>
+    <string name="appd_sort_background">Achtergrond</string>
+    <string name="appd_loading_connections">Verbindingsgeschiedenis wordt geladen…</string>
+    <string name="appd_no_connections">Nog geen verbindingen vastgelegd</string>
+    <string name="appd_no_connections_desc">Zet de bescherming aan en open deze app. Bestemmingen, DNS-namen en trackerbedrijven verschijnen hier.</string>
+    <string name="appd_scanning">De app wordt gescand op ingebouwde tracker-SDK’s…</string>
+    <string name="appd_no_sdks">Geen bekende tracker-SDK’s gevonden</string>
+    <string name="appd_no_sdks_desc">Deze scan controleert de code en metagegevens van de app. Het netwerkgedrag wordt apart beoordeeld.</string>
+    <string name="appd_activity_by_hour">Activiteit per uur (24 u)</string>
+    <string name="appd_tracker_company">%1$s – %2$s</string>
+    <string name="appd_loading_payloads">Onderschepte inhoud wordt geladen…</string>
+    <string name="appd_no_payloads">Nog geen inhoud vastgelegd</string>
+    <string name="appd_no_payloads_desc">Zet HTTPS-inspectie aan via Instellingen → Inhoudsinspectie en laat de bescherming aan terwijl je deze app gebruikt.</string>
+    <string name="appd_r_title">Privacyrapport van de app</string>
+    <string name="appd_r_app">App: %1$s</string>
+    <string name="appd_r_package">Pakket: %1$s</string>
+    <string name="appd_r_traffic">Verkeer (24 u)</string>
+    <string name="appd_r_domains">  Gecontacteerde domeinen: %1$d</string>
+    <string name="appd_r_bg">  Verbindingen op de achtergrond: %1$d</string>
+    <string name="appd_r_data">  Overgedragen data: %1$s</string>
+    <string name="appd_r_sdks">Gevonden tracker-SDK’s: %1$d</string>
+    <string name="appd_r_mismatches">Afwijkingen in machtigingen: %1$d</string>
+    <string name="appd_r_top">Belangrijkste domeinen:</string>
+    <string name="appd_r_tracker_tag"> [tracker: %1$s]</string>
+    <string name="appd_r_generated">Gemaakt op %1$s</string>
+    <string name="rule_block_app_bg">%1$s blokkeren (achtergrond)</string>
+    <string name="rule_block_app">%1$s blokkeren</string>
+    <string name="apps_title">Apps</string>
+    <string name="apps_subtitle">Privacyrisico en verkeer per app</string>
+    <plurals name="apps_high_risk_n">
+        <item quantity="one">%d hoog risico</item>
+        <item quantity="other">%d hoog risico</item>
+    </plurals>
+    <string name="apps_stalker_title">Mogelijke signalen van stalkerware</string>
+    <plurals name="apps_stalker_desc">
+        <item quantity="one">%d app past bij patronen van verborgen installatie, nachtelijke activiteit of tracking op de achtergrond.</item>
+        <item quantity="other">%d apps passen bij patronen van verborgen installatie, nachtelijke activiteit of tracking op de achtergrond.</item>
+    </plurals>
+    <string name="apps_all">Alle apps</string>
+    <string name="apps_high_risk">Hoog risico</string>
+    <string name="apps_sort_risk">Risico</string>
+    <string name="apps_stalker">Stalker</string>
+    <plurals name="apps_destinations">
+        <item quantity="one">%d bestemming</item>
+        <item quantity="other">%d bestemmingen</item>
+    </plurals>
+    <plurals name="apps_suspicious">
+        <item quantity="one">%d verdacht</item>
+        <item quantity="other">%d verdacht</item>
+    </plurals>
+    <string name="apps_stalker_score">stalkerwarescore %1$d</string>
+    <string name="apps_search">App of pakket zoeken…</string>
+</resources>

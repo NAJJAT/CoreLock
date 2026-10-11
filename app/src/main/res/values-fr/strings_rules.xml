@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rules_title">Règles</string>
+    <string name="rules_add">Ajouter une règle</string>
+    <string name="rules_empty">Aucune règle pour l’instant</string>
+    <string name="rules_empty_desc">Touchez + pour ajouter une règle de domaine ou d’app</string>
+    <string name="rules_search">Rechercher un domaine, une app, une IP…</string>
+    <string name="rules_clear">Effacer</string>
+    <string name="rules_suggested">Suggérées</string>
+    <string name="rules_active">Règles actives · %1$d</string>
+    <plurals name="rules_count">
+        <item quantity="one">%d règle</item>
+        <item quantity="many">%d règles</item>
+        <item quantity="other">%d règles</item>
+    </plurals>
+    <string name="rules_d_domain">domaine : %1$s</string>
+    <string name="rules_d_app">app : %1$s</string>
+    <string name="rules_d_ip">IP : %1$s</string>
+    <string name="rules_d_bg">arrière-plan uniquement</string>
+    <plurals name="rules_triggered">
+        <item quantity="one">Appliquée %d fois</item>
+        <item quantity="many">Appliquée %d fois</item>
+        <item quantity="other">Appliquée %d fois</item>
+    </plurals>
+    <string name="rules_delete">Supprimer</string>
+    <string name="rules_add_title">Ajouter une règle</string>
+    <string name="rules_type">Type :</string>
+    <string name="rules_hint_domain">Domaine (ex. ads.example.com)</string>
+    <string name="rules_hint_package">Paquet d’app (ex. com.example.app)</string>
+    <string name="rules_hint_ip">IP ou CIDR (ex. 1.2.3.4 ou 10.0.0.0/8)</string>
+    <string name="rules_action">Action :</string>
+    <string name="rules_add_button">Ajouter</string>
+    <string name="rules_skip">Ignorer</string>
+    <plurals name="rules_reason_cleartext">
+        <item quantity="one">%d connexion en clair (7 jours)</item>
+        <item quantity="many">%d connexions en clair (7 jours)</item>
+        <item quantity="other">%d connexions en clair (7 jours)</item>
+    </plurals>
+    <plurals name="rules_reason_background">
+        <item quantity="one">%d connexion en arrière-plan (7 jours)</item>
+        <item quantity="many">%d connexions en arrière-plan (7 jours)</item>
+        <item quantity="other">%d connexions en arrière-plan (7 jours)</item>
+    </plurals>
+</resources>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sleep_subtitle">عمليات بحث DNS أثناء انطفاء الشاشة</string>
+    <plurals name="sleep_badge_days">
+        <item quantity="zero">%d يوم</item>
+        <item quantity="one">يوم واحد</item>
+        <item quantity="two">يومان</item>
+        <item quantity="few">%d أيام</item>
+        <item quantity="many">%d يومًا</item>
+        <item quantity="other">%d يوم</item>
+    </plurals>
+    <string name="sleep_activity">النشاط أثناء انطفاء الشاشة</string>
+    <plurals name="sleep_idle_apps">
+        <item quantity="zero">لم يُجرِ أي تطبيق عمليات بحث DNS أثناء انطفاء الشاشة</item>
+        <item quantity="one">أجرى تطبيق واحد عمليات بحث DNS أثناء انطفاء الشاشة</item>
+        <item quantity="two">أجرى تطبيقان عمليات بحث DNS أثناء انطفاء الشاشة</item>
+        <item quantity="few">أجرت %d تطبيقات عمليات بحث DNS أثناء انطفاء الشاشة</item>
+        <item quantity="many">أجرى %d تطبيقًا عمليات بحث DNS أثناء انطفاء الشاشة</item>
+        <item quantity="other">أجرى %d تطبيق عمليات بحث DNS أثناء انطفاء الشاشة</item>
+    </plurals>
+    <plurals name="sleep_review">
+        <item quantity="zero">لا شيء للمراجعة</item>
+        <item quantity="one">%d للمراجعة</item>
+        <item quantity="two">%d للمراجعة</item>
+        <item quantity="few">%d للمراجعة</item>
+        <item quantity="many">%d للمراجعة</item>
+        <item quantity="other">%d للمراجعة</item>
+    </plurals>
+    <string name="sleep_idle_dns">DNS والشاشة مطفأة</string>
+    <string name="sleep_apps">التطبيقات</string>
+    <string name="sleep_tracking">التتبّع</string>
+    <string name="sleep_top_apps">أكثر التطبيقات نشاطًا والشاشة مطفأة</string>
+    <string name="sleep_no_apps">لا عمليات بحث DNS أثناء انطفاء الشاشة في هذه الفترة.</string>
+    <string name="sleep_top_domains">أكثر النطاقات اتصالًا والشاشة مطفأة</string>
+    <string name="sleep_no_domains">لم يُتصل بأي نطاق أثناء انطفاء الشاشة.</string>
+    <plurals name="sleep_idle_n">
+        <item quantity="zero">%d والشاشة مطفأة</item>
+        <item quantity="one">%d والشاشة مطفأة</item>
+        <item quantity="two">%d والشاشة مطفأة</item>
+        <item quantity="few">%d والشاشة مطفأة</item>
+        <item quantity="many">%d والشاشة مطفأة</item>
+        <item quantity="other">%d والشاشة مطفأة</item>
+    </plurals>
+    <plurals name="sleep_total_n">
+        <item quantity="zero">%d إجمالًا</item>
+        <item quantity="one">%d إجمالًا</item>
+        <item quantity="two">%d إجمالًا</item>
+        <item quantity="few">%d إجمالًا</item>
+        <item quantity="many">%d إجمالًا</item>
+        <item quantity="other">%d إجمالًا</item>
+    </plurals>
+    <plurals name="sleep_idle_queries">
+        <item quantity="zero">لا عمليات بحث DNS والشاشة مطفأة</item>
+        <item quantity="one">عملية بحث DNS واحدة والشاشة مطفأة</item>
+        <item quantity="two">عمليتا بحث DNS والشاشة مطفأة</item>
+        <item quantity="few">%d عمليات بحث DNS والشاشة مطفأة</item>
+        <item quantity="many">%d عملية بحث DNS والشاشة مطفأة</item>
+        <item quantity="other">%d عملية بحث DNS والشاشة مطفأة</item>
+    </plurals>
+</resources>

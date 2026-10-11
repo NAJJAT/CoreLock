@@ -27,6 +27,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.privacyguard.app.R
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -40,6 +43,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.db.PayloadLogEntity
 import com.privacyguard.app.data.db.notDecryptedReason
+import com.privacyguard.app.data.db.notDecryptedReasonRes
 import com.privacyguard.app.data.repository.PayloadLogRepositoryImpl
 import com.privacyguard.domain.repository.PayloadLogRepository
 import com.privacyguard.vpn.mitm.LeakDetector
@@ -90,6 +94,28 @@ internal fun computeRiskScore(log: PayloadLogEntity): Int {
 }
 
 /** Personal data types [com.privacyguard.vpn.mitm.LeakDetector] found in this request. */
+private fun leakLabel(context: android.content.Context, t: LeakDetector.LeakType): String = context.getString(
+    when (t) {
+        LeakDetector.LeakType.LOCATION -> R.string.leak_location
+        LeakDetector.LeakType.ADVERTISING_ID -> R.string.leak_ad_id
+        LeakDetector.LeakType.DEVICE_ID -> R.string.leak_device_id
+        LeakDetector.LeakType.NETWORK_INFO -> R.string.leak_network
+        LeakDetector.LeakType.EMAIL -> R.string.leak_email
+        LeakDetector.LeakType.PHONE_NUMBER -> R.string.leak_phone
+    }
+)
+
+private fun leakDescription(context: android.content.Context, t: LeakDetector.LeakType): String = context.getString(
+    when (t) {
+        LeakDetector.LeakType.LOCATION -> R.string.leak_location_desc
+        LeakDetector.LeakType.ADVERTISING_ID -> R.string.leak_ad_id_desc
+        LeakDetector.LeakType.DEVICE_ID -> R.string.leak_device_id_desc
+        LeakDetector.LeakType.NETWORK_INFO -> R.string.leak_network_desc
+        LeakDetector.LeakType.EMAIL -> R.string.leak_email_desc
+        LeakDetector.LeakType.PHONE_NUMBER -> R.string.leak_phone_desc
+    }
+)
+
 internal fun leaksOf(log: PayloadLogEntity): Set<LeakDetector.LeakType> =
     LeakDetector.decode(parseHeadersMap(log.headers)[LeakDetector.LEAKS_HEADER])
 
@@ -105,8 +131,13 @@ private fun parseHeadersMap(json: String): Map<String, String> {
     return map
 }
 
-private fun shortAppName(pkg: String?): String {
-    if (pkg.isNullOrBlank()) return "Unknown"
+// The installed app's own label (localized by its developer), not a guess from the package name.
+private fun shortAppName(context: android.content.Context, pkg: String?): String {
+    if (pkg.isNullOrBlank()) return context.getString(R.string.mitm_unknown_app)
+    runCatching {
+        val pm = context.packageManager
+        return pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+    }
     return when {
         pkg.contains("tiktok", ignoreCase = true)    -> "TikTok"
         pkg.contains("instagram", ignoreCase = true) -> "Instagram"
@@ -118,26 +149,24 @@ private fun shortAppName(pkg: String?): String {
         pkg.contains("twitter", ignoreCase = true) ||
                 pkg.contains(".x.", ignoreCase = true) -> "Twitter/X"
         pkg.contains("chrome", ignoreCase = true) ||
-                pkg.contains("browser", ignoreCase = true) -> "Browser"
+                pkg.contains("browser", ignoreCase = true) -> context.getString(R.string.mitm_browser)
         else -> pkg.split(".").filter { it.length > 2 }
             .lastOrNull()?.replaceFirstChar { it.uppercase() } ?: pkg
     }
 }
 
+// Default-locale digits and decimal separator; units stay international (B, KB, MB).
 private fun fmtBytes(bytes: Int): String = when {
-    bytes < 1_024 -> "$bytes B"
-    bytes < 1_048_576 -> "${bytes / 1_024} KB"
-    else -> "${"%.1f".format(bytes / 1_048_576.0)} MB"
+    bytes < 1_024 -> String.format(Locale.getDefault(), "%d B", bytes)
+    bytes < 1_048_576 -> String.format(Locale.getDefault(), "%d KB", bytes / 1_024)
+    else -> String.format(Locale.getDefault(), "%.1f MB", bytes / 1_048_576.0)
 }
 
-private fun fmtRelative(ts: Long): String {
-    val diff = System.currentTimeMillis() - ts
-    return when {
-        diff < 60_000 -> "${diff / 1_000}s ago"
-        diff < 3_600_000 -> "${diff / 60_000}m ago"
-        else -> SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(ts))
-    }
-}
+// Locale-aware "5 minutes ago" / "5 minuten geleden" / "قبل ٥ دقائق".
+private fun fmtRelative(ts: Long): String =
+    android.text.format.DateUtils.getRelativeTimeSpanString(
+        ts, System.currentTimeMillis(), android.text.format.DateUtils.SECOND_IN_MILLIS,
+    ).toString()
 
 // ── NAV STATE ───────────────────────────────────────────────────────────────
 private sealed class PScreen {
@@ -221,25 +250,22 @@ fun MitmScreen() {
             AlertDialog(
                 onDismissRequest = { showConsentDialog = false },
                 containerColor = Bg2,
-                title = { Text("Enable Traffic Inspection", color = Ac, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.mitm_consent_title), color = Ac, fontWeight = FontWeight.Bold) },
                 text = {
                     Text(
-                        "PrivacyGuard will intercept and log your HTTPS traffic so you can " +
-                        "inspect every request and response on this device.\n\n" +
-                        "After you confirm, the app will ask you to install a CA certificate. " +
-                        "This is required to decrypt HTTPS. The certificate stays on your device " +
-                        "and can be removed at any time from Settings → Security → Certificates.",
+                        stringResource(R.string.mitm_consent_body),
+
                         color = TxS, fontSize = 13.sp, lineHeight = 19.sp
                     )
                 },
                 confirmButton = {
                     TextButton(onClick = { vm.recordConsent(); showConsentDialog = false }) {
-                        Text("Confirm & Install Certificate", color = Ac, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.mitm_consent_confirm), color = Ac, fontWeight = FontWeight.Bold)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showConsentDialog = false }) {
-                        Text("Cancel", color = TxS)
+                        Text(stringResource(R.string.mitm_cancel), color = TxS)
                     }
                 }
             )
@@ -286,23 +312,21 @@ private fun ScreenLockRequiredDialog(onOpenSettings: () -> Unit, onDismiss: () -
         onDismissRequest = onDismiss,
         containerColor = Bg2,
         icon = { Icon(Icons.Default.Lock, null, tint = Amber) },
-        title = { Text("Screen Lock Required", color = Amber, fontWeight = FontWeight.Bold) },
+        title = { Text(stringResource(R.string.mitm_lock_title), color = Amber, fontWeight = FontWeight.Bold) },
         text = {
             Text(
-                "Android requires a screen lock (PIN, pattern, or password) before " +
-                "installing CA certificates.\n\n" +
-                "Go to:\nSettings → Security → Screen Lock\n\n" +
-                "Set a PIN or password, then come back and tap Install.",
+                stringResource(R.string.mitm_lock_body),
+
                 color = TxS, fontSize = 13.sp, lineHeight = 18.sp
             )
         },
         confirmButton = {
             TextButton(onClick = onOpenSettings) {
-                Text("Open Settings", color = Amber, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.mitm_open_settings), color = Amber, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel", color = TxS) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.mitm_cancel), color = TxS) }
         }
     )
 }
@@ -325,39 +349,32 @@ private fun SettingsInstallDialog(
             tint = if (saved) Ac else Red) },
         title = {
             Text(
-                if (saved) "Install from Settings" else "Couldn't save certificate",
+                if (saved) stringResource(R.string.mitm_install_title) else stringResource(R.string.mitm_save_failed_title),
                 color = if (saved) Ac else Red, fontWeight = FontWeight.Bold
             )
         },
         text = {
             Text(
                 if (saved)
-                    "Android 11 and newer only allow CA certificates to be installed from " +
-                    "the Settings app, not from inside other apps.\n\n" +
-                    "The certificate was saved to Downloads as:\n$fileName\n\n" +
-                    "1. Tap Open Settings (it opens \"Install a certificate\")\n" +
-                    "2. Tap CA certificate → Install anyway\n" +
-                    "3. Open Download and pick $fileName. Older privacyguard_ca " +
-                    "files there are from earlier installs and no longer work.\n" +
-                    "4. Come back here — the card turns green once Android trusts it.\n\n" +
-                    "If Settings opens a different page, search Settings for \"CA certificate\"."
+                    stringResource(R.string.mitm_install_steps, fileName)
+
                 else
-                    "The certificate could not be written to Downloads. Check free storage " +
-                    "and try again; details are in logcat under the CaInstallHelper tag.",
+                    stringResource(R.string.mitm_save_failed_body),
+
                 color = TxS, fontSize = 13.sp, lineHeight = 18.sp
             )
         },
         confirmButton = {
             if (saved) {
                 TextButton(onClick = onOpenSettings) {
-                    Text("Open Settings", color = Ac, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.mitm_open_settings), color = Ac, fontWeight = FontWeight.Bold)
                 }
             } else {
-                TextButton(onClick = onDismiss) { Text("OK", color = TxS) }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.mitm_ok), color = TxS) }
             }
         },
         dismissButton = if (saved) {
-            { TextButton(onClick = onDismiss) { Text("Later", color = TxS) } }
+            { TextButton(onClick = onDismiss) { Text(stringResource(R.string.mitm_later), color = TxS) } }
         } else null
     )
 }
@@ -381,12 +398,11 @@ private fun CaptureListScreen(
     if (showRemoveCaPrompt) {
         AlertDialog(
             onDismissRequest = { showRemoveCaPrompt = false },
-            title = { Text("Remove the PrivacyGuard certificate") },
+            title = { Text(stringResource(R.string.mitm_remove_ca_title)) },
             text = {
                 Text(
-                    "Inspection is off and the signing key has been deleted, but Android still trusts " +
-                        "the installed PrivacyGuard CA. Remove it in Settings → Security → " +
-                        "Encryption & credentials → User credentials."
+                    stringResource(R.string.mitm_remove_ca_body)
+
                 )
             },
             confirmButton = {
@@ -395,9 +411,9 @@ private fun CaptureListScreen(
                     runCatching {
                         context.startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     }
-                }) { Text("Open settings") }
+                }) { Text(stringResource(R.string.mitm_open_settings)) }
             },
-            dismissButton = { TextButton(onClick = { showRemoveCaPrompt = false }) { Text("Later") } },
+            dismissButton = { TextButton(onClick = { showRemoveCaPrompt = false }) { Text(stringResource(R.string.mitm_later)) } },
         )
     }
 
@@ -413,7 +429,7 @@ private fun CaptureListScreen(
                 Box(Modifier.size(8.dp).clip(CircleShape).background(if (uiState.isEnabled) Ac else TxM))
                 Text("PRIVACYGUARD", color = Ac, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
                 Surface(color = AcDim, shape = RoundedCornerShape(5.dp), border = BorderStroke(1.dp, Ac.copy(alpha = 0.3f))) {
-                    Text("PAYLOAD", Modifier.padding(horizontal = 7.dp, vertical = 2.dp), color = Ac, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.mitm_badge_payload).uppercase(), Modifier.padding(horizontal = 7.dp, vertical = 2.dp), color = Ac, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -456,11 +472,11 @@ private fun CaptureListScreen(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             val allActive = uiState.methodFilter == null && !uiState.showFlaggedOnly
-            FilterPill("All", allActive) { vm.setMethodFilter(null); vm.setShowFlaggedOnly(false) }
+            FilterPill(stringResource(R.string.mitm_filter_all), allActive) { vm.setMethodFilter(null); vm.setShowFlaggedOnly(false) }
             FilterPill("POST", uiState.methodFilter == "POST") { vm.setMethodFilter(if (uiState.methodFilter == "POST") null else "POST") }
             FilterPill("GET", uiState.methodFilter == "GET") { vm.setMethodFilter(if (uiState.methodFilter == "GET") null else "GET") }
-            FilterPill("⚑ Flagged", uiState.showFlaggedOnly, accent = Red) { vm.setShowFlaggedOnly(!uiState.showFlaggedOnly) }
-            FilterPill("Has Body", uiState.filterHasBody, accent = Amber) { vm.setFilterHasBody(!uiState.filterHasBody) }
+            FilterPill(stringResource(R.string.mitm_filter_flagged), uiState.showFlaggedOnly, accent = Red) { vm.setShowFlaggedOnly(!uiState.showFlaggedOnly) }
+            FilterPill(stringResource(R.string.mitm_filter_body), uiState.filterHasBody, accent = Amber) { vm.setFilterHasBody(!uiState.filterHasBody) }
         }
 
         // Search
@@ -468,7 +484,7 @@ private fun CaptureListScreen(
             value = uiState.searchQuery,
             onValueChange = { vm.setSearchQuery(it) },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-            placeholder = { Text("Search app, host, domain…", color = TxM, fontSize = 12.sp) },
+            placeholder = { Text(stringResource(R.string.mitm_search), color = TxM, fontSize = 12.sp) },
             leadingIcon = { Icon(Icons.Default.Search, null, tint = TxM, modifier = Modifier.size(18.dp)) },
             singleLine = true,
             shape = RoundedCornerShape(10.dp),
@@ -491,9 +507,17 @@ private fun CaptureListScreen(
                 border = BorderStroke(1.dp, bc.copy(alpha = 0.3f))
             ) {
                 Column(Modifier.padding(10.dp)) {
-                    Text(uiState.mitmStatus, color = bc, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    Text(uiState.mitmStatusMessage, color = TxS, fontSize = 11.sp)
-                    uiState.mitmStatusDomain?.let { Text("Domain: $it", color = TxM, fontSize = 10.sp) }
+                    // Codes come from MitmEngine; the engine's own message is English (logs).
+                    val (stateLabel, stateMessage) = when (uiState.mitmStatus) {
+                        "STARTING" -> R.string.mitm_st_starting to R.string.mitm_st_starting_desc
+                        "TIMEOUT" -> R.string.mitm_st_timeout to R.string.mitm_st_timeout_desc
+                        "PINNED_BYPASS" -> R.string.mitm_st_pinned to R.string.mitm_st_pinned_desc
+                        "HANDSHAKE_FAILED" -> R.string.mitm_st_handshake to R.string.mitm_st_handshake_desc
+                        else -> R.string.mitm_st_error to R.string.mitm_st_error_desc
+                    }
+                    Text(stringResource(stateLabel).uppercase(), color = bc, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(stateMessage), color = TxS, fontSize = 11.sp)
+                    uiState.mitmStatusDomain?.let { Text(stringResource(R.string.mitm_domain, it), color = TxM, fontSize = 10.sp) }
                 }
             }
         }
@@ -512,12 +536,12 @@ private fun CaptureListScreen(
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(Icons.Default.NetworkCheck, null, tint = TxM, modifier = Modifier.size(56.dp))
-                    Text(if (uiState.isEnabled) "No payloads captured yet" else "MITM interception disabled", color = TxS, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(if (uiState.isEnabled) stringResource(R.string.mitm_empty_on) else stringResource(R.string.mitm_empty_off), color = TxS, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Text(
                         if (uiState.isEnabled)
-                            "Install the CA, then test with a browser. Apps using pinning, QUIC/UDP, or end-to-end encryption may show metadata only."
+                            stringResource(R.string.mitm_empty_on_desc)
                         else
-                            "Toggle the switch above to enable",
+                            stringResource(R.string.mitm_empty_off_desc),
                         color = TxM, fontSize = 12.sp, textAlign = TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
@@ -551,15 +575,15 @@ private fun QuicBlockRow(blockQuic: Boolean, onToggle: (Boolean) -> Unit) {
             Icon(Icons.Default.Block, null, tint = if (blockQuic) Blue else TxM, modifier = Modifier.size(18.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    "Block QUIC / HTTP3",
+                    stringResource(R.string.mitm_quic),
                     color = if (blockQuic) Blue else TxS,
                     fontSize = 11.sp, fontWeight = FontWeight.Bold
                 )
                 Text(
                     if (blockQuic)
-                        "UDP/443 is being dropped. Chrome, YouTube, and WhatsApp will fall back to TLS/TCP and become interceptable."
+                        stringResource(R.string.mitm_quic_on)
                     else
-                        "Enable to drop UDP/443 (QUIC), forcing apps to retry on TLS/TCP. Required to inspect Chrome and YouTube traffic.",
+                        stringResource(R.string.mitm_quic_off),
                     color = TxM, fontSize = 10.sp, lineHeight = 15.sp
                 )
             }
@@ -631,40 +655,37 @@ private fun CaInstallCard(
             Column(Modifier.weight(1f)) {
                 Text(
                     when {
-                        caTrusted -> "CA installed — HTTPS decryption active"
-                        caFailed  -> "CA generation failed"
-                        caReady   -> "Install CA certificate to decrypt HTTPS"
-                        else      -> "Generating CA certificate…"
+                        caTrusted -> stringResource(R.string.mitm_ca_trusted)
+                        caFailed  -> stringResource(R.string.mitm_ca_failed)
+                        caReady   -> stringResource(R.string.mitm_ca_ready)
+                        else      -> stringResource(R.string.mitm_ca_generating)
                     },
                     color = cardColor, fontSize = 11.sp, fontWeight = FontWeight.Bold
                 )
                 Text(
                     when {
                         caTrusted ->
-                            "Browsers that trust user certificates (Chrome, Edge, Brave) now " +
-                            "show full payloads. Most other apps ignore user-installed CAs " +
-                            "since Android 7, and pinned apps (WhatsApp, Instagram, banking) " +
-                            "always show metadata only — that's an Android limit, not a bug."
+                            stringResource(R.string.mitm_ca_trusted_desc)
+
                         caFailed  ->
-                            "Tap Regenerate to try again. If the problem persists, clear the " +
-                            "app's storage in Android Settings and reopen the app."
+                            stringResource(R.string.mitm_ca_failed_desc)
+
                         caReady && helper.canInstallFromApp ->
-                            "Tap Install. Android will ask you to name the certificate — " +
-                            "type anything (e.g. PrivacyGuard) and tap OK."
+                            stringResource(R.string.mitm_ca_ready_app_desc)
+
                         caReady   ->
-                            "Android 11+ only installs CA certificates from Settings. Tap " +
-                            "Install: the certificate is saved to Downloads and you'll get " +
-                            "step-by-step instructions."
+                            stringResource(R.string.mitm_ca_ready_settings_desc)
+
                         else      ->
-                            "Generating CA for the first time. This takes a few seconds."
+                            stringResource(R.string.mitm_ca_generating_desc)
+
                     },
                     color = TxS, fontSize = 10.sp, lineHeight = 15.sp
                 )
                 if (staleCas > 0) {
                     Text(
-                        "$staleCas old PrivacyGuard certificate" + (if (staleCas > 1) "s are" else " is") +
-                            " still installed and no longer works. Tap Remove old, open the " +
-                            "User tab and remove every \"PrivacyGuard Enterprise CA\" except the newest.",
+                        pluralStringResource(R.plurals.mitm_stale_cas, staleCas, staleCas),
+
                         color = Amber, fontSize = 10.sp, lineHeight = 15.sp,
                         modifier = Modifier.padding(top = 4.dp)
                     )
@@ -676,7 +697,7 @@ private fun CaInstallCard(
                         modifier = Modifier.padding(top = 4.dp)
                     ) {
                         Text(
-                            "Remove old",
+                            stringResource(R.string.mitm_remove_old),
                             Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                             color = Amber, fontSize = 10.sp, fontWeight = FontWeight.Bold
                         )
@@ -702,7 +723,7 @@ private fun CaInstallCard(
                         border = BorderStroke(1.dp, Red.copy(alpha = 0.4f))
                     ) {
                         Text(
-                            "Regenerate",
+                            stringResource(R.string.mitm_regenerate),
                             Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                             color = Red, fontSize = 10.sp, fontWeight = FontWeight.Bold
                         )
@@ -717,7 +738,7 @@ private fun CaInstallCard(
                         border = BorderStroke(1.dp, Amber.copy(alpha = 0.4f))
                     ) {
                         Text(
-                            "Install",
+                            stringResource(R.string.mitm_install),
                             Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                             color = Amber, fontSize = 10.sp, fontWeight = FontWeight.Bold
                         )
@@ -732,7 +753,7 @@ private fun CaInstallCard(
                         border = BorderStroke(1.dp, LineCol)
                     ) {
                         Text(
-                            "Save .crt",
+                            stringResource(R.string.mitm_save_crt),
                             Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                             color = TxS, fontSize = 10.sp
                         )
@@ -763,7 +784,8 @@ private fun PayloadListItem(log: PayloadLogEntity, onClick: () -> Unit) {
     val riskScore = remember(log.id) { computeRiskScore(log) }
     val flagged = remember(log.id) { isLogFlagged(log) }
     val dotColor = when { flagged || riskScore >= 80 -> Red; riskScore >= 50 -> Amber; else -> Ac }
-    val appName = remember(log.ownerPackage) { shortAppName(log.ownerPackage) }
+    val context = LocalContext.current
+    val appName = remember(log.ownerPackage) { shortAppName(context, log.ownerPackage) }
 
     Row(
         Modifier.fillMaxWidth()
@@ -799,7 +821,7 @@ private fun PayloadListItem(log: PayloadLogEntity, onClick: () -> Unit) {
             val leaks = remember(log.id) { leaksOf(log) }
             if (leaks.isNotEmpty()) {
                 Text(
-                    "Sends: " + leaks.joinToString(" · ") { it.label },
+                    stringResource(R.string.mitm_sends, leaks.joinToString(" · ") { leakLabel(context, it) }),
                     color = Red, fontSize = 10.sp, fontWeight = FontWeight.Bold,
                     maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
@@ -834,23 +856,26 @@ private fun MethodBadge(method: String?) {
 // ── ANALYTICS SCREEN ─────────────────────────────────────────────────────────
 @Composable
 private fun AnalyticsScreen(logs: List<PayloadLogEntity>, onBack: () -> Unit) {
+    val context = LocalContext.current
     val flaggedCount = remember(logs) { logs.count { isLogFlagged(it) } }
     val warnCount = remember(logs) { logs.count { computeRiskScore(it) in 50..79 } }
     val cleanCount = remember(logs) { logs.count { computeRiskScore(it) < 30 } }
     val totalKb = remember(logs) { logs.sumOf { it.sizeBytes } / 1_024 }
 
     val appRisks = remember(logs) {
-        logs.groupBy { shortAppName(it.ownerPackage) }
+        logs.groupBy { shortAppName(context, it.ownerPackage) }
             .mapValues { (_, v) -> v.maxOf { computeRiskScore(it) } }
             .entries.sortedByDescending { it.value }.take(6)
     }
     val total = logs.size.coerceAtLeast(1)
+    val outboundLabel = stringResource(R.string.mitm_outbound)
+    val inboundLabel = stringResource(R.string.mitm_inbound)
     val protocolRows = remember(logs) {
         listOf(
             Triple("HTTP/1.x", logs.count { it.protocol == "HTTP1" }.toDouble() / total, "${logs.count { it.protocol == "HTTP1" }}"),
             Triple("HTTP/2", logs.count { it.protocol == "HTTP2" }.toDouble() / total, "${logs.count { it.protocol == "HTTP2" }}"),
-            Triple("Outbound", logs.count { it.direction == "OUTBOUND" }.toDouble() / total, "${logs.count { it.direction == "OUTBOUND" }}"),
-            Triple("Inbound", logs.count { it.direction == "INBOUND" }.toDouble() / total, "${logs.count { it.direction == "INBOUND" }}"),
+            Triple(outboundLabel, logs.count { it.direction == "OUTBOUND" }.toDouble() / total, "${logs.count { it.direction == "OUTBOUND" }}"),
+            Triple(inboundLabel, logs.count { it.direction == "INBOUND" }.toDouble() / total, "${logs.count { it.direction == "INBOUND" }}"),
         ).filter { it.second > 0 }
     }
 
@@ -858,7 +883,7 @@ private fun AnalyticsScreen(logs: List<PayloadLogEntity>, onBack: () -> Unit) {
         Row(Modifier.fillMaxWidth().background(Bg1).padding(8.dp),
             verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Ac) }
-            Text("Analytics", color = TxP, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.mitm_analytics), color = TxP, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
         HorizontalDivider(color = LineCol)
 
@@ -869,24 +894,24 @@ private fun AnalyticsScreen(logs: List<PayloadLogEntity>, onBack: () -> Unit) {
             Surface(color = Bg2, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, LineCol)) {
                 Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("${logs.size}", color = Ac, fontSize = 52.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 52.sp)
-                    Text("Total requests captured", color = TxS, fontSize = 12.sp)
+                    Text(stringResource(R.string.mitm_total_requests), color = TxS, fontSize = 12.sp)
                 }
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatCard(Modifier.weight(1f), "$flaggedCount", "Flagged", Red)
-                StatCard(Modifier.weight(1f), "$warnCount", "Warnings", Amber)
+                StatCard(Modifier.weight(1f), "$flaggedCount", stringResource(R.string.mitm_flagged), Red)
+                StatCard(Modifier.weight(1f), "$warnCount", stringResource(R.string.mitm_warnings), Amber)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatCard(Modifier.weight(1f), "$cleanCount", "Clean", Ac)
-                StatCard(Modifier.weight(1f), "$totalKb KB", "Total Size", Blue)
+                StatCard(Modifier.weight(1f), "$cleanCount", stringResource(R.string.mitm_clean), Ac)
+                StatCard(Modifier.weight(1f), fmtBytes(totalKb * 1_024), stringResource(R.string.mitm_total_size), Blue)
             }
 
             if (appRisks.isNotEmpty()) {
-                BarChartCard("Risk by app", appRisks.map { Triple(it.key, it.value / 100.0, "${it.value}") })
+                BarChartCard(stringResource(R.string.mitm_risk_by_app), appRisks.map { Triple(it.key, it.value / 100.0, "${it.value}") })
             }
             if (protocolRows.isNotEmpty()) {
-                BarChartCard("Traffic breakdown", protocolRows)
+                BarChartCard(stringResource(R.string.mitm_traffic_breakdown), protocolRows)
             }
             Spacer(Modifier.height(16.dp))
         }
@@ -934,7 +959,7 @@ private fun DetailScreen(log: PayloadLogEntity, onBack: () -> Unit) {
     val riskScore = remember(log.id) { computeRiskScore(log) }
     val flagged = remember(log.id) { isLogFlagged(log) }
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Payload", "Headers", "Risk", "Fields")
+    val tabs = listOf(stringResource(R.string.mitm_tab_payload), stringResource(R.string.mitm_tab_headers), stringResource(R.string.mitm_tab_risk), stringResource(R.string.mitm_tab_fields))
 
     Column(Modifier.fillMaxSize().background(Bg)) {
         // Header
@@ -943,7 +968,7 @@ private fun DetailScreen(log: PayloadLogEntity, onBack: () -> Unit) {
                 Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 4.dp, end = 16.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Ac) }
-                    Text("Captures", color = Ac, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.mitm_captures), color = Ac, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Column(Modifier.padding(horizontal = 16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -956,10 +981,10 @@ private fun DetailScreen(log: PayloadLogEntity, onBack: () -> Unit) {
                 Spacer(Modifier.height(10.dp))
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     val rc = when { riskScore >= 60 -> Red; riskScore >= 40 -> Amber; else -> Ac }
-                    MetaCell(Modifier.weight(1f), "Risk", "$riskScore", rc)
-                    MetaCell(Modifier.weight(1f), "Dir", log.direction.take(3), TxP)
-                    MetaCell(Modifier.weight(1f), "Proto", log.protocol.take(5), TxP)
-                    MetaCell(Modifier.weight(1f), "Size", fmtBytes(log.sizeBytes), TxP)
+                    MetaCell(Modifier.weight(1f), stringResource(R.string.mitm_tab_risk), "$riskScore", rc)
+                    MetaCell(Modifier.weight(1f), stringResource(R.string.mitm_dir), log.direction.take(3), TxP)
+                    MetaCell(Modifier.weight(1f), stringResource(R.string.mitm_proto), log.protocol.take(5), TxP)
+                    MetaCell(Modifier.weight(1f), stringResource(R.string.mitm_size), fmtBytes(log.sizeBytes), TxP)
                 }
             }
         }
@@ -1010,10 +1035,10 @@ private fun MetaCell(modifier: Modifier, label: String, value: String, valueColo
 private fun PayloadTab(log: PayloadLogEntity) {
     var fmt by remember { mutableStateOf("json") }
     val hasBody = !log.body.isNullOrBlank()
-    val notDecryptedReason = remember(log) { log.notDecryptedReason() }
+    val notDecryptedReason = log.notDecryptedReasonRes()?.let { stringResource(it) }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(14.dp)) {
-        SectionLabel(if (log.direction == "OUTBOUND") "Request Body" else "Response Body")
+        SectionLabel(if (log.direction == "OUTBOUND") stringResource(R.string.mitm_request_body) else stringResource(R.string.mitm_response_body))
 
         // HTTPS that was NOT decrypted → explain why
         if (notDecryptedReason != null) {
@@ -1026,14 +1051,12 @@ private fun PayloadTab(log: PayloadLogEntity) {
                 Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(Icons.Default.Lock, null, tint = Blue, modifier = Modifier.size(18.dp))
                     Column {
-                        Text("Not decrypted — metadata only", color = Blue,
+                        Text(stringResource(R.string.mitm_not_decrypted), color = Blue,
                             fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "$notDecryptedReason\n\n" +
-                                    "App: ${log.ownerPackage ?: "unknown"}\n" +
-                                    "Host: ${log.sniHostname ?: log.destinationIp}\n" +
-                                    "Sent: ${fmtBytes(log.sizeBytes)}",
+                            stringResource(R.string.mitm_not_decrypted_detail, notDecryptedReason, shortAppName(LocalContext.current, log.ownerPackage), log.sniHostname ?: log.destinationIp, fmtBytes(log.sizeBytes)),
+
                             color = TxS, fontSize = 11.sp, lineHeight = 17.sp
                         )
                     }
@@ -1052,12 +1075,15 @@ private fun PayloadTab(log: PayloadLogEntity) {
 
         // Body box
         val body = log.body
-        val displayText = remember(body, fmt, notDecryptedReason) {
+        val noBodyNotDecrypted = stringResource(R.string.mitm_no_body_not_decrypted)
+    val noBodyMethod = stringResource(R.string.mitm_no_body_method, log.method.orEmpty())
+    val noBody = stringResource(R.string.mitm_no_body)
+    val displayText = remember(body, fmt, notDecryptedReason) {
             when {
                 body.isNullOrBlank() -> when {
-                    notDecryptedReason != null -> "(not decrypted — see notice above)"
-                    log.method != null -> "(no body — ${log.method} request; data is in the URL and headers)"
-                    else -> "(no body)"
+                    notDecryptedReason != null -> noBodyNotDecrypted
+                    log.method != null -> noBodyMethod
+                    else -> noBody
                 }
                 fmt == "hex" -> toHexDump(body)
                 fmt == "raw" -> body
@@ -1076,10 +1102,10 @@ private fun PayloadTab(log: PayloadLogEntity) {
         }
 
         Spacer(Modifier.height(16.dp))
-        SectionLabel("Headers")
+        SectionLabel(stringResource(R.string.mitm_tab_headers))
         Surface(Modifier.fillMaxWidth(), color = Bg, shape = RoundedCornerShape(10.dp), border = BorderStroke(1.dp, LineCol)) {
             val prettyHeaders = remember(log.headers) { tryPrettyJson(log.headers) }
-            Text(prettyHeaders.ifBlank { "(none)" }, Modifier.fillMaxWidth().padding(12.dp),
+            Text(prettyHeaders.ifBlank { stringResource(R.string.mitm_none) }, Modifier.fillMaxWidth().padding(12.dp),
                 color = TxS, fontSize = 10.sp, lineHeight = 17.sp, fontFamily = FontFamily.Monospace)
         }
         Spacer(Modifier.height(24.dp))
@@ -1166,9 +1192,9 @@ private fun HeadersTab(log: PayloadLogEntity) {
     val warnKeys = remember { setOf("user-agent", "x-session", "x-request-id", "x-client", "x-app") }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(14.dp)) {
-        item { SectionLabel("Headers (${headers.size})") }
+        item { SectionLabel(stringResource(R.string.mitm_headers_count, headers.size)) }
         if (headers.isEmpty()) {
-            item { Text("No headers captured", color = TxM, fontSize = 12.sp) }
+            item { Text(stringResource(R.string.mitm_no_headers), color = TxM, fontSize = 12.sp) }
         }
         items(headers.entries.toList(), key = { "header:${it.key}" }) { (key, value) ->
             val kl = key.lowercase()
@@ -1198,7 +1224,7 @@ private fun HeaderItem(name: String, value: String, severity: String) {
                 if (severity != "ok") {
                     Spacer(Modifier.height(4.dp))
                     Surface(color = borderColor.copy(alpha = 0.14f), shape = RoundedCornerShape(4.dp)) {
-                        Text(severity.uppercase(), Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                        Text((if (severity == "bad") stringResource(R.string.mitm_sev_bad) else stringResource(R.string.mitm_sev_warn)).uppercase(), Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
                             color = borderColor, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -1210,7 +1236,8 @@ private fun HeaderItem(name: String, value: String, severity: String) {
 // ── RISK TAB ──────────────────────────────────────────────────────────────────
 @Composable
 private fun RiskTab(log: PayloadLogEntity, riskScore: Int, flagged: Boolean) {
-    val risks = remember(log.id) { buildRisks(log, riskScore) }
+    val context = LocalContext.current
+    val risks = remember(log.id) { buildRisks(context, log, riskScore) }
     val riskColor = when { riskScore >= 80 -> Red; riskScore >= 50 -> Amber; else -> Ac }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(14.dp)) {
@@ -1230,14 +1257,14 @@ private fun RiskTab(log: PayloadLogEntity, riskScore: Int, flagged: Boolean) {
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("$riskScore", color = riskColor, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 22.sp)
-                            Text("RISK", color = TxM, fontSize = 7.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+                            Text(stringResource(R.string.mitm_tab_risk).uppercase(), color = TxM, fontSize = 7.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
                         }
                     }
                     Column {
-                        Text(when { riskScore >= 80 -> "High Risk"; riskScore >= 50 -> "Medium Risk"; else -> "Low Risk" },
+                        Text(when { riskScore >= 80 -> stringResource(R.string.mitm_risk_high); riskScore >= 50 -> stringResource(R.string.mitm_risk_medium); else -> stringResource(R.string.mitm_risk_low) },
                             color = riskColor, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
                         Spacer(Modifier.height(4.dp))
-                        Text("${risks.count { it.first == "crit" }} critical · ${risks.count { it.first == "warn" }} warnings",
+                        Text(stringResource(R.string.mitm_risk_counts, pluralStringResource(R.plurals.mitm_critical_count, risks.count { it.first == "crit" }, risks.count { it.first == "crit" }), pluralStringResource(R.plurals.mitm_warning_count, risks.count { it.first == "warn" }, risks.count { it.first == "warn" })),
                             color = TxS, fontSize = 11.sp)
                     }
                 }
@@ -1251,29 +1278,30 @@ private fun RiskTab(log: PayloadLogEntity, riskScore: Int, flagged: Boolean) {
     }
 }
 
-private fun buildRisks(log: PayloadLogEntity, riskScore: Int): List<Triple<String, String, String>> {
+private fun buildRisks(context: android.content.Context, log: PayloadLogEntity, riskScore: Int): List<Triple<String, String, String>> {
+    fun s(id: Int, vararg a: Any) = context.getString(id, *a)
     val risks = mutableListOf<Triple<String, String, String>>()
     for (leak in leaksOf(log))
-        risks += Triple("crit", "${leak.label} sent", leak.description)
+        risks += Triple("crit", s(R.string.mitm_r_leak, leakLabel(context, leak)), leakDescription(context, leak))
     val headers = parseHeadersMap(log.headers)
     val hKeys = headers.keys.map { it.lowercase() }
     if (hKeys.any { it.contains("authorization") })
-        risks += Triple("warn", "Authorization Header Present", "Bearer token or credentials transmitted in this request.")
+        risks += Triple("warn", s(R.string.mitm_r_auth), s(R.string.mitm_r_auth_desc))
     if (hKeys.any { it.contains("x-device") || it.contains("device-id") })
-        risks += Triple("crit", "Device Identifier in Headers", "Device ID being sent to remote — potential tracking vector.")
+        risks += Triple("crit", s(R.string.mitm_r_device), s(R.string.mitm_r_device_desc))
     if (hKeys.any { it.contains("cookie") })
-        risks += Triple("warn", "Session Cookie Transmitted", "Cookie header may contain session tokens or tracking IDs.")
+        risks += Triple("warn", s(R.string.mitm_r_cookie), s(R.string.mitm_r_cookie_desc))
     if (!log.body.isNullOrBlank() && log.body.length > 500)
-        risks += Triple("info", "Large Request Body (${fmtBytes(log.body.length)})", "Request body is ${log.body.length} bytes.")
+        risks += Triple("info", s(R.string.mitm_r_large, fmtBytes(log.body.length)), s(R.string.mitm_r_large_desc, log.body.length))
     if (log.method == "POST" || log.method == "PUT")
-        risks += Triple("info", "${log.method} Request", "Data is being submitted to ${log.sniHostname ?: log.destinationIp}.")
+        risks += Triple("info", s(R.string.mitm_r_submit, log.method.orEmpty()), s(R.string.mitm_r_submit_desc, log.sniHostname ?: log.destinationIp))
     if (log.protocol == "HTTP1" && log.destinationPort != 443)
-        risks += Triple("crit", "Unencrypted HTTP Traffic", "Data transmitted over plain HTTP without TLS encryption.")
-    log.notDecryptedReason()?.let {
-        risks += Triple("info", "Not Decrypted", it)
+        risks += Triple("crit", s(R.string.mitm_r_http), s(R.string.mitm_r_http_desc))
+    log.notDecryptedReasonRes()?.let { context.getString(it) }?.let {
+        risks += Triple("info", s(R.string.mitm_r_not_decrypted), it)
     }
     if (risks.isEmpty())
-        risks += Triple("info", "No anomalies detected", "This request appears clean based on available metadata.")
+        risks += Triple("info", s(R.string.mitm_r_clean), s(R.string.mitm_r_clean_desc))
     return risks
 }
 
@@ -1295,7 +1323,7 @@ private fun RiskAnomalyItem(level: String, title: String, body: String) {
                     Text(title, color = TxP, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     Spacer(Modifier.width(8.dp))
                     Surface(color = surfaceBg, shape = RoundedCornerShape(5.dp), border = BorderStroke(1.dp, badgeFg.copy(alpha = 0.3f))) {
-                        Text(level.uppercase(), Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        Text(stringResource(when (level) { "crit" -> R.string.mitm_level_crit; "warn" -> R.string.mitm_sev_warn; else -> R.string.mitm_level_info }).uppercase(), Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                             color = badgeFg, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
                     }
                 }
@@ -1309,10 +1337,14 @@ private fun RiskAnomalyItem(level: String, title: String, body: String) {
 // ── FIELDS TAB ────────────────────────────────────────────────────────────────
 @Composable
 private fun FieldsTab(log: PayloadLogEntity) {
+    val context = LocalContext.current
+    val unknown = stringResource(R.string.mitm_unknown_app)
+    val none = stringResource(R.string.mitm_none)
+    val noneFound = stringResource(R.string.mitm_none_found)
     val fields = remember(log.id) {
         buildList {
-            add(Triple("package", log.ownerPackage ?: "unknown", Ac))
-            add(Triple("sni_hostname", log.sniHostname ?: "(none)", Blue))
+            add(Triple("package", log.ownerPackage ?: unknown, Ac))
+            add(Triple("sni_hostname", log.sniHostname ?: none, Blue))
             add(Triple("destination_ip", log.destinationIp, TxP))
             add(Triple("destination_port", "${log.destinationPort}", TxP))
             add(Triple("protocol", log.protocol, TxP))
@@ -1321,16 +1353,16 @@ private fun FieldsTab(log: PayloadLogEntity) {
             add(Triple("direction", log.direction, if (log.direction == "OUTBOUND") Amber else Ac))
             add(Triple("size_bytes", "${log.sizeBytes} (${fmtBytes(log.sizeBytes)})", TxP))
             add(Triple("body_encoding", log.bodyEncoding, TxS))
-            add(Triple("personal_data", leaksOf(log).joinToString { it.label }.ifEmpty { "none found" },
+            add(Triple("personal_data", leaksOf(log).joinToString { leakLabel(context, it) }.ifEmpty { noneFound },
                 if (log.piiRedacted) Red else Ac))
             add(Triple("mitm_success", "${log.isMitmSuccess}", if (log.isMitmSuccess) Ac else Red))
             add(Triple("session_id", log.sessionId.take(36), TxM))
-            add(Triple("timestamp", SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(log.timestamp)), TxS))
+            add(Triple("timestamp", android.text.format.DateUtils.formatDateTime(context, log.timestamp, android.text.format.DateUtils.FORMAT_SHOW_DATE or android.text.format.DateUtils.FORMAT_SHOW_TIME or android.text.format.DateUtils.FORMAT_SHOW_YEAR), TxS))
         }
     }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(14.dp)) {
-        item { SectionLabel("Extracted Fields (${fields.size})") }
+        item { SectionLabel(stringResource(R.string.mitm_fields_count, fields.size)) }
         items(fields) { (key, value, color) ->
             Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {

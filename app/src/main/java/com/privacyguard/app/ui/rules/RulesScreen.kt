@@ -18,6 +18,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.privacyguard.app.R
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.privacyguard.core.filter.FilterRule
@@ -34,7 +37,7 @@ fun RulesScreen(vm: RulesViewModel = viewModel()) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Rules", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.rules_title), fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 ),
@@ -42,7 +45,7 @@ fun RulesScreen(vm: RulesViewModel = viewModel()) {
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Add rule")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.rules_add))
             }
         },
     ) { padding ->
@@ -56,8 +59,8 @@ fun RulesScreen(vm: RulesViewModel = viewModel()) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.Security, contentDescription = null,
                         modifier = Modifier.size(48.dp), tint = Color.LightGray)
-                    Text("No rules yet", color = Color.Gray, fontSize = 16.sp)
-                    Text("Tap + to add a domain or app rule", color = Color.LightGray, fontSize = 13.sp)
+                    Text(stringResource(R.string.rules_empty), color = Color.Gray, fontSize = 16.sp)
+                    Text(stringResource(R.string.rules_empty_desc), color = Color.LightGray, fontSize = 13.sp)
                 }
             }
         } else {
@@ -72,11 +75,11 @@ fun RulesScreen(vm: RulesViewModel = viewModel()) {
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { vm.setSearchQuery(it) },
-                        placeholder = { Text("Search domain, app, IP…", fontSize = 13.sp, color = Color.Gray) },
+                        placeholder = { Text(stringResource(R.string.rules_search), fontSize = 13.sp, color = Color.Gray) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         trailingIcon = if (searchQuery.isNotEmpty()) {{
                             IconButton(onClick = { vm.setSearchQuery("") }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.rules_clear))
                             }
                         }} else null,
                         singleLine = true,
@@ -88,7 +91,7 @@ fun RulesScreen(vm: RulesViewModel = viewModel()) {
                 if (suggestions.isNotEmpty()) {
                     item {
                         Text(
-                            "SUGGESTED",
+                            stringResource(R.string.rules_suggested).uppercase(),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.Gray,
@@ -104,7 +107,7 @@ fun RulesScreen(vm: RulesViewModel = viewModel()) {
                     }
                     item {
                         Text(
-                            "ACTIVE RULES · ${rules.size}",
+                            stringResource(R.string.rules_active, rules.size).uppercase(),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.Gray,
@@ -114,7 +117,7 @@ fun RulesScreen(vm: RulesViewModel = viewModel()) {
                 } else {
                     item {
                         Text(
-                            "${rules.size} rule${if (rules.size != 1) "s" else ""}",
+                            pluralStringResource(R.plurals.rules_count, rules.size, rules.size),
                             fontSize = 12.sp,
                             color = Color.Gray,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -154,7 +157,7 @@ private fun RuleCard(
     onDelete: () -> Unit,
 ) {
     val actionColor = if (rule.action == FilterRule.Action.DENY) Color(0xFFF44336) else Color(0xFF4CAF50)
-    val actionLabel = if (rule.action == FilterRule.Action.DENY) "BLOCK" else "ALLOW"
+    val actionLabel = (if (rule.action == FilterRule.Action.DENY) stringResource(R.string.ads_block) else stringResource(R.string.ads_allow)).uppercase()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -194,15 +197,15 @@ private fun RuleCard(
                     maxLines   = 1,
                 )
                 val detail = listOfNotNull(
-                    rule.matchDomain?.let { "domain: $it" },
-                    rule.matchPackage?.let { "pkg: $it" },
-                    rule.matchIp?.let { "ip: $it" },
-                    rule.matchBackground?.let { if (it) "background only" else null },
+                    rule.matchDomain?.let { stringResource(R.string.rules_d_domain, it) },
+                    rule.matchPackage?.let { stringResource(R.string.rules_d_app, it) },
+                    rule.matchIp?.let { stringResource(R.string.rules_d_ip, it) },
+                    rule.matchBackground?.let { if (it) stringResource(R.string.rules_d_bg) else null },
                 ).joinToString(" · ").ifBlank { rule.source.name }
                 Text(detail, fontSize = 11.sp, color = Color.Gray, maxLines = 1)
                 if (rule.hitCount > 0) {
                     Text(
-                        "Triggered ${rule.hitCount} time${if (rule.hitCount > 1) "s" else ""}",
+                        pluralStringResource(R.plurals.rules_triggered, rule.hitCount, rule.hitCount),
                         fontSize = 10.sp,
                         color = actionColor.copy(alpha = 0.7f),
                     )
@@ -218,7 +221,7 @@ private fun RuleCard(
             Spacer(Modifier.width(4.dp))
 
             IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete",
+                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.rules_delete),
                     tint = Color.Gray, modifier = Modifier.size(18.dp))
             }
         }
@@ -239,12 +242,12 @@ private fun AddRuleDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Rule", fontWeight = FontWeight.Bold) },
+        title = { Text(stringResource(R.string.rules_add_title), fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 // Rule type selector
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Type:", fontSize = 14.sp, modifier = Modifier.width(60.dp))
+                    Text(stringResource(R.string.rules_type), fontSize = 14.sp, modifier = Modifier.width(60.dp))
                     Box {
                         OutlinedButton(
                             onClick = { typeExpanded = true },
@@ -272,9 +275,9 @@ private fun AddRuleDialog(
                     label         = {
                         Text(
                             when (ruleType) {
-                                RuleType.DOMAIN  -> "Domain (e.g. ads.example.com)"
-                                RuleType.PACKAGE -> "Package (e.g. com.example.app)"
-                                RuleType.IP      -> "IP or CIDR (e.g. 1.2.3.4 or 10.0.0.0/8)"
+                                RuleType.DOMAIN  -> stringResource(R.string.rules_hint_domain)
+                                RuleType.PACKAGE -> stringResource(R.string.rules_hint_package)
+                                RuleType.IP      -> stringResource(R.string.rules_hint_ip)
                             }
                         )
                     },
@@ -284,11 +287,11 @@ private fun AddRuleDialog(
 
                 // Action toggle
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Action:", fontSize = 14.sp)
+                    Text(stringResource(R.string.rules_action), fontSize = 14.sp)
                     FilterChip(
                         selected = blockAction,
                         onClick  = { blockAction = true },
-                        label    = { Text("Block") },
+                        label    = { Text(stringResource(R.string.ads_block)) },
                         leadingIcon = {
                             if (blockAction) Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
                         },
@@ -296,7 +299,7 @@ private fun AddRuleDialog(
                     FilterChip(
                         selected = !blockAction,
                         onClick  = { blockAction = false },
-                        label    = { Text("Allow") },
+                        label    = { Text(stringResource(R.string.ads_allow)) },
                         leadingIcon = {
                             if (!blockAction) Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp))
                         },
@@ -317,11 +320,11 @@ private fun AddRuleDialog(
                 },
                 enabled = value.isNotBlank(),
             ) {
-                Text("Add")
+                Text(stringResource(R.string.rules_add_button))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(android.R.string.cancel)) }
         },
     )
 }
@@ -367,12 +370,12 @@ private fun SuggestionCard(
                 )
             }
             Spacer(modifier = Modifier.size(8.dp))
-            TextButton(onClick = onDismiss) { Text("Skip", fontSize = 12.sp) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.rules_skip), fontSize = 12.sp) }
             Button(
                 onClick = onAccept,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
             ) {
-                Text("Add", fontSize = 12.sp)
+                Text(stringResource(R.string.rules_add_button), fontSize = 12.sp)
             }
         }
     }

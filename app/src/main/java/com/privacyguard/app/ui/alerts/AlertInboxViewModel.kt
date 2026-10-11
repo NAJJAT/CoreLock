@@ -33,6 +33,7 @@ data class AlertInboxState(
 )
 
 class AlertInboxViewModel(app: Application) : AndroidViewModel(app) {
+    private fun str(id: Int, vararg a: Any): String = getApplication<Application>().getString(id, *a)
 
     private val db = AppDatabase.getInstance(app)
     private val _state = MutableStateFlow(AlertInboxState())
@@ -67,8 +68,8 @@ class AlertInboxViewModel(app: Application) : AndroidViewModel(app) {
                 AlertItem(
                     id = "cleartext_${conn.id}",
                     type = AlertType.CLEARTEXT,
-                    title = "Cleartext traffic",
-                    detail = "${conn.packageName.ifBlank { "Unknown" }} → ${conn.sniHostname ?: conn.domain ?: conn.destinationIp}",
+                    title = str(com.privacyguard.app.R.string.alerts_cleartext),
+                    detail = str(com.privacyguard.app.R.string.notif_app_to_domain, conn.packageName.ifBlank { null }?.let { appLabel(it) } ?: str(com.privacyguard.app.R.string.conn_unknown_app), conn.sniHostname ?: conn.domain ?: conn.destinationIp),
                     severity = 4,
                     timestamp = conn.timestamp,
                     packageName = conn.packageName.ifBlank { null },
@@ -82,8 +83,8 @@ class AlertInboxViewModel(app: Application) : AndroidViewModel(app) {
     private fun DnsAnomalyEntity.toAlertItem() = AlertItem(
         id = "dns_$id",
         type = AlertType.DNS_ANOMALY,
-        title = anomalyType.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() },
-        detail = "$domain · $description",
+        title = com.privacyguard.app.ui.text.FindingText.dnsAnomalyTitle(getApplication(), anomalyType),
+        detail = "$domain · ${com.privacyguard.app.ui.text.FindingText.dnsAnomalyExplanation(getApplication(), anomalyType)}",
         severity = severity,
         timestamp = timestamp,
         packageName = packageName.ifBlank { null },
@@ -103,13 +104,13 @@ class AlertInboxViewModel(app: Application) : AndroidViewModel(app) {
             else          -> AlertType.CT_EVENT
         },
         title = when (alertType) {
-            "JA3_THREAT"  -> "JA3 fingerprint · ${malwareName ?: category ?: "Unknown malware"}"
-            "WEAK_CIPHER" -> "Weak cipher suite detected"
+            "JA3_THREAT"  -> str(com.privacyguard.app.R.string.alerts_ja3, malwareName ?: category ?: str(com.privacyguard.app.R.string.alerts_unknown_malware))
+            "WEAK_CIPHER" -> str(com.privacyguard.app.R.string.alerts_weak_cipher)
             TlsAlertEntity.TYPE_TLS_FP_CHANGE -> getApplication<Application>().getString(
                 com.privacyguard.app.R.string.tls_fp_alert_title,
                 packageName?.let { appLabel(it) } ?: "?",
             )
-            else          -> "Certificate Transparency event"
+            else          -> str(com.privacyguard.app.R.string.alerts_ct)
         },
         detail = listOfNotNull(sni, hash?.take(16)?.let { "hash:$it" }, detail).firstOrNull() ?: "",
         severity = severity,

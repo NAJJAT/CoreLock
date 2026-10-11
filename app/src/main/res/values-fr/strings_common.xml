@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="common_on">Activé</string>
+    <string name="common_off">Désactivé</string>
+    <string name="common_canceled">%1$s annulé</string>
+    <string name="common_no_auth">L’authentification de l’appareil n’est pas disponible pour cette action</string>
+    <string name="common_blocked_integrity">Les actions sensibles sont désactivées, car l’intégrité de l’app n’a pas pu être vérifiée</string>
+    <string name="common_blocked_lock">Configurez un verrouillage de l’écran avant d’utiliser des actions sensibles sur cet appareil</string>
+    <string name="net_offline">Hors ligne</string>
+    <string name="net_unknown">Réseau inconnu</string>
+    <string name="net_wifi">Réseau Wi-Fi</string>
+    <string name="net_cellular">Réseau mobile</string>
+    <string name="net_ethernet">Réseau Ethernet</string>
+    <string name="net_vpn">Réseau VPN</string>
+    <string name="net_wifi_named">Wi-Fi : %1$s</string>
+    <string name="nd_mitm_off">L’inspection HTTPS est désactivée ou son consentement a expiré ; cette connexion a donc été transmise sans modification.</string>
+    <string name="nd_bypass">Cet hôte figure dans la liste jamais interceptée (DNS sur HTTPS, services Google ou Samsung). Le déchiffrer casserait la résolution de noms ou la connexion, il est donc transmis tel quel.</string>
+    <string name="nd_pinned">Cette app épingle son certificat ou ne fait pas confiance aux autorités installées par l’utilisateur (comportement par défaut des apps pour Android 7+). Elle a refusé le certificat d’inspection ; la connexion a donc été transmise et seules les métadonnées sont visibles.</string>
+    <string name="nd_failed">L’inspection n’a pas pu démarrer pour cette connexion (autorité pas encore prête ou erreur du proxy local). Elle a été transmise ; les prochaines connexions vers cet hôte pourront être déchiffrées.</string>
+    <string name="nd_other">Cette connexion n’a pas été inspectée. Vérifiez que l’autorité d’inspection est installée et que l’inspection HTTPS est activée.</string>
+    <string name="common_all">Tout</string>
+</resources>

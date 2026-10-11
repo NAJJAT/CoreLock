@@ -78,9 +78,9 @@ class PrivacyGuardTileService : TileService() {
     private fun syncTile(running: Boolean) {
         val tile = qsTile ?: return
         tile.state = if (running) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-        tile.label = "PrivacyGuard"
+        tile.label = getString(com.privacyguard.app.R.string.app_name)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            tile.subtitle = if (running) "Protected" else "Off"
+            tile.subtitle = getString(if (running) com.privacyguard.app.R.string.dash_protected else com.privacyguard.app.R.string.common_off)
         }
         tile.updateTile()
     }

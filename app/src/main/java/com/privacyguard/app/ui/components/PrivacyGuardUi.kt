@@ -38,6 +38,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.privacyguard.app.R
 import com.privacyguard.app.ui.theme.MonoFont
 import com.privacyguard.app.ui.theme.PgAccent
 import com.privacyguard.app.ui.theme.PgBackgroundAlt
@@ -224,6 +227,8 @@ fun MetricRow(
 
 @Composable
 fun ToggleChip(checked: Boolean, modifier: Modifier = Modifier) {
+    val onLabel = stringResource(R.string.common_on)
+    val offLabel = stringResource(R.string.common_off)
     Box(
         modifier = modifier
             // Purely visual otherwise: tell TalkBack this is a switch and whether it
@@ -231,7 +236,7 @@ fun ToggleChip(checked: Boolean, modifier: Modifier = Modifier) {
             .semantics {
                 role = Role.Switch
                 toggleableState = ToggleableState(checked)
-                stateDescription = if (checked) "On" else "Off"
+                stateDescription = if (checked) onLabel else offLabel
             }
             .size(width = 38.dp, height = 22.dp)
             .clip(RoundedCornerShape(999.dp))
@@ -255,17 +260,15 @@ fun formatBytes(bytes: Long): String {
         bytes >= 1024L * 1024L * 1024L -> "${df.format(bytes / (1024.0 * 1024.0 * 1024.0))} GB"
         bytes >= 1024L * 1024L -> "${df.format(bytes / (1024.0 * 1024.0))} MB"
         bytes >= 1024L -> "${df.format(bytes / 1024.0)} KB"
-        else -> "$bytes B"
+        else -> "${java.text.NumberFormat.getIntegerInstance().format(bytes)} B"
     }
 }
 
-fun formatAgo(timeMillis: Long): String {
-    val diff = (System.currentTimeMillis() - timeMillis).coerceAtLeast(0L)
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(diff)
-    return when {
-        minutes <= 0L -> "now"
-        minutes == 1L -> "1m ago"
-        minutes < 60L -> "${minutes}m ago"
-        else -> "${TimeUnit.MILLISECONDS.toHours(diff)}h ago"
-    }
-}
+// Locale-aware ("5 min. ago", "5 minuten geleden", "قبل ٥ دقائق"), no Context needed.
+fun formatAgo(timeMillis: Long): String =
+    android.text.format.DateUtils.getRelativeTimeSpanString(
+        timeMillis.coerceAtMost(System.currentTimeMillis()),
+        System.currentTimeMillis(),
+        android.text.format.DateUtils.MINUTE_IN_MILLIS,
+        android.text.format.DateUtils.FORMAT_ABBREV_RELATIVE,
+    ).toString()

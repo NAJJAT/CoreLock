@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_unknown_app">Unknown app</string>
+    <string name="notif_ch_status">Protection status</string>
+    <string name="notif_ch_status_desc">Shows whether protection is on</string>
+    <string name="notif_ch_alerts">Privacy alerts</string>
+    <string name="notif_ch_alerts_desc">Alerts for suspicious or blocked connections</string>
+    <string name="notif_ch_weekly">Weekly report</string>
+    <string name="notif_ch_weekly_desc">Weekly privacy summary</string>
+    <string name="notif_monitoring">Monitoring your connections…</string>
+    <plurals name="notif_blocked_n">
+        <item quantity="one">%d connection blocked</item>
+        <item quantity="other">%d connections blocked</item>
+    </plurals>
+    <string name="notif_active">Protection on</string>
+    <string name="notif_stop">Stop</string>
+    <string name="notif_suspicious_title">Suspicious connection blocked</string>
+    <string name="notif_app_to_domain">%1$s → %2$s</string>
+    <string name="notif_suspicious_body">%1$s tried to connect to %2$s, which your privacy rules blocked.</string>
+    <string name="notif_weekly_top">Most tracked app this week: %1$s</string>
+    <string name="notif_weekly_tap">Tap to see your privacy summary.</string>
+    <string name="notif_weekly_title">Your weekly privacy report</string>
+    <plurals name="notif_weekly_blocked">
+        <item quantity="one">%d connection blocked this week</item>
+        <item quantity="other">%d connections blocked this week</item>
+    </plurals>
+    <string name="notif_ja3_title">TLS fingerprint match: %1$s</string>
+    <string name="notif_ja3_body">%1$s made a TLS connection matching the “%2$s” fingerprint. Tap to view it in the alert inbox.</string>
+    <string name="notif_behavior_title">Behavior alert: %1$s</string>
+    <string name="notif_cleartext_title">Unencrypted connection: %1$s</string>
+    <string name="notif_cleartext_text">%1$s → %2$s (HTTP, no TLS)</string>
+    <string name="notif_cleartext_body">%1$s connected to %2$s over unencrypted HTTP. Turn on “Block Cleartext” in Settings to prevent this.</string>
+    <plurals name="notif_ct_body">
+        <item quantity="one">%1$d new certificate issued for %2$s</item>
+        <item quantity="other">%1$d new certificates issued for %2$s</item>
+    </plurals>
+    <string name="notif_ct_title">Certificate Transparency: %1$s</string>
+    <string name="notif_ct_tap">%1$s. Tap to review it in the alert inbox.</string>
+    <string name="notif_vpn_down_title">Protection stopped</string>
+    <string name="notif_vpn_down_blocked">Android is blocking all connections until protection reconnects.</string>
+    <string name="notif_vpn_down_open">Traffic is not filtered until protection reconnects. Turn on “Block connections without VPN” in Android to block it.</string>
+    <string name="notif_bg_title">Background connection blocked</string>
+    <string name="notif_bg_text">%1$s tried to connect to %2$s while in the background</string>
+    <string name="notif_blocklist_updated">Blocklist updated</string>
+    <string name="notif_blocklist_entries">%1$s: %2$s entries loaded</string>
+    <string name="notif_ch_high">Critical privacy alerts</string>
+    <string name="notif_ch_high_desc">Critical alerts about your privacy protection</string>
+    <string name="notif_ch_normal">Notifications</string>
+    <string name="notif_ch_normal_desc">Regular notifications about blocked connections</string>
+    <string name="notif_ch_updates">Updates</string>
+    <string name="notif_ch_updates_desc">Reports and updates</string>
+    <string name="notif_block_app">Block app</string>
+    <string name="notif_dismiss">Dismiss</string>
+</resources>

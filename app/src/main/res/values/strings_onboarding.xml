@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onb_1_title">Your device. Your rules.</string>
+    <string name="onb_1_body">The app runs a local VPN to see every connection your apps make, so nothing leaves your device unnoticed.</string>
+    <string name="onb_1_b1">Looks at connection details only: no content is decrypted unless you turn HTTPS inspection on</string>
+    <string name="onb_1_b2">Works on your device, with no cloud account</string>
+    <string name="onb_1_b3">Android can block traffic if protection drops (Always-on VPN)</string>
+    <string name="onb_2_title">What it detects</string>
+    <string name="onb_2_body">Several analysis layers surface things your phone wouldn\'t normally show you.</string>
+    <string name="onb_2_b1">Apps that suddenly connect in a new way (TLS fingerprints)</string>
+    <string name="onb_2_b2">DNS tunneling and random-looking (DGA) domains</string>
+    <string name="onb_2_b3">Tracker SDKs built into your apps</string>
+    <string name="onb_2_b4">Apps using the network in the background</string>
+    <string name="onb_2_b5">Unencrypted (cleartext) connections</string>
+    <string name="onb_3_title">What you control</string>
+    <string name="onb_3_body">Block anything: per app, per domain, per IP or everywhere. Rules apply immediately.</string>
+    <string name="onb_3_b1">Block specific apps, domains or IPs</string>
+    <string name="onb_3_b2">Block all cleartext or weak TLS</string>
+    <string name="onb_3_b3">Suggested rules based on what your apps do</string>
+    <string name="onb_3_b4">Export logs as PCAP, CSV or an IT report</string>
+    <string name="onb_start">I understand: start monitoring</string>
+    <string name="onb_continue">Continue without turning on the VPN</string>
+    <string name="onb_next">Next</string>
+    <string name="onb_consent_title">What this app does</string>
+    <string name="onb_consent_body">Please read and confirm each item before continuing.</string>
+    <string name="onb_c_net">Network monitoring</string>
+    <string name="onb_c_net_body">A local VPN is created on this device. All network traffic passes through it so the app can show you which apps are communicating and with whom. No data leaves your device.</string>
+    <string name="onb_c_https">HTTPS traffic inspection (optional)</string>
+    <string name="onb_c_https_body">To read encrypted traffic contents, the app acts as a local HTTPS proxy. This requires installing a security certificate. The certificate lives only on this device and is deleted when you uninstall the app. You can use the app without this feature.</string>
+    <string name="onb_c_storage">Local storage</string>
+    <string name="onb_c_storage_body">Traffic logs are stored in the app\'s private storage on this device only. They are never uploaded anywhere. You can delete them at any time from Settings.</string>
+    <string name="onb_required_note">Required items must be checked to continue.</string>
+    <string name="onb_required">Required</string>
+    <string name="onb_optional">Optional</string>
+</resources>

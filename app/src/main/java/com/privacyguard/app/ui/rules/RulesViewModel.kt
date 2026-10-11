@@ -1,6 +1,7 @@
 package com.privacyguard.app.ui.rules
 
 import android.app.Application
+import com.privacyguard.app.R
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.privacyguard.app.data.db.AppDatabase
@@ -28,6 +29,8 @@ data class SuggestedRule(
 )
 
 class RulesViewModel(app: Application) : AndroidViewModel(app) {
+    private fun str(id: Int, vararg a: Any): String = getApplication<Application>().getString(id, *a)
+    private fun plural(id: Int, n: Int): String = getApplication<Application>().resources.getQuantityString(id, n, n)
 
     private val db     by lazy { AppDatabase.getInstance(app) }
     private val configDb by lazy { ConfigDatabase.getInstance(app) }
@@ -94,8 +97,8 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
                         ?.appName?.ifBlank { pkg.substringAfterLast('.') } ?: pkg.substringAfterLast('.')
                     list += SuggestedRule(
                         id = "suggest:cleartext:$pkg",
-                        label = "Block $name",
-                        reason = "$n cleartext connections (7d)",
+                        label = str(R.string.rule_block_app, name),
+                        reason = plural(R.plurals.rules_reason_cleartext, n),
                         action = FilterRule.Action.DENY,
                         matchPackage = pkg,
                     )
@@ -116,8 +119,8 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
                         ?.appName?.ifBlank { pkg.substringAfterLast('.') } ?: pkg.substringAfterLast('.')
                     list += SuggestedRule(
                         id = "suggest:background:$pkg",
-                        label = "Block $name",
-                        reason = "$n background connections (7d)",
+                        label = str(R.string.rule_block_app, name),
+                        reason = plural(R.plurals.rules_reason_background, n),
                         action = FilterRule.Action.DENY,
                         matchPackage = pkg,
                     )
@@ -152,7 +155,7 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val rule = FilterRule(
                 id       = UUID.randomUUID().toString(),
-                label    = "${if (action == FilterRule.Action.DENY) "Block" else "Allow"} $domain",
+                label    = str(if (action == FilterRule.Action.DENY) R.string.rule_block_domain else R.string.rule_allow_domain, domain),
                 action   = action,
                 source   = FilterRule.Source.USER,
                 priority = FilterRule.HIGH_PRIORITY,
@@ -169,7 +172,7 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
             if (!isValidIpOrCidr(trimmed)) return@launch
             val rule = FilterRule(
                 id       = UUID.randomUUID().toString(),
-                label    = "${if (action == FilterRule.Action.DENY) "Block" else "Allow"} $trimmed",
+                label    = str(if (action == FilterRule.Action.DENY) R.string.rule_block_domain else R.string.rule_allow_domain, trimmed),
                 action   = action,
                 source   = FilterRule.Source.USER,
                 priority = FilterRule.HIGH_PRIORITY,
@@ -200,7 +203,7 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
             val rule = FilterRule(
                 id       = if (action == FilterRule.Action.DENY) AppsViewModel.packageBlockRuleId(trimmed)
                            else UUID.randomUUID().toString(),
-                label    = "${if (action == FilterRule.Action.DENY) "Block" else "Allow"} $trimmed",
+                label    = str(if (action == FilterRule.Action.DENY) R.string.rule_block_domain else R.string.rule_allow_domain, trimmed),
                 action   = action,
                 source   = FilterRule.Source.USER,
                 priority = FilterRule.HIGH_PRIORITY,
