@@ -43,6 +43,7 @@ class Ipv6Proxy(
     companion object {
         private const val TAG = "Ipv6Proxy"
         private const val RELAY_TIMEOUT_MS = 30_000L
+        private const val CONNECT_TIMEOUT_MS = 10_000
         private const val BUF_SIZE = 8192
     }
 
@@ -68,6 +69,8 @@ class Ipv6Proxy(
                 val srcPort = ((payload[off].toInt() and 0xFF) shl 8) or (payload[off + 1].toInt() and 0xFF)
                 val dstPort = ((payload[off + 2].toInt() and 0xFF) shl 8) or (payload[off + 3].toInt() and 0xFF)
                 val udpLen  = ((payload[off + 4].toInt() and 0xFF) shl 8) or (payload[off + 5].toInt() and 0xFF)
+                // A length below the 8-byte header made copyOfRange throw.
+                if (udpLen < 8) return
                 val data    = payload.copyOfRange(off + 8, (off + udpLen).coerceAtMost(payload.size))
                 handleUdp(ipv6, srcPort, dstPort, data)
             }
@@ -86,52 +89,73 @@ class Ipv6Proxy(
     private fun handleTcp(ipv6: Ipv6Packet, tcp: TcpPacket) {
         val key = SessionKey.of(ipv6.sourceIp, tcp.sourcePort, ipv6.destinationIp, tcp.destinationPort, 6)
 
-        if (tcp.isSyn) {
+        if (tcp.isSyn && !tcp.flagAck) {
+            // A retransmitted SYN while connecting used to open (and leak) another socket.
+            if (key in pendingConnects) return
+            tcpSessions.remove(key)?.close()   // reused port: drop the stale relay
+            if (!pendingConnects.add(key)) return
             openTcpSession(key, ipv6, tcp)
             return
         }
 
         val session = tcpSessions[key] ?: return
         when {
-            tcp.flagFin || tcp.flagRst -> {
+            tcp.flagRst -> {
                 session.close()
-                tcpSessions.remove(key)
+                tcpSessions.remove(key, session)
             }
-            tcp.data.isNotEmpty() -> session.sendToRemote(tcp.data)
+            else -> {
+                if (tcp.data.isNotEmpty()) session.onClientData(tcp.sequenceNumber, tcp.data)
+                // FIN is a half-close: keep relaying the server's remaining response.
+                if (tcp.flagFin) session.onClientFin(tcp.sequenceNumber, tcp.data.size)
+            }
         }
     }
 
+    private val pendingConnects = ConcurrentHashMap.newKeySet<SessionKey>()
+
     private fun openTcpSession(key: SessionKey, ipv6: Ipv6Packet, tcp: TcpPacket) {
         scope.launch(Dispatchers.IO) {
+            var session: TcpRelaySession? = null
+            var channel: SocketChannel? = null
             try {
-                val channel = SocketChannel.open()
+                channel = SocketChannel.open()
                 protectSocket(channel.socket())
-                channel.connect(InetSocketAddress(
+                // Connect with a timeout: a blocking connect to a black-holed address
+                // otherwise holds this IO thread for minutes.
+                channel.socket().connect(InetSocketAddress(
                     Inet6Address.getByName(ipv6.destinationIp),
                     tcp.destinationPort,
-                ))
+                ), CONNECT_TIMEOUT_MS)
 
-                val session = TcpRelaySession(
+                val relay = TcpRelaySession(
                     channel        = channel,
                     srcIp          = ipv6.destinationIp,
                     srcPort        = tcp.destinationPort,
                     dstIp          = ipv6.sourceIp,
                     dstPort        = tcp.sourcePort,
                     serverSeqInit  = (Math.random() * Int.MAX_VALUE).toLong(),
-                    clientSeqInit  = tcp.sequenceNumber + 1,
+                    clientSeqInit  = (tcp.sequenceNumber + 1) and 0xFFFFFFFFL,
                     tunWriter      = tunWriter,
                     onClosed       = onFlowClosed,
                 )
-                tcpSessions[key] = session
+                session = relay
+                tcpSessions[key] = relay
+                pendingConnects.remove(key)
 
                 // Send SYN-ACK back to device
-                session.sendSynAck()
+                relay.sendSynAck()
 
                 // Start relay loop
-                session.startRelay()
+                relay.startRelay()
             } catch (e: Exception) {
                 Log.e(TAG, "IPv6 TCP connect failed: ${e.message}")
+                if (session == null) runCatching { channel?.close() }
                 sendRst(ipv6, tcp)
+            } finally {
+                pendingConnects.remove(key)
+                // The relay ended (remote closed or failed): forget it, or the map grew forever.
+                session?.let { tcpSessions.remove(key, it) }
             }
         }
     }
@@ -191,8 +215,9 @@ private class TcpRelaySession(
     private val tunWriter: TunWriter,
     private val onClosed:  ((Ipv6Flow) -> Unit)? = null,
 ) {
-    private var serverSeq = serverSeqInit
-    private var clientSeq = clientSeqInit
+    // serverSeq is advanced by the relay thread, clientSeq by the TUN reader thread.
+    @Volatile private var serverSeq = serverSeqInit
+    @Volatile private var clientSeq = clientSeqInit
     private val startedAt = System.currentTimeMillis()
     private val sent = java.util.concurrent.atomic.AtomicLong()
     private val received = java.util.concurrent.atomic.AtomicLong()
@@ -200,6 +225,13 @@ private class TcpRelaySession(
     // First client bytes, kept until the TLS server name is found (ClientHellos can span segments).
     @Volatile private var helloBuf: ByteArray? = ByteArray(0)
     @Volatile private var sni: String? = null
+    @Volatile private var clientFinished = false
+
+    private companion object {
+        // TUN MTU 1500 − 40 IPv6 − 20 TCP: larger injected packets are dropped by the device.
+        const val MSS = 1440
+    }
+
     fun sendSynAck() {
         val pkt = Ipv6Packet.buildTcp(
             srcAddr = srcIp, srcPort = srcPort,
@@ -207,19 +239,65 @@ private class TcpRelaySession(
             seqNum = serverSeq, ackNum = clientSeq,
             syn = true, ack = true,
         )
-        serverSeq++
+        serverSeq = (serverSeq + 1) and 0xFFFFFFFFL
         tunWriter.enqueue(pkt)
     }
 
-    fun sendToRemote(data: ByteArray) {
-        sent.addAndGet(data.size.toLong())
+    private fun sendAck() {
+        tunWriter.enqueue(Ipv6Packet.buildTcp(
+            srcAddr = srcIp, srcPort = srcPort,
+            dstAddr = dstIp, dstPort = dstPort,
+            seqNum = serverSeq, ackNum = clientSeq,
+            ack = true,
+        ))
+    }
+
+    /**
+     * Forwards each client byte once, in order, and ACKs it. Nothing was ACKed
+     * before, so the device kept retransmitting and every retransmit was written
+     * to the server again, corrupting the stream.
+     */
+    @Synchronized
+    fun onClientData(seq: Long, data: ByteArray) {
+        if (clientFinished) { sendAck(); return }
+        val alreadyAcked = (clientSeq - seq) and 0xFFFFFFFFL
+        val fresh = when {
+            alreadyAcked == 0L -> data
+            alreadyAcked < 0x80000000L && alreadyAcked < data.size ->
+                data.copyOfRange(alreadyAcked.toInt(), data.size)
+            else -> { sendAck(); return }   // duplicate, or a gap: re-ACK what we have
+        }
         helloBuf?.let { buf ->
-            val joined = buf + data
+            val joined = buf + fresh
             val name = com.privacyguard.core.tls.ClientHelloParser.parse(joined)?.sni
             helloBuf = if (name != null || joined.size >= 4096) null else joined
             if (name != null) sni = name
+            // DoH by name over IPv6 skipped DnsBypassGuard (only IPv4 checked it).
+            if (com.privacyguard.vpn.firewall.DnsBypassGuard.isDohHost(name)) {
+                close()
+                return
+            }
         }
-        runCatching { channel.write(ByteBuffer.wrap(data)) }
+        val ok = runCatching {
+            val bb = ByteBuffer.wrap(fresh)
+            while (bb.hasRemaining()) channel.write(bb)   // blocking channel
+        }.isSuccess
+        if (!ok) { close(); return }
+        sent.addAndGet(fresh.size.toLong())
+        clientSeq = (clientSeq + fresh.size) and 0xFFFFFFFFL
+        sendAck()
+    }
+
+    /** Client half-close: stop sending upstream but keep relaying the response. */
+    @Synchronized
+    fun onClientFin(seq: Long, dataLen: Int) {
+        if (clientFinished) { sendAck(); return }
+        // Only once every byte before the FIN arrived; otherwise the device resends.
+        if (((seq + dataLen) and 0xFFFFFFFFL) != clientSeq) { sendAck(); return }
+        clientFinished = true
+        clientSeq = (clientSeq + 1) and 0xFFFFFFFFL
+        runCatching { channel.shutdownOutput() }
+        sendAck()
     }
 
     fun startRelay() {
@@ -231,15 +309,20 @@ private class TcpRelaySession(
             buf.flip()
             val bytes = ByteArray(n).also { buf.get(it) }
             received.addAndGet(n.toLong())
-            val pkt = Ipv6Packet.buildTcp(
-                srcAddr = srcIp, srcPort = srcPort,
-                dstAddr = dstIp, dstPort = dstPort,
-                seqNum = serverSeq, ackNum = clientSeq,
-                ack = true, psh = true,
-                data = bytes,
-            )
-            serverSeq += n
-            tunWriter.enqueue(pkt)
+            var offset = 0
+            while (offset < n) {
+                val end = minOf(offset + MSS, n)
+                val pkt = Ipv6Packet.buildTcp(
+                    srcAddr = srcIp, srcPort = srcPort,
+                    dstAddr = dstIp, dstPort = dstPort,
+                    seqNum = serverSeq, ackNum = clientSeq,
+                    ack = true, psh = end == n,
+                    data = bytes.copyOfRange(offset, end),
+                )
+                serverSeq = (serverSeq + (end - offset)) and 0xFFFFFFFFL
+                tunWriter.enqueue(pkt)
+                offset = end
+            }
         }
         // Send FIN-ACK to device
         val fin = Ipv6Packet.buildTcp(

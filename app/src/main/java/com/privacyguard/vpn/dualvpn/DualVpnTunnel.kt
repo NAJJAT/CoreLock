@@ -68,12 +68,17 @@ object DualVpnTunnel {
         check(ver == 5) { "SOCKS5 version mismatch (got $ver)" }
 
         if (method == 0x02 && useAuth) {
+            // RFC 1929 lengths are byte counts (max 255). Using String.length broke
+            // non-ASCII credentials and silently wrapped long ones.
+            val userBytes = user.toByteArray(Charsets.UTF_8)
+            val passBytes = password.toByteArray(Charsets.UTF_8)
+            require(userBytes.size in 1..255 && passBytes.size <= 255) { "SOCKS5 credentials too long" }
             val authPkt = buildList<Byte> {
                 add(0x01)
-                add(user.length.toByte())
-                addAll(user.toByteArray().toList())
-                add(password.length.toByte())
-                addAll(password.toByteArray().toList())
+                add(userBytes.size.toByte())
+                addAll(userBytes.toList())
+                add(passBytes.size.toByte())
+                addAll(passBytes.toList())
             }.toByteArray()
             outs.write(authPkt); outs.flush()
             ins.read() // auth version
@@ -86,6 +91,7 @@ object DualVpnTunnel {
 
     private fun socks5Connect(ins: InputStream, outs: OutputStream, host: String, port: Int) {
         val hostBytes = host.toByteArray(Charsets.UTF_8)
+        require(hostBytes.size in 1..255) { "SOCKS5 host name length out of range" }
         val pkt = buildList<Byte> {
             add(0x05); add(0x01); add(0x00) // VER CMD RSV
             add(0x03)                         // ATYP = domain
@@ -108,8 +114,15 @@ object DualVpnTunnel {
         // Drain address/port from reply
         when (reply[3].toInt()) {
             0x01 -> readExactly(ins, 4 + 2)   // IPv4 + port
-            0x03 -> { val len = ins.read(); readExactly(ins, len + 2) } // domain + port
+            0x03 -> {
+                val len = ins.read()
+                check(len >= 0) { "SOCKS5 stream closed before reply body" }
+                readExactly(ins, len + 2)   // domain + port
+            }
             0x04 -> readExactly(ins, 16 + 2)  // IPv6 + port
+            // Unknown type: we cannot tell where the reply ends, so any later byte
+            // would be mistaken for target data.
+            else -> error("SOCKS5 reply has unknown address type ${reply[3].toInt()}")
         }
     }
     private fun readExactly(input: InputStream, byteCount: Int): ByteArray {

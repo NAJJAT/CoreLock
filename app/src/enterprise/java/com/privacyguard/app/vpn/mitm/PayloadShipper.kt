@@ -82,7 +82,7 @@ class PayloadShipper(
         )
 
         if (!queue.offer(event)) {
-            Log.w(TAG, "Queue full — dropping SIEM event for $sniHostname")
+            Log.w(TAG, "Queue full — dropping SIEM event")
         } else {
             Log.d(TAG, "Enqueued event for $sniHostname, queue size: ${queue.size}")
         }

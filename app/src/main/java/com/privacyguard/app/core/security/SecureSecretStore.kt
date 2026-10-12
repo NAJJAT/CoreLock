@@ -123,11 +123,26 @@ class SecureSecretStore private constructor(
         from.edit().remove(prefKey).commit()
     }
 
+    /**
+     * True only when the master key really lives in a TEE or StrongBox. This used to
+     * return true whenever the key existed, so a software-only Keystore (emulators,
+     * some low-end devices) was reported as hardware-backed in the security posture.
+     */
     fun isHardwareBacked(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return false
-        val keyStore = runCatching { KeyStore.getInstance("AndroidKeyStore").apply { load(null) } }
-            .getOrNull() ?: return false
-        return runCatching { keyStore.containsAlias(KEY_ALIAS) }.getOrDefault(false)
+        return runCatching {
+            val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+            val key = keyStore.getKey(KEY_ALIAS, null) as? SecretKey ?: return false
+            val info = javax.crypto.SecretKeyFactory.getInstance(key.algorithm, "AndroidKeyStore")
+                .getKeySpec(key, android.security.keystore.KeyInfo::class.java) as android.security.keystore.KeyInfo
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                info.securityLevel == KeyProperties.SECURITY_LEVEL_TRUSTED_ENVIRONMENT ||
+                    info.securityLevel == KeyProperties.SECURITY_LEVEL_STRONGBOX
+            } else {
+                @Suppress("DEPRECATION")
+                info.isInsideSecureHardware
+            }
+        }.getOrDefault(false)
     }
 
     private fun putBytes(name: String, value: ByteArray, alias: String = KEY_ALIAS, commit: Boolean = false) {

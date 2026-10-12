@@ -27,17 +27,32 @@ object DnsBypassGuard {
         "freedns.controld.com", "doh.dns.sb", "dns.alidns.com", "doh.pub",
     )
 
-    /** Public resolvers that also serve DoH on 443 by bare IP. */
+    /**
+     * Public resolvers that also serve DoH on 443 by bare IP. IPv6 entries are in the
+     * RFC 5952 form Ipv6Packet.parseAddress produces.
+     */
     private val DOH_IPS = setOf(
         "8.8.8.8", "8.8.4.4",
         "1.1.1.1", "1.0.0.1",
         "9.9.9.9", "149.112.112.112",
         "208.67.222.222", "208.67.220.220",
         "94.140.14.14", "94.140.15.15",
+        "2001:4860:4860::8888", "2001:4860:4860::8844",
+        "2606:4700:4700::1111", "2606:4700:4700::1001",
+        "2620:fe::fe", "2620:fe::9",
+        "2620:119:35::35", "2620:119:53::53",
+        "2a10:50c0::ad1:ff", "2a10:50c0::ad2:ff",
     )
 
     /** DNS over TLS / DNS over QUIC, on any protocol. */
     fun isEncryptedDnsPort(port: Int): Boolean = port == DOT_PORT
+
+    /**
+     * Plain DNS that DnsHandler never sees: DNS over TCP (it only answers UDP), and
+     * any DNS over IPv6 (the tunnel only offers an IPv4 resolver). Dropping it makes
+     * the app fall back to UDP through the tunnel's resolver.
+     */
+    fun isUnfilteredPlainDns(port: Int): Boolean = port == 53
 
     fun isDohHost(sni: String?): Boolean {
         if (sni.isNullOrBlank()) return false

@@ -42,7 +42,11 @@ class MainActivity : com.privacyguard.BaseActivity() {
         if (settings.weeklyReport.value) {
             WeeklyReportWorker.scheduleWeekly(this)
         }
+        // MainActivity is exported (launcher), so any app can set this extra. Only the
+        // routes our own notifications use are honoured: an arbitrary route could open
+        // internal screens directly, and an unknown one crashed navigate().
         val initialRoute = intent.getStringExtra(NotificationHelper.EXTRA_NAV_ROUTE)
+            ?.takeIf { it in NOTIFICATION_ROUTES }
         setContent {
             PrivacyGuardTheme {
                 AppNavHost(
@@ -68,5 +72,10 @@ class MainActivity : com.privacyguard.BaseActivity() {
         val intent = VpnService.prepare(this)
         if (intent != null) vpnPermissionLauncher.launch(intent)
         else VpnManager.startVpn(this)
+    }
+
+    private companion object {
+        /** Destinations NotificationHelper deep-links to (see EXTRA_NAV_ROUTE). */
+        val NOTIFICATION_ROUTES = setOf("alerts", "crypto", "connections", "apps")
     }
 }

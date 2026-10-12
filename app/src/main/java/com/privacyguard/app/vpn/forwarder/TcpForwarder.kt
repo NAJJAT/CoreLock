@@ -86,13 +86,25 @@ class TcpForwarder(
                 Log.d(TAG, "RST for $key")
                 sessionTable.remove(key)
             }
-            tcp.isFin -> handleFin(ip, tcp, key)
+            tcp.isFin -> {
+                // The last data often rides on the FIN segment; it used to be dropped.
+                if (tcp.hasData) handleData(ip, tcp, key, ownerUid, ownerPackage)
+                handleFin(ip, tcp, key)
+            }
             else -> handleData(ip, tcp, key, ownerUid, ownerPackage)
         }
     }
 
     private fun handleSyn(ip: IpPacket, tcp: TcpPacket, key: SessionKey, ownerUid: Int, ownerPackage: String?) {
         Log.d(TAG, "SYN: connecting to ${ip.destinationIp}:${tcp.destinationPort}")
+        sessionTable.get(key)?.let { existing ->
+            // A retransmitted SYN while the upstream connect is in flight: finishConnect
+            // will answer it. Opening a second channel here leaked the first one.
+            if (existing.tcpState.get() == Session.TcpState.SYN_RECEIVED &&
+                existing.lastDeviceSeq == tcp.sequenceNumber) return
+            // Anything else is a reused port or a lost SYN-ACK: start over cleanly.
+            sessionTable.remove(key)
+        }
         val session = sessionTable.getOrCreate(key, uid = ownerUid, ownerPackage = ownerPackage)
         session.lastDeviceSeq = tcp.sequenceNumber
 
@@ -193,13 +205,19 @@ class TcpForwarder(
         }
         if (!tcp.hasData) return
 
-        // MITM sessions: drop retransmits of bytes we already ACKed (compare modulo
-        // 2^32) so the TLS stream to the local MITM server never sees duplicates.
-        if (session.isMitmIntercepted) {
-            val end = (tcp.sequenceNumber + tcp.data.size) and 0xFFFFFFFFL
-            val behind = (session.lastAckToDevice - end) and 0xFFFFFFFFL
-            if (behind < 0x80000000L) {
-                Log.d(TAG, "Dropping retransmitted ${tcp.data.size}B for MITM session $key")
+        // Forward every byte exactly once and in order (sequence numbers compared
+        // modulo 2^32). Bytes before lastAckToDevice were already forwarded: a
+        // retransmit, or the start of a segment the socket only partly took. A segment
+        // past it means an earlier one was not fully written and the device will
+        // resend from lastAckToDevice. Forwarding either case corrupted the stream;
+        // this used to be done for MITM sessions only.
+        val alreadyAcked = (session.lastAckToDevice - tcp.sequenceNumber) and 0xFFFFFFFFL
+        val payload: ByteArray = when {
+            alreadyAcked == 0L -> tcp.data
+            alreadyAcked < 0x80000000L && alreadyAcked < tcp.data.size ->
+                tcp.data.copyOfRange(alreadyAcked.toInt(), tcp.data.size)
+            else -> {
+                Log.d(TAG, "Dropping out-of-window ${tcp.data.size}B for $key")
                 tunWriter.enqueueWithChecksums(
                     buildTcp(
                         srcIp = ip.destinationIp,
@@ -222,17 +240,17 @@ class TcpForwarder(
             // on the first segment alone misses the hostname, so MITM never fires
             // and the connection slips through unintercepted. Accumulate the first
             // TLS record, then classify and route on the whole thing.
-            var clientHelloBytes = tcp.data
+            var clientHelloBytes = payload
             if (key.destinationPort == 443 && !session.isMitmIntercepted &&
-                tcp.data.isNotEmpty() &&
-                (session.httpOutBytes.isNotEmpty() || (tcp.data[0].toInt() and 0xFF) == 0x16)) {
-                val buffered = session.httpOutBytes + tcp.data
+                payload.isNotEmpty() &&
+                (session.httpOutBytes.isNotEmpty() || (payload[0].toInt() and 0xFF) == 0x16)) {
+                val buffered = session.httpOutBytes + payload
                 val recordLen = if (buffered.size >= 5)
                     5 + (((buffered[3].toInt() and 0xFF) shl 8) or (buffered[4].toInt() and 0xFF))
                     else Int.MAX_VALUE
                 if (buffered.size < recordLen && buffered.size < 16_384) {
                     session.httpOutBytes = buffered            // keep buffering, ACK, wait
-                    sendAckToDevice(ip, tcp, session)
+                    sendAckToDevice(ip, tcp, session, payload.size)
                     return
                 }
                 clientHelloBytes = buffered
@@ -306,16 +324,21 @@ class TcpForwarder(
                         session.selectionKey = mitmChannel.register(selector, SelectionKey.OP_CONNECT, session)
                         connectingCount.incrementAndGet()
                     } catch (e: Exception) {
-                        Log.w(TAG, "MITM redirect failed for $sni: ${e.message}")
+                        Log.w(TAG, "MITM redirect failed: ${e.message}")
                         runCatching { mitmChannel.close() }
                         session.isMitmIntercepted = false
                         session.pendingMitmData = null
                         interception.markPinned(sni)
+                        // The upstream channel is already closed, so the session cannot
+                        // continue; reset it and let the app retry (pinned → passthrough).
+                        sessionTable.remove(key)
+                        sendRstToDevice(ip, tcp)
+                        return
                     }
                     // ACK the ClientHello now: it will be replayed to the MITM socket.
                     // Without this the device retransmits it and the MITM server
                     // receives a second ClientHello mid-handshake.
-                    sendAckToDevice(ip, tcp, session)
+                    sendAckToDevice(ip, tcp, session, payload.size)
                     return  // Do NOT forward raw ClientHello to original upstream
                 }
             }
@@ -346,15 +369,20 @@ class TcpForwarder(
             // (pinned, MITM off, or intercept failed), forward the whole buffer to
             // the real server — the generic path below would send only the last
             // segment and drop the earlier bytes.
-            if (clientHelloBytes.size != tcp.data.size) {
+            if (clientHelloBytes.size != payload.size) {
                 val channel = session.tcpChannel
                 if (channel != null) {
                     try {
                         val bb = ByteBuffer.wrap(clientHelloBytes)
                         while (bb.hasRemaining()) { if (channel.write(bb) <= 0) break }
+                        if (bb.hasRemaining()) {
+                            // Earlier segments were already ACKed, so the device cannot
+                            // resend them: a short write here would lose bytes silently.
+                            throw java.io.IOException("short write of buffered ClientHello")
+                        }
                         session.recordOutbound(clientHelloBytes.size)
                         forwardedBytesOut.addAndGet(clientHelloBytes.size.toLong())
-                        sendAckToDevice(ip, tcp, session)
+                        sendAckToDevice(ip, tcp, session, payload.size)
                     } catch (e: Exception) {
                         Log.w(TAG, "Forward buffered ClientHello failed for $key: ${e.message}")
                         sessionTable.remove(key)
@@ -367,7 +395,7 @@ class TcpForwarder(
 
         // ── PAYLOAD CAPTURE (fully async — never touches the forwarding path) ──
         if (interception.isEnabled && !isPrivacyGuardTraffic(session.ownerPackage)) {
-            val snap = tcp.data.copyOf()          // snapshot before forwarding
+            val snap = payload.copyOf()           // snapshot before forwarding
             val enc  = session.encryptionStatus
             // Metadata-only stub for TLS sessions we are NOT decrypting. MITM'd sessions
             // log real decrypted entries via capture — a stub there would show
@@ -394,14 +422,17 @@ class TcpForwarder(
             return
         }
         try {
-            val buf = ByteBuffer.wrap(tcp.data)
+            val buf = ByteBuffer.wrap(payload)
             while (buf.hasRemaining()) {
                 val written = channel.write(buf)
                 if (written <= 0) break   // Non-blocking: socket buffer full, stop spinning
             }
-            session.recordOutbound(tcp.data.size)
-            forwardedBytesOut.addAndGet(tcp.data.size.toLong())
-            sendAckToDevice(ip, tcp, session)
+            // ACK only what the socket took. ACKing the whole segment after a short
+            // write dropped the rest silently; now the device resends it.
+            val written = buf.position()
+            session.recordOutbound(written)
+            forwardedBytesOut.addAndGet(written.toLong())
+            if (written > 0) sendAckToDevice(ip, tcp, session, written)
         } catch (e: Exception) {
             Log.w(TAG, "Forward failed for $key: ${e.message}")
             sessionTable.remove(key)
@@ -419,6 +450,10 @@ class TcpForwarder(
     private fun handleFin(ip: IpPacket, tcp: TcpPacket, key: SessionKey) {
         Log.d(TAG, "FIN for $key")
         val session = sessionTable.get(key) ?: return
+        // Close only once every byte before the FIN was forwarded; otherwise the
+        // device resends the missing data together with the FIN.
+        val finSeq = (tcp.sequenceNumber + tcp.data.size) and 0xFFFFFFFFL
+        if (finSeq != session.lastAckToDevice) return
         session.tcpState.set(Session.TcpState.FIN_WAIT)
         runCatching { session.tcpChannel?.shutdownOutput() }
         sendFinAckToDevice(ip, tcp, session)
@@ -547,13 +582,17 @@ class TcpForwarder(
             ack = true,
         )
         session.sendSeq++
-        session.lastAckToDevice = session.lastDeviceSeq + 1
+        session.lastAckToDevice = (session.lastDeviceSeq + 1) and 0xFFFFFFFFL
         tunWriter.enqueueWithChecksums(pkt)
     }
 
-    private fun sendAckToDevice(ip: IpPacket, tcp: TcpPacket, session: Session) {
-        val expected = tcp.sequenceNumber + tcp.data.size
-        if (expected <= session.lastAckToDevice) return
+    /** ACKs [consumed] bytes past lastAckToDevice (callers have already trimmed retransmits). */
+    private fun sendAckToDevice(ip: IpPacket, tcp: TcpPacket, session: Session, consumed: Int) {
+        // Sequence numbers wrap at 2^32; a plain `<=` stopped ACKing for good once
+        // the device's sequence space wrapped, and the upload stalled.
+        val expected = (session.lastAckToDevice + consumed) and 0xFFFFFFFFL
+        val ahead = (expected - session.lastAckToDevice) and 0xFFFFFFFFL
+        if (ahead == 0L || ahead >= 0x80000000L) return
         session.lastAckToDevice = expected
         tunWriter.enqueueWithChecksums(
             buildTcp(
@@ -604,7 +643,7 @@ class TcpForwarder(
                 dstIp = ip.sourceIp,
                 dstPort = tcp.sourcePort,
                 seqNum = session.sendSeq,
-                ackNum = tcp.sequenceNumber + 1,
+                ackNum = (tcp.sequenceNumber + tcp.data.size + 1) and 0xFFFFFFFFL,
                 ack = true,
                 fin = true,
             )

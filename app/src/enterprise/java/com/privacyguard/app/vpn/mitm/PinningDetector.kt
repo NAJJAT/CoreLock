@@ -141,7 +141,7 @@ class PinningDetector {
      */
     fun markAsPinned(domain: String) {
         if (dynamicPinnedDomains.add(domain)) {
-            Log.w(TAG, "Dynamically marked domain as pinned: $domain")
+            Log.w(TAG, "Dynamically marked a domain as pinned")
         }
     }
 

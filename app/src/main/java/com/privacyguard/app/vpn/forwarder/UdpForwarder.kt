@@ -96,11 +96,16 @@ class UdpForwarder(
     }
 
     private fun createSession(ip: IpPacket, udp: UdpPacket, key: SessionKey, ownerUid: Int, ownerPackage: String?): Session? {
+        var channel: DatagramChannel? = null
         return try {
-            val channel = DatagramChannel.open()
+            channel = DatagramChannel.open()
             channel.configureBlocking(false)
             channel.socket().also { protectSocket(it) }
             channel.bind(null)
+            // Connected: the kernel then only delivers datagrams from this destination.
+            // Unconnected, anyone who found the port could inject datagrams that were
+            // handed to the app as if they came from the server it talks to.
+            channel.connect(InetSocketAddress(ip.destinationIp, udp.destinationPort))
 
             val session = sessionTable.getOrCreate(key, uid = ownerUid, ownerPackage = ownerPackage)
             session.udpChannel = channel
@@ -112,7 +117,11 @@ class UdpForwarder(
             Log.d(TAG, "UDP session created for $key")
             session
         } catch (e: Exception) {
-            Log.e(TAG, "UDP session creation error for $key: ${e.message}")
+            Log.e(TAG, "UDP session creation error: ${e.message}")
+            // The channel used to leak here (one fd per failed attempt).
+            runCatching { channel?.close() }
+            sessionTable.get(key)?.takeIf { it.udpChannel == null || it.udpChannel === channel }
+                ?.let { sessionTable.remove(key) }
             errorCount.incrementAndGet()
             null
         }

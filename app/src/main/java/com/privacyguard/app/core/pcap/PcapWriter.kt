@@ -15,6 +15,9 @@ object PcapWriter {
     private var currentFile: File? = null
     private var lastCompletedFile: File? = null
 
+    // write() runs on the TUN reader thread, start/stop on the UI: without the lock a
+    // stop could close the stream mid-record and leave a truncated, unreadable file.
+    @Synchronized
     fun startCapture(context: Context) {
         if (capturing) return
         // files/exports/ is the only app-private folder the FileProvider shares.
@@ -28,6 +31,7 @@ object PcapWriter {
         capturing = true
     }
 
+    @Synchronized
     fun stopCapture(): File? {
         if (!capturing) return lastCompletedFile
         capturing = false
@@ -44,14 +48,17 @@ object PcapWriter {
 
     fun getCurrentFilePath(): String? = currentFile?.absolutePath
 
+    @Synchronized
     fun getOutputFile(): File? = currentFile
 
+    @Synchronized
     fun write(packet: ByteArray) {
         if (!capturing) return
         val os = outputStream ?: return
         runCatching { os.write(packetRecord(packet)) }
     }
 
+    @Synchronized
     fun flush() {
         runCatching { outputStream?.flush() }
     }

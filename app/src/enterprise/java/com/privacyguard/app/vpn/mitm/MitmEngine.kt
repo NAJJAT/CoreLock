@@ -92,7 +92,8 @@ class MitmEngine(
         // CaManager.initialize() runs async at VPN start; the first TLS connection
         // could theoretically arrive before it completes on slow devices.
         if (caManager.getCaCert() == null || caManager.getCaKey() == null) {
-            Log.w(TAG, "intercept: CA not ready yet — skipping MITM for $domain")
+            // No hostnames in warnings: they survive R8 and end up in logcat/bug reports.
+            Log.w(TAG, "intercept: CA not ready yet — skipping MITM")
             return -1
         }
 
@@ -115,7 +116,7 @@ class MitmEngine(
                 it.soTimeout = 10_000  // 10 s for TcpForwarder to connect back to us
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to create MITM server socket for $domain", e)
+            Log.e(TAG, "Failed to create MITM server socket", e)
             return -1
         }
         val localPort = serverSocket.localPort
@@ -137,7 +138,7 @@ class MitmEngine(
                 handleHandshakeFailure(session, domain, e)
                 serverSocket.runCatching { close() }
             } catch (e: SocketTimeoutException) {
-                Log.w(TAG, "MITM device connection timed out for $domain")
+                Log.w(TAG, "MITM device connection timed out")
                 _statusFlow.value = MitmRuntimeStatus(
                     state = "TIMEOUT",
                     message = "Timed out waiting for the app to connect to the local MITM socket",
@@ -192,7 +193,7 @@ class MitmEngine(
             // hangs until its own timeout instead of failing fast.
             try {
                 if (!protectSocket(plainSocket)) {
-                    Log.w(TAG, "protect() failed for upstream socket to $domain — traffic may loop through the tunnel")
+                    Log.w(TAG, "protect() failed for upstream socket — traffic may loop through the tunnel")
                 }
                 // Connect to the IP the app actually dialled rather than resolving the
                 // SNI again — avoids a DNS round-trip through our own tunnel and keeps
@@ -399,7 +400,7 @@ class MitmEngine(
         pinningDetector.markAsPinned(domain)
         val who = if (e.deviceSide) "${session.ownerPackage ?: "app"} rejected the PrivacyGuard certificate"
                   else "upstream TLS to $domain failed"
-        Log.w(TAG, "MITM handshake failed for $domain ($who) — passing this host through: ${e.cause?.message}")
+        Log.w(TAG, "MITM handshake failed (${if (e.deviceSide) "device" else "upstream"} side) — passing this host through: ${e.cause?.message}")
         _statusFlow.value = MitmRuntimeStatus(
             state = "HANDSHAKE_FAILED",
             message = if (e.deviceSide)

@@ -141,7 +141,7 @@ class PrivacyVpnService : VpnService() {
             startVpnInternal()
         } catch (e: Throwable) {
             Log.e(TAG, "FATAL: startVpn crashed", e)
-            stopSelf()
+            runCatching { releaseResources() }
         }
     }
 
@@ -404,6 +404,16 @@ class PrivacyVpnService : VpnService() {
             srcPort = 0; dstPort = 0
         }
 
+        // Same DNS-bypass guard as the IPv4 path. IPv6 never reaches DnsHandler, so
+        // plain DNS, DoT and DoH to a hard-coded IPv6 resolver skipped the blocklist.
+        if (isTransport && (
+                DnsBypassGuard.isEncryptedDnsPort(dstPort) ||
+                DnsBypassGuard.isUnfilteredPlainDns(dstPort) ||
+                DnsBypassGuard.isDohAddress(normalizeIp(ipv6.destinationIp), dstPort))) {
+            recordBlock()
+            return
+        }
+
         // Resolve owner UID and package — /proc/net/tcp6 and /proc/net/udp6 are read the same way
         val uid = com.privacyguard.app.vpn.UidMapper.uidForSrcPort(
             srcPort, ipv6.nextHeader, applicationInfo.uid
@@ -544,6 +554,7 @@ class PrivacyVpnService : VpnService() {
             IpPacket.PROTO_TCP -> {
                 val tcp = TcpPacket.parse(ip) ?: return
                 if (DnsBypassGuard.isEncryptedDnsPort(tcp.destinationPort) ||
+                    DnsBypassGuard.isUnfilteredPlainDns(tcp.destinationPort) ||
                     DnsBypassGuard.isDohAddress(ip.destinationIp, tcp.destinationPort)) {
                     // Dropping the SYN makes the app fall back to plain DNS through the tunnel.
                     recordBlock()
@@ -623,7 +634,8 @@ class PrivacyVpnService : VpnService() {
                     packageName = ja3Alert.packageName,
                 ))
             }
-            Log.w(TAG, "JA3 THREAT: ${ja3Alert.malwareName} hash=${ja3Alert.hash} pkg=$pkg sni=${ja3Alert.sni}")
+            // No package or SNI: warnings survive R8, and logcat is readable via adb/bug reports.
+            Log.w(TAG, "JA3 THREAT: ${ja3Alert.malwareName} hash=${ja3Alert.hash}")
             if (ja3NotifiedHashes.add(ja3Alert.hash)) {
                 notifHelper.postJa3ThreatAlert(
                     malwareName = ja3Alert.malwareName,
@@ -954,23 +966,36 @@ class PrivacyVpnService : VpnService() {
         isRunning = false
         _isRunningFlow.value = false
         com.privacyguard.app.vpn.BootReceiver.markVpnStopped(this)
-        runCatching { unregisterReceiver(stopReceiver) }
 
         // History pruning is PruneWorker's job (daily, VPN on or off).
-        scope.launch { metadataRepo.saveAll(metadataEngine.allProfiles()) }
+        if (::metadataRepo.isInitialized && ::metadataEngine.isInitialized) {
+            scope.launch { metadataRepo.saveAll(metadataEngine.allProfiles()) }
+        }
+        releaseResources()
+    }
 
+    /**
+     * Tears down whatever startVpnInternal managed to build. Also used when startup
+     * fails half way: stopVpn() returns early then (isRunning is still false), which
+     * left the TUN fd open, so all traffic went into a tunnel nobody read, and the
+     * forwarder threads kept running.
+     */
+    private fun releaseResources() {
+        runCatching { unregisterReceiver(stopReceiver) }
         com.privacyguard.app.vpn.KillSwitch.stopMonitoring()
         com.privacyguard.app.vpn.KillSwitch.clearLockdownState()
         if (::ctMonitor.isInitialized) ctMonitor.stop()
-        tunReader.stop()
-        tunWriter.stop()
+        if (::tunReader.isInitialized) tunReader.stop()
+        if (::tunWriter.isInitialized) tunWriter.stop()
         if (::sensorWatcher.isInitialized) sensorWatcher.stop()
-        tcpForwarder.stop()
-        udpForwarder.stop()
-        sessionTable.clear()
+        if (::tcpForwarder.isInitialized) tcpForwarder.stop()
+        if (::udpForwarder.isInitialized) udpForwarder.stop()
+        if (::dnsHandler.isInitialized) dnsHandler.shutdown()
+        if (::sessionTable.isInitialized) sessionTable.clear()
         com.privacyguard.app.vpn.UidMapper.clear()
         StatsManager.reset()
         runCatching { tunFd?.close() }
+        tunFd = null
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }

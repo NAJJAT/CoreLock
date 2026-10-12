@@ -89,7 +89,7 @@ class CtMonitor(
                 lastMaxCertId[domain] = maxOf(lastMaxCertId[domain] ?: 0L, entries.maxOf { it.id })
             }
         } catch (e: Exception) {
-            Log.w(TAG, "CT check failed for $domain: ${e.message}")
+            Log.w(TAG, "CT check failed: ${e.message}")
         }
     }
 

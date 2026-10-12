@@ -118,6 +118,20 @@ class PruneWorker(
             db.connectionProfileDao().deleteOlderThan(cutoff)
         }
 
+        /**
+         * PCAP captures, reports and CSV exports are plaintext copies of history (a
+         * PCAP holds whole packets) outside the encrypted database, and nothing ever
+         * deleted them. They only need to live long enough to be shared.
+         */
+        internal fun pruneExports(exportsDir: java.io.File, now: Long, maxAgeMs: Long = EXPORT_MAX_AGE_MS) {
+            val active = com.privacyguard.app.core.pcap.PcapWriter.getOutputFile()
+            exportsDir.walkBottomUp()
+                .filter { it.isFile && it != active && now - it.lastModified() > maxAgeMs }
+                .forEach { it.delete() }
+        }
+
+        private const val EXPORT_MAX_AGE_MS = DAY_MS
+
         private suspend fun deleteInBatches(batchSize: Int, deleteBatch: suspend (Int) -> Int) {
             while (deleteBatch(batchSize) >= batchSize) Unit
         }
@@ -137,6 +151,7 @@ class PruneWorker(
                     payloadCutoffMs = FlavorRetention.payloadCutoffMs(applicationContext),
                 )
                 FlavorRetention.afterPrune(applicationContext)
+                pruneExports(applicationContext.filesDir.resolve("exports"), System.currentTimeMillis())
                 Log.d(TAG, "Prune complete (retention=$retentionDays days)")
             }
             Result.success()

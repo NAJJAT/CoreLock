@@ -70,6 +70,10 @@ object ManagedConfigApplier {
         // Owner, install the CA silently right now.
         applyBoolean(bundle, "ca_install_automatic") { autoInstall ->
             if (autoInstall && DeviceAdminReceiver.hasOwnerPrivileges(context)) {
+                // The CA is created lazily; without this, the install at app start
+                // always failed with "CA not yet generated". apply() only runs on IO
+                // threads (FlavorStartup, MdmConfigReceiver, DeviceAdminReceiver).
+                kotlinx.coroutines.runBlocking { com.privacyguard.vpn.mitm.CaManager(context).initialize() }
                 val installed = DeviceAdminReceiver.installCaCertificate(context)
                 Log.i(TAG, "MDM automatic CA install: $installed")
             }

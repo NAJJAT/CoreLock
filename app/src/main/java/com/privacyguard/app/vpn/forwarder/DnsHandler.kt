@@ -132,15 +132,31 @@ class DnsHandler(
         // ── Forward to upstream DNS (plain UDP or DoH) ───────────────────────
         queryListener?.onQuery(ownerPackage, queryName, false)
         forwardCount.incrementAndGet()
-        val label = "dns-fwd-${dns.id}"
-        if (dohEnabled) {
-            Thread(null, { forwardViaDoh(ipPacket, udpPacket, dns, ownerPackage) }, label)
-                .also { it.isDaemon = true; it.start() }
-        } else {
-            Thread(null, { forwardBlocking(ipPacket, udpPacket, dns, ownerPackage) }, label)
-                .also { it.isDaemon = true; it.start() }
+        // Bounded pool: one new thread per query let any app flood DNS until the VPN
+        // process ran out of threads/memory. Overflow is dropped; resolvers retry.
+        try {
+            if (dohEnabled) {
+                forwardExecutor.execute { forwardViaDoh(ipPacket, udpPacket, dns, ownerPackage) }
+            } else {
+                forwardExecutor.execute { forwardBlocking(ipPacket, udpPacket, dns, ownerPackage) }
+            }
+        } catch (_: java.util.concurrent.RejectedExecutionException) {
+            droppedQueries.incrementAndGet()
         }
         return true
+    }
+
+    private val forwardExecutor = java.util.concurrent.ThreadPoolExecutor(
+        // core == max: with a bounded queue, extra threads would start only once it is full.
+        MAX_FORWARD_THREADS, MAX_FORWARD_THREADS, 30L, java.util.concurrent.TimeUnit.SECONDS,
+        java.util.concurrent.LinkedBlockingQueue(MAX_PENDING_QUERIES),
+        { r -> Thread(r, "dns-fwd").also { it.isDaemon = true } },
+        java.util.concurrent.ThreadPoolExecutor.AbortPolicy(),
+    ).also { it.allowCoreThreadTimeOut(true) }
+
+    /** Stops forwarding threads when the VPN stops. */
+    fun shutdown() {
+        forwardExecutor.shutdownNow()
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -161,7 +177,7 @@ class DnsHandler(
             if (tryForwardToServer(server, ipPacket, udpPacket, dnsQuery, ownerPackage)) return
         }
         upstreamErrors.incrementAndGet()
-        Log.e(TAG, "All DNS servers failed for ${dnsQuery.queryName}")
+        Log.e(TAG, "All DNS servers failed")
     }
 
     private fun tryForwardToServer(
@@ -192,12 +208,14 @@ class DnsHandler(
                 val recv        = DatagramPacket(responseBuf, responseBuf.size)
                 socket.receive(recv)
 
+                // Only accept the answer from the server we asked; anything else on
+                // this port is spoofed or stray.
+                if (recv.address != upstream || recv.port != upstreamPort) return@use false
                 val responseData = responseBuf.copyOf(recv.length)
                 injectDnsResponse(ipPacket, udpPacket, dnsQuery, responseData, ownerPackage)
-                true
             }
         } catch (e: Exception) {
-            Log.w(TAG, "DNS forward to $server failed for ${dnsQuery.queryName}: ${e.message}")
+            Log.w(TAG, "DNS forward to $server failed: ${e.message}")
             false
         }
     }
@@ -208,14 +226,19 @@ class DnsHandler(
         dnsQuery:     DnsPacket,
         responseData: ByteArray,
         @Suppress("UNUSED_PARAMETER") ownerPackage: String?,
-    ) {
+    ): Boolean {
+        // Must be a parseable answer to this very query: otherwise a forged or
+        // mismatched response (or an HTTP body that is not a DNS message) would be
+        // handed to the app and poison the IP→hostname map.
         val dnsResponse = DnsPacket.parse(responseData)
-        if (dnsResponse != null) {
-            val queryName = dnsQuery.queryName
-            if (queryName != null) {
-                for (ip in dnsResponse.aRecords)    resolvedListener?.onResolved(ip, queryName)
-                for (ip in dnsResponse.aaaaRecords) resolvedListener?.onResolved(ip, queryName)
-            }
+        if (dnsResponse == null || !dnsResponse.isResponse || dnsResponse.id != dnsQuery.id) {
+            Log.w(TAG, "Dropping DNS response that does not match the query")
+            return false
+        }
+        val queryName = dnsQuery.queryName
+        if (queryName != null) {
+            for (ip in dnsResponse.aRecords)    resolvedListener?.onResolved(ip, queryName)
+            for (ip in dnsResponse.aaaaRecords) resolvedListener?.onResolved(ip, queryName)
         }
         tunWriter.enqueueWithChecksums(buildUdpResponse(
             srcIp   = ipPacket.destinationIp,
@@ -224,6 +247,7 @@ class DnsHandler(
             dstPort = udpPacket.sourcePort,
             data    = responseData,
         ))
+        return true
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -239,14 +263,15 @@ class DnsHandler(
         try {
             val queryBytes = udpPacket.data
             val responseData = postDoh(queryBytes)
-            if (responseData != null) {
-                injectDnsResponse(ipPacket, udpPacket, dnsQuery, responseData, ownerPackage)
-            } else {
-                upstreamErrors.incrementAndGet()
-                forwardBlocking(ipPacket, udpPacket, dnsQuery, ownerPackage)
+            if (responseData != null &&
+                injectDnsResponse(ipPacket, udpPacket, dnsQuery, responseData, ownerPackage)) {
+                return
             }
+            upstreamErrors.incrementAndGet()
+            forwardBlocking(ipPacket, udpPacket, dnsQuery, ownerPackage)
         } catch (e: Exception) {
-            Log.w(TAG, "DoH error for ${dnsQuery.queryName}: ${e.message}")
+            // No hostname: warnings survive R8 and would put browsing history in logcat.
+            Log.w(TAG, "DoH error: ${e.message}")
             upstreamErrors.incrementAndGet()
             forwardBlocking(ipPacket, udpPacket, dnsQuery, ownerPackage)
         }
@@ -353,6 +378,7 @@ class DnsHandler(
     val forwardCount   = AtomicLong(0)
     val malformedDns   = AtomicLong(0)
     val upstreamErrors = AtomicLong(0)
+    val droppedQueries = AtomicLong(0)
 
     data class Stats(
         val blocked:        Long,
@@ -394,6 +420,11 @@ class DnsHandler(
         // 512 bytes get truncated (TC=1), the device retries over DNS-over-TCP
         // (which this handler doesn't support), and resolution fails entirely.
         const val MAX_DNS_PAYLOAD = 4096
+
+        // Upstream timeout is 3 s, so 32 threads sustain ~10 queries/s even when
+        // every server is down; the queue absorbs bursts (page loads).
+        private const val MAX_FORWARD_THREADS = 32
+        private const val MAX_PENDING_QUERIES = 512
 
         // Automatic fallback chain if the primary DNS is unreachable.
         val FALLBACK_DNS_SERVERS = listOf("8.8.8.8", "9.9.9.9")
