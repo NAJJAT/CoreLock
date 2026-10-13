@@ -20,6 +20,7 @@
                 <action android:name="com.privacyguard.debug.SET_SETTING" />
                 <action android:name="com.privacyguard.debug.UPDATE_BLOCKLISTS" />
                 <action android:name="com.privacyguard.debug.PCAP" />
+                <action android:name="com.privacyguard.debug.DUMP_ALERTS" />
                 <action android:name="com.privacyguard.debug.PROBE_DNS" />
                 <action android:name="com.privacyguard.debug.DOMAIN_RULE" />
             </intent-filter>

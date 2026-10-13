@@ -53,6 +53,7 @@ class DebugHooksReceiver : BroadcastReceiver() {
             ACTION_SET_SETTING -> setSetting(context, intent)
             ACTION_UPDATE_BLOCKLISTS -> updateBlocklists(context)
             ACTION_PCAP -> pcap(context, intent)
+            ACTION_DUMP_ALERTS -> dumpAlerts(context, intent)
             ACTION_PROBE_DNS -> probeDns()
             ACTION_DOMAIN_RULE -> domainRule(context, intent)
             ACTION_FAIL_NEXT_START -> {
@@ -102,6 +103,29 @@ class DebugHooksReceiver : BroadcastReceiver() {
                 "gateways=${if (q) lp.routes.filter { it.hasGateway() }.map { it.gateway?.hostAddress } else lp.routes} " +
                 "dns=${lp.dnsServers.map { it.hostAddress }} domains=${lp.domains} " +
                 "transportInfo=${if (q) caps.transportInfo else "n/a"}")
+        }
+    }
+
+    /**
+     * What the alert inbox holds since a moment (types and apps, no domains):
+     *   adb shell am broadcast -a com.privacyguard.debug.DUMP_ALERTS --el since EPOCH_MS -p PKG
+     */
+    private fun dumpAlerts(context: Context, intent: Intent) {
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val since = intent.getLongExtra("since", 0L)
+                val app = context.applicationContext as android.app.Application
+                val items = com.privacyguard.app.ui.alerts.AlertFeed(app).loadItems().filter { it.timestamp >= since }
+                Log.i(TAG, "ALERTS since=$since total=${items.size} byType=${items.groupingBy { it.type }.eachCount()}")
+                items.groupingBy { "${it.type}|${it.title}|${it.packageName}" }.eachCount()
+                    .entries.sortedByDescending { it.value }.take(15)
+                    .forEach { (k, n) -> Log.i(TAG, "ALERTS $n × $k") }
+                val hours = items.groupingBy { it.timestamp / 3_600_000L }.eachCount().toSortedMap()
+                Log.i(TAG, "ALERTS perHour=${hours.values}")
+            } finally {
+                pending.finish()
+            }
         }
     }
 
@@ -243,6 +267,7 @@ class DebugHooksReceiver : BroadcastReceiver() {
         const val ACTION_SET_SETTING = "com.privacyguard.debug.SET_SETTING"
         const val ACTION_UPDATE_BLOCKLISTS = "com.privacyguard.debug.UPDATE_BLOCKLISTS"
         const val ACTION_PCAP = "com.privacyguard.debug.PCAP"
+        const val ACTION_DUMP_ALERTS = "com.privacyguard.debug.DUMP_ALERTS"
         const val ACTION_PROBE_DNS = "com.privacyguard.debug.PROBE_DNS"
         const val ACTION_DOMAIN_RULE = "com.privacyguard.debug.DOMAIN_RULE"
         const val DEBUG_PREFS = "debug_hooks"
