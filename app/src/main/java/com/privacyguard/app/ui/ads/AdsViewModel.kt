@@ -145,12 +145,26 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun addCustomRule(domain: String, allow: Boolean) {
+    /** An Allow for a malware or phishing host, waiting for the user to confirm the warning. */
+    private val _securityWarning = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    val securityWarning: kotlinx.coroutines.flow.StateFlow<String?> = _securityWarning
+
+    fun dismissSecurityWarning() { _securityWarning.value = null }
+
+    fun addCustomRule(domain: String, allow: Boolean, confirmedRisk: Boolean = false) {
         val normalized = domain.trim().lowercase().removePrefix("https://").removePrefix("http://").substringBefore('/')
         if (normalized.isBlank()) return
         viewModelScope.launch {
+            if (allow && !confirmedRisk && blocklistRepo.isSecurityThreat(normalized)) {
+                _securityWarning.value = normalized
+                return@launch
+            }
+            _securityWarning.value = null
             val rule = if (allow) {
-                FilterRule.allowDomain(normalized, label = getApplication<android.app.Application>().getString(com.privacyguard.app.R.string.rule_allow_domain, normalized))
+                val app = getApplication<android.app.Application>()
+                FilterRule.allowDomain(normalized, label = app.getString(
+                    if (confirmedRisk) com.privacyguard.app.R.string.rule_allow_domain_risky else com.privacyguard.app.R.string.rule_allow_domain, normalized))
+                    .copy(overridesSecurity = confirmedRisk)
             } else {
                 FilterRule.blockDomain(normalized, label = getApplication<android.app.Application>().getString(com.privacyguard.app.R.string.rule_block_domain, normalized), source = FilterRule.Source.USER)
             }

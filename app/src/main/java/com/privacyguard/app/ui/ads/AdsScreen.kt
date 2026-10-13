@@ -68,6 +68,14 @@ fun AdsScreen(
     viewModel: AdsViewModel = viewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val securityWarning by viewModel.securityWarning.collectAsStateWithLifecycle()
+    securityWarning?.let { domain ->
+        com.privacyguard.app.ui.rules.SecurityAllowWarningDialog(
+            domain = domain,
+            onConfirm = { viewModel.addCustomRule(domain, allow = true, confirmedRisk = true) },
+            onDismiss = viewModel::dismissSecurityWarning,
+        )
+    }
     var dialogOpen by remember { mutableStateOf(false) }
     var customDomain by remember { mutableStateOf("") }
     var customAllow by remember { mutableStateOf(false) }

@@ -81,6 +81,9 @@ class TlsBaselineEngine(
     // Fast path: most connections reuse a known fingerprint; skip the database.
     private val knownCache = ConcurrentHashMap.newKeySet<String>()
 
+    /** "Clear data" emptied the baseline tables; learn again from scratch. */
+    fun clearCache() = knownCache.clear()
+
     fun isCachedKnown(uid: Int, packageName: String, ja4: String) =
         knownCache.contains(cacheKey(uid, packageName, ja4))
 

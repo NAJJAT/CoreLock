@@ -69,6 +69,7 @@ class RulesRepo(
         enabled = isEnabled,
         priority = priority,
         description = label,
+        overridesSecurity = overridesSecurity,
     )
 
     private fun RuleEntity.toFilterRule() = FilterRule(
@@ -87,5 +88,6 @@ class RulesRepo(
         matchEncryption = matchEncryption?.let(EncryptionStatus::valueOf),
         matchBackground = matchBackground,
         hitCount = hitCount,
+        overridesSecurity = overridesSecurity,
     )
 }

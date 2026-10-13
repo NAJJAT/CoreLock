@@ -24,4 +24,7 @@ data class RuleEntity(
     val lastModified: Long      = System.currentTimeMillis(),
     val hitCount:     Int       = 0,
     val lastHit:      Long?     = null,
+    /** Allow rule the user confirmed after a malware/phishing warning (config DB v2). */
+    @androidx.room.ColumnInfo(defaultValue = "0")
+    val overridesSecurity: Boolean = false,
 )

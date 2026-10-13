@@ -52,6 +52,8 @@ class DnsHandler(
     private val adSdkPolicy:       com.privacyguard.app.adprivacy.AdSdkPolicy? = null,
     // Dual-hop: DoH goes through the SOCKS chain like every other TCP connection.
     private val dualVpnConfig:     () -> com.privacyguard.vpn.dualvpn.DualVpnConfig = { com.privacyguard.vpn.dualvpn.DualVpnConfig() },
+    // Malware and phishing hosts: only an Allow rule the user confirmed after a warning lets them through.
+    private val securityFilter:    DomainFilter? = null,
 ) {
     // ─────────────────────────────────────────────────────────────────────────
     // Listeners
@@ -117,13 +119,17 @@ class DnsHandler(
         // ── Layer 1: Blocklist ───────────────────────────────────────────────
         // Ad-SDK policy is per app (DomainFilter is not): it blocks SDK hosts in
         // other apps, and keeps login/push/deep-link hosts open even when a
-        // downloaded list contains them. The user's own rules still win.
+        // downloaded list contains them. Precedence: see [DnsBlockDecision].
         val sdkVerdict = adSdkPolicy?.decide(ownerPackage, queryName)
-        val isBlockedByDomainFilter = sdkVerdict !is com.privacyguard.app.adprivacy.AdSdkVerdict.KeepOpen &&
-            domainFilter?.isBlocked(queryName) == true
-        val isBlockedByRuleEngine = filterEngine.isDomainBlocked(queryName)
-        val isBlockedAsAdSdk = sdkVerdict is com.privacyguard.app.adprivacy.AdSdkVerdict.Block
-        if (isBlockedByDomainFilter || isBlockedByRuleEngine || isBlockedAsAdSdk) {
+        val userRule = filterEngine.domainRuleFor(queryName, ownerPackage)
+        val blockReason = DnsBlockDecision.decide(
+            userRule = userRule,
+            onSecurityList = securityFilter?.isBlocked(queryName) == true,
+            onLevelBlocklist = sdkVerdict !is com.privacyguard.app.adprivacy.AdSdkVerdict.KeepOpen &&
+                domainFilter?.isBlocked(queryName) == true,
+            adSdkBlocks = sdkVerdict is com.privacyguard.app.adprivacy.AdSdkVerdict.Block,
+        ) ?: if (userRule == null && filterEngine.isDomainBlocked(queryName)) DnsBlockDecision.Reason.USER_RULE else null
+        if (blockReason != null) {
             queryListener?.onQuery(ownerPackage, queryName, true)
             blockedCount.incrementAndGet()
             val nxdomain = DnsPacket.buildBlockedResponse(dns)

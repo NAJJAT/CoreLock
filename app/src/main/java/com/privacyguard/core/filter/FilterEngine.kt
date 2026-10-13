@@ -107,6 +107,19 @@ class FilterEngine(
     // Quick checks (used by DNS intercept and connection guard)
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * The first enabled rule (in priority order) that names this domain, for this
+     * app or for every app. DNS uses it to let the user's Allow beat the lists.
+     */
+    fun domainRuleFor(domain: String, pkg: String?): FilterRule? {
+        for (rule in rules) {
+            if (!rule.isEnabled || !isActiveForLevel(rule)) continue
+            if (rule.matchDomain == null) continue
+            if (rule.matches(-1, pkg, domain, "0.0.0.0", 0, 0)) return rule
+        }
+        return null
+    }
+
     fun isDomainBlocked(domain: String): Boolean {
         for (rule in rules) {
             if (!rule.isEnabled || !isActiveForLevel(rule)) continue

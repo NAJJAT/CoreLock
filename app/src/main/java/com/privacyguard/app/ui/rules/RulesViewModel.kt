@@ -149,15 +149,41 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
         _suggestions.value = _suggestions.value.filter { it.id != id }
     }
 
-    fun addDomainRule(domain: String, action: FilterRule.Action) {
+    private val blocklistRepo by lazy {
+        com.privacyguard.app.data.repository.BlocklistRepo(db.blocklistDao(), configDb.blocklistToggleDao())
+    }
+
+    /** An Allow for a domain on a malware or phishing list, waiting for the user to confirm the warning. */
+    private val _securityWarning = MutableStateFlow<String?>(null)
+    val securityWarning: StateFlow<String?> = _securityWarning.asStateFlow()
+
+    fun dismissSecurityWarning() { _securityWarning.value = null }
+
+    /**
+     * Allow overrides ad, tracker and telemetry lists. For a malware or phishing host
+     * it first asks ([securityWarning]); [confirmedRisk] is the user's answer.
+     */
+    fun addDomainRule(domain: String, action: FilterRule.Action, confirmedRisk: Boolean = false) {
+        val normalized = domain.trim().lowercase()
         viewModelScope.launch {
+            if (action == FilterRule.Action.ALLOW && !confirmedRisk && blocklistRepo.isSecurityThreat(normalized)) {
+                _securityWarning.value = normalized
+                return@launch
+            }
+            _securityWarning.value = null
+            val overrides = action == FilterRule.Action.ALLOW && confirmedRisk
             val rule = FilterRule(
                 id       = UUID.randomUUID().toString(),
-                label    = str(if (action == FilterRule.Action.DENY) R.string.rule_block_domain else R.string.rule_allow_domain, domain),
+                label    = str(when {
+                    action == FilterRule.Action.DENY -> R.string.rule_block_domain
+                    overrides -> R.string.rule_allow_domain_risky
+                    else -> R.string.rule_allow_domain
+                }, normalized),
                 action   = action,
                 source   = FilterRule.Source.USER,
                 priority = FilterRule.HIGH_PRIORITY,
-                matchDomain = domain.trim().lowercase(),
+                matchDomain = normalized,
+                overridesSecurity = overrides,
             )
             repo.addRule(rule)
             refresh()

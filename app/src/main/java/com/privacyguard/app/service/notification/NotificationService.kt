@@ -12,6 +12,8 @@ class NotificationService(private val context: Context) {
     private val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     fun blocklistUpdated(sourceName: String, totalEntries: Int) {
+        // The Settings "Notifications" switch covers this too.
+        if (!com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(context).notificationsEnabled.value) return
         val notification = NotificationCompat.Builder(context, CHANNEL_UPDATES)
             .setSmallIcon(android.R.drawable.ic_menu_info_details)
             .setContentTitle(context.getString(com.privacyguard.app.R.string.notif_blocklist_updated))

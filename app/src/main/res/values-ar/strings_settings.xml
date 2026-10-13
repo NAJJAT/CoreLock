@@ -18,7 +18,7 @@
     <string name="set_vpn_drop_alert">تنبيه انقطاع VPN</string>
     <string name="set_vpn_drop_alert_desc">إشعار وإعادة تشغيل الحماية عند انقطاع VPN (لا يحظر حركة البيانات)</string>
     <string name="set_notifications">الإشعارات</string>
-    <string name="set_notifications_desc">التنبيهات والملخّصات</string>
+    <string name="set_notifications_desc">كل التنبيهات والملخص الأسبوعي وإشعارات تحديث قوائم الحظر. لتنبيه انقطاع VPN مفتاح خاص به.</string>
     <string name="set_weekly_report">التقرير الأسبوعي</string>
     <string name="set_weekly_report_desc">تلقّي ملخّص الخصوصية</string>
     <string name="set_doh">DNS عبر HTTPS</string>
@@ -87,11 +87,11 @@
         <item quantity="other">%d يوم</item>
     </plurals>
     <string name="set_retention">مدة الاحتفاظ بالبيانات</string>
-    <string name="set_clear_data">مسح جميع بيانات الاتصالات</string>
+    <string name="set_clear_data">مسح كل البيانات المجمّعة</string>
     <string name="set_danger_zone">منطقة خطرة</string>
-    <string name="set_clear_confirm_title">مسح بيانات الاتصالات</string>
-    <string name="set_clear_confirm_body">أكّد هويتك قبل حذف سجل الاتصالات المحلي</string>
-    <string name="set_cleared">مُسح سجل الاتصالات</string>
+    <string name="set_clear_confirm_title">مسح كل البيانات المجمّعة</string>
+    <string name="set_clear_confirm_body">يحذف الاتصالات وطلبات DNS وملفات تعريف التطبيقات والتنبيهات وثقة الشبكة والمحتوى المفحوص وأحداث الكاميرا والميكروفون وخطوط أساس TLS والتقاطات الحزم والملفات المصدَّرة. تبقى إعداداتك وقواعدك وقوائم الحظر.</string>
+    <string name="set_cleared">تم مسح كل البيانات المجمّعة</string>
     <string name="set_analysis">التحليل والرؤى</string>
     <string name="set_nav_security">تحليل الأمان</string>
     <string name="set_nav_security_desc">بصمات TLS للتطبيقات، وتنبيهات التشفير، وشفافية الشهادات</string>

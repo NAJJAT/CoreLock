@@ -33,6 +33,7 @@ fun RulesScreen(vm: RulesViewModel = viewModel()) {
     val suggestions by vm.suggestions.collectAsStateWithLifecycle()
     val searchQuery by vm.searchQuery.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
+    val securityWarning by vm.securityWarning.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -135,6 +136,13 @@ fun RulesScreen(vm: RulesViewModel = viewModel()) {
         }
     }
 
+    securityWarning?.let { domain ->
+        SecurityAllowWarningDialog(
+            domain = domain,
+            onConfirm = { vm.addDomainRule(domain, com.privacyguard.core.filter.FilterRule.Action.ALLOW, confirmedRisk = true) },
+            onDismiss = vm::dismissSecurityWarning,
+        )
+    }
     if (showAddDialog) {
         AddRuleDialog(
             onDismiss = { showAddDialog = false },

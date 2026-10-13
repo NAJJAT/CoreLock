@@ -50,6 +50,8 @@ class DebugHooksReceiver : BroadcastReceiver() {
                     context, com.privacyguard.platform.android.PrivacyVpnService.startIntent(context))
             }.onFailure { Log.w(TAG, "START_VPN refused: ${it.message}") }
             ACTION_SET_DUAL_VPN -> setDualVpn(context, intent)
+            ACTION_SET_SETTING -> setSetting(context, intent)
+            ACTION_DOMAIN_RULE -> domainRule(context, intent)
             ACTION_FAIL_NEXT_START -> {
                 context.getSharedPreferences(DEBUG_PREFS, Context.MODE_PRIVATE)
                     .edit().putBoolean(KEY_FAIL_NEXT_START, true).commit()
@@ -101,6 +103,56 @@ class DebugHooksReceiver : BroadcastReceiver() {
     }
 
     /**
+     * Settings switches without the UI:
+     *   adb shell am broadcast -a com.privacyguard.debug.SET_SETTING --es name ct|notifications --ez value true -p PKG
+     */
+    private fun setSetting(context: Context, intent: Intent) {
+        val s = com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(context)
+        val value = intent.getBooleanExtra("value", false)
+        when (intent.getStringExtra("name")) {
+            "ct" -> s.setCtMonitoringEnabled(value)
+            "notifications" -> s.setNotificationsEnabled(value)
+            else -> { Log.w(TAG, "SETTING unknown name"); return }
+        }
+        Log.i(TAG, "SETTING ${intent.getStringExtra("name")}=$value")
+    }
+
+    /**
+     * Domain rules without the UI (risky = the user accepted the malware warning):
+     *   adb shell am broadcast -a com.privacyguard.debug.DOMAIN_RULE --es domain d --ez allow true [--ez risky true] -p PKG
+     *   adb shell am broadcast -a com.privacyguard.debug.DOMAIN_RULE --es delete ID -p PKG
+     * Also logs one domain from the malware lists (SAMPLE malware=...) to test with.
+     */
+    private fun domainRule(context: Context, intent: Intent) {
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val config = com.privacyguard.app.data.db.ConfigDatabase.getInstance(context)
+                val repo = com.privacyguard.app.data.repository.RulesRepo(config.rulesDao(), com.privacyguard.core.filter.FilterEngine())
+                val delete = intent.getStringExtra("delete")
+                val domain = intent.getStringExtra("domain")
+                when {
+                    delete != null -> { repo.deleteRule(delete); Log.i(TAG, "RULE deleted $delete") }
+                    domain != null -> {
+                        val allow = intent.getBooleanExtra("allow", true)
+                        val base = if (allow) com.privacyguard.core.filter.FilterRule.allowDomain(domain)
+                            else com.privacyguard.core.filter.FilterRule.blockDomain(domain, source = com.privacyguard.core.filter.FilterRule.Source.USER)
+                        val rule = base.copy(id = "debug-$domain", overridesSecurity = allow && intent.getBooleanExtra("risky", false))
+                        repo.upsertRule(rule)
+                        Log.i(TAG, "RULE ${rule.id} allow=$allow overridesSecurity=${rule.overridesSecurity}")
+                    }
+                }
+                val sample = AppDatabase.getInstance(context).blocklistDao()
+                    .getEntriesByCategory(com.privacyguard.app.data.repository.BlocklistRepo.CAT_MALWARE)
+                    .filter { !it.domain.startsWith("*") }.map { it.domain }.shuffled().take(40)
+                Log.i(TAG, "SAMPLE malware=$sample")
+            } finally {
+                pending.finish()
+            }
+        }
+    }
+
+    /**
      * Configures dual-hop without the UI (the phone may be locked during a test run):
      *   adb shell am broadcast -a com.privacyguard.debug.SET_DUAL_VPN --ez enabled true \
      *       --es hop1 127.0.0.1 --ei hop1port 1080 --es hop2 127.0.0.1 --ei hop2port 1081 \
@@ -144,6 +196,8 @@ class DebugHooksReceiver : BroadcastReceiver() {
         const val ACTION_DUMP_NETWORK = "com.privacyguard.debug.DUMP_NETWORK"
         const val ACTION_START_VPN = "com.privacyguard.debug.START_VPN"
         const val ACTION_SET_DUAL_VPN = "com.privacyguard.debug.SET_DUAL_VPN"
+        const val ACTION_SET_SETTING = "com.privacyguard.debug.SET_SETTING"
+        const val ACTION_DOMAIN_RULE = "com.privacyguard.debug.DOMAIN_RULE"
         const val DEBUG_PREFS = "debug_hooks"
         const val KEY_ALLOW_SCREENSHOTS = "allow_screenshots"
         const val KEY_FAIL_NEXT_START = "fail_next_start"

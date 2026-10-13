@@ -165,11 +165,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun clearConnectionData() {
-        viewModelScope.launch {
-            db.connectionDao().deleteAll()
-            db.connectionProfileDao().deleteAll()
-            db.dnsAnomalyDao().deleteAll()
-        }
+        viewModelScope.launch { com.privacyguard.app.data.repository.LocalDataEraser.eraseAll(getApplication()) }
     }
 
     fun runDiagnostics() {

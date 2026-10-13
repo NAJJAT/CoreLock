@@ -120,6 +120,9 @@ interface BlocklistDao {
     /**
      * Gets total count
      */
+    @Query("SELECT EXISTS(SELECT 1 FROM blocklist WHERE isEnabled = 1 AND category = :category AND domain IN (:candidates))")
+    suspend fun anyInCategory(category: String, candidates: List<String>): Boolean
+
     @Query("SELECT COUNT(*) FROM blocklist")
     suspend fun count(): Int
     

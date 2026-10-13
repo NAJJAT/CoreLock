@@ -36,6 +36,8 @@ class TlsFingerprintMonitor(
 ) {
     private val engine = TlsBaselineEngine(RoomTlsBaselineStore(db.tlsBaselineDao()))
 
+    fun clearCache() = engine.clearCache()
+
     // Platform part of the environment signature. Recomputed at most every 10 min:
     // a WebView or Conscrypt update lands mid-session rarely, and this runs per new fingerprint.
     @Volatile private var platformSig: Pair<Long, String>? = null

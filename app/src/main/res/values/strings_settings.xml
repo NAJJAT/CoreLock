@@ -18,7 +18,7 @@
     <string name="set_vpn_drop_alert">VPN drop alert</string>
     <string name="set_vpn_drop_alert_desc">Notify and restart protection if the VPN drops (does not block traffic)</string>
     <string name="set_notifications">Notifications</string>
-    <string name="set_notifications_desc">Alerts and summaries</string>
+    <string name="set_notifications_desc">Every alert, the weekly summary and blocklist update notices. The VPN drop alert has its own switch.</string>
     <string name="set_weekly_report">Weekly report</string>
     <string name="set_weekly_report_desc">Deliver privacy summary</string>
     <string name="set_doh">DNS over HTTPS</string>
@@ -79,11 +79,11 @@
         <item quantity="other">%d days</item>
     </plurals>
     <string name="set_retention">Data retention</string>
-    <string name="set_clear_data">Clear all connection data</string>
+    <string name="set_clear_data">Clear all collected data</string>
     <string name="set_danger_zone">Danger zone</string>
-    <string name="set_clear_confirm_title">Clear connection data</string>
-    <string name="set_clear_confirm_body">Confirm access before deleting local connection history</string>
-    <string name="set_cleared">Connection history cleared</string>
+    <string name="set_clear_confirm_title">Clear all collected data</string>
+    <string name="set_clear_confirm_body">Deletes connections, DNS lookups, app profiles, alerts, network trust, inspected payloads, camera and microphone events, TLS baselines, packet captures and exports. Your settings, rules and blocklists stay.</string>
+    <string name="set_cleared">All collected data cleared</string>
     <string name="set_analysis">Analysis &amp; insights</string>
     <string name="set_nav_security">Security Analysis</string>
     <string name="set_nav_security_desc">App TLS fingerprints, cipher alerts, certificate transparency</string>

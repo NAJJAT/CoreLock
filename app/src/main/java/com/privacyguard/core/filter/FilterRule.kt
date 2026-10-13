@@ -39,6 +39,11 @@ data class FilterRule(
     /** If true, rule only applies when the owning app is in the background. */
     val matchBackground: Boolean? = null,
     val hitCount: Int = 0,
+    /**
+     * Allow rules only: also lets the domain through when a malware or phishing list
+     * has it. Set only after the user confirmed a warning.
+     */
+    val overridesSecurity: Boolean = false,
 ) {
     // ─────────────────────────────────────────────────────────────────────────
     // Enums

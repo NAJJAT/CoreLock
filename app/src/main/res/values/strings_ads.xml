@@ -41,4 +41,9 @@
     <string name="ads_delete_rule">Delete rule</string>
     <string name="ads_source_counts">%1$d of %2$s enabled</string>
     <string name="ads_on">On</string>
+    <string name="rule_allow_domain_risky">Allow %1$s (malware warning accepted)</string>
+    <string name="rule_security_warn_title">This site is on a malware list</string>
+    <string name="rule_security_warn_body">%1$s is on a malware or phishing list. Sites like this can steal passwords, install harmful apps or take over accounts.\nAn Allow rule normally only overrides ad and tracker lists. If you continue, PrivacyGuard will also stop blocking this site for malware. Only do this if you are sure the listing is a mistake.</string>
+    <string name="rule_security_warn_confirm">Allow anyway</string>
+    <string name="rule_security_warn_cancel">Keep blocked</string>
 </resources>

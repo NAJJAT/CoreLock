@@ -18,7 +18,7 @@
     <string name="set_vpn_drop_alert">Alerte de coupure du VPN</string>
     <string name="set_vpn_drop_alert_desc">Prévenir et relancer la protection si le VPN se coupe (ne bloque pas le trafic)</string>
     <string name="set_notifications">Notifications</string>
-    <string name="set_notifications_desc">Alertes et résumés</string>
+    <string name="set_notifications_desc">Toutes les alertes, le résumé hebdomadaire et les avis de mise à jour des listes de blocage. L’alerte de coupure du VPN a son propre interrupteur.</string>
     <string name="set_weekly_report">Rapport hebdomadaire</string>
     <string name="set_weekly_report_desc">Recevoir un résumé de confidentialité</string>
     <string name="set_doh">DNS sur HTTPS</string>
@@ -81,11 +81,11 @@
         <item quantity="other">%d jours</item>
     </plurals>
     <string name="set_retention">Conservation des données</string>
-    <string name="set_clear_data">Effacer toutes les données de connexion</string>
+    <string name="set_clear_data">Effacer toutes les données collectées</string>
     <string name="set_danger_zone">Zone sensible</string>
-    <string name="set_clear_confirm_title">Effacer les données de connexion</string>
-    <string name="set_clear_confirm_body">Confirmez votre identité avant de supprimer l’historique local des connexions</string>
-    <string name="set_cleared">Historique des connexions effacé</string>
+    <string name="set_clear_confirm_title">Effacer toutes les données collectées</string>
+    <string name="set_clear_confirm_body">Supprime les connexions, les requêtes DNS, les profils d’apps, les alertes, la confiance réseau, les contenus inspectés, les événements caméra et micro, les références TLS, les captures de paquets et les exports. Vos réglages, règles et listes de blocage sont conservés.</string>
+    <string name="set_cleared">Toutes les données collectées ont été effacées</string>
     <string name="set_analysis">Analyse et informations</string>
     <string name="set_nav_security">Analyse de sécurité</string>
     <string name="set_nav_security_desc">Empreintes TLS des apps, alertes de chiffrement, Certificate Transparency</string>

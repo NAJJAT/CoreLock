@@ -41,4 +41,9 @@
     <string name="ads_delete_rule">Regel verwijderen</string>
     <string name="ads_source_counts">%1$d van %2$s ingeschakeld</string>
     <string name="ads_on">Aan</string>
+    <string name="rule_allow_domain_risky">%1$s toestaan (malwarewaarschuwing geaccepteerd)</string>
+    <string name="rule_security_warn_title">Deze site staat op een malwarelijst</string>
+    <string name="rule_security_warn_body">%1$s staat op een lijst met malware- of phishingsites. Zulke sites kunnen wachtwoorden stelen, schadelijke apps installeren of accounts overnemen.\nEen toestaan-regel gaat normaal alleen boven advertentie- en trackerlijsten. Als je doorgaat, blokkeert PrivacyGuard deze site ook niet meer als malware. Doe dit alleen als je zeker weet dat de vermelding een vergissing is.</string>
+    <string name="rule_security_warn_confirm">Toch toestaan</string>
+    <string name="rule_security_warn_cancel">Geblokkeerd laten</string>
 </resources>

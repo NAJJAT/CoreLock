@@ -145,6 +145,9 @@ class MetadataEngine {
     // Queries
     // ─────────────────────────────────────────────────────────────────────────
 
+    /** "Clear data": forget every profile, so the next save does not bring them back. */
+    fun clear() = profiles.clear()
+
     fun allProfiles(): List<ConnectionProfile> = profiles.values.toList()
 
     fun profilesForApp(pkg: String): List<ConnectionProfile> =

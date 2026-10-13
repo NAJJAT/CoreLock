@@ -23,7 +23,11 @@ import java.util.concurrent.atomic.AtomicLong
  *  - "*.ads.example.com" → blocks all subdomains
  *  - "*.example.com"     → blocks example.com and all sub-domains
  */
-class DomainFilter {
+/**
+ * [useNativeBloom]: the native bloom filter is one global instance, so only one
+ * DomainFilter (the main blocklist) may use it; a second one would overwrite it.
+ */
+class DomainFilter(private val useNativeBloom: Boolean = true) {
 
     // ─────────────────────────────────────────────────────────────────────────
     // Trie
@@ -91,7 +95,7 @@ class DomainFilter {
         insertedCount.set(count)
 
         // Accelerate lookups with native bloom filter when Rust is available
-        if (com.privacyguard.core.native_engine.RustBridge.isAvailable) {
+        if (useNativeBloom && com.privacyguard.core.native_engine.RustBridge.isAvailable) {
             com.privacyguard.core.native_engine.RustBridge.bloomRebuild(domainList.toTypedArray())
         }
     }
@@ -147,7 +151,7 @@ class DomainFilter {
         if (d.isEmpty()) return false
 
         // Bloom filter fast-path: if native says no, skip trie entirely (~5x faster)
-        if (com.privacyguard.core.native_engine.RustBridge.isAvailable &&
+        if (useNativeBloom && com.privacyguard.core.native_engine.RustBridge.isAvailable &&
             !mightBeInNativeBloom(d)) {
             return false
         }

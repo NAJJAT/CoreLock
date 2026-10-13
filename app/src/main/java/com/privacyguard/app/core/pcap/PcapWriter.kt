@@ -42,6 +42,10 @@ object PcapWriter {
         return lastCompletedFile
     }
 
+    /** After "Clear data": the file is gone, so there is nothing left to share. */
+    @Synchronized
+    fun forgetLastCapture() { lastCompletedFile = null }
+
     fun isCapturing(): Boolean = capturing
 
     fun getLastCompletedFile(): File? = lastCompletedFile

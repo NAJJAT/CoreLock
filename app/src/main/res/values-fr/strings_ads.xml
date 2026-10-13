@@ -43,4 +43,9 @@
     <string name="ads_delete_rule">Supprimer la règle</string>
     <string name="ads_source_counts">%1$d sur %2$s activés</string>
     <string name="ads_on">Activé</string>
+    <string name="rule_allow_domain_risky">Autoriser %1$s (alerte malware acceptée)</string>
+    <string name="rule_security_warn_title">Ce site figure sur une liste de malwares</string>
+    <string name="rule_security_warn_body">%1$s figure sur une liste de sites malveillants ou d’hameçonnage. Ce type de site peut voler des mots de passe, installer des apps nuisibles ou pirater des comptes.\nUne règle d’autorisation ne passe normalement qu’avant les listes de publicités et de traqueurs. Si vous continuez, PrivacyGuard cessera aussi de bloquer ce site comme malveillant. Ne le faites que si vous êtes sûr que ce classement est une erreur.</string>
+    <string name="rule_security_warn_confirm">Autoriser quand même</string>
+    <string name="rule_security_warn_cancel">Laisser bloqué</string>
 </resources>

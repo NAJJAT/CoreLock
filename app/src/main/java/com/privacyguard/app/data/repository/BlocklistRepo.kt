@@ -67,6 +67,14 @@ class BlocklistRepo(
         blocklistDao.enabledDomainsIn(categories.toList())
     }
 
+    /**
+     * True when a malware or phishing list has this domain or a parent of it (also as
+     * "*.parent"). Allowing such a domain needs the user to confirm a warning.
+     */
+    suspend fun isSecurityThreat(domain: String): Boolean = withContext(Dispatchers.IO) {
+        blocklistDao.anyInCategory(CAT_MALWARE, securityCandidates(domain))
+    }
+
     suspend fun domainsForCategory(cat: String): List<String> = withContext(Dispatchers.IO) {
         blocklistDao.getEntriesByCategory(cat).map { it.domain }
     }
@@ -88,6 +96,14 @@ class BlocklistRepo(
     }
 
     companion object {
+        /** The domain, each parent, and each as a "*." wildcard entry. */
+        fun securityCandidates(domain: String): List<String> {
+            val labels = domain.trim().lowercase().trimEnd('.').removePrefix("*.").split('.').filter { it.isNotEmpty() }
+            return labels.indices.filter { labels.size - it >= 2 }
+                .map { labels.drop(it).joinToString(".") }
+                .flatMap { listOf(it, "*.$it") }
+        }
+
         const val SOURCE_EASYLIST = "EasyList"
         const val SOURCE_EASYPRIVACY = "EasyPrivacy"
         const val SOURCE_STEVEN_BLACK = "StevenBlack"

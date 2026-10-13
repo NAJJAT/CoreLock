@@ -97,6 +97,8 @@ class PrivacyVpnService : VpnService() {
     private lateinit var dnsAnomalyDetector: DnsAnomalyDetector
     private lateinit var filterEngine: FilterEngine
     private lateinit var domainFilter: DomainFilter
+    // Malware and phishing hosts, at every level: a plain Allow rule does not open them.
+    private val securityFilter = DomainFilter(useNativeBloom = false)
     private lateinit var ipFilter: IpFilter
     private lateinit var appFilter: AppFilter
     private lateinit var encEnforcer: EncryptionEnforcer
@@ -130,6 +132,16 @@ class PrivacyVpnService : VpnService() {
     private val cleartextNotifiedPackages = ConcurrentHashMap.newKeySet<String>()
     private val backgroundBlockNotifiedPackages = ConcurrentHashMap.newKeySet<String>()
     private val ctNotifiedDomains = ConcurrentHashMap.newKeySet<String>()
+
+    // "Clear data" in Settings: drop what this run remembers, or it is saved back.
+    private val dataClearListener = com.privacyguard.app.data.repository.LocalDataEraser.Listener {
+        if (::metadataEngine.isInitialized) metadataEngine.clear()
+        if (::tlsFingerprintMonitor.isInitialized) tlsFingerprintMonitor.clearCache()
+        cleartextNotifiedPackages.clear()
+        ctNotifiedDomains.clear()
+        totalCleartext.set(0)
+        StatsManager.reset()
+    }
     @Volatile private var blockCleartextRuleActive = false
 
     /** Guards the tunnel's lifetime: establishing it vs. tearing it down. */
@@ -176,6 +188,7 @@ class PrivacyVpnService : VpnService() {
 
     override fun onDestroy() {
         Log.i(TAG, "VPN service destroyed")
+        com.privacyguard.app.data.repository.LocalDataEraser.unregister(dataClearListener)
         stopVpn()
         scope.cancel()
         super.onDestroy()
@@ -257,7 +270,7 @@ class PrivacyVpnService : VpnService() {
         sessionTable = SessionTable()
         sessionTable.addListener(SessionLifecycleListener())
 
-        ctMonitor = CtMonitor { domain, entries ->
+        ctMonitor = CtMonitor(baseline = com.privacyguard.core.tls.SharedPrefsCtBaselineStore(this)) { domain, entries ->
             val detail = entries.firstOrNull()?.let { "issuer: ${it.issuerName.take(60)}" }
             scope.launch {
                 db.tlsAlertDao().insert(TlsAlertEntity(
@@ -292,6 +305,7 @@ class PrivacyVpnService : VpnService() {
         }
         com.privacyguard.app.vpn.BootReceiver.markVpnActive(this)
         watchSettings(settings)
+        com.privacyguard.app.data.repository.LocalDataEraser.register(dataClearListener)
         startLiveStats()
         scope.launch {
             appTracker.preloadInstalledApps()
@@ -341,6 +355,7 @@ class PrivacyVpnService : VpnService() {
             protectSocket = { sock -> protect(sock) },
             protectTcpSocket = { sock -> protect(sock) },
             domainFilter = domainFilter,
+            securityFilter = securityFilter,
             adSdkPolicy = com.privacyguard.app.adprivacy.AdSdkPolicy(enabled = { settings.adSdkBlockingEnabled.value }),
             dualVpnConfig = { settings.getDualVpnConfig() },
         ).also { h ->
@@ -368,8 +383,6 @@ class PrivacyVpnService : VpnService() {
             }
         }
 
-        // Opt-in: CT checks send contacted domains to crt.sh.
-        if (settings.ctMonitoringEnabled.value) ctMonitor.startMonitoring()
         sensorWatcher = com.privacyguard.app.adprivacy.SensorUsageWatcher(
             context = this,
             dao = db.sensorEventDao(),
@@ -419,6 +432,8 @@ class PrivacyVpnService : VpnService() {
             }
         }
         scope.launch { BlocklistSyncBus.version.collect { reloadBlocklists() } }
+        // Opt-in: CT checks send contacted domains to crt.sh. Turning it off stops at once.
+        scope.launch { settings.ctMonitoringEnabled.collect { ctMonitor.setEnabled(it) } }
         scope.launch { settings.dohEnabled.collect { dnsHandler.dohEnabled = it } }
         scope.launch { settings.dohProvider.collect { dnsHandler.dohProvider = it } }
         scope.launch { settings.upstreamDns.collect { dnsHandler.upstreamDns = validUpstream(it) } }
@@ -445,6 +460,7 @@ class PrivacyVpnService : VpnService() {
         val blocked = blocklistRepo.domainsIn(com.privacyguard.core.filter.ProtectionLevels.categoriesFor(level)) +
             (if (com.privacyguard.core.filter.ProtectionLevels.includesCuratedAdHosts(level)) CuratedAdDomains.all else emptyList())
         domainFilter.rebuild(blocked)
+        securityFilter.rebuild(blocklistRepo.domainsIn(setOf(com.privacyguard.app.data.repository.BlocklistRepo.CAT_MALWARE)))
         metadataEngine.knownTrackers = (blocklistRepo.allDomains() + CuratedAdDomains.all).toSet()
     }
 
@@ -763,9 +779,7 @@ class PrivacyVpnService : VpnService() {
         }
 
         // Register SNI with CT monitor
-        if (SettingsPreferences.getInstance(this).ctMonitoringEnabled.value) {
-            hello.sni?.let { ctMonitor.addDomain(it) }
-        }
+        hello.sni?.let { ctMonitor.addDomain(it) }  // ignored while CT checks are off
     }
 
     private fun recordBlock() {

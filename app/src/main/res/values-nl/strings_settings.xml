@@ -18,7 +18,7 @@
     <string name="set_vpn_drop_alert">Melding bij VPN-uitval</string>
     <string name="set_vpn_drop_alert_desc">Melden en de bescherming herstarten als de VPN wegvalt (blokkeert geen verkeer)</string>
     <string name="set_notifications">Meldingen</string>
-    <string name="set_notifications_desc">Waarschuwingen en overzichten</string>
+    <string name="set_notifications_desc">Alle waarschuwingen, het weekoverzicht en meldingen over blokkeerlijst-updates. De melding bij uitval van de VPN heeft een eigen schakelaar.</string>
     <string name="set_weekly_report">Weekrapport</string>
     <string name="set_weekly_report_desc">Privacyoverzicht ontvangen</string>
     <string name="set_doh">DNS via HTTPS</string>
@@ -79,11 +79,11 @@
         <item quantity="other">%d dagen</item>
     </plurals>
     <string name="set_retention">Bewaartermijn</string>
-    <string name="set_clear_data">Alle verbindingsgegevens wissen</string>
+    <string name="set_clear_data">Alle verzamelde gegevens wissen</string>
     <string name="set_danger_zone">Gevarenzone</string>
-    <string name="set_clear_confirm_title">Verbindingsgegevens wissen</string>
-    <string name="set_clear_confirm_body">Bevestig je identiteit voordat de lokale verbindingsgeschiedenis wordt gewist</string>
-    <string name="set_cleared">Verbindingsgeschiedenis gewist</string>
+    <string name="set_clear_confirm_title">Alle verzamelde gegevens wissen</string>
+    <string name="set_clear_confirm_body">Wist verbindingen, DNS-opzoekingen, app-profielen, waarschuwingen, netwerkvertrouwen, geïnspecteerde inhoud, camera- en microfoongebeurtenissen, TLS-basislijnen, pakketopnames en exports. Je instellingen, regels en blokkeerlijsten blijven.</string>
+    <string name="set_cleared">Alle verzamelde gegevens gewist</string>
     <string name="set_analysis">Analyse en inzichten</string>
     <string name="set_nav_security">Beveiligingsanalyse</string>
     <string name="set_nav_security_desc">TLS-vingerafdrukken per app, waarschuwingen over versleuteling, certificate transparency</string>

@@ -23,6 +23,14 @@ import com.privacyguard.app.R
  */
 class NotificationHelper(private val context: Context) {
 
+    /**
+     * The Settings "Notifications" switch silences every alert and summary. The VPN
+     * drop alert is the exception: it has its own switch and exists to say that
+     * protection is off.
+     */
+    private fun muted(): Boolean =
+        !com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(context).notificationsEnabled.value
+
     /** The app's own label ("Facebook"), never a package fragment ("katana"). */
     private fun appLabel(packageName: String?): String {
         if (packageName.isNullOrBlank()) return context.getString(R.string.notif_unknown_app)
@@ -150,6 +158,7 @@ class NotificationHelper(private val context: Context) {
         domain: String,
         mainActivityClass: Class<*>,
     ) {
+        if (muted()) return
         val tapIntent  = Intent(context, mainActivityClass)
         val pendingTap = PendingIntent.getActivity(
             context, NOTIFICATION_ID_ALERT, tapIntent,
@@ -187,6 +196,7 @@ class NotificationHelper(private val context: Context) {
         topApp: String?,
         mainActivityClass: Class<*>,
     ) {
+        if (muted()) return
         val tapIntent  = Intent(context, mainActivityClass)
         val pendingTap = PendingIntent.getActivity(
             context, NOTIFICATION_ID_REPORT, tapIntent,
@@ -242,6 +252,7 @@ class NotificationHelper(private val context: Context) {
         sni: String?,
         mainActivityClass: Class<*>,
     ) {
+        if (muted()) return
         val tapIntent  = Intent(context, mainActivityClass).putExtra(EXTRA_NAV_ROUTE, "alerts")
         val pendingTap = PendingIntent.getActivity(
             context, NOTIFICATION_ID_JA3_THREAT, tapIntent,
@@ -278,6 +289,7 @@ class NotificationHelper(private val context: Context) {
         sni: String?,
         mainActivityClass: Class<*>,
     ) {
+        if (muted()) return
         val id = NOTIFICATION_ID_TLS_FP_BASE + (packageName.hashCode() and 0xFFF)
         val tapIntent = Intent(context, mainActivityClass).putExtra(EXTRA_NAV_ROUTE, "crypto")
         val pendingTap = PendingIntent.getActivity(
@@ -315,6 +327,7 @@ class NotificationHelper(private val context: Context) {
         summary: String,
         mainActivityClass: Class<*>,
     ) {
+        if (muted()) return
         val tapIntent = Intent(context, mainActivityClass).putExtra(EXTRA_NAV_ROUTE, "alerts")
         val pendingTap = PendingIntent.getActivity(
             context, NOTIFICATION_ID_BEHAVIOR, tapIntent,
@@ -342,6 +355,7 @@ class NotificationHelper(private val context: Context) {
         destination: String,
         mainActivityClass: Class<*>,
     ) {
+        if (muted()) return
         val tapIntent = Intent(context, mainActivityClass).putExtra(EXTRA_NAV_ROUTE, "connections")
         val pendingTap = PendingIntent.getActivity(
             context, NOTIFICATION_ID_CLEARTEXT, tapIntent,
@@ -370,6 +384,7 @@ class NotificationHelper(private val context: Context) {
         newCertCount: Int,
         mainActivityClass: Class<*>,
     ) {
+        if (muted()) return
         val tapIntent  = Intent(context, mainActivityClass).putExtra(EXTRA_NAV_ROUTE, "alerts")
         val pendingTap = PendingIntent.getActivity(
             context, NOTIFICATION_ID_CT_CERT, tapIntent,
@@ -429,6 +444,7 @@ class NotificationHelper(private val context: Context) {
         destination: String,
         mainActivityClass: Class<*>,
     ) {
+        if (muted()) return
         val tapIntent = Intent(context, mainActivityClass).putExtra(EXTRA_NAV_ROUTE, "apps")
         val pendingTap = PendingIntent.getActivity(
             context, NOTIFICATION_ID_BACKGROUND_BLOCK, tapIntent,
