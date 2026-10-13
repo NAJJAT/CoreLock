@@ -191,7 +191,7 @@ class DnsAnomalyDetector {
         private val OWN_HOSTS = listOf(
             "crt.sh", "easylist.to", "oisd.nl", "raw.githubusercontent.com",
             "cloudflare-dns.com", "dns.google", "dns.quad9.net",
-            "reports.exodus-privacy.eu.org", "api.ipify.org",
+            "reports.exodus-privacy.eu.org", "api.ipify.org", "urlhaus.abuse.ch",
         )
 
         fun isOwnHost(domain: String): Boolean {

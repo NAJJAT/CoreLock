@@ -17,6 +17,16 @@ explains what it finds in plain language in **English, Dutch, French and Arabic*
 > App name in code and on the device: **PrivacyGuard** (`com.privacyguard.app`).
 > Repository name: **CoreLock**.
 
+**How it works, in plain English:** [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md)
+describes what the code actually does: the path of one connection, how every
+number on every screen is calculated, each detector and its thresholds, what is
+stored and for how long, what leaves the phone, and the known limits. In short:
+all traffic runs through a local VPN on the phone; DNS names are checked against
+your rules, the lists for your protection level and an ad-SDK policy; every
+connection is relayed and recorded with its app, server, size, timing and
+encryption; detectors look for odd DNS names, TLS changes, timer-like contacts,
+behaviour changes and stalkerware traits; history stays encrypted on the phone.
+
 ---
 
 ## Contents
@@ -49,14 +59,14 @@ explains what it finds in plain language in **English, Dutch, French and Arabic*
 | Feature | Details |
 |---|---|
 | **Local VPN engine** | A TUN interface carries all IPv4 and IPv6 traffic (TCP and UDP). Both address families run through the same TCP state machine (`TcpForwarder`, with flow control and retransmission toward the app) and UDP forwarder (oversized replies are fragmented). The tunnel only opens once rules and blocklists are loaded. Every finished flow is written to history with its app, hostname, bytes and timing. |
-| **DNS filtering** | Every lookup goes through `DnsHandler`: blocklists (hosts, EasyList and domain-list formats, trie lookup), your own rules, and the per-app ad-SDK policy. Blocked names get *NXDOMAIN*, so no connection is made. Lookups go only to the resolver you chose (and that provider's second address); if it cannot be reached the app gets *SERVFAIL*. |
+| **DNS filtering** | Every lookup goes through `DnsHandler`: blocklists (hosts, EasyList and domain-list formats, hash-set lookup), your own rules, and the per-app ad-SDK policy. A user Allow beats ad, tracker and telemetry lists and the ad-SDK policy; malware and phishing hosts stay blocked unless the user accepts a warning. Blocked names get *NXDOMAIN*, so no connection is made. Lookups go only to the resolver you chose (and that provider's second address); if it cannot be reached the app gets *SERVFAIL*. |
 | **DNS over HTTPS** | Optional RFC 8484 DoH to Cloudflare, Google or Quad9. Connects to the provider's literal bootstrap address so the DoH host lookup cannot loop through the tunnel. If DoH fails the lookup is answered with *SERVFAIL*; it is never resent as plain DNS. |
 | **Encrypted-DNS bypass guard** | Drops DNS-over-TLS/QUIC and DoH to known resolver IPs from other apps, so they fall back to DNS that the filter can see. |
 | **Filter rules** | Block by domain, IP/CIDR, app or globally, optionally "only in the background". Three protection levels (Minimal, Standard, Strict). Rules apply instantly without restarting the VPN. Hit counters and suggested rules. |
-| **Kill switch** | Uses Android's *Always-on VPN* with *Block connections without VPN* (only Android can block once the tunnel is gone). The card shows "blocking" only when Android reports lockdown; otherwise the app can alert and restart, not block. |
+| **Kill switch** | Uses Android's *Always-on VPN* with *Block connections without VPN* (only Android can block once the tunnel is gone). The card shows "blocking" only when Android reports lockdown; otherwise the VPN drop alert can only notify you (it cannot restart or block). |
 | **Cleartext / weak TLS** | Detects plain-HTTP connections and weak TLS versions and cipher suites (NULL, EXPORT, RC4, DES/3DES, anonymous). Optional rules block them. |
-| **Network trust** | Scores each network (Wi-Fi SSID or cellular) by cleartext traffic, DNS anomalies and weak TLS, and can recommend Strict mode. |
-| **Dual VPN** | Optional two-hop SOCKS5 chain for outbound traffic. |
+| **Network trust** | Scores each network from network-side signs only: open Wi-Fi, captive portal, tampered DNS answers, DNS hijacking, TLS interception. On a low-trust Wi-Fi it suggests Strict mode. |
+| **Dual VPN** | Optional two-hop SOCKS5 chain. Carries every TCP connection, and DNS when DoH is on. QUIC is dropped while it is on so apps use TCP; other UDP goes direct unless "Block UDP outside the chain" is on. |
 | **Quick Settings tile and boot start** | VPN toggle in the notification shade; restarts after reboot if it was on. |
 
 ### Detection
@@ -118,8 +128,9 @@ or Instagram.
 
 ### Reports and export
 
-- **PCAP export:** real PCAP files (LINKTYPE_RAW) for Wireshark/tcpdump. Starting
-  or sharing a capture requires device authentication.
+- **PCAP export:** real PCAP files (LINKTYPE_RAW) for Wireshark/tcpdump, both
+  directions. Stops at 100 MB or when protection stops; not encrypted, deleted
+  after 24 hours. Starting or sharing a capture requires device authentication.
 - **CSV export:** 7 days of connections (app, domain, IP, bytes, TLS, background, blocked).
 - **IT report:** PDF + JSON summary for IT staff (kept in English on purpose).
 - **Weekly report:** WorkManager summary notification.
@@ -155,7 +166,7 @@ or Instagram.
 | Request | When | What the other side learns |
 |---|---|---|
 | Upstream DNS (default 1.1.1.1; configurable, IP address only) or DoH (Cloudflare / Google / Quad9) | Every DNS lookup by any app; only to the chosen provider | The names looked up, from your IP |
-| Blocklists (GitHub raw, easylist.to, oisd.nl) and the Exodus tracker list | Periodic refresh / "Refresh now" | That the app is installed, from your IP |
+| Blocklists (raw.githubusercontent.com, easylist.to, small.oisd.nl, urlhaus.abuse.ch) and the Exodus tracker list | Periodic refresh / "Refresh now" | That the app is installed, from your IP |
 | crt.sh (Certificate Transparency) | Only if turned on in Settings | Registrable domains of TLS servers you contact |
 | api.ipify.org | Only if "External IP check" is on, when diagnostics run | Your public IP |
 | SIEM endpoint (enterprise only, set by MDM) | Only when the administrator enables shipping | Payload metadata; HTTPS with optional pinning and signing |
@@ -222,7 +233,7 @@ SQLCipher, WorkManager, AppCompat per-app locales, BouncyCastle and OkHttp
 
 ## Data storage and privacy
 
-- **Two databases.** History (`privacyguard.db`, Room v10) is large and
+- **Two databases.** History (`privacyguard.db`, Room v12) is large and
   disposable. Your configuration (rules, list toggles) lives in a separate
   config database, so clearing history never deletes your rules.
 - **Encryption at rest.** SQLCipher, with a passphrase wrapped by an Android
@@ -241,6 +252,9 @@ SQLCipher, WorkManager, AppCompat per-app locales, BouncyCastle and OkHttp
   choose (7/14/30/90 days) and caps the large tables at 500,000 rows. A
   weekly VACUUM compacts the file. Schemas are exported to `app/schemas/` and
   every migration has an instrumented test.
+- **Clear all collected data** (Settings) erases every history table, exports,
+  PCAPs and the Certificate Transparency record, and what the running VPN holds
+  in memory; settings, rules and blocklists stay.
 - **Screen privacy.** `FLAG_SECURE` blocks screenshots and recents thumbnails.
 - **Sensitive actions** (exports, PCAP, clearing data) require device
   authentication and are blocked on a tampered runtime. `AppSecurityMonitor`
@@ -515,7 +529,7 @@ app/src/
 ├── main/java/com/privacyguard/
 │   ├── core/          packet (IPv4/IPv6/TCP/UDP/DNS), session, filter, tls (ClientHello, JA3/JA4, ciphers, CT)
 │   ├── vpn/           forwarder (TcpForwarder, UdpForwarder, DnsHandler), tunnel (TUN reader/writer),
-│   │                  firewall (domain trie/bloom, IP/CIDR), inspector (DNS anomalies, encryption),
+│   │                  firewall (domain hash sets/bloom, IP/CIDR), inspector (DNS anomalies, encryption),
 │   │                  interception (TLS inspection seam)
 │   ├── platform/      PrivacyVpnService, AppTracker, ForegroundAppDetector, NotificationHelper
 │   ├── ui/            AppNavHost (navigation, bottom bar, routes)
