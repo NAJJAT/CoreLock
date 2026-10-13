@@ -2,11 +2,11 @@
 <resources>
     <string name="stats_title">الإحصاءات</string>
     <string name="stats_subtitle">تحليلات حركة البيانات واتجاهات الحالات الشاذة</string>
-    <string name="stats_badge_today">اليوم</string>
+    <string name="stats_badge_today">24 ساعة</string>
     <string name="stats_total_connections">إجمالي الاتصالات</string>
     <string name="stats_data_transferred">البيانات المنقولة</string>
     <string name="stats_block_rate">نسبة الحظر</string>
-    <string name="stats_share_score_text">درجة خصوصيتي اليوم %1$d/100.</string>
+    <string name="stats_share_score_text">درجة خصوصيتي خلال آخر 24 ساعة هي %1$d/100.</string>
     <string name="stats_share_score">مشاركة درجة الخصوصية</string>
     <string name="stats_gen_it">إنشاء تقرير لقسم تقنية المعلومات</string>
     <string name="stats_gen_it_confirm">أكّد هويتك قبل تصدير بيانات الأمان</string>
@@ -16,7 +16,7 @@
     <string name="stats_share_log">مشاركة سجل الاتصالات</string>
     <string name="stats_share_csv">مشاركة CSV</string>
     <string name="stats_network_map">خريطة الشبكة</string>
-    <string name="stats_map_legend">الأقواس: أخضر = حجم منخفض · برتقالي = متوسط · أحمر = مرتفع</string>
+    <string name="stats_map_legend">الأقواس: أخضر = اتصالات قليلة · برتقالي = أكثر · أحمر = الأكثر (24 ساعة)</string>
     <string name="stats_by_org">حركة البيانات حسب الجهة</string>
     <string name="stats_heatmap">خريطة النشاط — 7 أيام × 24 ساعة</string>
     <string name="stats_heatmap_legend">الأخضر الأغمق = اتصالات أكثر في تلك الساعة. الخلايا الساطعة = ذروة النشاط.</string>
@@ -34,7 +34,7 @@
         <item quantity="many">رُصدت %d حالةً شاذة في DNS</item>
         <item quantity="other">رُصدت %d حالة شاذة في DNS</item>
     </plurals>
-    <string name="stats_dns_anomalies_desc">حالات شاذة عالية الخطورة حفظها درع DNS</string>
+    <string name="stats_dns_anomalies_desc">حالات شذوذ DNS خلال آخر 7 أيام. اضغط لعرضها.</string>
     <plurals name="stats_blocked_requests">
         <item quantity="zero">لا طلبات محظورة</item>
         <item quantity="one">طلب محظور واحد</item>
@@ -75,9 +75,13 @@
     <string name="stats_top_apps">أكثر التطبيقات استهلاكًا للبيانات (24 س)</string>
     <string name="stats_f_encryption">التشفير</string>
     <string name="stats_f_encrypted">%1$s مشفّر</string>
-    <string name="stats_f_blocked">%1$s محظور</string>
+    <string name="stats_f_blocked">%1$s من طلبات DNS محظورة</string>
     <string name="stats_f_cleartext">غير مشفّر</string>
     <string name="stats_score_factors">عوامل الدرجة</string>
     <string name="stats_today">اليوم</string>
     <string name="stats_blocked_port">%1$s · حُظر المنفذ %2$d</string>
+    <string name="stats_f_high_risk">تطبيقات عالية الخطورة</string>
+    <string name="stats_f_blocklist">قائمة الحظر</string>
+    <string name="stats_f_background">الخلفية</string>
+    <string name="stats_f_points">%1$d/%2$d</string>
 </resources>

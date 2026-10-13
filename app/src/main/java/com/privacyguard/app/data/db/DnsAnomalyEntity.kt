@@ -16,4 +16,6 @@ data class DnsAnomalyEntity(
     val anomalyType: String,
     val description: String,
     val severity: Int,
+    /** Network the lookup was made on (NetworkIdentity key); null for older rows. */
+    val networkKey: String? = null,
 )

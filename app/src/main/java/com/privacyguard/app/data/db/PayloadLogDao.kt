@@ -32,6 +32,35 @@ interface PayloadLogDao {
     """)
     suspend fun search(query: String): List<PayloadLogEntity>
 
+    /**
+     * The list behind the Payload screen: every filter and the search run here, in
+     * SQL, over all stored entries (newest [limit]), not over a preloaded page.
+     */
+    @Query("""
+        SELECT * FROM payload_logs
+        WHERE (ownerPackage IS NULL OR ownerPackage NOT LIKE 'com.privacyguard.app%')
+          AND (:direction IS NULL OR direction = :direction)
+          AND (:method IS NULL OR UPPER(method) = :method)
+          AND (:hasBody = 0 OR (body IS NOT NULL AND body != ''))
+          AND (:query = ''
+               OR sniHostname LIKE '%' || :query || '%'
+               OR ownerPackage LIKE '%' || :query || '%'
+               OR urlPath LIKE '%' || :query || '%'
+               OR body LIKE '%' || :query || '%')
+        ORDER BY timestamp DESC
+        LIMIT :limit
+    """)
+    fun filtered(query: String, method: String?, direction: String?, hasBody: Boolean, limit: Int): Flow<List<PayloadLogEntity>>
+
+    /** Everything the risk rules and analytics need, without bodies (which can be 32 KB each). */
+    @Query("""
+        SELECT id, ownerPackage, method, direction, protocol, headers, piiRedacted, sizeBytes,
+               LENGTH(body) AS bodyLength, destinationPort, isMitmSuccess, bodyEncoding
+        FROM payload_logs
+        WHERE ownerPackage IS NULL OR ownerPackage NOT LIKE 'com.privacyguard.app%'
+    """)
+    fun summariesFlow(): Flow<List<PayloadLogSummary>>
+
     @Query("SELECT COUNT(*) FROM payload_logs WHERE timestamp >= :fromMs")
     suspend fun countSince(fromMs: Long): Long
 
@@ -58,3 +87,18 @@ interface PayloadLogDao {
     @Query("SELECT COUNT(*) FROM payload_logs")
     suspend fun getTotalCount(): Int
 }
+/** A payload entry without its body: what risk scoring and analytics read. */
+data class PayloadLogSummary(
+    val id: Long,
+    val ownerPackage: String?,
+    val method: String?,
+    val direction: String,
+    val protocol: String,
+    val headers: String,
+    val piiRedacted: Boolean,
+    val sizeBytes: Int,
+    val bodyLength: Int?,
+    val destinationPort: Int,
+    val isMitmSuccess: Boolean,
+    val bodyEncoding: String,
+)

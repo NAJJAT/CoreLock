@@ -45,7 +45,7 @@
     <string name="appd_no_recent">No recent app activity recorded yet.</string>
     <string name="appd_timeline_24h">24-hour timeline</string>
     <string name="appd_hour">%1$d h</string>
-    <string name="appd_legend">Green: allowed · Yellow: idle or background · Red: blocked</string>
+    <string name="appd_legend">Connections per hour. Green: allowed · Yellow: screen off or app not on screen · Red: blocked lookups and attempts</string>
     <string name="appd_loading_mismatch">Comparing permissions with observed traffic…</string>
     <string name="appd_no_mismatch">No permission mismatch found</string>
     <string name="appd_no_mismatch_desc">Declared Android permissions and observed traffic look consistent for this app so far.</string>
@@ -80,7 +80,7 @@
     <string name="rule_block_app_bg">Block %1$s (background)</string>
     <string name="rule_block_app">Block %1$s</string>
     <string name="apps_title">Apps</string>
-    <string name="apps_subtitle">Per-app privacy risk and traffic</string>
+    <string name="apps_subtitle">Risk from all observed behaviour · traffic from the last 24 h</string>
     <plurals name="apps_high_risk_n">
         <item quantity="one">%d high risk</item>
         <item quantity="other">%d high risk</item>
@@ -104,4 +104,5 @@
     </plurals>
     <string name="apps_stalker_score">stalkerware score %1$d</string>
     <string name="apps_search">Search app or package…</string>
+    <string name="apps_sort_destinations">Destinations</string>
 </resources>

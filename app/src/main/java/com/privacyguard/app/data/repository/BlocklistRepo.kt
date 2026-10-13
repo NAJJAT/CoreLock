@@ -63,6 +63,10 @@ class BlocklistRepo(
         blocklistDao.enabledDomains()
     }
 
+    suspend fun domainsIn(categories: Set<String>): List<String> = withContext(Dispatchers.IO) {
+        blocklistDao.enabledDomainsIn(categories.toList())
+    }
+
     suspend fun domainsForCategory(cat: String): List<String> = withContext(Dispatchers.IO) {
         blocklistDao.getEntriesByCategory(cat).map { it.domain }
     }

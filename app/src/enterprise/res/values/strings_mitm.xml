@@ -51,7 +51,7 @@
     <string name="mitm_outbound">Outbound</string>
     <string name="mitm_inbound">Inbound</string>
     <string name="mitm_analytics">Analytics</string>
-    <string name="mitm_total_requests">Total requests captured</string>
+    <string name="mitm_total_requests">Entries captured (requests and responses)</string>
     <string name="mitm_flagged">Flagged</string>
     <string name="mitm_warnings">Warnings</string>
     <string name="mitm_clean">Clean</string>
@@ -132,4 +132,8 @@
     <string name="mitm_st_handshake_desc">The app rejected the inspection certificate (pinning, or user CAs not trusted). The host is passed through without decryption.</string>
     <string name="mitm_st_error">Error</string>
     <string name="mitm_st_error_desc">Inspection hit an error for this connection; it was passed through.</string>
+    <string name="mitm_metadata_only">Metadata only</string>
+    <string name="mitm_no_match">No matching entries</string>
+    <string name="mitm_no_match_desc">Nothing stored matches this search or filter. Tap All to clear the filters.</string>
+    <string name="mitm_list_capped">Showing the newest %1$d matches. Narrow the search to see older ones.</string>
 </resources>

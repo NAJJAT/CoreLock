@@ -50,16 +50,22 @@ class DnsAnomalyDetector {
     private val lastReported = ConcurrentHashMap<String, Long>()
 
     fun analyze(pkg: String?, domain: String): List<Anomaly> {
+        // PrivacyGuard's own lookups (CT checks, blocklist downloads, DoH) are not app behaviour.
+        if (isOwnHost(domain) || (pkg != null && pkg.startsWith(OWN_PACKAGE_PREFIX))) return emptyList()
         totalAnalyzed.incrementAndGet()
-        val pkgKey = pkg ?: "unknown"
+        // Same "Unknown" as unattributed DNS rows, so the UI labels it "Unknown app".
+        val pkgKey = pkg?.takeIf { it.isNotBlank() } ?: "Unknown"
 
         if (seenDomains.add(domain)) totalNewDomains.incrementAndGet()
 
         val anomalies = mutableListOf<Anomaly>()
         val now = System.currentTimeMillis()
 
-        // Record query
+        // Record the lookup. Android asks for A and AAAA (and HTTPS) records of one name
+        // at once; those packets are one lookup, not two or three.
         val history = queryHistory.getOrPut(pkgKey) { ArrayDeque() }
+        val sameLookup = history.lastOrNull { it.second == domain }?.let { now - it.first < SAME_LOOKUP_MS } == true
+        if (sameLookup) return emptyList()
         history.addLast(now to domain)
         // Keep last 100 entries
         while (history.size > 100) history.removeFirst()
@@ -106,17 +112,19 @@ class DnsAnomalyDetector {
             )
         }
 
-        // High frequency: >20 queries in last 10 seconds
+        // Burst: many different names in 10 seconds. Counting distinct names (not
+        // packets) keeps one page load with A + AAAA from looking like twice the work.
         val windowStart = now - 10_000L
-        val recentCount = history.count { (ts, _) -> ts > windowStart }
-        if (recentCount > 20) {
+        val recentCount = history.filter { (ts, _) -> ts > windowStart }.map { it.second }.distinct().size
+        if (recentCount > BURST_DISTINCT_NAMES) {
             anomalies += Anomaly(
                 timestamp   = now,
                 packageName = pkgKey,
                 domain      = domain,
                 type        = AnomalyType.HIGH_FREQUENCY,
-                description = "$recentCount DNS queries in last 10 seconds",
-                severity    = 7,
+                description = "$recentCount different names looked up in 10 seconds",
+                // Medium: browsers and feeds do this on every page; it is context, not a threat.
+                severity    = 4,
             )
         }
 
@@ -133,10 +141,11 @@ class DnsAnomalyDetector {
             )
         }
 
-        // Each A and AAAA lookup runs this, and a pattern keeps matching on every
-        // further query, so report each (app, domain, type) once per cooldown.
-        val fresh = anomalies.filter { anomaly ->
-            val key = "$pkgKey|${anomaly.domain}|${anomaly.type}"
+        // A pattern keeps matching on every further lookup, so report each (app, host)
+        // once per cooldown, whatever the type. The database enforces the same rule
+        // across restarts (DnsAnomalyRepo.save).
+        val fresh = anomalies.sortedByDescending { it.severity }.distinctBy { it.domain }.filter { anomaly ->
+            val key = "$pkgKey|${anomaly.domain}"
             val last = lastReported[key]
             if (last != null && now - last < REPORT_COOLDOWN_MS) false
             else { lastReported[key] = now; true }
@@ -160,9 +169,26 @@ class DnsAnomalyDetector {
         const val HIGH_ENTROPY_THRESHOLD = 3.4
         const val MIN_DGA_LABEL_LENGTH = 12
         const val MIN_DGA_DIGIT_RATIO = 0.15f
-        // A and AAAA lookups both count, so this is about 8 real lookups.
-        const val BEACON_QUERY_THRESHOLD = 16
-        const val REPORT_COOLDOWN_MS = 10 * 60_000L
+        // Lookups (A + AAAA count once) of the same name in 10 seconds.
+        const val BEACON_QUERY_THRESHOLD = 8
+        // Different names in 10 seconds that count as a burst.
+        const val BURST_DISTINCT_NAMES = 30
+        // Packets for the same name closer than this are one lookup (A, AAAA, HTTPS).
+        const val SAME_LOOKUP_MS = 1_000L
+        // One alert per app and host per day.
+        const val REPORT_COOLDOWN_MS = 24L * 60L * 60_000L
+        private const val OWN_PACKAGE_PREFIX = "com.privacyguard.app"
+        /** Hosts PrivacyGuard itself contacts; see CtMonitor, BlocklistSource, DnsHandler, ExodusUpdater. */
+        private val OWN_HOSTS = listOf(
+            "crt.sh", "easylist.to", "oisd.nl", "raw.githubusercontent.com",
+            "cloudflare-dns.com", "dns.google", "dns.quad9.net",
+            "reports.exodus-privacy.eu.org", "api.ipify.org",
+        )
+
+        fun isOwnHost(domain: String): Boolean {
+            val d = domain.lowercase().trimEnd('.')
+            return OWN_HOSTS.any { d == it || d.endsWith(".$it") }
+        }
         private const val MAX_TRACKED_REPORTS = 5_000
         private val CDN_SUFFIXES = listOf(
             "cloudfront.net", "akamaiedge.net", "akamaihd.net", "akamai.net", "edgekey.net",

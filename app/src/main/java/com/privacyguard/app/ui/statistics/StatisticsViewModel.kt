@@ -1,5 +1,6 @@
 package com.privacyguard.app.ui.statistics
 
+import com.privacyguard.app.data.db.host
 import android.app.Application
 import com.privacyguard.app.core.report.ItReportExporter
 import com.privacyguard.app.core.stats.StatsManager
@@ -23,8 +24,12 @@ data class StatisticsData(
     val cleartextToday: Int = 0,
     val dataTransferredToday: String = "",
     val blockRate: Float = 0f,
-    val encryptionHealth: Float = 0.87f,
+    val encryptionHealth: Float = 0f,
     val privacyScore: Int = 50,
+    /** The same breakdown Home uses; its factors are what the score is made of. */
+    val score: com.privacyguard.app.core.privacy.PrivacyScoreBreakdown? = null,
+    /** When these numbers were computed: the lists they open use the same window. */
+    val at: Long = 0L,
 )
 
 data class TrackerStats(
@@ -128,35 +133,38 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
         val now = System.currentTimeMillis()
         val todaySince = now - 24L * 60L * 60L * 1000L
         val since = now - 7L * 24L * 60L * 60L * 1000L
-        val recentConnections = db.connectionDao().getRecentConnections(todaySince, 1_000)
+        // Whole window, no LIMIT: these are totals, not a preview. Blocked attempts are
+        // counted by BlockStats, so this list is the connections that went through.
+        val recentConnections = db.connectionDao().between(todaySince, now)
+        val blockedRows = db.connectionDao().blockedBetween(todaySince, now)
+        val blocks = com.privacyguard.app.data.repository.BlockStats(db).between(todaySince, now)
         val profiles = cachedProfiles
         val behaviorSummaries = cachedBehaviorSummaries
-        val totalConnections = recentConnections.size
-        val blockedToday = recentConnections.count { it.wasBlocked }
-        val cleartextToday = recentConnections.count {
-            it.encryptionStatus == "CLEARTEXT" || it.encryptionStatus == "UNKNOWN"
-        }
-        val secureToday = recentConnections.count { it.encryptionStatus == "TLS" }
-        val totalBytes = recentConnections.sumOf { it.bytesSent + it.bytesReceived }
-
-        _stats.value = StatisticsData(
-            totalConnections = totalConnections,
-            blockedToday = blockedToday,
-            cleartextToday = cleartextToday,
-            dataTransferredToday = formatBytes(totalBytes),
-            blockRate = if (totalConnections == 0) 0f else blockedToday.toFloat() / totalConnections.toFloat(),
-            encryptionHealth = if (totalConnections == 0) 0f else secureToday.toFloat() / totalConnections.toFloat(),
-            privacyScore = (
-                (if (totalConnections == 0) 0.5f else secureToday.toFloat() / totalConnections.toFloat()) * 50f +
-                    (1f - (cleartextToday.toFloat() / totalConnections.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f)) * 25f +
-                    (1f - (behaviorSummaries.sumOf { it.findings.size } / 10f).coerceIn(0f, 1f)) * 25f
-                ).toInt().coerceIn(0, 100),
+        val level = com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(getApplication()).protectionLevel.value
+        val score = com.privacyguard.app.core.privacy.PrivacyScoreCalculator.calculate(
+            connections = recentConnections,
+            profiles = db.connectionProfileDao().allProfiles().map { metadataRepo.toDomainForDashboard(it) },
+            blocklistDomains = com.privacyguard.app.core.privacy.PrivacyScoreCalculator.blockedDomainsForLevel(db, level),
         )
 
-        _topBlockedDomains.value = db.connectionDao()
-            .getTopBlockedDomains(since, 5)
-            .map { BlockedDomainStat(it.domain, it.count) }
-        _highSeverityAnomalies.value = db.dnsAnomalyDao().countHighSeverity()
+        _stats.value = StatisticsData(
+            totalConnections = recentConnections.size,
+            blockedToday = blocks.total,
+            cleartextToday = score.cleartextConnections,
+            dataTransferredToday = formatBytes(db.connectionDao().bytesBetween(todaySince, now)),
+            blockRate = blocks.lookupBlockRate,
+            encryptionHealth = if (recentConnections.isEmpty()) 0f else score.encryptedRatio,
+            privacyScore = score.score,
+            score = score,
+            at = now,
+        )
+
+        // Blocking happens mostly at DNS, so the top blocked names come from blocked lookups.
+        _topBlockedDomains.value = db.dnsQueryDao()
+            .topBlockedDomainsSince(since, 5)
+            .map { BlockedDomainStat(it.domain, it.blockedQueries) }
+        // The size of the 7-day anomaly list this card opens (EvidenceKind.ANOMALIES_7D).
+        _highSeverityAnomalies.value = db.dnsAnomalyDao().since(since).count { it.timestamp <= now }
 
         val cal = java.util.Calendar.getInstance()
         _weeklyTrend.value = (6 downTo 0).map { daysAgo ->
@@ -169,9 +177,11 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
             val dayEnd = dayStart + 86_400_000L
             val label = if (daysAgo == 0) getApplication<android.app.Application>().getString(com.privacyguard.app.R.string.stats_today)
                 else java.text.SimpleDateFormat("EEE", java.util.Locale.getDefault()).format(java.util.Date(dayStart))
-            val dayConns = db.connectionDao().getRecentConnections(dayStart, 2_000)
-                .filter { it.timestamp < dayEnd }
-            DayTrend(label, dayConns.size, dayConns.count { it.wasBlocked })
+            DayTrend(
+                label,
+                db.connectionDao().countBetween(dayStart, dayEnd),
+                com.privacyguard.app.data.repository.BlockStats(db).between(dayStart, dayEnd).total,
+            )
         }
 
         _topAppsByData.value = recentConnections
@@ -206,16 +216,15 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
                 timestamp = it.timestamp,
                 title = it.domain,
                 subtitle = "${com.privacyguard.app.ui.text.FindingText.appLabel(getApplication(), it.packageName)} · ${com.privacyguard.app.ui.text.FindingText.dnsAnomalyTitle(getApplication(), it.anomalyType)}",
-                severity = if (it.severity >= 8) "CRITICAL" else "WARN",
+                severity = if (it.severity >= 9) "CRITICAL" else if (it.severity >= 7) "HIGH" else "MEDIUM",
             )
         }
-        val blockedItems = recentConnections
-            .filter { it.wasBlocked }
+        val blockedItems = blockedRows
             .take(10)
             .map {
                 ThreatTimelineItem(
                     timestamp = it.timestamp,
-                    title = it.domain ?: it.destinationIp,
+                    title = it.host ?: it.destinationIp,
                     subtitle = getApplication<android.app.Application>().getString(com.privacyguard.app.R.string.stats_blocked_port, it.appName, it.destinationPort),
                     severity = "BLOCKED",
                 )
@@ -227,7 +236,7 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
                         timestamp = profiles.firstOrNull { it.packageName == finding.packageName && it.hostname == finding.hostname }?.lastSeen ?: now,
                         title = finding.hostname,
                         subtitle = "${com.privacyguard.app.ui.text.FindingText.appLabel(getApplication(), finding.packageName)} · ${com.privacyguard.app.ui.text.FindingText.title(getApplication(), finding)}",
-                        severity = finding.severity.label,
+                        severity = finding.severity.name,
                     )
                 }
             }
@@ -239,7 +248,7 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
         _rememberedNetworks.value = db.networkTrustDao().allNetworks().take(6)
 
         // Build 7×24 heatmap from the full 7-day window (not just today)
-        val weekConnections = db.connectionDao().getRecentConnections(since, 5_000)
+        val weekConnections = db.connectionDao().between(since, now)
         val grid = Array(7) { IntArray(24) }
         weekConnections.forEach { conn ->
             val cal = java.util.Calendar.getInstance().apply { timeInMillis = conn.timestamp }
@@ -265,14 +274,14 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val now = System.currentTimeMillis()
             val since = now - 7L * 24L * 60L * 60L * 1000L
-            val connections = db.connectionDao().getRecentConnections(since, 5_000)
+            val connections = db.connectionDao().allSince(since)
             val stamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date(now))
             val exportDir = java.io.File(getApplication<android.app.Application>().filesDir, "exports/csv").apply { mkdirs() }
             val file = java.io.File(exportDir, "connections_$stamp.csv")
             file.bufferedWriter().use { w ->
                 w.write("timestamp,appName,packageName,domain,destinationIp,destinationPort,protocol,bytesSent,bytesReceived,encryptionStatus,tlsVersion,wasBlocked,wasBackground\n")
                 connections.forEach { c ->
-                    w.write("${c.timestamp},${c.appName.csvEscape()},${c.packageName.csvEscape()},${(c.domain ?: c.sniHostname ?: "").csvEscape()},${c.destinationIp},${c.destinationPort},${c.protocol},${c.bytesSent},${c.bytesReceived},${c.encryptionStatus},${c.tlsVersion ?: ""},${c.wasBlocked},${c.wasBackground}\n")
+                    w.write("${c.timestamp},${c.appName.csvEscape()},${c.packageName.csvEscape()},${(c.host ?: "").csvEscape()},${c.destinationIp},${c.destinationPort},${c.protocol},${c.bytesSent},${c.bytesReceived},${c.encryptionStatus},${c.tlsVersion ?: ""},${c.wasBlocked},${c.wasBackground}\n")
                 }
             }
             _csvExportPath.value = file.absolutePath
@@ -283,7 +292,8 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val now = System.currentTimeMillis()
             val since = now - 24L * 60L * 60L * 1000L
-            val connections = db.connectionDao().getRecentConnections(since, 500)
+            val connections = db.connectionDao().allSince(since)
+            val blocks = com.privacyguard.app.data.repository.BlockStats(db).between(since, now)
             val anomalies = db.dnsAnomalyDao().recent(100)
             val profiles = db.connectionProfileDao().allProfiles().map { metadataRepo.toDomainForDashboard(it) }
             val files = ItReportExporter.export(
@@ -291,8 +301,9 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
                 connections = connections,
                 anomalies = anomalies,
                 profiles = profiles,
-                trackersBlocked = StatsManager.snapshot.value.totalTrackersBlocked,
-                blocklistDomains = 0,
+                blocked = blocks,
+                blocklistDomains = com.privacyguard.app.core.privacy.PrivacyScoreCalculator.blockedDomainsForLevel(
+                    db, com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(getApplication()).protectionLevel.value),
             )
             _lastItReportPaths.value = files.jsonFile.absolutePath to files.pdfFile.absolutePath
         }
@@ -300,10 +311,5 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun String.csvEscape(): String = "\"${replace("\"", "\"\"")}\""
 
-    private fun formatBytes(bytes: Long): String {
-        return when {
-            // Locale-aware units, digits and decimal separator.
-            else -> android.text.format.Formatter.formatShortFileSize(getApplication(), bytes)
-        }
-    }
+    private fun formatBytes(bytes: Long): String = com.privacyguard.app.core.utils.ByteFormat.format(bytes)
 }

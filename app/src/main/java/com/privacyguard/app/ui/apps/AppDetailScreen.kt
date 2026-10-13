@@ -648,7 +648,9 @@ private fun DomainCard(row: DomainRow, onClick: () -> Unit) {
                 Text(row.domain, style = MaterialTheme.typography.titleMedium, color = PgText, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    row.trackerName?.let { stringResource(R.string.appd_tracker_company, it, row.company) } ?: row.company,
+                    (row.company ?: stringResource(R.string.trf_company_unknown)).let { owner ->
+                        row.trackerName?.let { stringResource(R.string.appd_tracker_company, it, owner) } ?: owner
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = PgTextMuted,
                     maxLines = 1,

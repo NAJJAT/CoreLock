@@ -66,6 +66,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun StatisticsScreen(
+    /** Opens the same list Home opens for this number, for the window it was computed at. */
+    onOpenEvidence: (com.privacyguard.app.ui.traffic.EvidenceKind, Long) -> Unit = { _, _ -> },
+    onOpenDomain: (String) -> Unit = {},
+    onOpenApp: (String) -> Unit = {},
     viewModel: StatisticsViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -83,6 +87,7 @@ fun StatisticsScreen(
     val sunburstOrgs by viewModel.sunburstOrgs.collectAsStateWithLifecycle()
     val topAppsByData by viewModel.topAppsByData.collectAsStateWithLifecycle()
     val weeklyTrend by viewModel.weeklyTrend.collectAsStateWithLifecycle()
+    val open: (com.privacyguard.app.ui.traffic.EvidenceKind) -> Unit = { kind -> onOpenEvidence(kind, stats.at) }
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -92,18 +97,24 @@ fun StatisticsScreen(
                 badge = stringResource(R.string.stats_badge_today).uppercase()
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatTile(stringResource(R.string.stats_total_connections), fmtCount(stats.totalConnections), PgText, Modifier.weight(1f))
-                    StatTile(stringResource(R.string.dash_blocked), fmtCount(stats.blockedToday), PgDanger, Modifier.weight(1f))
+                    StatTile(stringResource(R.string.stats_total_connections), fmtCount(stats.totalConnections), PgText, Modifier.weight(1f).clickable { open(com.privacyguard.app.ui.traffic.EvidenceKind.CONNECTIONS_24H) })
+                    StatTile(stringResource(R.string.dash_blocked), fmtCount(stats.blockedToday), PgDanger, Modifier.weight(1f).clickable { open(com.privacyguard.app.ui.traffic.EvidenceKind.BLOCKED_24H) })
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatTile(stringResource(R.string.stats_data_transferred), stats.dataTransferredToday, PgInfo, Modifier.weight(1f))
+                    StatTile(stringResource(R.string.stats_data_transferred), stats.dataTransferredToday, PgInfo, Modifier.weight(1f).clickable { open(com.privacyguard.app.ui.traffic.EvidenceKind.DATA_24H) })
                     StatTile(stringResource(R.string.dash_privacy_score), fmtCount(stats.privacyScore), PgWarning, Modifier.weight(1f))
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                LabeledProgress(stringResource(R.string.stats_block_rate), fmtPercent(stats.blockRate), stats.blockRate, PgAccent)
+                LabeledProgress(
+                    modifier = Modifier.clickable { open(com.privacyguard.app.ui.traffic.EvidenceKind.BLOCKED_24H) },
+                    label = stringResource(R.string.stats_block_rate), valueText = fmtPercent(stats.blockRate), progress = stats.blockRate, color = PgAccent,
+                )
                 Spacer(modifier = Modifier.height(14.dp))
-                LabeledProgress(stringResource(R.string.dash_encryption_health), stringResource(R.string.dash_tls_percent, (stats.encryptionHealth * 100).toInt()), stats.encryptionHealth, PgAccent)
+                LabeledProgress(
+                    modifier = Modifier.clickable { open(com.privacyguard.app.ui.traffic.EvidenceKind.ENCRYPTION_24H) },
+                    label = stringResource(R.string.dash_encryption_health), valueText = stringResource(R.string.dash_tls_percent, (stats.encryptionHealth * 100).toInt()), progress = stats.encryptionHealth, color = PgAccent,
+                )
                 Spacer(modifier = Modifier.height(14.dp))
                 ScoreBreakdown(stats)
                 Spacer(modifier = Modifier.height(12.dp))
@@ -297,9 +308,16 @@ fun StatisticsScreen(
                     timeline.forEachIndexed { index, item ->
                         val tint = when (item.severity) {
                             "CRITICAL", "HIGH", "BLOCKED" -> PgDanger
-                            "WARN", "MED" -> PgWarning
+                            "MEDIUM" -> PgWarning
                             else -> PgInfo
                         }
+                        val severityLabel = stringResource(when (item.severity) {
+                            "CRITICAL" -> R.string.alerts_critical
+                            "HIGH" -> R.string.alerts_high
+                            "MEDIUM" -> R.string.alerts_medium
+                            "BLOCKED" -> R.string.dash_blocked
+                            else -> R.string.alerts_low
+                        })
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -310,7 +328,7 @@ fun StatisticsScreen(
                                 Text(item.subtitle, style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
                             }
                             Column(horizontalAlignment = androidx.compose.ui.Alignment.End) {
-                                Text(item.severity, style = MaterialTheme.typography.labelSmall, color = tint)
+                                Text(severityLabel.uppercase(), style = MaterialTheme.typography.labelSmall, color = tint)
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(formatAgo(item.timestamp), style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
                             }
@@ -322,7 +340,7 @@ fun StatisticsScreen(
         }
 
         item {
-            PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+            PanelCard(modifier = Modifier.padding(horizontal = 16.dp).clickable { open(com.privacyguard.app.ui.traffic.EvidenceKind.ANOMALIES_7D) }) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -340,7 +358,7 @@ fun StatisticsScreen(
         }
 
         itemsIndexed(topBlockedDomains, key = { _, it -> "blocked:${it.domain}" }) { index, item ->
-            PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+            PanelCard(modifier = Modifier.padding(horizontal = 16.dp).clickable { onOpenDomain(item.domain) }) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Row {
                         Text(fmtCount(index + 1), style = MaterialTheme.typography.labelMedium, color = PgTextMuted)
@@ -515,7 +533,9 @@ fun StatisticsScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     val maxBytes = topAppsByData.firstOrNull()?.totalBytes?.coerceAtLeast(1L) ?: 1L
                     topAppsByData.forEachIndexed { index, app ->
-                        AppDataRow(app, app.totalBytes.toFloat() / maxBytes.toFloat())
+                        Box(Modifier.clickable { onOpenApp(app.packageName) }) {
+                            AppDataRow(app, app.totalBytes.toFloat() / maxBytes.toFloat())
+                        }
                         if (index != topAppsByData.lastIndex) Spacer(modifier = Modifier.height(10.dp))
                     }
                 }
@@ -577,15 +597,17 @@ private fun AppDataRow(app: AppDataStat, fraction: Float) {
 private fun ScoreBreakdown(stats: StatisticsData) {
     data class Factor(val label: String, val value: String, val fraction: Float, val color: androidx.compose.ui.graphics.Color, val good: Boolean)
 
-    val total = stats.totalConnections.coerceAtLeast(1)
-    val factors = listOf(
-        Factor(stringResource(R.string.stats_f_encryption), stringResource(R.string.stats_f_encrypted, fmtPercent(stats.encryptionHealth)),
-            stats.encryptionHealth, PgAccent, true),
-        Factor(stringResource(R.string.stats_block_rate), stringResource(R.string.stats_f_blocked, fmtPercent(stats.blockRate)),
-            stats.blockRate, PgInfo, true),
-        Factor(stringResource(R.string.stats_f_cleartext), pluralStringResource(R.plurals.dash_connections_count, stats.cleartextToday, stats.cleartextToday),
-            (stats.cleartextToday.toFloat() / total).coerceIn(0f, 1f), PgDanger, false),
-    )
+    // Exactly the parts the score is made of (PrivacyScoreCalculator), with their points.
+    val breakdown = stats.score ?: return
+    val factors = breakdown.factors.map { f ->
+        val label = stringResource(when (f.kind) {
+            com.privacyguard.app.core.privacy.ScoreFactor.Kind.ENCRYPTION -> R.string.stats_f_encryption
+            com.privacyguard.app.core.privacy.ScoreFactor.Kind.HIGH_RISK_APPS -> R.string.stats_f_high_risk
+            com.privacyguard.app.core.privacy.ScoreFactor.Kind.BLOCKLIST -> R.string.stats_f_blocklist
+            com.privacyguard.app.core.privacy.ScoreFactor.Kind.BACKGROUND -> R.string.stats_f_background
+        })
+        Factor(label, stringResource(R.string.stats_f_points, f.points, f.maxPoints), f.fraction, PgAccent, true)
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.stats_score_factors), style = MaterialTheme.typography.labelSmall, color = PgTextMuted)

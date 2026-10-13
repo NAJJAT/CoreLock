@@ -107,6 +107,13 @@ interface BlocklistDao {
     @Query("SELECT DISTINCT domain FROM blocklist WHERE isEnabled = 1 ORDER BY domain")
     suspend fun enabledDomains(): List<String>
 
+    /** Enabled domains in [categories]: what the current protection level blocks. */
+    @Query("SELECT DISTINCT domain FROM blocklist WHERE isEnabled = 1 AND category IN (:categories) ORDER BY domain")
+    suspend fun enabledDomainsIn(categories: List<String>): List<String>
+
+    @Query("SELECT COUNT(DISTINCT domain) FROM blocklist WHERE isEnabled = 1 AND category IN (:categories)")
+    suspend fun enabledCountIn(categories: List<String>): Int
+
     @Query("SELECT COUNT(*) FROM blocklist WHERE source LIKE :prefix || '%'")
     suspend fun countBySourcePrefix(prefix: String): Int
     

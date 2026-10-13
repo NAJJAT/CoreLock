@@ -18,7 +18,7 @@
     <string name="trf_why">سبب التعليم: %1$s</string>
     <string name="trf_not_flagged">غير مُعلَّم</string>
     <string name="trf_r_tracker">%1$s، متتبّع معروف (%2$s)</string>
-    <string name="trf_r_blocked">حُظر عند DNS بواسطة قوائم الحظر أو قواعدك</string>
+    <string name="trf_r_blocked">حُظر بواسطة قوائم الحظر أو قواعدك</string>
     <string name="trf_r_screen_off">كانت الشاشة مطفأة</string>
     <string name="trf_r_background">لم يكن التطبيق ظاهرًا على الشاشة</string>
     <string name="trf_r_cleartext">أُرسل دون تشفير (HTTP عادي)</string>
@@ -115,19 +115,19 @@
     <string name="trf_no_domain_data">لا طلبات ولا اتصالات بهذا النطاق في آخر 7 أيام.</string>
     <string name="trf_anomalies">حالات شاذة في DNS</string>
     <string name="ev_blocked_24h">الطلبات المحظورة · آخر 24 ساعة</string>
-    <string name="ev_blocked_24h_def">طلبات DNS أجابت عنها قوائم الحظر أو قواعدك بـ«غير موجود»، فلم يحدث أي اتصال.</string>
+    <string name="ev_blocked_24h_def">طلبات DNS أجابت عنها قوائم الحظر أو قواعدك بـ«غير موجود»، إضافةً إلى محاولات الاتصال التي أوقفتها قواعدك. لم يُرسَل شيء إلى هذه الوجهات.</string>
     <string name="ev_cleartext_24h">اتصالات غير مشفّرة · آخر 24 ساعة</string>
     <string name="ev_cleartext_24h_def">اتصالات رأينا فيها HTTP عاديًا. يمكن لأي طرف على مسار الشبكة قراءتها.</string>
     <string name="ev_encryption_24h">التشفير · آخر 24 ساعة</string>
-    <string name="ev_encryption_24h_def">%1$s من أصل %2$s اتصالًا كانت مشفّرة بـ TLS.</string>
+    <string name="ev_encryption_24h_def">%1$s من أصل %2$s اتصالًا أمكن التعرّف عليها كانت مشفّرة (TLS أو QUIC). و%3$s اتصالًا آخر لم تُظهر مصافحة معروفة ولا تُحتسب.</string>
     <string name="ev_night_24h">نشاط ليلي · آخر 24 ساعة</string>
-    <string name="ev_night_24h_def">اتصالات بدأت بين 00:00 و05:59.</string>
+    <string name="ev_night_24h_def">اتصالات بدأت بين 00:00 و05:59 والشاشة مطفأة.</string>
     <string name="ev_background_24h">اتصالات في الخلفية · آخر 24 ساعة</string>
     <string name="ev_background_24h_def">اتصالات بدأت والتطبيق غير ظاهر على الشاشة. يحتاج إلى إذن الوصول إلى بيانات الاستخدام؛ ولا تُحسب الاتصالات التي تعذّر تحديد حالتها.</string>
     <string name="ev_ipv6_24h">جلسات IPv6 · آخر 24 ساعة</string>
     <string name="ev_ipv6_24h_def">جلسات إلى عناوين IPv6. مرّت عبر نفق PrivacyGuard مثل حركة IPv4.</string>
     <string name="ev_uploads_24h">عمليات الرفع · آخر 24 ساعة</string>
-    <string name="ev_uploads_24h_def">اتصالات أرسلت بيانات، الأكبر رفعًا أولًا.</string>
+    <string name="ev_uploads_24h_def">اتصالات أرسلت بيانات بينما لم يكن التطبيق على الشاشة، الأكبر أولًا. لا تُعرض عمليات الرفع التي تقوم بها بنفسك (والتطبيق على الشاشة).</string>
     <string name="ev_beacons_24h">أنماط متكررة · آخر 24 ساعة</string>
     <string name="ev_beacons_24h_def">التطبيق نفسه يتصل بالمضيف نفسه على فترات شبه ثابتة (6 مرات أو أكثر، بتفاوت أقل من 25 %)، كمؤقّت لا كإنسان.</string>
     <string name="ev_entropy_7d">نطاقات تبدو عشوائية · آخر 7 أيام</string>
@@ -146,4 +146,6 @@
     <string name="dash_blocked_24h">المحظور (24 س)</string>
     <string name="dash_cleartext_24h">غير مشفّر (24 س)</string>
     <string name="sleep_definition">«الخمول» يعني أن الشاشة كانت مطفأة. تُرتَّب التطبيقات حسب طلبات DNS التي أجرتها والشاشة مطفأة خلال الفترة المختارة. اضغط تطبيقًا لعرض كل اتصالاته.</string>
+    <string name="ev_connections_24h">الاتصالات · آخر 24 ساعة</string>
+    <string name="ev_data_24h">البيانات المنقولة · آخر 24 ساعة</string>
 </resources>

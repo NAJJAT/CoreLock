@@ -39,7 +39,7 @@ abstract class ConfigDatabase : RoomDatabase() {
 
         private fun build(context: Context): ConfigDatabase =
             Room.databaseBuilder(context, ConfigDatabase::class.java, DATABASE_NAME)
-                .openHelperFactory(DatabaseEncryption.openHelperFactory(context, DATABASE_NAME))
+                .openHelperFactory(DatabaseEncryption.lazyOpenHelperFactory(context, DATABASE_NAME))
                 .addCallback(object : Callback() {
                     // Runs before the first query is served, so nothing reads an empty
                     // rules table while an upgrade's rules are still in the old file.

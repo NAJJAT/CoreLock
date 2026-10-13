@@ -18,7 +18,7 @@
     <string name="trf_why">Waarom gemarkeerd: %1$s</string>
     <string name="trf_not_flagged">Niet gemarkeerd</string>
     <string name="trf_r_tracker">%1$s, een bekende %2$s-tracker</string>
-    <string name="trf_r_blocked">via DNS geblokkeerd door je blokkeerlijsten of regels</string>
+    <string name="trf_r_blocked">geblokkeerd door je blokkeerlijsten of regels</string>
     <string name="trf_r_screen_off">het scherm stond uit</string>
     <string name="trf_r_background">de app stond niet op het scherm</string>
     <string name="trf_r_cleartext">onversleuteld verzonden (gewoon HTTP)</string>
@@ -99,19 +99,19 @@
     <string name="trf_no_domain_data">Geen opzoekingen of verbindingen naar dit domein in de laatste 7 dagen.</string>
     <string name="trf_anomalies">DNS-afwijkingen</string>
     <string name="ev_blocked_24h">Geblokkeerde opzoekingen · laatste 24 u</string>
-    <string name="ev_blocked_24h_def">DNS-opzoekingen die je blokkeerlijsten of regels beantwoordden met ‘niet gevonden’, zodat er geen verbinding kwam.</string>
+    <string name="ev_blocked_24h_def">DNS-opzoekingen die je blokkeerlijsten of regels beantwoordden met ‘niet gevonden’, plus verbindingspogingen die je regels tegenhielden. Er is niets naar deze bestemmingen verstuurd.</string>
     <string name="ev_cleartext_24h">Onversleutelde verbindingen · laatste 24 u</string>
     <string name="ev_cleartext_24h_def">Verbindingen waarin we gewoon HTTP zagen. Iedereen op de netwerkroute kan ze lezen.</string>
     <string name="ev_encryption_24h">Versleuteling · laatste 24 u</string>
-    <string name="ev_encryption_24h_def">%1$s van de %2$s verbindingen waren met TLS versleuteld.</string>
+    <string name="ev_encryption_24h_def">%1$s van de %2$s verbindingen die we konden herkennen waren versleuteld (TLS of QUIC). Nog %3$s toonden geen herkenbare handshake en tellen niet mee.</string>
     <string name="ev_night_24h">Nachtelijke activiteit · laatste 24 u</string>
-    <string name="ev_night_24h_def">Verbindingen die begonnen tussen 00:00 en 05:59.</string>
+    <string name="ev_night_24h_def">Verbindingen die begonnen tussen 00:00 en 05:59 terwijl het scherm uit was.</string>
     <string name="ev_background_24h">Verbindingen op de achtergrond · laatste 24 u</string>
     <string name="ev_background_24h_def">Verbindingen die begonnen terwijl de app niet op het scherm stond. Vereist toegang tot gebruiksgegevens; verbindingen die we niet konden plaatsen, tellen niet mee.</string>
     <string name="ev_ipv6_24h">IPv6-sessies · laatste 24 u</string>
     <string name="ev_ipv6_24h_def">Sessies naar IPv6-adressen. Ze liepen net als IPv4-verkeer door de tunnel van PrivacyGuard.</string>
     <string name="ev_uploads_24h">Uploads · laatste 24 u</string>
-    <string name="ev_uploads_24h_def">Verbindingen die gegevens verzonden, grootste upload eerst.</string>
+    <string name="ev_uploads_24h_def">Verbindingen die gegevens verstuurden terwijl de app niet in beeld was, grootste upload eerst. Uploads die je zelf doet (app in beeld) staan er niet bij.</string>
     <string name="ev_beacons_24h">Herhalende patronen · laatste 24 u</string>
     <string name="ev_beacons_24h_def">Dezelfde app die dezelfde host met bijna vaste tussenpozen benadert (6 keer of vaker, spreiding onder 25 %), als een timer en niet als een mens.</string>
     <string name="ev_entropy_7d">Willekeurig ogende domeinen · laatste 7 dagen</string>
@@ -130,4 +130,6 @@
     <string name="dash_blocked_24h">Geblokkeerd (24 u)</string>
     <string name="dash_cleartext_24h">Onversleuteld (24 u)</string>
     <string name="sleep_definition">‘Inactief’ betekent dat het scherm uit stond. Apps worden gerangschikt op de DNS-opzoekingen die ze deden terwijl het scherm uit stond in de gekozen periode. Tik op een app om alle verbindingen te zien.</string>
+    <string name="ev_connections_24h">Verbindingen · afgelopen 24 u</string>
+    <string name="ev_data_24h">Overgedragen gegevens · afgelopen 24 u</string>
 </resources>

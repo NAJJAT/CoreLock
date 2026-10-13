@@ -20,7 +20,7 @@ interface ConnectionProfileDao {
     @Query("SELECT * FROM connection_profiles WHERE riskScore >= :minRisk ORDER BY riskScore DESC")
     suspend fun riskyProfiles(minRisk: Int): List<ConnectionProfileEntity>
 
-    @Query("SELECT * FROM connection_profiles WHERE encryptionStatus IN ('NONE', 'UNKNOWN') ORDER BY connectionCount DESC")
+    @Query("SELECT * FROM connection_profiles WHERE encryptionStatus = 'CLEARTEXT' ORDER BY connectionCount DESC")
     suspend fun cleartextProfiles(): List<ConnectionProfileEntity>
 
     @Query("""

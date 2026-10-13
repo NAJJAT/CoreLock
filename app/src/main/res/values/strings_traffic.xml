@@ -21,7 +21,7 @@
     <string name="trf_why">Why flagged: %1$s</string>
     <string name="trf_not_flagged">Not flagged</string>
     <string name="trf_r_tracker">%1$s, a known %2$s tracker</string>
-    <string name="trf_r_blocked">blocked at DNS by your blocklists or rules</string>
+    <string name="trf_r_blocked">blocked by your blocklists or rules</string>
     <string name="trf_r_screen_off">the screen was off</string>
     <string name="trf_r_background">the app was not on screen</string>
     <string name="trf_r_cleartext">sent without encryption (plain HTTP)</string>
@@ -112,19 +112,19 @@
 
     <!-- Home drill-downs -->
     <string name="ev_blocked_24h">Blocked lookups · last 24 h</string>
-    <string name="ev_blocked_24h_def">DNS lookups your blocklists or rules answered with “not found”, so no connection was made.</string>
+    <string name="ev_blocked_24h_def">DNS lookups your blocklists or rules answered with “not found”, plus connection attempts your rules stopped. Nothing was sent to these destinations.</string>
     <string name="ev_cleartext_24h">Unencrypted connections · last 24 h</string>
     <string name="ev_cleartext_24h_def">Connections where we saw plain HTTP. Anyone on the network path could read them.</string>
     <string name="ev_encryption_24h">Encryption · last 24 h</string>
-    <string name="ev_encryption_24h_def">%1$s of %2$s connections were TLS-encrypted.</string>
+    <string name="ev_encryption_24h_def">%1$s of %2$s connections we could identify were encrypted (TLS or QUIC). %3$s more showed no handshake we recognise and are not counted.</string>
     <string name="ev_night_24h">Night activity · last 24 h</string>
-    <string name="ev_night_24h_def">Connections that started between 00:00 and 05:59.</string>
+    <string name="ev_night_24h_def">Connections that started between 00:00 and 05:59 while the screen was off.</string>
     <string name="ev_background_24h">Background connections · last 24 h</string>
     <string name="ev_background_24h_def">Connections that started while the app was not on screen. Needs Usage Access; connections we could not place are not counted.</string>
     <string name="ev_ipv6_24h">IPv6 sessions · last 24 h</string>
     <string name="ev_ipv6_24h_def">Sessions to IPv6 addresses. They went through PrivacyGuard’s tunnel like IPv4 traffic.</string>
     <string name="ev_uploads_24h">Uploads · last 24 h</string>
-    <string name="ev_uploads_24h_def">Connections that sent data, largest upload first.</string>
+    <string name="ev_uploads_24h_def">Connections that sent data while the app was not on screen, largest upload first. Uploads you make yourself (app on screen) are not listed.</string>
     <string name="ev_beacons_24h">Repeating patterns · last 24 h</string>
     <string name="ev_beacons_24h_def">The same app contacting the same host at near-constant intervals (6 or more times, spread under 25 %), like a timer rather than a person.</string>
     <string name="ev_entropy_7d">Random-looking domains · last 7 days</string>
@@ -145,4 +145,6 @@
 
     <!-- Sleep report definition -->
     <string name="sleep_definition">“Idle” means the screen was off. Apps are ranked by the DNS lookups they made while the screen was off in the chosen period. Tap an app to see every connection.</string>
+    <string name="ev_connections_24h">Connections · last 24 h</string>
+    <string name="ev_data_24h">Data transferred · last 24 h</string>
 </resources>

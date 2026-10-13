@@ -45,7 +45,14 @@ data class Connection(
     val encryptionInfo: String = "Unknown",
     val payloadPreview: String? = null,
     val wasBackground: Boolean = false,
+    /** GeoIP owner of the address, shown when no hostname is known. Never a block target. */
+    val orgHint: String? = null,
+    /** A block rule for this destination exists now (the session itself may have gone through). */
+    val hasBlockRule: Boolean = false,
 )
+
+/** Live sessions now, or connections that ended in the last 24 h. */
+enum class TrafficTab { LIVE, HISTORY }
 
 data class ConnectionFilter(
     val query: String = "",
@@ -99,9 +106,9 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
                     destinationPort = it.destinationPort,
                     protocol = it.protocol,
                     isBlocked = it.isBlocked,
-                    dataRate = formatRate(it.bytesTransferred),
-                    bytesSent = it.bytesTransferred,
-                    bytesReceived = 0,
+                    dataRate = formatRate(it.bytesPerSec),
+                    bytesSent = it.bytesSent,
+                    bytesReceived = it.bytesReceived,
                     hostName = it.hostName,
                     securityInfo = it.securityInfo,
                     encryptionInfo = it.encryptionInfo,
@@ -110,6 +117,11 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _tab = MutableStateFlow(TrafficTab.LIVE)
+    val tab: StateFlow<TrafficTab> = _tab.asStateFlow()
+
+    fun setTab(t: TrafficTab) { _tab.value = t }
 
     private val _filter = MutableStateFlow(ConnectionFilter())
     val filter: StateFlow<ConnectionFilter> = _filter.asStateFlow()
@@ -132,7 +144,8 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
             while (true) {
                 try {
                 val since = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
-                _recentConnections.value = db.connectionDao().getRecentConnections(since, 100).filterNot {
+                // Every connection that ended in the last 24 h (blocked attempts included).
+                _recentConnections.value = db.connectionDao().allSince(since).filterNot {
                     isPrivacyGuardPackage(it.packageName)
                 }.map {
                     Connection(
@@ -149,11 +162,12 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
                         destinationPort = it.destinationPort,
                         protocol = it.protocol,
                         isBlocked = it.wasBlocked,
-                        dataRate = formatRate(it.bytesSent + it.bytesReceived),
+                        // A total for a finished connection: never shown "per second".
+                        dataRate = formatBytes(it.bytesSent + it.bytesReceived),
                         bytesSent = it.bytesSent,
                         bytesReceived = it.bytesReceived,
-                        hostName = it.sniHostname ?: it.domain
-                            ?: orgHintForIp(it.destinationIp),
+                        hostName = it.sniHostname ?: it.domain,
+                        orgHint = if (it.sniHostname == null && it.domain == null) orgHintForIp(it.destinationIp) else null,
                         securityInfo = it.encryptionStatus,
                         encryptionInfo = it.tlsVersion ?: "",
                         payloadPreview = null,
@@ -162,13 +176,16 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 } catch (e: kotlinx.coroutines.CancellationException) { throw e }
                   catch (_: Exception) { }
-                delay(1_000)
+                // History is the whole day with a GeoIP lookup per unnamed row: refresh calmly.
+                delay(5_000)
             }
         }
     }
 
+    private fun formatBytes(bytes: Long): String = com.privacyguard.app.core.utils.ByteFormat.format(bytes)
+
     val dataRate: String
-        get() = formatRate(connections.value.sumOf { it.bytesSent })
+        get() = formatRate(StatsManager.snapshot.value.throughputBytesPerSec)
 
     /**
      * Returns a human-readable hint when neither SNI nor DNS domain is available.
@@ -202,9 +219,14 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setFilter(filter: ConnectionFilter) {
+        if (filter.query != _filter.value.query) _dnsLookup.value = DnsLookupState()
         _filter.value = filter
-        resolveDnsIfHost(filter.query)
     }
+
+    /** Only on an explicit tap: a lookup goes out to the network and into your own history. */
+    fun lookUpDns() = resolveDnsIfHost(_filter.value.query)
+
+    fun queryLooksLikeHost(): Boolean = _filter.value.query.trim().looksLikeHostname()
 
     fun clearFilter() {
         _filter.value = ConnectionFilter()
@@ -225,7 +247,7 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
             refreshBlockedRuleKeys()
             _selectedConnection.value = _selectedConnection.value?.let {
                 if (it.connection.id == connection.id) {
-                    it.copy(connection = it.connection.copy(isBlocked = _blockedRuleKeys.value.contains(id)))
+                    it.copy(connection = it.connection.copy(hasBlockRule = _blockedRuleKeys.value.contains(id)))
                 } else {
                     it
                 }
@@ -285,7 +307,8 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun getFilteredConnections(): List<Connection> {
-        var result = (if (connections.value.isNotEmpty()) connections.value else recentConnections.value)
+        // The chosen tab only; never a silent fallback from live to history.
+        var result = (if (_tab.value == TrafficTab.LIVE) connections.value else recentConnections.value)
             .map { it.withRuleState() }
 
         if (_filter.value.showBlockedOnly) {
@@ -293,12 +316,8 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         if (_filter.value.showCleartextOnly) {
-            // Live sessions start as UNKNOWN before TLS is seen, so UNKNOWN alone
-            // matched almost every HTTPS connection; only count it on plain-HTTP port 80.
-            result = result.filter {
-                it.securityInfo.contains("CLEAR", ignoreCase = true) ||
-                    (it.securityInfo.contains("UNKNOWN", ignoreCase = true) && it.destinationPort == 80)
-            }
+            // Plain HTTP actually seen (live sessions are classified as soon as data flows).
+            result = result.filter { it.securityInfo == "CLEARTEXT" }
         }
 
         if (_filter.value.query.isNotBlank()) {
@@ -308,6 +327,7 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
                     it.packageName.contains(q, ignoreCase = true) ||
                     it.destinationIp.contains(q, ignoreCase = true) ||
                     (it.hostName?.contains(q, ignoreCase = true) == true) ||
+                    (it.orgHint?.contains(q, ignoreCase = true) == true) ||
                     it.destination.contains(q, ignoreCase = true)
             }
         }
@@ -322,8 +342,9 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
             .toSet()
     }
 
+    // isBlocked stays what happened to this connection; the rule state drives the button.
     private fun Connection.withRuleState(): Connection =
-        copy(isBlocked = isBlocked || _blockedRuleKeys.value.contains(blockTarget().ruleId()))
+        copy(hasBlockRule = _blockedRuleKeys.value.contains(blockTarget().ruleId()))
 
     private fun Connection.blockTarget(): BlockTarget {
         val host = hostName?.trim()

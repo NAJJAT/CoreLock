@@ -1,5 +1,6 @@
 package com.privacyguard.app.ui.apps
 
+import com.privacyguard.app.data.db.host
 import android.app.Application
 import com.privacyguard.app.R
 import android.content.pm.PackageManager
@@ -38,7 +39,8 @@ data class DomainRow(
     val bytesSent: Long,
     val bytesReceived: Long,
     val trackerName: String?,
-    val company: String,
+    /** Owner from DomainClassifier (the classifier every screen uses); null when unknown. */
+    val company: String?,
 )
 
 data class ActivityHourRow(
@@ -170,7 +172,9 @@ class AppDetailViewModel(
 
     private fun observeTraffic() {
         viewModelScope.launch {
-            StatsManager.snapshot.collectLatest { snapshot ->
+            // Polled: the live stats change every second, the history this reads does not.
+            while (true) {
+                val snapshot = StatsManager.snapshot.value
                 val since = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
                 // Only this package's own traffic. Matching by keyword ("meta", "facebook")
                 // or GeoIP organisation credited other apps' connections to this one.
@@ -197,15 +201,16 @@ class AppDetailViewModel(
                 val domainRows = mergedConnections
                     .groupBy { (it.sniHostname ?: it.domain ?: it.destinationIp).ifBlank { it.destinationIp } }
                     .map { (domain, connections) ->
-                        val tracker = TrackerDatabase.lookupByDomain(domain)
+                        val cls = com.privacyguard.app.core.tracker.DomainClassifier.classify(domain, packageName)
                         DomainRow(
                             domain = domain,
                             count = connections.size,
                             backgroundCount = connections.count { it.foreground == false },
                             bytesSent = connections.sumOf { it.bytesSent },
                             bytesReceived = connections.sumOf { it.bytesReceived },
-                            trackerName = tracker?.name,
-                            company = tracker?.company ?: TrackerDatabase.companyForDomain(domain),
+                            // The app maker's own SDK in its own app is first-party, not a tracker.
+                            trackerName = cls.trackerName?.takeIf { cls.purpose != com.privacyguard.app.core.tracker.DomainPurpose.FIRST_PARTY },
+                            company = cls.company,
                         )
                     }
                     .sortedByDescending { it.count }
@@ -228,17 +233,16 @@ class AppDetailViewModel(
                 }
                 val dnsDomains = db.dnsQueryDao().topDomainsForApp(packageName, since, 10)
                 val dnsHourly = db.dnsQueryDao().hourlyForApp(packageName, since)
+                // One unit per hour: connections, plus blocked lookups (which never become a
+                // connection). Allowed lookups are not added: each one usually precedes a
+                // connection that is already counted, so a visit would count two or three times.
                 dnsHourly.forEach { bucket ->
-                    if (bucket.hour in 0..23) {
-                        suspiciousByHour[bucket.hour] += bucket.idleQueries
-                        blockedByHour[bucket.hour] += bucket.blockedQueries
-                        allowedByHour[bucket.hour] += (bucket.totalQueries - bucket.idleQueries - bucket.blockedQueries).coerceAtLeast(0)
-                    }
+                    if (bucket.hour in 0..23) blockedByHour[bucket.hour] += bucket.blockedQueries
                 }
                 val recentActivity = mergedConnections.take(12).map {
                     RecentActivityRow(
                         timestamp = it.timestamp,
-                        label = it.domain ?: it.sniHostname ?: it.destinationIp,
+                        label = it.host ?: it.destinationIp,
                         detail = "${it.protocol} ${it.destinationPort}",
                         blocked = it.wasBlocked,
                         idle = it.screenOn == false,
@@ -264,6 +268,7 @@ class AppDetailViewModel(
                     recentActivity = recentActivity,
                 )
                 refreshMismatchFindings(observedDomains = domainRows.map { it.domain })
+                kotlinx.coroutines.delay(5_000)
             }
         }
     }
@@ -274,7 +279,7 @@ class AppDetailViewModel(
             val observedDomains = runCatching {
                 val since = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
                 db.connectionDao().forPackageBetween(packageName, since, System.currentTimeMillis())
-                    .mapNotNull { it.domain ?: it.sniHostname }
+                    .mapNotNull { it.host }
                     .distinct()
             }.getOrElse { emptyList() }
             val profiles = loadObservedProfiles()
@@ -359,8 +364,8 @@ class AppDetailViewModel(
             domain = hostName,
             sniHostname = hostName,
             protocol = protocol,
-            bytesSent = bytesTransferred,
-            bytesReceived = 0L,
+            bytesSent = bytesSent,
+            bytesReceived = bytesReceived,
             timestamp = System.currentTimeMillis(),
             durationMs = 0L,
             wasBlocked = isBlocked,

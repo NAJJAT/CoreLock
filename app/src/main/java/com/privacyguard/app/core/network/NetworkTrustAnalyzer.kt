@@ -1,9 +1,6 @@
 package com.privacyguard.app.core.network
 
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import android.net.wifi.WifiManager
 import com.privacyguard.app.data.db.ConnectionEntity
 import com.privacyguard.app.data.db.DnsAnomalyEntity
 
@@ -21,19 +18,37 @@ data class NetworkTrustSummary(
 )
 
 object NetworkTrustAnalyzer {
+
+    /** Trust of the network the phone is on now, from what was seen on that network only. */
     fun summarize(
         context: Context,
         connections: List<ConnectionEntity>,
         anomalies: List<DnsAnomalyEntity>,
+        blockedAttempts: List<ConnectionEntity> = emptyList(),
+    ): NetworkTrustSummary = score(NetworkIdentity.current(context), connections, anomalies, blockedAttempts)
+
+    /**
+     * Rows recorded on another network, or before rows carried a network (null), are
+     * ignored: traffic from the mobile network says nothing about this Wi-Fi.
+     * Only confirmed plain HTTP counts as cleartext; "unknown" (QUIC, chat protocols,
+     * handshakes we did not see) is not evidence of anything.
+     */
+    fun score(
+        network: NetworkId,
+        allConnections: List<ConnectionEntity>,
+        allAnomalies: List<DnsAnomalyEntity>,
+        /** Connection attempts PrivacyGuard dropped (wasBlocked rows). */
+        allBlockedAttempts: List<ConnectionEntity> = emptyList(),
     ): NetworkTrustSummary {
-        val (networkKey, networkLabel, isWifi) = detectNetwork(context)
+        val connections = allConnections.filter { it.networkKey == network.key && !it.wasBlocked }
+        val anomalies = allAnomalies.filter { it.networkKey == network.key }
         var penalty = 0
         val reasons = mutableListOf<String>()
 
-        val cleartext = connections.count { it.encryptionStatus == "CLEARTEXT" || it.encryptionStatus == "UNKNOWN" }
+        val cleartext = connections.count { it.encryptionStatus == "CLEARTEXT" }
         if (cleartext > 0) {
             penalty += minOf(25, cleartext * 3)
-            reasons += "$cleartext cleartext or unknown sessions"
+            reasons += "$cleartext cleartext sessions"
         }
 
         val rogueDns = anomalies.count { it.anomalyType.contains("DNS", ignoreCase = true) || it.anomalyType.contains("DGA", ignoreCase = true) }
@@ -48,7 +63,9 @@ object NetworkTrustAnalyzer {
             reasons += "$mitmSignals weak encryption signals"
         }
 
-        val blocked = connections.count { it.wasBlocked }
+        // Blocked rows may arrive in either list (callers pass each row once).
+        val blocked = (allBlockedAttempts + allConnections.filter { it.wasBlocked })
+            .count { it.networkKey == network.key }
         if (blocked > 0) {
             penalty += minOf(15, blocked / 3)
             reasons += "$blocked blocked attempts"
@@ -62,47 +79,16 @@ object NetworkTrustAnalyzer {
         }
 
         return NetworkTrustSummary(
-            networkKey = networkKey,
-            networkLabel = networkLabel,
+            networkKey = network.key,
+            networkLabel = network.label,
             score = score,
             level = level,
-            shouldRecommendStrict = level == "Reduced" && isWifi,
+            shouldRecommendStrict = level == "Reduced" && network.isWifi,
             reasons = if (reasons.isEmpty()) listOf("No cleartext, DNS, or weak TLS issues seen") else reasons.take(3),
             cleartextCount = cleartext,
             dnsAnomalyCount = rogueDns,
             weakTlsCount = mitmSignals,
             blockedCount = blocked,
         )
-    }
-
-    /**
-     * Key, display label and whether it is Wi-Fi. The key keeps the original
-     * English-derived format so networks remembered before localization still
-     * match, and never changes with the UI language.
-     */
-    private fun detectNetwork(context: Context): Triple<String, String, Boolean> {
-        fun s(id: Int) = context.getString(id)
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-            ?: return Triple("offline", s(com.privacyguard.app.R.string.net_offline), false)
-        val network = cm.activeNetwork ?: return Triple("offline", s(com.privacyguard.app.R.string.net_offline), false)
-        val caps = cm.getNetworkCapabilities(network)
-            ?: return Triple("unknown network", s(com.privacyguard.app.R.string.net_unknown), false)
-        return when {
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> currentSsid(context)
-                ?.let { ssid -> Triple("wi-fi: ${ssid.lowercase()}", context.getString(com.privacyguard.app.R.string.net_wifi_named, ssid), true) }
-                ?: Triple("wi-fi network", s(com.privacyguard.app.R.string.net_wifi), true)
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> Triple("cellular network", s(com.privacyguard.app.R.string.net_cellular), false)
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> Triple("ethernet network", s(com.privacyguard.app.R.string.net_ethernet), false)
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) -> Triple("vpn network", s(com.privacyguard.app.R.string.net_vpn), false)
-            else -> Triple("unknown network", s(com.privacyguard.app.R.string.net_unknown), false)
-        }
-    }
-
-    private fun currentSsid(context: Context): String? {
-        val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager ?: return null
-        @Suppress("DEPRECATION")
-        return runCatching { wifiManager.connectionInfo?.ssid }.getOrNull()
-            ?.trim('"')
-            ?.takeIf { it.isNotBlank() && it != "<unknown ssid>" }
     }
 }

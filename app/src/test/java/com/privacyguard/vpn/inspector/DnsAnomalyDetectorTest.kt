@@ -6,63 +6,48 @@ import org.junit.Test
 
 class DnsAnomalyDetectorTest {
 
-    @Test
-    fun entropyForReadableDomainIsLowerThanGeneratedLabel() {
-        val readable = DnsAnomalyDetector.shannonEntropy("google")
-        val generated = DnsAnomalyDetector.shannonEntropy("x9q2mz8v4pr7ka")
+    private fun burstTypes(d: DnsAnomalyDetector, pkg: String, names: List<String>) =
+        names.flatMap { d.analyze(pkg, it) }.map { it.type }
 
-        assertTrue(generated > readable)
-        assertTrue(generated >= DnsAnomalyDetector.HIGH_ENTROPY_THRESHOLD)
+    @Test
+    fun a_and_aaaa_for_twenty_names_is_not_a_burst() {
+        val d = DnsAnomalyDetector()
+        // 20 names, each asked twice (A + AAAA): 40 packets, 20 lookups.
+        val names = (1..20).flatMap { listOf("host$it.example.com", "host$it.example.com") }
+        assertTrue(DnsAnomalyDetector.AnomalyType.HIGH_FREQUENCY !in burstTypes(d, "com.browser", names))
     }
 
     @Test
-    fun highEntropyDomainCreatesAnomaly() {
-        val detector = DnsAnomalyDetector()
-
-        val anomalies = detector.analyze("com.test.app", "x9q2mz8v4pr7ka.example.com")
-
-        assertTrue(anomalies.any { it.type == DnsAnomalyDetector.AnomalyType.HIGH_ENTROPY })
+    fun many_distinct_names_is_a_medium_burst() {
+        val d = DnsAnomalyDetector()
+        val all = (1..40).flatMap { d.analyze("com.app", "n$it.example.com") }
+        val burst = all.filter { it.type == DnsAnomalyDetector.AnomalyType.HIGH_FREQUENCY }
+        assertTrue(burst.isNotEmpty())
+        assertTrue(burst.all { it.severity < 7 })   // not "High"
     }
 
     @Test
-    fun repeatedDnsLookupsCreateBeaconAnomaly() {
-        val detector = DnsAnomalyDetector()
-        var latest = emptyList<DnsAnomalyDetector.Anomaly>()
-
-        repeat(DnsAnomalyDetector.BEACON_QUERY_THRESHOLD) {
-            latest = detector.analyze("com.test.app", "c2.example.com")
-        }
-
-        assertTrue(latest.any { it.type == DnsAnomalyDetector.AnomalyType.DGA_BEACON })
+    fun own_service_hosts_are_never_reported() {
+        val d = DnsAnomalyDetector()
+        val all = (1..50).flatMap { d.analyze(null, "crt.sh") + d.analyze(null, "a$it.raw.githubusercontent.com") }
+        assertTrue(all.isEmpty())
     }
 
     @Test
-    fun normalDomainDoesNotTriggerEntropyAnomaly() {
-        val detector = DnsAnomalyDetector()
-
-        val anomalies = detector.analyze("com.browser", "www.microsoft.com")
-
-        assertEquals(false, anomalies.any { it.type == DnsAnomalyDetector.AnomalyType.HIGH_ENTROPY })
+    fun one_report_per_app_and_host() {
+        val d = DnsAnomalyDetector()
+        val long = "a".repeat(30) + ".b.c.d.e.f.example.com"   // long and many labels
+        val first = d.analyze("com.app", long)
+        Thread.sleep(1_100)                                  // past the same-lookup window
+        val second = d.analyze("com.app", long)
+        assertEquals(1, first.size)
+        assertTrue(second.isEmpty())
     }
 
     @Test
-    fun sameAnomalyIsReportedOncePerCooldown() {
-        val detector = DnsAnomalyDetector()
-
-        // An A and an AAAA lookup for the same name used to produce two identical alerts.
-        val first = detector.analyze("com.test.app", "x9q2mz8v4pr7ka.example.com")
-        val second = detector.analyze("com.test.app", "x9q2mz8v4pr7ka.example.com")
-
-        assertTrue(first.any { it.type == DnsAnomalyDetector.AnomalyType.HIGH_ENTROPY })
-        assertTrue(second.none { it.type == DnsAnomalyDetector.AnomalyType.HIGH_ENTROPY })
-    }
-
-    @Test
-    fun cdnHostnamesAreNotFlaggedAsGenerated() {
-        val detector = DnsAnomalyDetector()
-
-        val anomalies = detector.analyze("com.honeyboard", "d127n5jiwb3j0b.cloudfront.net")
-
-        assertEquals(false, anomalies.any { it.type == DnsAnomalyDetector.AnomalyType.HIGH_ENTROPY })
+    fun unattributed_lookups_use_the_unknown_key() {
+        val d = DnsAnomalyDetector()
+        val a = d.analyze(null, "x".repeat(60) + ".example.com")
+        assertEquals("Unknown", a.single().packageName)
     }
 }

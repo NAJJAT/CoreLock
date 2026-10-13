@@ -77,17 +77,21 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
             val categoryStats = runCatching { blocklistDao.getCategoryToggleStats() }.getOrDefault(emptyList())
             val userRules = runCatching { rulesRepo.userRules() }.getOrDefault(emptyList())
             val since = System.currentTimeMillis() - 86_400_000L
-            val blockedToday = runCatching { connectionDao.getBlockedCountToday(since) }.getOrDefault(0)
-            // Same window as blockedToday; dividing by the all-time total understated the rate.
-            val totalToday = runCatching { connectionDao.getCountSince(since) }.getOrDefault(0)
+            // Same definition of "blocked" as Home and Stats (BlockStats), last 24 h.
+            val blocks = runCatching {
+                com.privacyguard.app.data.repository.BlockStats(db).between(since, System.currentTimeMillis())
+            }.getOrNull()
+            val blockedToday = blocks?.total ?: 0
 
             val recentConns = runCatching {
-                connectionDao.getRecentConnections(since, 1_000)
+                connectionDao.between(since, System.currentTimeMillis())
             }.getOrDefault(emptyList())
             val topTrackerApps = recentConns
                 .filter { conn ->
                     val host = conn.sniHostname ?: conn.domain ?: return@filter false
-                    TrackerDatabase.lookupByDomain(host) != null
+                    // Same rule as the traffic screens: a known tracker, unless it is the app maker's own.
+                    val cls = com.privacyguard.app.core.tracker.DomainClassifier.classify(host, conn.packageName.ifBlank { null })
+                    cls.trackerName != null && cls.purpose != com.privacyguard.app.core.tracker.DomainPurpose.FIRST_PARTY
                 }
                 .groupBy { it.packageName }
                 .filter { it.key.isNotBlank() }
@@ -104,7 +108,7 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
             _state.value = AdsState(
                 masterEnabled = sourceStats.any { it.enabledCount > 0 } || categoryStats.any { it.enabledCount > 0 },
                 blockedToday = blockedToday,
-                blockRate = if (totalToday == 0) 0 else ((blockedToday * 100f) / totalToday).toInt(),
+                blockRate = ((blocks?.lookupBlockRate ?: 0f) * 100f).toInt(),
                 categories = categoryStats.toCategoryUi(),
                 sources = sourceStats.toSourceUi(),
                 customRules = userRules

@@ -4,7 +4,7 @@
     <string name="conn_no_records">No DNS records returned</string>
     <string name="conn_lookup_failed">DNS lookup failed</string>
     <string name="conn_title">Connections</string>
-    <string name="conn_subtitle">Live network traffic and encryption</string>
+    <string name="conn_subtitle">Live and recent connections</string>
     <string name="conn_cleartext">Cleartext</string>
     <string name="conn_no_match">No matching connections</string>
     <string name="conn_none_yet">No connections yet</string>
@@ -31,4 +31,10 @@
     <string name="conn_no_result">No result</string>
     <string name="conn_ok">OK</string>
     <string name="conn_search">Search host, app, IP…</string>
+    <string name="conn_tab_live">Live (%1)</string>
+    <string name="conn_tab_history">Last 24 h (%1)</string>
+    <string name="conn_live_note">Connections open right now, with their current speed.</string>
+    <string name="conn_history_note">Connections that ended in the last 24 h, newest first. Sizes are totals, not speeds. Blocked attempts are included.</string>
+    <string name="conn_dns_lookup_action">Look up %1 in DNS</string>
+    <string name="conn_route_ipv6">This device → IPv6 address (the offline map covers IPv4 only)</string>
 </resources>

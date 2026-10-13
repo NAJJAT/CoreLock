@@ -6,7 +6,21 @@ import androidx.room.*
 interface DnsAnomalyDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(anomaly: DnsAnomalyEntity)
+    suspend fun insertRow(anomaly: DnsAnomalyEntity)
+
+    @Query("SELECT COUNT(*) FROM dns_anomalies WHERE packageName = :pkg AND domain = :domain AND timestamp > :since")
+    suspend fun countForSince(pkg: String, domain: String, since: Long): Int
+
+    /**
+     * One anomaly per app and host per day, whatever its type, so the detector's
+     * in-memory cooldown also holds across VPN restarts. Returns whether stored.
+     */
+    @Transaction
+    suspend fun insert(anomaly: DnsAnomalyEntity): Boolean {
+        if (countForSince(anomaly.packageName, anomaly.domain, anomaly.timestamp - TlsAlertDao.ALERT_DEDUP_MS) > 0) return false
+        insertRow(anomaly)
+        return true
+    }
 
     @Query("SELECT * FROM dns_anomalies ORDER BY timestamp DESC LIMIT :limit")
     suspend fun recent(limit: Int): List<DnsAnomalyEntity>

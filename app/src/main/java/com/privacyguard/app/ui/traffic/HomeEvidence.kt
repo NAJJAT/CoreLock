@@ -11,7 +11,9 @@ import java.util.Calendar
 /** Every number on Home that opens a list. The name says the window. */
 enum class EvidenceKind {
     BLOCKED_24H, CLEARTEXT_24H, ENCRYPTION_24H, NIGHT_24H, BACKGROUND_24H, IPV6_24H, UPLOADS_24H,
-    BEACONS_24H, ENTROPY_7D, BEHAVIOR, CONNECTIONS_7D, BLOCKED_7D, ANOMALIES_7D, DATA_7D;
+    BEACONS_24H, ENTROPY_7D, BEHAVIOR_7D, CONNECTIONS_7D, BLOCKED_7D, ANOMALIES_7D, DATA_7D,
+    // Stats tiles (last 24 h).
+    CONNECTIONS_24H, DATA_24H;
 
     val windowMs: Long get() = if (name.endsWith("_7D")) HomeEvidence.WEEK_MS else HomeEvidence.DAY_MS
 }
@@ -45,16 +47,21 @@ class HomeEvidence(private val db: AppDatabase) {
     suspend fun load(kind: EvidenceKind, at: Long): Evidence {
         val from = at - kind.windowMs
         return when (kind) {
-            EvidenceKind.BLOCKED_24H, EvidenceKind.BLOCKED_7D ->
-                Evidence.Rows(db.dnsQueryDao().blockedBetween(from, at).map { TrafficRows.fromLookup(it) })
+            // Blocked lookups and blocked connection attempts: the BlockStats definition.
+            EvidenceKind.BLOCKED_24H, EvidenceKind.BLOCKED_7D -> Evidence.Rows(
+                (db.dnsQueryDao().blockedBetween(from, at).map { TrafficRows.fromLookup(it) } +
+                    db.connectionDao().blockedBetween(from, at).map { TrafficRows.fromConnection(it) })
+                    .sortedByDescending { it.timestamp }
+            )
             EvidenceKind.CLEARTEXT_24H, EvidenceKind.ENCRYPTION_24H, EvidenceKind.CONNECTIONS_7D,
-            EvidenceKind.DATA_7D, EvidenceKind.NIGHT_24H, EvidenceKind.BACKGROUND_24H,
+            EvidenceKind.DATA_7D, EvidenceKind.CONNECTIONS_24H, EvidenceKind.DATA_24H, EvidenceKind.NIGHT_24H, EvidenceKind.BACKGROUND_24H,
             EvidenceKind.IPV6_24H, EvidenceKind.UPLOADS_24H -> rows(select(kind, connections(from, at)))
             EvidenceKind.BEACONS_24H -> Evidence.Beacons(beacons(connections(from, at)))
             EvidenceKind.ENTROPY_7D ->
-                Evidence.Anomalies(anomalies(from, at).filter { it.anomalyType == "HIGH_ENTROPY" || it.anomalyType == "DGA_BEACON" })
+                // Random-looking names only; repeated lookups of one name are a different signal.
+                Evidence.Anomalies(anomalies(from, at).filter { it.anomalyType == "HIGH_ENTROPY" })
             EvidenceKind.ANOMALIES_7D -> Evidence.Anomalies(anomalies(from, at))
-            EvidenceKind.BEHAVIOR -> Evidence.Findings(behaviorFindings())
+            EvidenceKind.BEHAVIOR_7D -> Evidence.Findings(behaviorFindings(at))
         }
     }
 
@@ -66,12 +73,19 @@ class HomeEvidence(private val db: AppDatabase) {
         db.connectionDao().bytesBetween(at - kind.windowMs, at)
 
     suspend fun blockedCount(kind: EvidenceKind, at: Long): Int =
-        db.dnsQueryDao().countBlockedBetween(at - kind.windowMs, at)
+        com.privacyguard.app.data.repository.BlockStats(db).between(at - kind.windowMs, at).total
 
-    suspend fun behaviorFindings(): List<BehaviorFinding> {
+    /**
+     * Behaviour changes seen in the 7 days before [at]: the baseline is learned from
+     * all saved profiles, but only findings about destinations active in the window count.
+     */
+    suspend fun behaviorFindings(at: Long): List<BehaviorFinding> {
         val repo = MetadataRepo(db.connectionProfileDao())
         val profiles = db.connectionProfileDao().allProfiles().map { repo.toDomainForDashboard(it) }
+        val from = at - WEEK_MS
+        val active = profiles.filter { it.lastSeen in from..at }.map { it.packageName to it.hostname }.toSet()
         return BehaviorDnaAnalyzer.summarizeAll(profiles).flatMap { it.findings }
+            .filter { (it.packageName to it.hostname) in active }
     }
 
     private suspend fun connections(from: Long, to: Long): List<ConnectionEntity> = db.connectionDao().between(from, to)
@@ -96,17 +110,37 @@ class HomeEvidence(private val db: AppDatabase) {
          */
         fun select(kind: EvidenceKind, inWindow: List<ConnectionEntity>): List<ConnectionEntity> = when (kind) {
             EvidenceKind.CLEARTEXT_24H -> inWindow.filter { it.encryptionStatus == "CLEARTEXT" && !it.wasBlocked }
-            EvidenceKind.NIGHT_24H -> inWindow.filter { isNight(it.timestamp) }
+            // Night and screen off: the user's own late-night use is not "unexpected".
+            EvidenceKind.NIGHT_24H -> inWindow.filter { isNight(it.timestamp) && it.screenOn == false }
             EvidenceKind.BACKGROUND_24H -> inWindow.filter { it.foreground == false }
             EvidenceKind.IPV6_24H -> inWindow.filter { it.isIPv6 || it.destinationIpv6 != null || it.destinationIp.contains(':') }
-            EvidenceKind.UPLOADS_24H -> inWindow.filter { it.bytesSent > 0 }.sortedByDescending { it.bytesSent }
-            EvidenceKind.DATA_7D -> inWindow.sortedByDescending { it.bytesSent + it.bytesReceived }
+            // Background only: the user sharing a video is not exfiltration.
+            EvidenceKind.UPLOADS_24H -> inWindow.filter { it.bytesSent > 0 && it.foreground == false }.sortedByDescending { it.bytesSent }
+            EvidenceKind.DATA_7D, EvidenceKind.DATA_24H -> inWindow.sortedByDescending { it.bytesSent + it.bytesReceived }
             else -> inWindow
+        }
+
+        /** Encryption of a set of connections, as every screen reports it. */
+        data class EncryptionShare(val encrypted: Int, val cleartext: Int, val unknown: Int) {
+            /** Connections whose encryption we could see (a handshake, or an HTTP request). */
+            val identified: Int get() = encrypted + cleartext
+            /** Encrypted share of [identified]; 1 when nothing could be identified yet. */
+            val ratio: Float get() = if (identified == 0) 1f else encrypted.toFloat() / identified
+        }
+
+        fun encryptionShare(connections: List<ConnectionEntity>): EncryptionShare {
+            val allowed = connections.filter { !it.wasBlocked }
+            val encrypted = allowed.count { isEncrypted(it) }
+            val cleartext = allowed.count { it.encryptionStatus == "CLEARTEXT" }
+            return EncryptionShare(encrypted, cleartext, allowed.size - encrypted - cleartext)
         }
 
         /** Counted as encrypted for the "Encryption health" percentage. */
         fun isEncrypted(c: ConnectionEntity): Boolean =
-            c.encryptionStatus == "TLS" || c.tlsVersion?.startsWith("TLS_1_") == true
+            c.encryptionStatus in ENCRYPTED_STATUSES || c.tlsVersion?.startsWith("TLS_1_") == true
+
+        /** TLS of any version (weak TLS still encrypts) and QUIC, which always runs TLS 1.3. */
+        private val ENCRYPTED_STATUSES = setOf("TLS", "TLS_1_2", "TLS_1_3", "WEAK_TLS", "QUIC")
 
         /** "Night" = 00:00–05:59 local time. */
         fun isNight(timestamp: Long): Boolean =
@@ -118,6 +152,8 @@ class HomeEvidence(private val db: AppDatabase) {
          */
         fun beacons(connections: List<ConnectionEntity>): List<BeaconPattern> =
             connections
+                // Push channels and keep-alives run on a timer by design.
+                .filter { !com.privacyguard.app.core.detection.KnownPushHosts.isPushHost(it.sniHostname ?: it.domain) }
                 .groupBy { it.packageName to (it.sniHostname ?: it.domain ?: it.destinationIp) }
                 .mapNotNull { (key, group) ->
                     if (group.size < 6) return@mapNotNull null

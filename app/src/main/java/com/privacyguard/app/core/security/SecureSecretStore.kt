@@ -116,6 +116,28 @@ class SecureSecretStore private constructor(
         }
     }
 
+    /**
+     * Encrypts data kept in files outside the SQLCipher databases (e.g. queued SIEM
+     * batches) with the background Keystore key. Returns IV + ciphertext.
+     */
+    fun encryptBlob(plain: ByteArray): ByteArray {
+        val cipher = Cipher.getInstance(AES_MODE)
+        cipher.init(Cipher.ENCRYPT_MODE, ensureKey(BACKGROUND_KEY_ALIAS, requireUnlocked = false))
+        return cipher.iv + cipher.doFinal(plain)
+    }
+
+    /** Reverses [encryptBlob]; throws GeneralSecurityException if the data was tampered with. */
+    fun decryptBlob(blob: ByteArray): ByteArray {
+        require(blob.size > 12) { "blob too short" }
+        val cipher = Cipher.getInstance(AES_MODE)
+        cipher.init(
+            Cipher.DECRYPT_MODE,
+            ensureKey(BACKGROUND_KEY_ALIAS, requireUnlocked = false),
+            GCMParameterSpec(GCM_TAG_BITS, blob.copyOfRange(0, 12)),
+        )
+        return cipher.doFinal(blob, 12, blob.size - 12)
+    }
+
     /** Moves a secret that older versions kept in plain SharedPreferences into this store. */
     fun migratePlaintext(from: SharedPreferences, prefKey: String, name: String) {
         val legacy = from.getString(prefKey, null) ?: return

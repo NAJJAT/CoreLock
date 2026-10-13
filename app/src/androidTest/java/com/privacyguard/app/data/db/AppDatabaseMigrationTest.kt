@@ -130,4 +130,26 @@ class AppDatabaseMigrationTest {
         }
         db.close()
     }
+
+    @Test
+    fun migrate10To11_keepsRowsWithNoNetwork() {
+        helper.createDatabase(dbName, 10).apply {
+            execSQL("INSERT INTO connections (appUid, appName, packageName, destinationIp, destinationPort, isIPv6, protocol, bytesSent, bytesReceived, timestamp, durationMs, wasBlocked, encryptionStatus, wasBackground) VALUES (10123, 'App', 'com.example', '1.2.3.4', 80, 0, 'TCP', 10, 20, 1000, 5, 0, 'CLEARTEXT', 0)")
+            execSQL("INSERT INTO dns_anomalies (timestamp, packageName, domain, anomalyType, description, severity) VALUES (1000, 'com.example', 'x.example', 'DGA_BEACON', '', 5)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(dbName, 11, true, AppDatabase.MIGRATION_10_11)
+        // Rows from before the column existed belong to no network: trust never guesses.
+        db.query("SELECT COUNT(*) FROM connections WHERE networkKey IS NULL").use { c ->
+            c.moveToFirst(); assertEquals(1, c.getInt(0))
+        }
+        db.query("SELECT COUNT(*) FROM dns_anomalies WHERE networkKey IS NULL").use { c ->
+            c.moveToFirst(); assertEquals(1, c.getInt(0))
+        }
+        // Port 80 was labelled cleartext without looking at the bytes: now unknown.
+        db.query("SELECT encryptionStatus FROM connections").use { c ->
+            c.moveToFirst(); assertEquals("UNKNOWN", c.getString(0))
+        }
+        db.close()
+    }
 }

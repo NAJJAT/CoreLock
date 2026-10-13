@@ -1,5 +1,6 @@
 package com.privacyguard.app.ui.apps
 
+import com.privacyguard.app.data.db.host
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -125,10 +126,11 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun refresh() = withContext(Dispatchers.Default) {
         val profiles   = metadataRepo.recent()
-        val liveStats  = StatsManager.snapshot.value.appStats
+        // Sessions open right now: App detail merges the same ones into its counts.
+        val liveSessions = StatsManager.snapshot.value.activeConnections
         val since = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
         val recentConnections = runCatching {
-            db.connectionDao().getRecentConnections(since, 800)
+            db.connectionDao().between(since, System.currentTimeMillis())
         }.getOrElse { emptyList() }
         val blockedPackages = configDb.rulesDao()
             .getAllRules()
@@ -147,56 +149,37 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
         val installedPackages = installed.map { it.packageName }.toSet()
         val installedNames = installed.associate { it.packageName to it.appName }
         val profileBuckets = profiles.groupBy { canonicalPackageForObserved(it.packageName, installedPackages) }
-        val liveBuckets = liveStats.groupBy { canonicalPackageForObserved(it.packageName, installedPackages) }
+        val liveBuckets = liveSessions.groupBy { canonicalPackageForObserved(it.packageName, installedPackages) }
         val connectionBuckets = recentConnections.groupBy { canonicalPackageForObserved(it.packageName, installedPackages) }
-        val observed = if (profiles.isNotEmpty()) {
-            installed
-                .mapNotNull { installedApp ->
-                    val pkg = installedApp.packageName
-                    val rows = profileBuckets[pkg].orEmpty()
-                    val liveRows = liveBuckets[pkg].orEmpty()
-                    val connectionRows = connectionBuckets[pkg].orEmpty()
-                    if (rows.isEmpty() && liveRows.isEmpty() && connectionRows.isEmpty()) return@mapNotNull null
-                    val stalkerware = assessStalkerware(pkg, permissionsByPackage[pkg].orEmpty(), rows)
-                    val fallbackMetrics = connectionMetrics(connectionRows)
-                    AppRiskItem(
-                        appName           = installedNames[pkg].orEmpty().ifBlank { com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), pkg) },
-                        packageName       = pkg,
-                        totalDestinations = rows.size.takeIf { it > 0 } ?: fallbackMetrics.totalDestinations,
-                        suspiciousCount   = rows.count { it.riskScore >= 40 }.takeIf { it > 0 } ?: fallbackMetrics.suspiciousCount,
-                        cleartextCount    = rows.count { it.encryptionStatus.name == "CLEARTEXT" || it.encryptionStatus.name == "UNKNOWN" }
-                            .takeIf { it > 0 } ?: fallbackMetrics.cleartextCount,
-                        totalBytesOut     = rows.sumOf { it.totalBytesOut } + liveRows.sumOf { it.bytesTransferred } + fallbackMetrics.totalBytes,
-                        maxRiskScore      = (rows.maxOfOrNull { it.riskScore } ?: fallbackMetrics.maxRiskScore),
-                        isBlocked         = pkg in blockedPackages,
-                        stalkerwareScore  = stalkerware.score,
-                        stalkerwareReasons = stalkerware.reasons,
-                        backgroundCount   = connectionRows.count { it.wasBackground },
-                    )
-                }
-                .sortedWith(compareByDescending<AppRiskItem> { it.maxRiskScore }.thenByDescending { it.totalBytesOut })
-        } else {
-            // VPN just started — DB not warm yet. Show live traffic from StatsManager
-            // so the Apps screen is never completely blank while VPN is running.
-            liveBuckets
-                .map { (pkg, stats) ->
-                    val displayName = installedNames[pkg].orEmpty().ifBlank {
-                        com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), pkg, stats.firstOrNull()?.appName)
-                    }
-                    AppRiskItem(
-                        appName           = displayName,
-                        packageName       = pkg,
-                        totalDestinations = 0,
-                        suspiciousCount   = 0,
-                        cleartextCount    = 0,
-                        totalBytesOut     = stats.sumOf { it.bytesTransferred },
-                        maxRiskScore      = if (stats.any { it.blockedCount > 0 }) 40 else 10,
-                        isBlocked         = pkg in blockedPackages,
-                        stalkerwareScore  = 0,
-                    )
-                }
-                .sortedByDescending { it.totalBytesOut }
-        }
+        // Traffic numbers are the last 24 h plus open sessions, exactly what App detail
+        // shows for the app; risk comes from the long-term behaviour profiles.
+        val observed = installed
+            .mapNotNull { installedApp ->
+                val pkg = installedApp.packageName
+                val rows = profileBuckets[pkg].orEmpty()
+                val liveRows = liveBuckets[pkg].orEmpty()
+                val connectionRows = connectionBuckets[pkg].orEmpty()
+                if (rows.isEmpty() && liveRows.isEmpty() && connectionRows.isEmpty()) return@mapNotNull null
+                val stalkerware = assessStalkerware(pkg, permissionsByPackage[pkg].orEmpty(), rows)
+                val fallbackMetrics = connectionMetrics(connectionRows)
+                val hosts = (connectionRows.map { it.host ?: it.destinationIp } + liveRows.map { it.hostName ?: it.destinationIp })
+                    .filter { it.isNotBlank() }.toSet()
+                AppRiskItem(
+                    appName           = installedNames[pkg].orEmpty().ifBlank { com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), pkg) },
+                    packageName       = pkg,
+                    totalDestinations = hosts.size,
+                    suspiciousCount   = rows.count { it.riskScore >= 40 },
+                    cleartextCount    = connectionRows.count { it.encryptionStatus == "CLEARTEXT" } +
+                        liveRows.count { it.securityInfo == "CLEARTEXT" },
+                    totalBytesOut     = connectionRows.sumOf { it.bytesSent + it.bytesReceived } + liveRows.sumOf { it.bytesTransferred },
+                    maxRiskScore      = rows.maxOfOrNull { it.riskScore } ?: fallbackMetrics.maxRiskScore,
+                    isBlocked         = pkg in blockedPackages,
+                    stalkerwareScore  = stalkerware.score,
+                    stalkerwareReasons = stalkerware.reasons,
+                    // Same test as App detail: the app was not on screen (unknown is not counted).
+                    backgroundCount   = connectionRows.count { it.foreground == false },
+                )
+            }
 
         val observedByPackage = observed.associateBy { it.packageName }
         _apps.value = (observed + installed.filterNot { observedByPackage.containsKey(it.packageName) })
@@ -229,7 +212,7 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
             .distinct()
             .size
         val suspicious = rows.count { it.wasBlocked }
-        val cleartext = rows.count { it.encryptionStatus.equals("CLEARTEXT", ignoreCase = true) || it.encryptionStatus.equals("UNKNOWN", ignoreCase = true) }
+        val cleartext = rows.count { it.encryptionStatus.equals("CLEARTEXT", ignoreCase = true) }
         val totalBytes = rows.sumOf { it.bytesSent + it.bytesReceived }
         val risk = when {
             suspicious > 0 -> 40

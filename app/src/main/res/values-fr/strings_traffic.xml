@@ -18,7 +18,7 @@
     <string name="trf_why">Pourquoi signalé : %1$s</string>
     <string name="trf_not_flagged">Non signalé</string>
     <string name="trf_r_tracker">%1$s, un traqueur connu (%2$s)</string>
-    <string name="trf_r_blocked">bloqué au niveau DNS par vos listes de blocage ou vos règles</string>
+    <string name="trf_r_blocked">bloqué par vos listes de blocage ou vos règles</string>
     <string name="trf_r_screen_off">l’écran était éteint</string>
     <string name="trf_r_background">l’app n’était pas à l’écran</string>
     <string name="trf_r_cleartext">envoyé sans chiffrement (HTTP simple)</string>
@@ -103,19 +103,19 @@
     <string name="trf_no_domain_data">Aucune requête ni connexion vers ce domaine ces 7 derniers jours.</string>
     <string name="trf_anomalies">Anomalies DNS</string>
     <string name="ev_blocked_24h">Requêtes bloquées · 24 dernières h</string>
-    <string name="ev_blocked_24h_def">Requêtes DNS auxquelles vos listes de blocage ou vos règles ont répondu « introuvable » : aucune connexion n’a eu lieu.</string>
+    <string name="ev_blocked_24h_def">Requêtes DNS auxquelles vos listes de blocage ou vos règles ont répondu « introuvable », plus les tentatives de connexion arrêtées par vos règles. Rien n’a été envoyé à ces destinations.</string>
     <string name="ev_cleartext_24h">Connexions non chiffrées · 24 dernières h</string>
     <string name="ev_cleartext_24h_def">Connexions où nous avons vu du HTTP simple. Toute personne sur le trajet réseau pouvait les lire.</string>
     <string name="ev_encryption_24h">Chiffrement · 24 dernières h</string>
-    <string name="ev_encryption_24h_def">%1$s connexions sur %2$s étaient chiffrées en TLS.</string>
+    <string name="ev_encryption_24h_def">%1$s connexions sur %2$s identifiables étaient chiffrées (TLS ou QUIC). %3$s autres n’ont montré aucune poignée de main reconnue et ne sont pas comptées.</string>
     <string name="ev_night_24h">Activité nocturne · 24 dernières h</string>
-    <string name="ev_night_24h_def">Connexions commencées entre 00:00 et 05:59.</string>
+    <string name="ev_night_24h_def">Connexions démarrées entre 00:00 et 05:59 écran éteint.</string>
     <string name="ev_background_24h">Connexions en arrière-plan · 24 dernières h</string>
     <string name="ev_background_24h_def">Connexions commencées alors que l’app n’était pas à l’écran. Nécessite l’accès aux données d’utilisation ; les connexions non situables ne sont pas comptées.</string>
     <string name="ev_ipv6_24h">Sessions IPv6 · 24 dernières h</string>
     <string name="ev_ipv6_24h_def">Sessions vers des adresses IPv6. Elles sont passées par le tunnel de PrivacyGuard, comme le trafic IPv4.</string>
     <string name="ev_uploads_24h">Envois · 24 dernières h</string>
-    <string name="ev_uploads_24h_def">Connexions qui ont envoyé des données, le plus gros envoi en premier.</string>
+    <string name="ev_uploads_24h_def">Connexions qui ont envoyé des données pendant que l’app n’était pas à l’écran, plus gros envoi en premier. Les envois que vous faites vous-même (app à l’écran) ne sont pas listés.</string>
     <string name="ev_beacons_24h">Motifs répétitifs · 24 dernières h</string>
     <string name="ev_beacons_24h_def">La même app qui contacte le même hôte à intervalles presque constants (6 fois ou plus, écart inférieur à 25 %), comme une minuterie plutôt qu’une personne.</string>
     <string name="ev_entropy_7d">Domaines d’apparence aléatoire · 7 derniers jours</string>
@@ -134,4 +134,6 @@
     <string name="dash_blocked_24h">Bloqués (24 h)</string>
     <string name="dash_cleartext_24h">Non chiffrées (24 h)</string>
     <string name="sleep_definition">« Inactif » signifie écran éteint. Les apps sont classées selon les requêtes DNS faites écran éteint sur la période choisie. Touchez une app pour voir toutes ses connexions.</string>
+    <string name="ev_connections_24h">Connexions · dernières 24 h</string>
+    <string name="ev_data_24h">Données transférées · dernières 24 h</string>
 </resources>

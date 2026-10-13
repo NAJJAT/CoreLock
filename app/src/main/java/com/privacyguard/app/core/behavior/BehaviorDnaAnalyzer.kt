@@ -128,7 +128,8 @@ object BehaviorDnaAnalyzer {
             }
 
         profiles
-            .filter { it.totalBytesOut >= UPLOAD_SPIKE_MIN_BYTES && now - it.lastSeen <= NEW_DESTINATION_WINDOW_MS }
+            // Only uploads made mostly in the background: a photo the user shares is not a spike.
+            .filter { it.totalBytesOut >= UPLOAD_SPIKE_MIN_BYTES && now - it.lastSeen <= NEW_DESTINATION_WINDOW_MS && it.backgroundRatio >= 0.5f }
             .forEach { profile ->
                 val referenceAverage = profiles
                     .filter { it.hostname != profile.hostname && it.totalBytesOut > 0L }
@@ -141,7 +142,7 @@ object BehaviorDnaAnalyzer {
                     findings += BehaviorFinding(
                         packageName = packageName,
                         hostname = profile.hostname,
-                        severity = if (profile.backgroundRatio >= 0.75f) BehaviorSeverity.HIGH else BehaviorSeverity.MEDIUM,
+                        severity = BehaviorSeverity.MEDIUM,
                         title = "Upload spike",
                         summary = "${profile.hostname} uploaded much more data than this app normally sends.",
                         evidence = listOf(
@@ -156,14 +157,17 @@ object BehaviorDnaAnalyzer {
             }
 
         profiles
-            .filter { it.backgroundRatio >= 0.85f && it.connectionCount >= 8 && it.avgIntervalMs in 10_000L..15L * 60L * 1000L }
+            // Push channels and keep-alives are timers by design (KnownPushHosts).
+            .filter { it.backgroundRatio >= 0.85f && it.connectionCount >= 8 && it.avgIntervalMs in 10_000L..15L * 60L * 1000L &&
+                !com.privacyguard.app.core.detection.KnownPushHosts.isPushHost(it.hostname) }
             .sortedByDescending { it.connectionCount }
             .take(3)
             .forEach { profile ->
                 findings += BehaviorFinding(
                     packageName = packageName,
                     hostname = profile.hostname,
-                    severity = BehaviorSeverity.HIGH,
+                    // A warning to review, not proof: many legitimate apps sync on a timer.
+                    severity = BehaviorSeverity.MEDIUM,
                     title = "Background beacon pattern",
                     summary = "${profile.hostname} is contacted on a regular cadence mostly while the app is in the background.",
                     evidence = listOf(
@@ -189,12 +193,7 @@ object BehaviorDnaAnalyzer {
 
     private fun hourLabel(hour: Int): String = String.format(java.util.Locale.US, "%02d:00", hour)
 
-    private fun formatBytes(bytes: Long): String = when {
-        bytes >= 1024L * 1024L * 1024L -> "${((bytes / (1024.0 * 1024.0 * 1024.0)) * 10).roundToInt() / 10.0} GB"
-        bytes >= 1024L * 1024L -> "${((bytes / (1024.0 * 1024.0)) * 10).roundToInt() / 10.0} MB"
-        bytes >= 1024L -> "${((bytes / 1024.0) * 10).roundToInt() / 10.0} KB"
-        else -> "$bytes B"
-    }
+    private fun formatBytes(bytes: Long): String = com.privacyguard.app.core.utils.ByteFormat.plain(bytes)
 
     private fun Double.roundToLongSafe(): Long = if (isFinite()) roundToLong() else 0L
 }

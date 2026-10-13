@@ -28,6 +28,7 @@ class SettingsPreferences private constructor(context: Context) {
         private const val KEY_CT_MONITORING_ENABLED      = "ct_monitoring_enabled"
         private const val KEY_AD_SDK_BLOCKING_ENABLED    = "ad_sdk_blocking_enabled"
         private const val KEY_AD_CHECKLIST_DONE          = "ad_checklist_done"
+        private const val KEY_STRICT_DISMISSED           = "strict_suggestion_dismissed"
         private const val KEY_EXTERNAL_IP_CHECK_ENABLED  = "external_ip_check_enabled"
         private const val KEY_DOH_PROVIDER               = "doh_provider"
         private const val KEY_RETENTION_DAYS             = "retention_days"
@@ -130,6 +131,16 @@ class SettingsPreferences private constructor(context: Context) {
     /** IDs of "Reduce ad tracking" checklist steps the user marked done. */
     private val _adChecklistDone = MutableStateFlow(prefs.getStringSet(KEY_AD_CHECKLIST_DONE, emptySet()).orEmpty().toSet())
     val adChecklistDone: StateFlow<Set<String>> = _adChecklistDone.asStateFlow()
+
+    /** Networks (NetworkIdentity keys) where the user said no to "switch to Strict". */
+    private val _strictSuggestionDismissed = MutableStateFlow(prefs.getStringSet(KEY_STRICT_DISMISSED, emptySet()).orEmpty().toSet())
+    val strictSuggestionDismissed: StateFlow<Set<String>> = _strictSuggestionDismissed.asStateFlow()
+
+    fun dismissStrictSuggestion(networkKey: String) {
+        val next = _strictSuggestionDismissed.value + networkKey
+        prefs.edit().putStringSet(KEY_STRICT_DISMISSED, next).apply()
+        _strictSuggestionDismissed.value = next
+    }
 
     /** Diagnostics asks api.ipify.org for the public IP. */
     private val _externalIpCheckEnabled = MutableStateFlow(prefs.getBoolean(KEY_EXTERNAL_IP_CHECK_ENABLED, false))

@@ -116,6 +116,7 @@ data class Ipv6Packet(
             syn: Boolean = false, ack: Boolean = false,
             psh: Boolean = false, fin: Boolean = false, rst: Boolean = false,
             data: ByteArray = ByteArray(0),
+            window: Int = 0xFFFF,
         ): ByteArray {
             val tcpLen   = 20 + data.size
             val totalLen = HEADER_LEN + tcpLen
@@ -144,8 +145,8 @@ data class Ipv6Packet(
                 (if (psh) 0x08 else 0) or (if (fin) 0x01 else 0) or
                 (if (rst) 0x04 else 0)
             ).toByte()
-            pkt[t + 14] = 0xFF.toByte()
-            pkt[t + 15] = 0xFF.toByte()
+            pkt[t + 14] = (window ushr 8).toByte()
+            pkt[t + 15] = (window and 0xFF).toByte()
 
             if (data.isNotEmpty()) data.copyInto(pkt, t + 20)
 

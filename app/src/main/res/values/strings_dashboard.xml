@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="dash_card_behavior">App Behavior DNA</string>
-    <string name="dash_card_behavior_desc">Learns normal app rhythm and flags deviations</string>
+    <string name="dash_card_behavior_desc">Changes from each app’s learned pattern, last 7 days</string>
     <string name="dash_status_anomalous">Anomalous</string>
     <string name="dash_status_learning">Learning</string>
     <string name="dash_status_quiet">Quiet</string>
@@ -9,8 +9,8 @@
         <item quantity="one">%d alert</item>
         <item quantity="other">%d alerts</item>
     </plurals>
-    <string name="dash_card_ipv6">IPv6 leak</string>
-    <string name="dash_card_ipv6_desc">Dual-stack routing and bypass check</string>
+    <string name="dash_card_ipv6">IPv6 traffic</string>
+    <string name="dash_card_ipv6_desc">IPv6 sessions in the last 24 h, carried through the tunnel like IPv4</string>
     <string name="dash_status_critical">Critical</string>
     <string name="dash_status_blocked">Blocked</string>
     <string name="dash_status_contained">Contained</string>
@@ -32,8 +32,8 @@
     <string name="dash_card_no_decrypt_desc">Metadata-only inspection; TLS contents stay private</string>
     <string name="dash_status_verified">Verified</string>
     <string name="dash_headers_only">Headers only</string>
-    <string name="dash_card_entropy">Shannon entropy detection</string>
-    <string name="dash_card_entropy_desc">DGA/C2 labels and tunneling-like DNS names</string>
+    <string name="dash_card_entropy">Random-looking names</string>
+    <string name="dash_card_entropy_desc">Domain names that look machine-generated, last 7 days</string>
     <string name="dash_status_high_value">High value</string>
     <string name="dash_status_normal">Normal</string>
     <plurals name="dash_signals_count">
@@ -41,22 +41,22 @@
         <item quantity="other">%d signals</item>
     </plurals>
     <string name="dash_card_night">Night activity detection</string>
-    <string name="dash_card_night_desc">Unexpected sessions between 00:00 and 05:00</string>
+    <string name="dash_card_night_desc">Sessions started 00:00–05:59 while the screen was off</string>
     <string name="dash_status_review">Review</string>
     <plurals name="dash_sessions_count">
         <item quantity="one">%d session</item>
         <item quantity="other">%d sessions</item>
     </plurals>
-    <string name="dash_card_beacon">Beacon interval analysis</string>
-    <string name="dash_card_beacon_desc">Repeated app × destination contact patterns</string>
-    <string name="dash_status_apt">APT pattern</string>
+    <string name="dash_card_beacon">Timer-like contacts</string>
+    <string name="dash_card_beacon_desc">Same app and host at near-constant intervals, 24 h; push channels not counted</string>
+    <string name="dash_status_apt">Repeating</string>
     <string name="dash_status_stable">Stable</string>
     <plurals name="dash_patterns_count">
         <item quantity="one">%d pattern</item>
         <item quantity="other">%d patterns</item>
     </plurals>
-    <string name="dash_card_upload">Large upload detection</string>
-    <string name="dash_card_upload_desc">Possible data exfiltration by volume</string>
+    <string name="dash_card_upload">Large background upload</string>
+    <string name="dash_card_upload_desc">Largest upload in 24 h made while the app was not on screen</string>
     <string name="dash_card_trust">Network trust level</string>
     <string name="dash_trust_reduced">Reduced</string>
     <string name="dash_trust_watch">Watch</string>
@@ -75,13 +75,13 @@
         <item quantity="other">%d apps</item>
     </plurals>
     <string name="dash_card_cleartext">Cleartext connections</string>
-    <string name="dash_card_cleartext_desc">Unencrypted HTTP connections allowed through</string>
+    <string name="dash_card_cleartext_desc">Plain HTTP requests seen in the last 24 h</string>
     <string name="dash_status_elevated">Elevated</string>
     <string name="dash_status_present">Present</string>
     <string name="dash_status_none">None</string>
     <plurals name="dash_today_count">
-        <item quantity="one">%d today</item>
-        <item quantity="other">%d today</item>
+        <item quantity="one">%d in 24 h</item>
+        <item quantity="other">%d in 24 h</item>
     </plurals>
     <string name="dash_rec_kill_switch">Turn on the kill switch so nothing leaks if protection drops.</string>
     <plurals name="dash_rec_behavior">
@@ -89,8 +89,8 @@
         <item quantity="other">Behavior DNA found %d app deviations. New destinations and odd-hour uploads deserve a review.</item>
     </plurals>
     <string name="dash_rec_ipv6">IPv6 traffic was seen while the VPN is active. Add IPv6 routing support or disable the IPv6 bypass.</string>
-    <string name="dash_rec_entropy">Random-looking DNS names were detected. Keep the behavior fingerprint even if the domain changes.</string>
-    <string name="dash_rec_beacon">Beacon-like intervals found. Treat that app and destination pair as reduced trust.</string>
+    <string name="dash_rec_entropy">Random-looking domain names were seen. Open the card to see which apps looked them up.</string>
+    <string name="dash_rec_beacon">Timer-like contacts were found. Open the card to see which app and host.</string>
     <string name="dash_rec_strict">Strict mode is recommended on %1$s because trust fell to %2$d/100.</string>
     <string name="dash_rec_default">Standard blocking plus the kill switch gives most people the strongest default protection.</string>
     <string name="dash_rec_no_decrypt">Behavior analysis works without decrypting content, so what you send stays private.</string>
@@ -105,7 +105,7 @@
     <string name="dash_not_protected">Not protected</string>
     <string name="dash_privacy_score_n">Privacy score %1$d</string>
     <string name="dash_encryption_health">Encryption health</string>
-    <string name="dash_tls_percent">%1$d%% TLS</string>
+    <string name="dash_tls_percent">%1$d%% encrypted</string>
     <string name="dash_trackers_blocked">Trackers blocked</string>
     <string name="dash_cleartext_conns">Cleartext connections</string>
     <string name="dash_privacy_score">Privacy score</string>
@@ -121,8 +121,8 @@
     <string name="dash_recommendations">Recommendations</string>
     <string name="dash_recent_alerts">Recent alerts</string>
     <string name="dash_no_alerts">No alerts yet</string>
-    <string name="dash_no_alerts_desc">Once traffic starts flowing, recent anomalies and blocks will appear here.</string>
-    <string name="dash_sleep_title">While you were sleeping</string>
+    <string name="dash_no_alerts_desc">Nothing in the alert inbox for the last 7 days.</string>
+    <string name="dash_sleep_title">Screen off · last 7 days</string>
     <string name="dash_sleep_summary">%1$s · %2$s</string>
     <plurals name="dash_apps_active">
         <item quantity="one">%d app active</item>
@@ -133,8 +133,8 @@
         <item quantity="other">%d DNS queries</item>
     </plurals>
     <plurals name="dash_tracking_count">
-        <item quantity="one">%d tracking</item>
-        <item quantity="other">%d tracking</item>
+        <item quantity="one">%d blocked domain</item>
+        <item quantity="other">%d blocked domains</item>
     </plurals>
     <string name="dash_weekly_title">Weekly privacy report</string>
     <string name="dash_weekly_desc">Behavioral summary from the last 7 days</string>
@@ -152,4 +152,18 @@
     <string name="dash_share_capture">Share last capture</string>
     <string name="dash_protection">Protection</string>
     <string name="dash_per_second">%1$s/s</string>
+    <!-- HTTPS inspection state (enterprise) and the Strict suggestion -->
+    <string name="dash_card_decrypt_on">HTTPS inspection is on</string>
+    <string name="dash_card_decrypt_on_desc">Apps that trust the PrivacyGuard certificate have their HTTPS content decrypted and stored on this phone</string>
+    <string name="dash_status_decrypting">Decrypting</string>
+    <string name="dash_payloads">Payloads</string>
+    <string name="dash_status_off">Not decrypting</string>
+    <string name="dash_strict_title">Switch to Strict on %1$s?</string>
+    <string name="dash_strict_body">Trust on this network fell to %1$d/100. Strict also blocks system telemetry. Nothing changes unless you choose it.</string>
+    <string name="dash_strict_accept">Switch to Strict</string>
+    <string name="dash_strict_dismiss">Not on this network</string>
+    <string name="dash_status_tunnelled">Tunnelled</string>
+    <string name="dash_ks_unchecked">Not checked (protection off)</string>
+    <string name="dash_ks_lockdown_on">Always-on + block</string>
+    <string name="dash_ks_lockdown_off">Not set up</string>
 </resources>

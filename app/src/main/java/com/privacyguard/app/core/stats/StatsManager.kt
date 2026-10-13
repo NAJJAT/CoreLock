@@ -21,11 +21,16 @@ data class ActiveConnectionInfo(
     val destinationPort: Int,
     val protocol:        String,
     val isBlocked:       Boolean,
+    /** Bytes up + down so far. */
     val bytesTransferred: Long,
     val hostName:        String? = null,
     val securityInfo:    String  = "Unknown",
     val encryptionInfo:  String  = "Unknown",
     val payloadPreview:  String? = null,
+    val bytesSent:       Long = 0L,
+    val bytesReceived:   Long = 0L,
+    /** Up + down during the last second. */
+    val bytesPerSec:     Long = 0L,
 )
 
 data class TrackerInfo(
@@ -59,6 +64,8 @@ data class StatsSnapshot(
     val recentActivity:      List<ActivityInfo>     = emptyList(),
     val topTrackers:         List<TrackerInfo>       = emptyList(),
     val appStats:            List<AppStat>           = emptyList(),
+    /** All traffic through the tunnel (up + down) during the last second. */
+    val throughputBytesPerSec: Long                  = 0L,
 )
 
 /**

@@ -55,7 +55,7 @@
     <string name="mitm_outbound">صادر</string>
     <string name="mitm_inbound">وارد</string>
     <string name="mitm_analytics">التحليلات</string>
-    <string name="mitm_total_requests">إجمالي الطلبات الملتقطة</string>
+    <string name="mitm_total_requests">الإدخالات الملتقطة (الطلبات والردود)</string>
     <string name="mitm_flagged">مُعلَّمة</string>
     <string name="mitm_warnings">تحذيرات</string>
     <string name="mitm_clean">سليمة</string>
@@ -144,4 +144,8 @@
     <string name="mitm_st_handshake_desc">رفض التطبيق شهادة الفحص (تثبيت الشهادة، أو عدم الثقة بشهادات المستخدم). يُمرَّر المضيف دون فك تشفير.</string>
     <string name="mitm_st_error">خطأ</string>
     <string name="mitm_st_error_desc">واجه الفحص خطأً في هذا الاتصال؛ ومُرّرت حركة البيانات.</string>
+    <string name="mitm_metadata_only">بيانات وصفية فقط</string>
+    <string name="mitm_no_match">لا توجد إدخالات مطابقة</string>
+    <string name="mitm_no_match_desc">لا شيء مما حُفظ يطابق هذا البحث أو المرشّح. اضغط «الكل» لمسح المرشّحات.</string>
+    <string name="mitm_list_capped">تُعرض أحدث %1$d نتيجة. ضيّق البحث لرؤية الأقدم.</string>
 </resources>

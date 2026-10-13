@@ -11,6 +11,9 @@ data class DualVpnConfig(
     val secondHopUser: String = "",
     val secondHopPassword: String = "",
 ) {
+    // Ports are range-checked: an out-of-range value (e.g. a mistyped "10811080")
+    // was cut to 16 bits and silently dialled some other port (63176).
     val isValid: Boolean get() =
-        enabled && firstHopHost.isNotBlank() && secondHopHost.isNotBlank()
+        enabled && firstHopHost.isNotBlank() && secondHopHost.isNotBlank() &&
+            firstHopPort in 1..65535 && secondHopPort in 1..65535
 }

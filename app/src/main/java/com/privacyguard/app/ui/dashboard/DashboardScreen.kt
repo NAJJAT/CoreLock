@@ -97,6 +97,8 @@ fun DashboardScreen(
     onOpenSleepReport: (at: Long) -> Unit = {},
     onOpenEvidence: (EvidenceKind, at: Long) -> Unit = { _, _ -> },
     onOpenStatistics: () -> Unit = {},
+    /** Null in builds without HTTPS inspection. */
+    onOpenPayloads: (() -> Unit)? = null,
     viewModel: DashboardViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -217,7 +219,8 @@ fun DashboardScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatTile(stringResource(R.string.dash_blocked_24h), formatCount(uiState.trackersBlocked), PgAccent, Modifier.weight(1f).clickable { open(EvidenceKind.BLOCKED_24H) })
+                    StatTile(stringResource(R.string.dash_blocked_24h), formatCount(uiState.trackersBlocked), PgAccent, Modifier.weight(1f).clickable { open(EvidenceKind.BLOCKED_24H) },
+                        detail = pluralStringResource(R.plurals.trf_n_domains, uiState.blockedDomains24h, uiState.blockedDomains24h))
                     StatTile(stringResource(R.string.dash_cleartext_24h), formatCount(uiState.cleartextCount), PgDanger, Modifier.weight(1f).clickable { open(EvidenceKind.CLEARTEXT_24H) })
                     StatTile(stringResource(R.string.dash_privacy_score), formatCount(uiState.privacyScore.score), PgInfo, Modifier.weight(1f).clickable(onClick = onOpenStatistics))
                 }
@@ -247,11 +250,25 @@ fun DashboardScreen(
                 )
 
                 Spacer(modifier = Modifier.height(18.dp))
+                uiState.strictSuggestion?.let { suggestion ->
+                    StrictSuggestionCard(
+                        suggestion = suggestion,
+                        onAccept = viewModel::acceptStrictSuggestion,
+                        onDismiss = viewModel::dismissStrictSuggestion,
+                    )
+                    Spacer(modifier = Modifier.height(18.dp))
+                }
                 SectionLabel(stringResource(R.string.set_protection_level))
                 Spacer(modifier = Modifier.height(8.dp))
                 ProtectionLevelPicker(
                     current = uiState.protectionLevel,
                     onSelect = { viewModel.setProtectionLevel(it) },
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    stringResource(protectionLevelDescription(uiState.protectionLevel)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PgTextMuted,
                 )
                 Spacer(modifier = Modifier.height(18.dp))
                 SectionLabel(stringResource(R.string.dash_security_systems))
@@ -267,6 +284,7 @@ fun DashboardScreen(
                             evidence != null -> open(evidence)
                             card.kind == CardKind.KILL_SWITCH -> KillSwitch.openAlwaysOnSettings(context)
                             card.kind == CardKind.TRUST -> onOpenStatistics()
+                            card.kind == CardKind.NO_DECRYPTION && card.severity == CardSeverity.WARNING -> onOpenPayloads?.invoke()
                             // "No decryption" states a fact about the app, not a count: nothing to list.
                             else -> {}
                         }
@@ -322,7 +340,7 @@ fun DashboardScreen(
             }
         }
 
-        if (uiState.anomalies.isEmpty()) {
+        if (uiState.recentAlerts.isEmpty()) {
             item {
                 PanelCard(
                     modifier = Modifier.padding(horizontal = 16.dp).clickable(onClick = onOpenAlerts),
@@ -333,9 +351,9 @@ fun DashboardScreen(
                 }
             }
         } else {
-            items(uiState.anomalies, key = { it.id }) { anomaly ->
-                val tint = if (anomaly.severity >= 8) PgDanger else PgWarning
-                val bg = if (anomaly.severity >= 8) PgDangerDim else PgWarningDim
+            items(uiState.recentAlerts, key = { it.id }) { alert ->
+                val tint = if (alert.severity >= 8) PgDanger else PgWarning
+                val bg = if (alert.severity >= 8) PgDangerDim else PgWarningDim
                 PanelCard(modifier = Modifier.padding(horizontal = 16.dp).clickable(onClick = onOpenAlerts)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
@@ -346,7 +364,7 @@ fun DashboardScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = if (anomaly.severity >= 8) Icons.Default.Warning else Icons.Default.Security,
+                                imageVector = if (alert.severity >= 8) Icons.Default.Warning else Icons.Default.Security,
                                 contentDescription = null,
                                 tint = tint,
                                 modifier = Modifier.size(18.dp)
@@ -354,11 +372,11 @@ fun DashboardScreen(
                         }
                         Spacer(modifier = Modifier.size(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(anomaly.domain, style = MaterialTheme.typography.titleMedium, color = PgText)
+                            Text(alert.title, style = MaterialTheme.typography.titleMedium, color = PgText)
                             Spacer(modifier = Modifier.height(2.dp))
-                            Text("${com.privacyguard.app.ui.text.FindingText.appLabel(context, anomaly.packageName)} · ${com.privacyguard.app.ui.text.FindingText.dnsAnomalyTitle(context, anomaly.anomalyType)}", style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                            Text("${com.privacyguard.app.ui.text.FindingText.appLabel(context, alert.packageName.orEmpty())} · ${alert.detail}", style = MaterialTheme.typography.bodySmall, color = PgTextMuted, maxLines = 2)
                         }
-                        Text(formatAgo(anomaly.timestamp), style = MaterialTheme.typography.labelMedium, color = PgTextFaint)
+                        Text(formatAgo(alert.timestamp), style = MaterialTheme.typography.labelMedium, color = PgTextFaint)
                     }
                 }
             }
@@ -534,21 +552,16 @@ private fun WeeklyPrivacyReportCard(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(stringResource(R.string.dash_weekly_desc), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
             }
-            Text(stringResource(when (report.trustLevel) {
-                "Reduced" -> R.string.dash_trust_reduced
-                "Watch" -> R.string.dash_trust_watch
-                "Learning" -> R.string.dash_status_learning
-                else -> R.string.dash_trust_trusted
-            }).uppercase(), style = MaterialTheme.typography.labelSmall, color = PgAccent)
         }
         Spacer(modifier = Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             StatTile(stringResource(R.string.dash_connections), formatCount(report.totalConnections), PgInfo, Modifier.weight(1f).clickable { onOpen(EvidenceKind.CONNECTIONS_7D) })
-            StatTile(stringResource(R.string.dash_blocked), formatCount(report.blockedConnections), PgDanger, Modifier.weight(1f).clickable { onOpen(EvidenceKind.BLOCKED_7D) })
+            StatTile(stringResource(R.string.dash_blocked), formatCount(report.blockedConnections), PgDanger, Modifier.weight(1f).clickable { onOpen(EvidenceKind.BLOCKED_7D) },
+                detail = pluralStringResource(R.plurals.trf_n_domains, report.blockedDomains, report.blockedDomains))
         }
         Spacer(modifier = Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatTile(stringResource(R.string.dash_behavior), formatCount(report.behaviorAlerts), PgWarning, Modifier.weight(1f).clickable { onOpen(EvidenceKind.BEHAVIOR) })
+            StatTile(stringResource(R.string.dash_behavior), formatCount(report.behaviorAlerts), PgWarning, Modifier.weight(1f).clickable { onOpen(EvidenceKind.BEHAVIOR_7D) })
             StatTile(stringResource(R.string.dash_score), formatCount(report.privacyScore), PgAccent, Modifier.weight(1f).clickable(onClick = onOpenScore))
         }
         Spacer(modifier = Modifier.height(12.dp))
@@ -656,3 +669,45 @@ private fun formatThroughput(context: android.content.Context, bytesPerSec: Long
 private fun formatCount(n: Number): String = java.text.NumberFormat.getIntegerInstance().format(n)
 
 
+
+/** What the level blocks, in words; the mapping itself is ProtectionLevels. */
+@androidx.annotation.StringRes
+internal fun protectionLevelDescription(level: String): Int = when (level) {
+    "MINIMAL" -> R.string.set_level_minimal_desc
+    "STRICT" -> R.string.set_level_strict_desc
+    else -> R.string.set_level_standard_desc
+}
+
+@Composable
+private fun StrictSuggestionCard(
+    suggestion: StrictSuggestion,
+    onAccept: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    PanelCard {
+        Text(
+            stringResource(R.string.dash_strict_title, suggestion.networkLabel),
+            style = MaterialTheme.typography.titleMedium,
+            color = PgText,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            stringResource(R.string.dash_strict_body, suggestion.score),
+            style = MaterialTheme.typography.bodySmall,
+            color = PgTextMuted,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Button(
+                onClick = onAccept,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(containerColor = PgWarningDim, contentColor = PgWarning),
+            ) { Text(stringResource(R.string.dash_strict_accept)) }
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(containerColor = PgBackgroundAlt, contentColor = PgTextMuted),
+            ) { Text(stringResource(R.string.dash_strict_dismiss)) }
+        }
+    }
+}

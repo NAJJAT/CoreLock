@@ -61,25 +61,10 @@
 
 
 # ── Kotlin ────────────────────────────────────────────────────────────────────
+# Destructuring, copy(), companions and object singletons are plain static calls,
+# so they need no keep rules. (Global keeps for them, and for every @Composable,
+# used to stop R8 from shrinking those members in every library as well.)
 
-# data class copy() / componentN() methods used in destructuring and StateFlow updates
--keepclassmembers class * {
-    ** component*();
-    ** copy(...);
-}
-
-# Kotlin companion objects accessed by name
--keepclassmembers class * {
-    public static ** Companion;
-}
-
-# object singletons (Kotlin object declarations)
--keepclassmembers class * {
-    public static ** INSTANCE;
-}
-
-# Kotlin metadata (needed for reflection, Coroutines, and Compose)
--keep class kotlin.Metadata { *; }
 -dontwarn kotlin.reflect.jvm.internal.**
 
 
@@ -103,13 +88,8 @@
 
 
 # ── Jetpack Compose ───────────────────────────────────────────────────────────
-
-# Compose Compiler generates stable class markers; keep them
--keep class androidx.compose.** { *; }
--keepclassmembers class * {
-    @androidx.compose.runtime.Composable <methods>;
-}
--dontwarn androidx.compose.**
+# Compose ships its own consumer R8 rules; keeping all of androidx.compose.**
+# only made the APK larger.
 
 
 # ── JNI — Rust native bridge ──────────────────────────────────────────────────
@@ -141,14 +121,11 @@
 
 
 # ── MITM / TLS engine ────────────────────────────────────────────────────────
+# (javax.net.ssl / java.security are platform classes, not in the APK: no rules.)
 
-# X.509 / SSLContext / KeyManager classes loaded by class name at runtime
--keep class javax.net.ssl.** { *; }
--keep class java.security.** { *; }
--keep class sun.security.** { *; }
 -dontwarn sun.security.**
 
-# BouncyCastle (used by CaManager / CertForger if present on device)
+# BouncyCastle looks up some of its own classes by name; enterprise flavor only.
 -keep class org.bouncycastle.** { *; }
 -dontwarn org.bouncycastle.**
 
@@ -172,21 +149,19 @@
 
 
 # ── OkHttp / networking (used by CtMonitor, DoH, SIEM shipper) ───────────────
+# OkHttp ships its own R8 rules.
 
 -dontwarn okhttp3.**
 -dontwarn okio.**
--keep class okhttp3.** { *; }
--keep interface okhttp3.** { *; }
 
 
 # ── AndroidX / Google libraries ───────────────────────────────────────────────
+# Navigation uses string routes here (no reflection), and AndroidX libraries
+# ship consumer rules for what they need.
 
 -dontwarn androidx.**
 -keep class androidx.core.app.CoreComponentFactory { *; }
 -keep class androidx.startup.** { *; }
-
-# Navigation component (routes stored as strings, looked up by reflection)
--keep class androidx.navigation.** { *; }
 
 
 # ── Suppress common harmless warnings ────────────────────────────────────────

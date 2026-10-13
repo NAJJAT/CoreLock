@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="dash_card_behavior">Gedrags-DNA van apps</string>
-    <string name="dash_card_behavior_desc">Leert het normale ritme van apps en signaleert afwijkingen</string>
+    <string name="dash_card_behavior_desc">Afwijkingen van het geleerde patroon van elke app, afgelopen 7 dagen</string>
     <string name="dash_status_anomalous">Afwijkend</string>
     <string name="dash_status_learning">Leert</string>
     <string name="dash_status_quiet">Rustig</string>
@@ -9,8 +9,8 @@
         <item quantity="one">%d melding</item>
         <item quantity="other">%d meldingen</item>
     </plurals>
-    <string name="dash_card_ipv6">IPv6-lek</string>
-    <string name="dash_card_ipv6_desc">Controle van dual-stackroutering en omzeiling</string>
+    <string name="dash_card_ipv6">IPv6-verkeer</string>
+    <string name="dash_card_ipv6_desc">IPv6-sessies in de afgelopen 24 u, via de tunnel net als IPv4</string>
     <string name="dash_status_critical">Kritiek</string>
     <string name="dash_status_blocked">Geblokkeerd</string>
     <string name="dash_status_contained">Ingeperkt</string>
@@ -32,8 +32,8 @@
     <string name="dash_card_no_decrypt_desc">Alleen metagegevens worden bekeken; TLS-inhoud blijft privé</string>
     <string name="dash_status_verified">Geverifieerd</string>
     <string name="dash_headers_only">Alleen headers</string>
-    <string name="dash_card_entropy">Detectie van willekeurige namen</string>
-    <string name="dash_card_entropy_desc">DGA/C2-namen en DNS-namen die op tunneling lijken</string>
+    <string name="dash_card_entropy">Willekeurig ogende namen</string>
+    <string name="dash_card_entropy_desc">Domeinnamen die er machinaal gemaakt uitzien, afgelopen 7 dagen</string>
     <string name="dash_status_high_value">Belangrijk</string>
     <string name="dash_status_normal">Normaal</string>
     <plurals name="dash_signals_count">
@@ -41,22 +41,22 @@
         <item quantity="other">%d signalen</item>
     </plurals>
     <string name="dash_card_night">Nachtelijke activiteit</string>
-    <string name="dash_card_night_desc">Onverwachte sessies tussen 00:00 en 05:00</string>
+    <string name="dash_card_night_desc">Sessies gestart tussen 00:00 en 05:59 terwijl het scherm uit was</string>
     <string name="dash_status_review">Bekijken</string>
     <plurals name="dash_sessions_count">
         <item quantity="one">%d sessie</item>
         <item quantity="other">%d sessies</item>
     </plurals>
-    <string name="dash_card_beacon">Analyse van bakenintervallen</string>
-    <string name="dash_card_beacon_desc">Herhaalde contactpatronen tussen app en bestemming</string>
-    <string name="dash_status_apt">APT-patroon</string>
+    <string name="dash_card_beacon">Contact op een timer</string>
+    <string name="dash_card_beacon_desc">Zelfde app en host met bijna vaste tussenpozen, 24 u; pushkanalen tellen niet mee</string>
+    <string name="dash_status_apt">Herhalend</string>
     <string name="dash_status_stable">Stabiel</string>
     <plurals name="dash_patterns_count">
         <item quantity="one">%d patroon</item>
         <item quantity="other">%d patronen</item>
     </plurals>
-    <string name="dash_card_upload">Detectie van grote uploads</string>
-    <string name="dash_card_upload_desc">Mogelijke datadiefstal op basis van volume</string>
+    <string name="dash_card_upload">Grote upload op de achtergrond</string>
+    <string name="dash_card_upload_desc">Grootste upload in 24 u terwijl de app niet in beeld was</string>
     <string name="dash_card_trust">Vertrouwen in netwerk</string>
     <string name="dash_trust_reduced">Verminderd</string>
     <string name="dash_trust_watch">Opletten</string>
@@ -75,13 +75,13 @@
         <item quantity="other">%d apps</item>
     </plurals>
     <string name="dash_card_cleartext">Onversleutelde verbindingen</string>
-    <string name="dash_card_cleartext_desc">Toegestane onversleutelde HTTP-verbindingen</string>
+    <string name="dash_card_cleartext_desc">Gewone HTTP-verzoeken in de afgelopen 24 u</string>
     <string name="dash_status_elevated">Verhoogd</string>
     <string name="dash_status_present">Aanwezig</string>
     <string name="dash_status_none">Geen</string>
     <plurals name="dash_today_count">
-        <item quantity="one">%d vandaag</item>
-        <item quantity="other">%d vandaag</item>
+        <item quantity="one">%d in 24 u</item>
+        <item quantity="other">%d in 24 u</item>
     </plurals>
     <string name="dash_rec_kill_switch">Zet de kill switch aan, zodat er niets lekt als de bescherming wegvalt.</string>
     <plurals name="dash_rec_behavior">
@@ -89,8 +89,8 @@
         <item quantity="other">Gedrags-DNA vond %d afwijkingen bij apps. Nieuwe bestemmingen en uploads op vreemde tijden verdienen een controle.</item>
     </plurals>
     <string name="dash_rec_ipv6">Er is IPv6-verkeer gezien terwijl de VPN actief is. Voeg IPv6-routering toe of zet de IPv6-omzeiling uit.</string>
-    <string name="dash_rec_entropy">Er zijn willekeurig ogende DNS-namen gevonden. Bewaar de gedragsvingerafdruk, ook als het domein verandert.</string>
-    <string name="dash_rec_beacon">Bakenachtige intervallen gevonden. Vertrouw die combinatie van app en bestemming minder.</string>
+    <string name="dash_rec_entropy">Er zijn willekeurig ogende domeinnamen gezien. Open de kaart om te zien welke apps ze opzochten.</string>
+    <string name="dash_rec_beacon">Er is contact op een timer gevonden. Open de kaart om te zien welke app en host.</string>
     <string name="dash_rec_strict">De strenge modus wordt aangeraden op %1$s, omdat het vertrouwen daalde tot %2$d/100.</string>
     <string name="dash_rec_default">Standaardblokkering plus de kill switch geeft de meeste mensen de sterkste standaardbescherming.</string>
     <string name="dash_rec_no_decrypt">De gedragsanalyse werkt zonder inhoud te ontsleutelen, dus wat je verstuurt blijft privé.</string>
@@ -105,7 +105,7 @@
     <string name="dash_not_protected">Niet beschermd</string>
     <string name="dash_privacy_score_n">Privacyscore %1$d</string>
     <string name="dash_encryption_health">Versleuteling</string>
-    <string name="dash_tls_percent">%1$d%% TLS</string>
+    <string name="dash_tls_percent">%1$d%% versleuteld</string>
     <string name="dash_trackers_blocked">Trackers geblokkeerd</string>
     <string name="dash_cleartext_conns">Onversleutelde verbindingen</string>
     <string name="dash_privacy_score">Privacyscore</string>
@@ -121,8 +121,8 @@
     <string name="dash_recommendations">Aanbevelingen</string>
     <string name="dash_recent_alerts">Recente meldingen</string>
     <string name="dash_no_alerts">Nog geen meldingen</string>
-    <string name="dash_no_alerts_desc">Zodra er verkeer is, verschijnen hier recente afwijkingen en blokkeringen.</string>
-    <string name="dash_sleep_title">Terwijl je sliep</string>
+    <string name="dash_no_alerts_desc">Niets in de meldingeninbox in de afgelopen 7 dagen.</string>
+    <string name="dash_sleep_title">Scherm uit · afgelopen 7 dagen</string>
     <string name="dash_sleep_summary">%1$s · %2$s</string>
     <plurals name="dash_apps_active">
         <item quantity="one">%d app actief</item>
@@ -133,8 +133,8 @@
         <item quantity="other">%d DNS-verzoeken</item>
     </plurals>
     <plurals name="dash_tracking_count">
-        <item quantity="one">%d tracker</item>
-        <item quantity="other">%d trackers</item>
+        <item quantity="one">%d geblokkeerd domein</item>
+        <item quantity="other">%d geblokkeerde domeinen</item>
     </plurals>
     <string name="dash_weekly_title">Wekelijks privacyrapport</string>
     <string name="dash_weekly_desc">Gedragsoverzicht van de afgelopen 7 dagen</string>
@@ -152,4 +152,17 @@
     <string name="dash_share_capture">Laatste opname delen</string>
     <string name="dash_protection">Bescherming</string>
     <string name="dash_per_second">%1$s/s</string>
+    <string name="dash_card_decrypt_on">HTTPS-inspectie staat aan</string>
+    <string name="dash_card_decrypt_on_desc">Bij apps die het PrivacyGuard-certificaat vertrouwen, wordt de HTTPS-inhoud ontsleuteld en op deze telefoon bewaard</string>
+    <string name="dash_status_decrypting">Ontsleutelt</string>
+    <string name="dash_payloads">Payloads</string>
+    <string name="dash_status_off">Ontsleutelt niet</string>
+    <string name="dash_strict_title">Overschakelen naar Streng op %1$s?</string>
+    <string name="dash_strict_body">Het vertrouwen in dit netwerk is gedaald naar %1$d/100. Streng blokkeert ook systeemtelemetrie. Er verandert niets tenzij je dat kiest.</string>
+    <string name="dash_strict_accept">Overschakelen naar Streng</string>
+    <string name="dash_strict_dismiss">Niet op dit netwerk</string>
+    <string name="dash_status_tunnelled">Via de tunnel</string>
+    <string name="dash_ks_unchecked">Niet gecontroleerd (bescherming uit)</string>
+    <string name="dash_ks_lockdown_on">Altijd aan + blokkeren</string>
+    <string name="dash_ks_lockdown_off">Niet ingesteld</string>
 </resources>

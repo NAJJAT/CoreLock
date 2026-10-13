@@ -205,6 +205,9 @@ fun AppNavHost(
                     onOpenSleepReport = { at -> navController.navigate("sleepReport?at=$at") },
                     onOpenEvidence = { kind, at -> navController.navigate("evidence/${kind.name}?at=$at") },
                     onOpenStatistics = { navController.navigate("statistics") },
+                    onOpenPayloads = if (BuildConfig.MITM_AVAILABLE) {
+                        { navController.navigate("payloads") }
+                    } else null,
                 )
             }
 
@@ -286,7 +289,11 @@ fun AppNavHost(
             }
 
             composable("statistics") {
-                StatisticsScreen()
+                StatisticsScreen(
+                    onOpenEvidence = { kind, at -> navController.navigate("evidence/${kind.name}?at=$at") },
+                    onOpenDomain = { host -> navController.navigate("domain/${Uri.encode(host)}") },
+                    onOpenApp = { pkg -> navController.navigate(appTrafficRoute(pkg)) },
+                )
             }
 
             composable("crypto") {

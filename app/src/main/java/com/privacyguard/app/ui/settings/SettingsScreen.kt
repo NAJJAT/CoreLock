@@ -38,6 +38,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
@@ -148,6 +149,12 @@ fun SettingsScreen(
                         FilterEngine.BlockLevel.STRICT.name -> R.string.set_level_strict
                         else -> R.string.set_level_standard
                     })),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PgTextMuted,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    stringResource(com.privacyguard.app.ui.dashboard.protectionLevelDescription(protectionLevel)),
                     style = MaterialTheme.typography.bodySmall,
                     color = PgTextMuted,
                 )
@@ -291,13 +298,20 @@ fun SettingsScreen(
             SettingBlock(
                 title = stringResource(R.string.set_upstream_dns),
                 footer = {
+                    // Edited as a draft; only a complete IP address is saved. Saving
+                    // every keystroke stored half-typed values ("1.1.") as the resolver.
+                    var dnsDraft by remember(upstreamDns) { mutableStateOf(upstreamDns) }
                     OutlinedTextField(
-                        value = upstreamDns,
+                        value = dnsDraft,
                         onValueChange = { value ->
-                            if (value.length <= 45 && value.all { it.isDigit() || it == '.' || it == ':' }) {
-                                settingsPreferences.setUpstreamDns(value)
+                            if (value.length <= 45 && value.all { it.isLetterOrDigit() || it == '.' || it == ':' }) {
+                                dnsDraft = value
+                                if (com.privacyguard.vpn.forwarder.DnsHandler.isIpLiteral(value)) {
+                                    settingsPreferences.setUpstreamDns(value)
+                                }
                             }
                         },
+                        isError = !com.privacyguard.vpn.forwarder.DnsHandler.isIpLiteral(dnsDraft),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),

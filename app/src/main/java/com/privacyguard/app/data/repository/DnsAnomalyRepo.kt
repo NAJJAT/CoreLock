@@ -8,7 +8,8 @@ import kotlinx.coroutines.withContext
 
 class DnsAnomalyRepo(private val dnsAnomalyDao: DnsAnomalyDao) {
 
-    suspend fun save(anomaly: DnsAnomalyDetector.Anomaly) = withContext(Dispatchers.IO) {
+    /** False when the same app and host already has an anomaly today (see DnsAnomalyDao.insert). */
+    suspend fun save(anomaly: DnsAnomalyDetector.Anomaly, networkKey: String? = null): Boolean = withContext(Dispatchers.IO) {
         dnsAnomalyDao.insert(DnsAnomalyEntity(
             timestamp = anomaly.timestamp,
             packageName = anomaly.packageName,
@@ -16,6 +17,7 @@ class DnsAnomalyRepo(private val dnsAnomalyDao: DnsAnomalyDao) {
             anomalyType = anomaly.type.name,
             description = anomaly.description,
             severity = anomaly.severity,
+            networkKey = networkKey,
         ))
     }
 

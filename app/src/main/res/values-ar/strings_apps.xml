@@ -69,7 +69,7 @@
     <string name="appd_no_recent">لم يُسجَّل أي نشاط حديث بعد.</string>
     <string name="appd_timeline_24h">المخطط الزمني لـ 24 ساعة</string>
     <string name="appd_hour">%1$d س</string>
-    <string name="appd_legend">أخضر: مسموح · أصفر: خمول أو خلفية · أحمر: محظور</string>
+    <string name="appd_legend">الاتصالات لكل ساعة. أخضر: مسموح · أصفر: الشاشة مطفأة أو التطبيق ليس على الشاشة · أحمر: طلبات ومحاولات محظورة</string>
     <string name="appd_loading_mismatch">جارٍ مقارنة الأذونات بحركة البيانات المرصودة…</string>
     <string name="appd_no_mismatch">لا يوجد عدم تطابق في الأذونات</string>
     <string name="appd_no_mismatch_desc">أذونات Android المعلنة وحركة البيانات المرصودة متوافقة حتى الآن لهذا التطبيق.</string>
@@ -104,7 +104,7 @@
     <string name="rule_block_app_bg">حظر %1$s (في الخلفية)</string>
     <string name="rule_block_app">حظر %1$s</string>
     <string name="apps_title">التطبيقات</string>
-    <string name="apps_subtitle">مخاطر الخصوصية وحركة البيانات لكل تطبيق</string>
+    <string name="apps_subtitle">الخطر من كل السلوك المرصود · الحركة خلال آخر 24 ساعة</string>
     <plurals name="apps_high_risk_n">
         <item quantity="zero">%d عالي الخطورة</item>
         <item quantity="one">%d عالي الخطورة</item>
@@ -144,4 +144,5 @@
     </plurals>
     <string name="apps_stalker_score">درجة التجسس %1$d</string>
     <string name="apps_search">ابحث عن تطبيق أو حزمة…</string>
+    <string name="apps_sort_destinations">الوجهات</string>
 </resources>

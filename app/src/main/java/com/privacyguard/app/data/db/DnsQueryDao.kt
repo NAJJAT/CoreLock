@@ -171,6 +171,12 @@ interface DnsQueryDao {
     @Query("SELECT COUNT(*) FROM dns_queries WHERE timestamp > :from AND timestamp <= :to AND was_blocked = 1")
     suspend fun countBlockedBetween(from: Long, to: Long): Int
 
+    @Query("SELECT COUNT(*) FROM dns_queries WHERE timestamp > :from AND timestamp <= :to")
+    suspend fun countBetween(from: Long, to: Long): Int
+
+    @Query("SELECT DISTINCT domain FROM dns_queries WHERE timestamp > :from AND timestamp <= :to AND was_blocked = 1")
+    suspend fun blockedDomainsBetween(from: Long, to: Long): List<String>
+
     /** Distinct blocked domains looked up while the screen was off (sleep report "tracking domains"). */
     @Query("""
         SELECT domain AS domain,
@@ -246,6 +252,9 @@ interface DnsQueryDao {
 
     @Query("SELECT MIN(timestamp) FROM dns_queries")
     suspend fun oldestTimestamp(): Long?
+
+    @Query("SELECT MIN(timestamp) FROM dns_queries WHERE domain = :domain")
+    suspend fun firstSeen(domain: String): Long?
 
     @Query("DELETE FROM dns_queries WHERE timestamp < :cutoff")
     suspend fun pruneOld(cutoff: Long)

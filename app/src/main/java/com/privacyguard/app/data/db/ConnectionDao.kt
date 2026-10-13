@@ -40,11 +40,11 @@ interface ConnectionDao {
      */
     @Query("""
         SELECT
-            COALESCE(domain, destinationIp) AS domain,
+            COALESCE(sniHostname, domain, destinationIp) AS domain,
             COUNT(*)                        AS count
         FROM connections
         WHERE packageName = :packageName
-        GROUP BY COALESCE(domain, destinationIp)
+        GROUP BY COALESCE(sniHostname, domain, destinationIp)
         ORDER BY count DESC
         LIMIT 100
     """)
@@ -143,11 +143,23 @@ interface ConnectionDao {
     @Query("SELECT * FROM connections WHERE timestamp > :since ORDER BY timestamp DESC")
     suspend fun allSince(since: Long): List<ConnectionEntity>
 
-    @Query("SELECT * FROM connections WHERE timestamp > :from AND timestamp <= :to ORDER BY timestamp DESC")
+    /** Connections that went through (blocked attempts are listed by [blockedBetween]). */
+    @Query("SELECT * FROM connections WHERE timestamp > :from AND timestamp <= :to AND wasBlocked = 0 ORDER BY timestamp DESC")
     suspend fun between(from: Long, to: Long): List<ConnectionEntity>
 
-    @Query("SELECT COUNT(*) FROM connections WHERE timestamp > :from AND timestamp <= :to")
+    @Query("SELECT COUNT(*) FROM connections WHERE timestamp > :from AND timestamp <= :to AND wasBlocked = 0")
     suspend fun countBetween(from: Long, to: Long): Int
+
+    /** Connection attempts PrivacyGuard dropped (rules, DNS-bypass guard, cleartext policy). */
+    @Query("SELECT * FROM connections WHERE timestamp > :from AND timestamp <= :to AND wasBlocked = 1 ORDER BY timestamp DESC")
+    suspend fun blockedBetween(from: Long, to: Long): List<ConnectionEntity>
+
+    @Query("SELECT COUNT(*) FROM connections WHERE timestamp > :from AND timestamp <= :to AND wasBlocked = 1")
+    suspend fun countBlockedBetween(from: Long, to: Long): Int
+
+    /** Distinct destinations of blocked attempts: SNI, else DNS name, else address. */
+    @Query("SELECT DISTINCT COALESCE(sniHostname, domain, destinationIp) FROM connections WHERE timestamp > :from AND timestamp <= :to AND wasBlocked = 1")
+    suspend fun blockedHostsBetween(from: Long, to: Long): List<String>
 
     @Query("SELECT COALESCE(SUM(bytesSent + bytesReceived), 0) FROM connections WHERE timestamp > :from AND timestamp <= :to")
     suspend fun bytesBetween(from: Long, to: Long): Long
@@ -165,6 +177,9 @@ interface ConnectionDao {
         ORDER BY timestamp DESC
     """)
     suspend fun forHostSince(host: String, since: Long): List<ConnectionEntity>
+
+    @Query("SELECT MIN(timestamp) FROM connections WHERE domain = :host OR sniHostname = :host")
+    suspend fun firstSeen(host: String): Long?
 
     @Query("""
         SELECT * FROM connections
@@ -187,7 +202,7 @@ interface ConnectionDao {
      */
     @Query("""
         SELECT 
-            strftime('%H', datetime(timestamp/1000, 'unixepoch')) as hour,
+            strftime('%H', datetime(timestamp/1000, 'unixepoch', 'localtime')) as hour,
             COUNT(*) as totalConnections,
             SUM(CASE WHEN wasBlocked = 1 THEN 1 ELSE 0 END) as blockedConnections,
             SUM(bytesSent + bytesReceived) as totalBytes
@@ -203,7 +218,7 @@ interface ConnectionDao {
      */
     @Query("""
         SELECT 
-            strftime('%Y-%m-%d', datetime(timestamp/1000, 'unixepoch')) as date,
+            strftime('%Y-%m-%d', datetime(timestamp/1000, 'unixepoch', 'localtime')) as date,
             COUNT(*) as totalConnections,
             SUM(CASE WHEN wasBlocked = 1 THEN 1 ELSE 0 END) as blockedConnections,
             SUM(bytesSent + bytesReceived) as totalBytes

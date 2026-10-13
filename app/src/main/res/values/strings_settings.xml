@@ -156,4 +156,8 @@
     <string name="set_posture_low">Trusted runtime</string>
     <string name="set_posture_elevated">Hardened, but hardware or integrity guarantees are reduced</string>
     <string name="set_posture_high">Tamper signals detected</string>
+    <!-- What each protection level blocks; see core/filter/ProtectionLevels.kt -->
+    <string name="set_level_minimal_desc">Minimal blocks malware and phishing hosts only. Ads and trackers load. Your own rules always apply.</string>
+    <string name="set_level_standard_desc">Standard blocks malware, ads and trackers. Your own rules always apply.</string>
+    <string name="set_level_strict_desc">Strict also blocks system telemetry (Microsoft, Apple, Amazon, Mozilla, Google Safe Browsing). Some features may stop working. Your own rules always apply.</string>
 </resources>

@@ -145,9 +145,9 @@ class WeeklyReportWorker(
     }
     
     /**
-     * Generates the weekly report. Blocking happens at DNS level, so the blocked
-     * count and top domains come from blocked DNS lookups (connections are never
-     * stored as blocked), and the score is the Dashboard's, so the two agree.
+     * Generates the weekly report. "Blocked" is the BlockStats definition (blocked
+     * lookups + blocked connection attempts), the same number Home and Stats show;
+     * top domains and apps come from blocked lookups, where most blocking happens.
      */
     private suspend fun generateReport(): WeeklyReport {
         val now = System.currentTimeMillis()
@@ -157,18 +157,14 @@ class WeeklyReportWorker(
         val connectionRepo = ConnectionRepository(database.connectionDao())
         val dnsQueries = database.dnsQueryDao()
 
-        val totalBlocked = dnsQueries.countBlockedSince(oneWeekAgo)
+        val totalBlocked = com.privacyguard.app.data.repository.BlockStats(database).between(oneWeekAgo, now).total
         val totalBytes = connectionRepo.getDailyStats(7).sumOf { it.totalBytes }
         val topBlockedDomains = dnsQueries.topBlockedDomainsSince(oneWeekAgo, 5)
         val topBlockedApps = dnsQueries.topBlockedAppsSince(oneWeekAgo, 3)
         val hourlyStats = connectionRepo.getHourlyStats(days = 7)
-        val privacyScore = com.privacyguard.app.core.privacy.PrivacyScoreCalculator.calculate(
-            connections = database.connectionDao().getRecentConnections(oneWeekAgo, 2_000),
-            profiles = database.connectionProfileDao().allProfiles()
-                .map { com.privacyguard.app.data.repository.MetadataRepo(database.connectionProfileDao()).toDomainForDashboard(it) },
-            trackersBlocked = totalBlocked,
-            blocklistDomains = com.privacyguard.app.core.blocklist.BlocklistManager.size.value,
-        ).score
+        val calc = com.privacyguard.app.core.privacy.PrivacyScoreCalculator
+        val level = com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(applicationContext).protectionLevel.value
+        val privacyScore = calc.forWindow(database, oneWeekAgo, now, calc.blockedDomainsForLevel(database, level)).score
 
         return WeeklyReport(
             date = now,

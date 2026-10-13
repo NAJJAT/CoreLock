@@ -47,10 +47,17 @@ object ManagedConfigApplier {
 
         applyBoolean(bundle, "mitm_enabled") { mitmConfig.setEnabled(it) }
 
+        // Organisation-level consent is valid for as long as the policy asserts it:
+        // it is recorded when missing or expired (not refreshed on every app start,
+        // which made the timestamp meaningless) and withdrawn when the policy
+        // switches it off, so an administrator can revoke it remotely.
         applyBoolean(bundle, "mitm_consent_given") { given ->
-            if (given) {
+            if (given && !mitmConfig.isConsentValid()) {
                 mitmConfig.recordConsent()
                 Log.i(TAG, "Enterprise consent recorded by MDM policy")
+            } else if (!given && mitmConfig.consentTimestamp != 0L) {
+                mitmConfig.clearConsent()
+                Log.i(TAG, "Enterprise consent withdrawn by MDM policy")
             }
         }
 

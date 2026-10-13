@@ -72,7 +72,8 @@ fun AppsScreen(
             val matchesQuery = searchQuery.isBlank() ||
                 app.appName.contains(searchQuery, true) ||
                 app.packageName.contains(searchQuery, true)
-            val matchesRisk = !highRiskOnly || app.maxRiskScore >= 70
+            // Same rule as the "N high risk" badge.
+            val matchesRisk = !highRiskOnly || app.maxRiskScore >= 70 || app.stalkerwareScore >= 70
             val matchesBlocked = !blockedOnly || app.isBlocked
             matchesQuery && matchesRisk && matchesBlocked
         }
@@ -127,7 +128,7 @@ fun AppsScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(stringResource(R.string.apps_sort_risk),        sortBy == AppSortBy.RISK,        PgDanger,  PgDangerDim)  { viewModel.setSortBy(AppSortBy.RISK) }
                     FilterChip(stringResource(R.string.appd_sort_data),        sortBy == AppSortBy.DATA,        PgAccent,  PgAccentDim)  { viewModel.setSortBy(AppSortBy.DATA) }
-                    FilterChip(stringResource(R.string.appd_tab_connections), sortBy == AppSortBy.CONNECTIONS, PgInfo,    PgInfoDim)    { viewModel.setSortBy(AppSortBy.CONNECTIONS) }
+                    FilterChip(stringResource(R.string.apps_sort_destinations), sortBy == AppSortBy.CONNECTIONS, PgInfo,    PgInfoDim)    { viewModel.setSortBy(AppSortBy.CONNECTIONS) }
                     FilterChip(stringResource(R.string.appd_sort_background),  sortBy == AppSortBy.BACKGROUND,  PgWarning, PgWarningDim) { viewModel.setSortBy(AppSortBy.BACKGROUND) }
                 }
             }

@@ -48,6 +48,7 @@ class EnterpriseMetadataShipper(
 ) {
     private val appContext = context.applicationContext
     private val queueDir = File(appContext.filesDir, "enterprise_payload_batches").apply { mkdirs() }
+    private val secrets = com.privacyguard.app.core.security.SecureSecretStore.getInstance(appContext)
 
     /**
      * Counts locally queued metadata events waiting for shipment.
@@ -146,7 +147,7 @@ class EnterpriseMetadataShipper(
             .filter { parseTagFromFileName(it.name) == tag }
             .sortedBy { it.lastModified() }
             .forEach { file ->
-                val batch = runCatching { file.readText(StandardCharsets.UTF_8) }.getOrNull() ?: return@forEach
+                val batch = runCatching { readBatch(file) }.getOrNull() ?: return@forEach
                 val result = sendBatch(endpoint, apiKey, pin, batch)
                 if (result.success) {
                     file.delete()
@@ -182,10 +183,25 @@ class EnterpriseMetadataShipper(
         }
     }
 
+    /**
+     * Batches hold payload previews, so they are encrypted like the database is
+     * (they used to be plain JSON in filesDir, outside SQLCipher).
+     */
     private fun persistPending(count: Int, payload: String, endpointTag: String) {
         val safeCount = count.coerceAtLeast(1)
         val file = File(queueDir, "batch_${System.currentTimeMillis()}_${endpointTag}_${safeCount}.json")
-        file.writeText(payload, StandardCharsets.UTF_8)
+        file.writeBytes(ENCRYPTED_MAGIC + secrets.encryptBlob(payload.toByteArray(StandardCharsets.UTF_8)))
+    }
+
+    /** Reads a batch written by [persistPending]; older plaintext batches are read as is. */
+    private fun readBatch(file: File): String {
+        val bytes = file.readBytes()
+        if (bytes.size < ENCRYPTED_MAGIC.size ||
+            !bytes.copyOfRange(0, ENCRYPTED_MAGIC.size).contentEquals(ENCRYPTED_MAGIC)) {
+            return String(bytes, StandardCharsets.UTF_8)
+        }
+        val plain = secrets.decryptBlob(bytes.copyOfRange(ENCRYPTED_MAGIC.size, bytes.size))
+        return String(plain, StandardCharsets.UTF_8)
     }
 
     /** Endpoint tag from "batch_<ts>_<tag>_<count>.json"; null for legacy "batch_<ts>_<count>.json". */
@@ -234,6 +250,8 @@ class EnterpriseMetadataShipper(
     private companion object {
         /** Tag for batches saved with no valid endpoint; these are never auto-flushed. */
         const val UNBOUND_TAG = "none"
+        /** Marks an encrypted batch file ("PGE1"). */
+        val ENCRYPTED_MAGIC = byteArrayOf(0x50, 0x47, 0x45, 0x31)
         const val CONNECT_TIMEOUT_SECONDS = 7L
         const val READ_TIMEOUT_SECONDS = 10L
     }

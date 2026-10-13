@@ -54,7 +54,7 @@ data class ConnectionEntity(
     val wasBlocked:       Boolean = false,
 
     // ── Encryption (BRD §8.1 — zero payload decryption) ──────────────────────
-    /** CLEARTEXT / TLS / WEAK_TLS / UNKNOWN */
+    /** EncryptionStatus name: CLEARTEXT (HTTP seen), TLS / TLS_1_2 / TLS_1_3 / WEAK_TLS, QUIC, or UNKNOWN. */
     val encryptionStatus: String  = "UNKNOWN",
     /** TLS_1_0 / TLS_1_1 / TLS_1_2 / TLS_1_3 — null for non-TLS sessions. */
     val tlsVersion:       String? = null,
@@ -69,4 +69,13 @@ data class ConnectionEntity(
     val foreground:       Boolean? = null,
     /** Whether the screen was on when the session opened; null for older rows. */
     val screenOn:         Boolean? = null,
+    /** Network the session used (NetworkIdentity key); null for older rows. */
+    val networkKey:       String? = null,
 )
+
+/**
+ * The host every screen shows for a connection: the TLS SNI the app sent (what it
+ * actually asked for), else the DNS name that resolved to this address, else null.
+ */
+val ConnectionEntity.host: String?
+    get() = sniHostname?.takeIf { it.isNotBlank() } ?: domain?.takeIf { it.isNotBlank() }

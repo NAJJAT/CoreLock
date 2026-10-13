@@ -48,9 +48,9 @@ explains what it finds in plain language in **English, Dutch, French and Arabic*
 
 | Feature | Details |
 |---|---|
-| **Local VPN engine** | A TUN interface carries all IPv4 and IPv6 traffic (TCP and UDP). IPv4 runs through a full TCP state machine (`TcpForwarder`) and a UDP forwarder; IPv6 runs through a relay (`Ipv6Proxy`). Every finished flow is written to history with its app, hostname, bytes and timing. |
-| **DNS filtering** | Every lookup goes through `DnsHandler`: blocklists (hosts, EasyList and domain-list formats, trie lookup), your own rules, and the per-app ad-SDK policy. Blocked names get *NXDOMAIN*, so no connection is made. |
-| **DNS over HTTPS** | Optional RFC 8484 DoH to Cloudflare, Google or Quad9. Connects to the provider's literal bootstrap address so the DoH host lookup cannot loop through the tunnel; falls back to plain upstream DNS if DoH fails. |
+| **Local VPN engine** | A TUN interface carries all IPv4 and IPv6 traffic (TCP and UDP). Both address families run through the same TCP state machine (`TcpForwarder`, with flow control and retransmission toward the app) and UDP forwarder (oversized replies are fragmented). The tunnel only opens once rules and blocklists are loaded. Every finished flow is written to history with its app, hostname, bytes and timing. |
+| **DNS filtering** | Every lookup goes through `DnsHandler`: blocklists (hosts, EasyList and domain-list formats, trie lookup), your own rules, and the per-app ad-SDK policy. Blocked names get *NXDOMAIN*, so no connection is made. Lookups go only to the resolver you chose (and that provider's second address); if it cannot be reached the app gets *SERVFAIL*. |
+| **DNS over HTTPS** | Optional RFC 8484 DoH to Cloudflare, Google or Quad9. Connects to the provider's literal bootstrap address so the DoH host lookup cannot loop through the tunnel. If DoH fails the lookup is answered with *SERVFAIL*; it is never resent as plain DNS. |
 | **Encrypted-DNS bypass guard** | Drops DNS-over-TLS/QUIC and DoH to known resolver IPs from other apps, so they fall back to DNS that the filter can see. |
 | **Filter rules** | Block by domain, IP/CIDR, app or globally, optionally "only in the background". Three protection levels (Minimal, Standard, Strict). Rules apply instantly without restarting the VPN. Hit counters and suggested rules. |
 | **Kill switch** | Uses Android's *Always-on VPN* with *Block connections without VPN* (only Android can block once the tunnel is gone). The card shows "blocking" only when Android reports lockdown; otherwise the app can alert and restart, not block. |
@@ -154,7 +154,7 @@ or Instagram.
 
 | Request | When | What the other side learns |
 |---|---|---|
-| Upstream DNS (default 1.1.1.1; configurable) or DoH (Cloudflare / Google / Quad9) | Every DNS lookup by any app | The names looked up, from your IP |
+| Upstream DNS (default 1.1.1.1; configurable, IP address only) or DoH (Cloudflare / Google / Quad9) | Every DNS lookup by any app; only to the chosen provider | The names looked up, from your IP |
 | Blocklists (GitHub raw, easylist.to, oisd.nl) and the Exodus tracker list | Periodic refresh / "Refresh now" | That the app is installed, from your IP |
 | crt.sh (Certificate Transparency) | Only if turned on in Settings | Registrable domains of TLS servers you contact |
 | api.ipify.org | Only if "External IP check" is on, when diagnostics run | Your public IP |
@@ -191,10 +191,10 @@ app that connects to the answer within a minute; blocked or unused lookups stay
 │        │          HomeEvidence · DomainClassifier · AlertFeed      │
 │        ▼                                                           │
 │ PrivacyVpnService (foreground, specialUse)                         │
-│   TUN read → parse → owner UID → filter → forward → TUN write      │
-│   ├─ IPv4: TcpForwarder (state machine, ClientHello reassembly)    │
-│   │        UdpForwarder                                            │
-│   ├─ IPv6: Ipv6Proxy (TCP relay + self-expiring UDP), flow reports │
+│   TUN read (poll) → parse → owner UID → filter → forward → TUN     │
+│   ├─ TCP:  TcpForwarder, IPv4 + IPv6 (state machine, flow control, │
+│   │        retransmission, ClientHello reassembly)                 │
+│   ├─ UDP:  UdpForwarder, IPv4 + IPv6 (fragments oversized replies) │
 │   ├─ DNS:  DnsHandler → blocklists / rules / AdSdkPolicy → DoH     │
 │   ├─ TLS:  ClientHelloParser → JA4/JA3 → TlsBaselineEngine         │
 │   ├─ Sessions: SessionTable (reaper) → ConnectionLogger (batched)  │
@@ -207,7 +207,7 @@ app that connects to the answer within a minute; blocked or unused lookups stay
 
 | Flow | Path |
 |---|---|
-| **Packet** | TUN → `IpPacket` / `Ipv6Packet` → owner UID (`ConnectivityManager.getConnectionOwnerUid`, `/proc` fallback) → `FilterEngine` → forwarder → protected socket → TUN |
+| **Packet** | TUN → `IpPacket` / `Ipv6Packet` → owner UID (`ConnectivityManager.getConnectionOwnerUid`, `/proc` fallback; looked up once per connection) → `FilterEngine` (re-checked about once a second for live connections) → forwarder → protected socket → TUN |
 | **Session → history** | `SessionTable` closes or reaps a session → snapshot (app, hostname, SNI, bytes, foreground, screen) → `ConnectionLogger` batches into Room |
 | **App state** | Recorded once when a session opens: foreground from `UsageStatsManager` (`ForegroundAppDetector`), screen from `PowerManager.isInteractive` |
 | **Rules** | UI → `RulesRepo` → `RuleSyncBus` → service reloads in place |
@@ -227,7 +227,9 @@ SQLCipher, WorkManager, AppCompat per-app locales, BouncyCastle and OkHttp
   config database, so clearing history never deletes your rules.
 - **Encryption at rest.** SQLCipher, with a passphrase wrapped by an Android
   Keystore key, so the database files are unreadable off the device.
-  Plaintext databases from older installs are encrypted in place.
+  Plaintext databases from older installs are encrypted in place. The key is
+  only unwrapped when a database is first used, off the main thread. Queued
+  SIEM batch files (enterprise) are encrypted with a Keystore key as well.
 - **History tables:**
   - `connections`: app, IP/port, hostname, SNI, bytes, time, encryption, foreground, screen.
   - `dns_queries`: app (when known), domain, blocked, screen off, app foreground.
@@ -243,10 +245,9 @@ SQLCipher, WorkManager, AppCompat per-app locales, BouncyCastle and OkHttp
 - **Sensitive actions** (exports, PCAP, clearing data) require device
   authentication and are blocked on a tampered runtime. `AppSecurityMonitor`
   checks signature, debugger, root packages, emulator and build tags.
-- **Backups.** On Android 12+ nothing is backed up or transferred to a new
-  device (`data_extraction_rules.xml`). On Android 11 and older, the legacy
-  rules (`backup_rules.xml`) still back up shared preferences (settings),
-  except `device.xml`. Databases are never included.
+- **Backups.** None. `allowBackup="false"` and `fullBackupContent="false"`
+  turn backup off on every Android version, and `data_extraction_rules.xml`
+  also excludes device-to-device transfer on Android 12+.
 
 ---
 
@@ -363,15 +364,22 @@ engine, CA manager, payload UI, MDM, SIEM, and their libraries) lives in
 
 - **HTTPS payload inspection (MITM).** Off by default and gated by explicit
   consent:
-  - The app generates a local CA; on Android 11+ the user installs it in Settings.
+  - The app generates a local CA only once inspection is on and consented to;
+    on Android 11+ the user installs it in Settings.
   - It forges per-host leaf certificates and logs requests and responses.
   - Apps that pin certificates or ignore user CAs are passed through as
     metadata-only, and the UI says why.
   - *Block QUIC* drops UDP/443 so browsers fall back to TLS over TCP.
   - Turning inspection off deletes the signing key and tells the user how to
     remove the installed CA.
-- **PII redaction** before storage: emails, card numbers, phone numbers, JWTs,
-  bearer tokens and sensitive JSON fields.
+- **PII redaction**: emails, card numbers, phone numbers, JWTs, bearer tokens
+  and sensitive JSON fields. Anything sent to the SIEM is always redacted. The
+  local payload log is redacted too while `mitm_redact_pii` is on (the
+  default); with it off, the inspector stores exactly what left the phone.
+- **SIEM shipping** happens automatically once 100 events are queued or a
+  minute after the first one, and "Ship now" sends the same queue.
+- **Consent from MDM** (`mitm_consent_given`) is valid for as long as the
+  policy asserts it; setting it to false withdraws consent and stops inspection.
 - **MDM / managed configuration** (`application_restrictions.xml`): see the
   table below.
 
@@ -394,7 +402,9 @@ A Device Admin receiver supports Intune, Workspace ONE, Jamf and similar.
 ./gradlew :app:connectedEnterpriseDebugAndroidTest                         # instrumented (device)
 ```
 
-- **JVM unit tests:** ~300 shared (consumer) and ~360 including enterprise. They cover:
+- **JVM unit tests:** ~310 shared (consumer) and ~370 including enterprise. They cover:
+  - the TCP forwarder end to end against a loopback server (lost segment,
+    small window, RSTs), UDP reply fragmentation, resolver address validation
   - packet parsing, IPv6 address formatting, checksums
   - ClientHello parsing, JA4 (including the FoxIO reference vector), JA3, cipher analysis
   - TLS baseline engine
@@ -407,7 +417,10 @@ A Device Admin receiver supports Intune, Workspace ONE, Jamf and similar.
 - **CI** (`.github/workflows/ci.yml`, on push and PR to `main`):
   - unit tests for both flavors
   - lint for both flavors
+  - R8 shrinking of both release variants
+  - instrumented tests (Room migrations) on an API 34 emulator
   - "unsigned release must fail" check
+  - all actions pinned to commit SHAs
   - Rust `cargo test` + clippy
   - gitleaks secret scan
 
@@ -501,7 +514,9 @@ prototype and not part of the Android build.
 app/src/
 ├── main/java/com/privacyguard/
 │   ├── core/          packet (IPv4/IPv6/TCP/UDP/DNS), session, filter, tls (ClientHello, JA3/JA4, ciphers, CT)
-│   ├── vpn/           firewall (domain trie/bloom, IP/CIDR), inspector (DNS anomalies, encryption)
+│   ├── vpn/           forwarder (TcpForwarder, UdpForwarder, DnsHandler), tunnel (TUN reader/writer),
+│   │                  firewall (domain trie/bloom, IP/CIDR), inspector (DNS anomalies, encryption),
+│   │                  interception (TLS inspection seam)
 │   ├── platform/      PrivacyVpnService, AppTracker, ForegroundAppDetector, NotificationHelper
 │   ├── ui/            AppNavHost (navigation, bottom bar, routes)
 │   └── app/
@@ -509,8 +524,7 @@ app/src/
 │       ├── core/      tracker (TrackerDatabase, DomainClassifier, Exodus), behavior, detection,
 │       │              network trust, privacy score, report, pcap, security, stats, apk, geoip
 │       ├── data/      Room entities/DAOs (AppDatabase v10, ConfigDatabase), repositories, preferences
-│       ├── vpn/       TcpForwarder, UdpForwarder, Ipv6Proxy, DnsHandler, TlsFingerprintMonitor,
-│       │              KillSwitch, VpnManager, BootReceiver, UidMapper
+│       ├── vpn/       TlsFingerprintMonitor, KillSwitch, VpnManager, BootReceiver, UidMapper
 │       ├── workers/   BlocklistUpdateWorker, PruneWorker, WeeklyReportWorker
 │       ├── tile/      Quick Settings tile
 │       └── ui/        dashboard, apps, traffic (app traffic, domain detail, evidence),
@@ -526,8 +540,9 @@ app/schemas/           exported Room schemas
 rust/  flutter/  ios/  testapp/  .github/
 ```
 
-> Some files under `com/privacyguard/app/…` declare `package com.privacyguard.…`
-> (without `.app`). Kotlin uses the declared package; the ProGuard rules cover both.
+> Two package roots exist: `com.privacyguard.app.…` (app, UI, data) and
+> `com.privacyguard.…` (packet engine: core, vpn, platform, mdm). Every file sits
+> in the folder of its declared package.
 
 ---
 
@@ -551,8 +566,12 @@ rust/  flutter/  ios/  testapp/  .github/
   TCP, 30 s for UDP). Very recent, still-open connections appear a little later.
 - **Updating the app stops the VPN** unless Android's Always-on VPN is enabled
   for the app. Enable Always-on VPN for continuous protection.
-- **Occasional forwarding stalls** under heavy load have been observed (rare
-  TLS `BAD_RECORD_MAC`); this is being investigated.
+- **Forwarding stalls under heavy load** (rare TLS `BAD_RECORD_MAC`) were traced
+  to server→app segments being dropped at a full TUN queue and never resent.
+  `TcpForwarder` now reads only what the app's window and the queue can take
+  and retransmits lost segments; this still needs confirming on a device.
+- **Large DNS answers** need DNS over TCP, which the tunnel does not offer, so
+  answers that do not fit in a 4 KB UDP reply fail.
 - **The JA3 watch-list is small and unverified;** treat matches as hints.
 - **Translations need native review.**
 - **The debug build's integrity check** expects a specific debug certificate;

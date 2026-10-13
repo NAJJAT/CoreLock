@@ -93,6 +93,37 @@ public class MainActivity extends Activity {
         root.addView(scroll);
 
         setContentView(root);
+        runProbeFromIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        runProbeFromIntent(intent);
+    }
+
+    /** adb shell am start -n com.privacyguard.testapp/.MainActivity --es probe dns_tcp (see NetProbes). */
+    private void runProbeFromIntent(android.content.Intent intent) {
+        if (intent == null) return;
+        String probe = intent.getStringExtra("probe");
+        if (probe == null) return;
+        String host = intent.getStringExtra("host");
+        int port = intent.getIntExtra("port", 0);
+        int mb = intent.getIntExtra("mb", 0);
+        intent.removeExtra("probe");
+        status.setText("Probe " + probe + "...");
+        new Thread(() -> {
+            String out;
+            try {
+                out = NetProbes.run(probe, host, port, mb);
+            } catch (Exception e) {
+                out = "FAIL " + probe + ": " + e + "\n";
+            }
+            for (String line : out.split("\n")) android.util.Log.w("PGProbe", "[" + probe + "] " + line);
+            android.util.Log.w("PGProbe", "[" + probe + "] DONE");
+            final String text = out;
+            main.post(() -> status.setText(text));
+        }).start();
     }
 
     private void sendRequest() {

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="dash_card_behavior">البصمة السلوكية للتطبيقات</string>
-    <string name="dash_card_behavior_desc">يتعلّم الإيقاع الطبيعي للتطبيقات وينبّه إلى الانحرافات</string>
+    <string name="dash_card_behavior_desc">تغيّرات عن النمط المُتعلَّم لكل تطبيق، آخر 7 أيام</string>
     <string name="dash_status_anomalous">غير طبيعي</string>
     <string name="dash_status_learning">يتعلّم</string>
     <string name="dash_status_quiet">هادئ</string>
@@ -13,8 +13,8 @@
         <item quantity="many">%d تنبيهًا</item>
         <item quantity="other">%d تنبيه</item>
     </plurals>
-    <string name="dash_card_ipv6">تسرّب IPv6</string>
-    <string name="dash_card_ipv6_desc">فحص التوجيه المزدوج ومحاولات التجاوز</string>
+    <string name="dash_card_ipv6">حركة IPv6</string>
+    <string name="dash_card_ipv6_desc">جلسات IPv6 خلال آخر 24 ساعة، تمر عبر النفق مثل IPv4</string>
     <string name="dash_status_critical">حرج</string>
     <string name="dash_status_blocked">محظور</string>
     <string name="dash_status_contained">تحت السيطرة</string>
@@ -44,8 +44,8 @@
     <string name="dash_card_no_decrypt_desc">فحص البيانات الوصفية فقط؛ يبقى محتوى TLS خاصًا</string>
     <string name="dash_status_verified">تم التحقق</string>
     <string name="dash_headers_only">الترويسات فقط</string>
-    <string name="dash_card_entropy">رصد الأسماء العشوائية</string>
-    <string name="dash_card_entropy_desc">أسماء DGA/C2 وأسماء DNS تشبه الأنفاق</string>
+    <string name="dash_card_entropy">أسماء تبدو عشوائية</string>
+    <string name="dash_card_entropy_desc">أسماء نطاقات تبدو مولّدة آليًا، آخر 7 أيام</string>
     <string name="dash_status_high_value">مهم</string>
     <string name="dash_status_normal">طبيعي</string>
     <plurals name="dash_signals_count">
@@ -57,7 +57,7 @@
         <item quantity="other">%d إشارة</item>
     </plurals>
     <string name="dash_card_night">النشاط الليلي</string>
-    <string name="dash_card_night_desc">جلسات غير متوقعة بين 00:00 و05:00</string>
+    <string name="dash_card_night_desc">جلسات بدأت بين 00:00 و05:59 والشاشة مطفأة</string>
     <string name="dash_status_review">يحتاج مراجعة</string>
     <plurals name="dash_sessions_count">
         <item quantity="zero">لا جلسات</item>
@@ -67,9 +67,9 @@
         <item quantity="many">%d جلسةً</item>
         <item quantity="other">%d جلسة</item>
     </plurals>
-    <string name="dash_card_beacon">تحليل فواصل الإرسال المنتظم</string>
-    <string name="dash_card_beacon_desc">أنماط اتصال متكررة بين تطبيق ووجهة</string>
-    <string name="dash_status_apt">نمط APT</string>
+    <string name="dash_card_beacon">اتصالات بتوقيت ثابت</string>
+    <string name="dash_card_beacon_desc">التطبيق والمضيف نفسهما بفواصل شبه ثابتة، 24 ساعة؛ قنوات الإشعارات غير محتسبة</string>
+    <string name="dash_status_apt">متكرر</string>
     <string name="dash_status_stable">مستقر</string>
     <plurals name="dash_patterns_count">
         <item quantity="zero">لا أنماط</item>
@@ -79,8 +79,8 @@
         <item quantity="many">%d نمطًا</item>
         <item quantity="other">%d نمط</item>
     </plurals>
-    <string name="dash_card_upload">رصد عمليات الرفع الكبيرة</string>
-    <string name="dash_card_upload_desc">تسرّب محتمل للبيانات بحسب الحجم</string>
+    <string name="dash_card_upload">رفع كبير في الخلفية</string>
+    <string name="dash_card_upload_desc">أكبر عملية رفع خلال 24 ساعة والتطبيق ليس على الشاشة</string>
     <string name="dash_card_trust">مستوى الثقة بالشبكة</string>
     <string name="dash_trust_reduced">منخفض</string>
     <string name="dash_trust_watch">تحت المراقبة</string>
@@ -107,17 +107,17 @@
         <item quantity="other">%d تطبيق</item>
     </plurals>
     <string name="dash_card_cleartext">الاتصالات غير المشفّرة</string>
-    <string name="dash_card_cleartext_desc">اتصالات HTTP غير مشفّرة سُمح بمرورها</string>
+    <string name="dash_card_cleartext_desc">طلبات HTTP غير مشفّرة خلال آخر 24 ساعة</string>
     <string name="dash_status_elevated">مرتفع</string>
     <string name="dash_status_present">موجود</string>
     <string name="dash_status_none">لا شيء</string>
     <plurals name="dash_today_count">
-        <item quantity="zero">%d اليوم</item>
-        <item quantity="one">%d اليوم</item>
-        <item quantity="two">%d اليوم</item>
-        <item quantity="few">%d اليوم</item>
-        <item quantity="many">%d اليوم</item>
-        <item quantity="other">%d اليوم</item>
+        <item quantity="zero">%d خلال 24 ساعة</item>
+        <item quantity="one">%d خلال 24 ساعة</item>
+        <item quantity="two">%d خلال 24 ساعة</item>
+        <item quantity="few">%d خلال 24 ساعة</item>
+        <item quantity="many">%d خلال 24 ساعة</item>
+        <item quantity="other">%d خلال 24 ساعة</item>
     </plurals>
     <string name="dash_rec_kill_switch">فعّل مفتاح الإيقاف حتى لا يتسرّب شيء إذا انقطعت الحماية.</string>
     <plurals name="dash_rec_behavior">
@@ -129,8 +129,8 @@
         <item quantity="other">رصدت البصمة السلوكية %d انحراف لدى التطبيقات. تستحق الوجهات الجديدة وعمليات الرفع في أوقات غريبة المراجعة.</item>
     </plurals>
     <string name="dash_rec_ipv6">رُصدت حركة IPv6 أثناء عمل VPN. أضف دعم توجيه IPv6 أو عطّل تجاوز IPv6.</string>
-    <string name="dash_rec_entropy">رُصدت أسماء DNS تبدو عشوائية. احتفظ بالبصمة السلوكية حتى لو تغيّر النطاق.</string>
-    <string name="dash_rec_beacon">رُصدت فواصل إرسال منتظمة. خفّض الثقة بهذا الثنائي من التطبيق والوجهة.</string>
+    <string name="dash_rec_entropy">رُصدت أسماء نطاقات تبدو عشوائية. افتح البطاقة لترى التطبيقات التي طلبتها.</string>
+    <string name="dash_rec_beacon">رُصدت اتصالات بتوقيت ثابت. افتح البطاقة لترى التطبيق والمضيف.</string>
     <string name="dash_rec_strict">يُنصح بالوضع الصارم على %1$s لأن الثقة انخفضت إلى %2$d/100.</string>
     <string name="dash_rec_default">الحظر القياسي مع مفتاح الإيقاف يمنح معظم الناس أقوى حماية افتراضية.</string>
     <string name="dash_rec_no_decrypt">يعمل تحليل السلوك دون فك تشفير المحتوى، لذلك يبقى ما ترسله خاصًا.</string>
@@ -145,7 +145,7 @@
     <string name="dash_not_protected">غير محمي</string>
     <string name="dash_privacy_score_n">درجة الخصوصية %1$d</string>
     <string name="dash_encryption_health">سلامة التشفير</string>
-    <string name="dash_tls_percent">%1$d%% TLS</string>
+    <string name="dash_tls_percent">%1$d%% مشفّر</string>
     <string name="dash_trackers_blocked">المتتبّعات المحظورة</string>
     <string name="dash_cleartext_conns">الاتصالات غير المشفّرة</string>
     <string name="dash_privacy_score">درجة الخصوصية</string>
@@ -161,8 +161,8 @@
     <string name="dash_recommendations">التوصيات</string>
     <string name="dash_recent_alerts">التنبيهات الأخيرة</string>
     <string name="dash_no_alerts">لا تنبيهات بعد</string>
-    <string name="dash_no_alerts_desc">ستظهر هنا الحالات الشاذة وعمليات الحظر الأخيرة بمجرد مرور حركة البيانات.</string>
-    <string name="dash_sleep_title">أثناء نومك</string>
+    <string name="dash_no_alerts_desc">لا شيء في صندوق التنبيهات خلال آخر 7 أيام.</string>
+    <string name="dash_sleep_title">الشاشة مطفأة · آخر 7 أيام</string>
     <string name="dash_sleep_summary">%1$s · %2$s</string>
     <plurals name="dash_apps_active">
         <item quantity="zero">لا تطبيقات نشطة</item>
@@ -181,12 +181,12 @@
         <item quantity="other">%d طلب DNS</item>
     </plurals>
     <plurals name="dash_tracking_count">
-        <item quantity="zero">لا متتبّعات</item>
-        <item quantity="one">متتبّع واحد</item>
-        <item quantity="two">متتبّعان</item>
-        <item quantity="few">%d متتبّعات</item>
-        <item quantity="many">%d متتبّعًا</item>
-        <item quantity="other">%d متتبّع</item>
+        <item quantity="zero">لا نطاقات محظورة</item>
+        <item quantity="one">نطاق محظور واحد</item>
+        <item quantity="two">نطاقان محظوران</item>
+        <item quantity="few">%d نطاقات محظورة</item>
+        <item quantity="many">%d نطاقًا محظورًا</item>
+        <item quantity="other">%d نطاق محظور</item>
     </plurals>
     <string name="dash_weekly_title">تقرير الخصوصية الأسبوعي</string>
     <string name="dash_weekly_desc">ملخّص السلوك خلال آخر 7 أيام</string>
@@ -204,4 +204,17 @@
     <string name="dash_share_capture">مشاركة آخر التقاط</string>
     <string name="dash_protection">الحماية</string>
     <string name="dash_per_second">%1$s/ث</string>
+    <string name="dash_card_decrypt_on">فحص HTTPS مُفعَّل</string>
+    <string name="dash_card_decrypt_on_desc">التطبيقات التي تثق بشهادة PrivacyGuard يُفكّ تشفير محتوى HTTPS الخاص بها ويُحفظ على هذا الهاتف</string>
+    <string name="dash_status_decrypting">يفكّ التشفير</string>
+    <string name="dash_payloads">المحتوى</string>
+    <string name="dash_status_off">لا يفكّ التشفير</string>
+    <string name="dash_strict_title">التبديل إلى المستوى «صارم» على %1$s؟</string>
+    <string name="dash_strict_body">انخفضت الثقة في هذه الشبكة إلى %1$d/100. يحظر المستوى «صارم» أيضًا قياسات النظام عن بُعد. لن يتغير شيء إلا إذا اخترت ذلك.</string>
+    <string name="dash_strict_accept">التبديل إلى «صارم»</string>
+    <string name="dash_strict_dismiss">ليس على هذه الشبكة</string>
+    <string name="dash_status_tunnelled">عبر النفق</string>
+    <string name="dash_ks_unchecked">لم يُفحص (الحماية متوقفة)</string>
+    <string name="dash_ks_lockdown_on">دائم التشغيل + حظر</string>
+    <string name="dash_ks_lockdown_off">غير مُعدّ</string>
 </resources>

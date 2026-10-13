@@ -205,10 +205,5 @@ object PermissionMismatchDetector {
     private fun isSocialIdentityHost(host: String): Boolean =
         socialIdentityHosts.any { candidate -> host == candidate || host.endsWith(".$candidate") }
 
-    private fun formatBytes(bytes: Long): String = when {
-        bytes >= 1024L * 1024L * 1024L -> "${(bytes / (1024.0 * 1024.0 * 1024.0) * 10).roundToInt() / 10.0} GB"
-        bytes >= 1024L * 1024L         -> "${(bytes / (1024.0 * 1024.0) * 10).roundToInt() / 10.0} MB"
-        bytes >= 1024L                 -> "${(bytes / 1024.0 * 10).roundToInt() / 10.0} KB"
-        else                           -> "$bytes B"
-    }
+    private fun formatBytes(bytes: Long): String = com.privacyguard.app.core.utils.ByteFormat.plain(bytes)
 }

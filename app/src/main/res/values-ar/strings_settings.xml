@@ -176,4 +176,7 @@
     <string name="set_posture_low">بيئة تشغيل موثوقة</string>
     <string name="set_posture_elevated">محمية، لكن ضمانات العتاد أو السلامة أقل</string>
     <string name="set_posture_high">رُصدت مؤشرات عبث</string>
+    <string name="set_level_minimal_desc">المستوى «أدنى» يحظر خوادم البرمجيات الضارة والتصيّد فقط. تُحمَّل الإعلانات وأدوات التتبع. قواعدك الخاصة تُطبَّق دائمًا.</string>
+    <string name="set_level_standard_desc">المستوى «قياسي» يحظر البرمجيات الضارة والإعلانات وأدوات التتبع. قواعدك الخاصة تُطبَّق دائمًا.</string>
+    <string name="set_level_strict_desc">المستوى «صارم» يحظر أيضًا قياسات النظام عن بُعد (Microsoft وApple وAmazon وMozilla وGoogle Safe Browsing). قد تتوقف بعض الميزات عن العمل. قواعدك الخاصة تُطبَّق دائمًا.</string>
 </resources>

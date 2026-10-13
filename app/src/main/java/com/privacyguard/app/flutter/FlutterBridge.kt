@@ -1,6 +1,10 @@
 package com.privacyguard.app.flutter
 
 import android.content.Context
+import android.net.VpnService
+import android.os.Handler
+import android.os.Looper
+import kotlinx.coroutines.Job
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.db.ConfigDatabase
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
@@ -32,14 +36,20 @@ class FlutterBridge(private val context: Context) {
     private val rulesRepo = RulesRepo(configDb.rulesDao(), FilterEngine())
     private val scope     = CoroutineScope(Dispatchers.IO)
 
+    // Flutter requires MethodChannel results and EventSink events on the platform
+    // (main) thread; work runs on IO, replies are posted back.
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var statsJob: Job? = null
+
     fun register(engine: FlutterEngine) {
         MethodChannel(engine.dartExecutor.binaryMessenger, METHOD_CH)
             .setMethodCallHandler { call, result ->
+                val mainResult = MainThreadResult(result)
                 scope.launch {
                     try {
-                        handleMethod(call.method, call.arguments, result)
+                        handleMethod(call.method, call.arguments, mainResult)
                     } catch (e: Exception) {
-                        result.error("BRIDGE_ERROR", e.message, null)
+                        mainResult.error("BRIDGE_ERROR", e.message, null)
                     }
                 }
             }
@@ -47,14 +57,27 @@ class FlutterBridge(private val context: Context) {
         EventChannel(engine.dartExecutor.binaryMessenger, EVENT_CH)
             .setStreamHandler(object : EventChannel.StreamHandler {
                 override fun onListen(args: Any?, sink: EventChannel.EventSink) {
-                    scope.launch {
+                    statsJob?.cancel()
+                    statsJob = scope.launch {
                         StatsManager.snapshot.collectLatest { snap ->
-                            sink.success(buildStatsMap(snap))
+                            val stats = buildStatsMap(snap)
+                            mainHandler.post { sink.success(stats) }
                         }
                     }
                 }
-                override fun onCancel(args: Any?) {}
+                override fun onCancel(args: Any?) {
+                    statsJob?.cancel()
+                    statsJob = null
+                }
             })
+    }
+
+    private inner class MainThreadResult(private val delegate: MethodChannel.Result) : MethodChannel.Result {
+        override fun success(result: Any?) { mainHandler.post { delegate.success(result) } }
+        override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+            mainHandler.post { delegate.error(errorCode, errorMessage, errorDetails) }
+        }
+        override fun notImplemented() { mainHandler.post { delegate.notImplemented() } }
     }
 
     private suspend fun handleMethod(
@@ -63,8 +86,14 @@ class FlutterBridge(private val context: Context) {
         result: MethodChannel.Result,
     ) = when (method) {
         "startVpn" -> {
-            VpnManager.startVpn(context)
-            result.success(null)
+            // Without the user's VPN consent establish() fails; the Compose UI must
+            // ask for it first (VpnService.prepare needs an Activity result).
+            if (VpnService.prepare(context) != null) {
+                result.error("VPN_PERMISSION_REQUIRED", "VPN permission not granted", null)
+            } else {
+                VpnManager.startVpn(context)
+                result.success(null)
+            }
         }
         "stopVpn" -> {
             VpnManager.stopVpn(context)

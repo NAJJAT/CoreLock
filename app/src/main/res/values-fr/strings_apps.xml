@@ -51,7 +51,7 @@
     <string name="appd_no_recent">Aucune activité récente enregistrée pour l’instant.</string>
     <string name="appd_timeline_24h">Chronologie sur 24 heures</string>
     <string name="appd_hour">%1$d h</string>
-    <string name="appd_legend">Vert : autorisé · Jaune : au repos ou en arrière-plan · Rouge : bloqué</string>
+    <string name="appd_legend">Connexions par heure. Vert : autorisées · Jaune : écran éteint ou app hors écran · Rouge : requêtes et tentatives bloquées</string>
     <string name="appd_loading_mismatch">Comparaison des autorisations avec le trafic observé…</string>
     <string name="appd_no_mismatch">Aucune incohérence d’autorisation</string>
     <string name="appd_no_mismatch_desc">Les autorisations Android déclarées et le trafic observé concordent jusqu’ici pour cette app.</string>
@@ -86,7 +86,7 @@
     <string name="rule_block_app_bg">Bloquer %1$s (arrière-plan)</string>
     <string name="rule_block_app">Bloquer %1$s</string>
     <string name="apps_title">Apps</string>
-    <string name="apps_subtitle">Risque de confidentialité et trafic par app</string>
+    <string name="apps_subtitle">Risque d’après tout le comportement observé · trafic des dernières 24 h</string>
     <plurals name="apps_high_risk_n">
         <item quantity="one">%d à risque élevé</item>
         <item quantity="many">%d à risque élevé</item>
@@ -114,4 +114,5 @@
     </plurals>
     <string name="apps_stalker_score">score logiciel espion %1$d</string>
     <string name="apps_search">Rechercher une app ou un paquet…</string>
+    <string name="apps_sort_destinations">Destinations</string>
 </resources>

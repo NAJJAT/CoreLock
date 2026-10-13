@@ -2,11 +2,11 @@
 <resources>
     <string name="stats_title">Statistieken</string>
     <string name="stats_subtitle">Verkeersanalyse en trends in afwijkingen</string>
-    <string name="stats_badge_today">Vandaag</string>
+    <string name="stats_badge_today">24 u</string>
     <string name="stats_total_connections">Verbindingen totaal</string>
     <string name="stats_data_transferred">Overgedragen data</string>
     <string name="stats_block_rate">Blokkeerpercentage</string>
-    <string name="stats_share_score_text">Mijn privacyscore is vandaag %1$d/100.</string>
+    <string name="stats_share_score_text">Mijn privacyscore over de afgelopen 24 uur is %1$d/100.</string>
     <string name="stats_share_score">Privacyscore delen</string>
     <string name="stats_gen_it">IT-rapport maken</string>
     <string name="stats_gen_it_confirm">Bevestig je identiteit voordat beveiligingsgegevens worden geëxporteerd</string>
@@ -16,7 +16,7 @@
     <string name="stats_share_log">Verbindingslogboek delen</string>
     <string name="stats_share_csv">CSV delen</string>
     <string name="stats_network_map">Netwerkkaart</string>
-    <string name="stats_map_legend">Bogen: groen = weinig verkeer · oranje = gemiddeld · rood = veel</string>
+    <string name="stats_map_legend">Bogen: groen = weinig verbindingen · oranje = meer · rood = meeste (24 u)</string>
     <string name="stats_by_org">Verkeer per organisatie</string>
     <string name="stats_heatmap">Activiteitskaart — 7 dagen × 24 uur</string>
     <string name="stats_heatmap_legend">Donkerder groen = meer verbindingen in dat uur. Heldere vakjes = piekactiviteit.</string>
@@ -30,7 +30,7 @@
         <item quantity="one">%d DNS-afwijking gevonden</item>
         <item quantity="other">%d DNS-afwijkingen gevonden</item>
     </plurals>
-    <string name="stats_dns_anomalies_desc">Ernstige afwijkingen die het DNS-schild heeft bewaard</string>
+    <string name="stats_dns_anomalies_desc">DNS-afwijkingen in de afgelopen 7 dagen. Tik om ze te zien.</string>
     <plurals name="stats_blocked_requests">
         <item quantity="one">%d geblokkeerd verzoek</item>
         <item quantity="other">%d geblokkeerde verzoeken</item>
@@ -55,9 +55,13 @@
     <string name="stats_top_apps">Apps met de meeste data (24 u)</string>
     <string name="stats_f_encryption">Versleuteling</string>
     <string name="stats_f_encrypted">%1$s versleuteld</string>
-    <string name="stats_f_blocked">%1$s geblokkeerd</string>
+    <string name="stats_f_blocked">%1$s van de DNS-opzoekingen geblokkeerd</string>
     <string name="stats_f_cleartext">Onversleuteld</string>
     <string name="stats_score_factors">Factoren van de score</string>
     <string name="stats_today">Vandaag</string>
     <string name="stats_blocked_port">%1$s · poort %2$d geblokkeerd</string>
+    <string name="stats_f_high_risk">Risicovolle apps</string>
+    <string name="stats_f_blocklist">Blokkeerlijst</string>
+    <string name="stats_f_background">Achtergrond</string>
+    <string name="stats_f_points">%1$d/%2$d</string>
 </resources>

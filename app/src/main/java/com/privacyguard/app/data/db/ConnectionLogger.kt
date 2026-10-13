@@ -1,8 +1,10 @@
 package com.privacyguard.app.data.db
 
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -12,13 +14,15 @@ import kotlinx.coroutines.withTimeoutOrNull
  *
  * The loop sleeps until a row arrives, then collects more for up to
  * [FLUSH_INTERVAL_MS] or until [BATCH_SIZE] rows, and writes them in one insert.
- * (An earlier version stopped receiving after its first idle interval and spun
- * a CPU core forever without ever writing a row.)
+ *
+ * It runs in its own process-wide scope, not the VPN service's: when the VPN stops,
+ * the service's scope is cancelled at once, and the rows of the connections closed
+ * during shutdown (often the most recent activity) used to be lost with it.
  *
  * [log] is fire-and-forget and never blocks. The channel capacity is large enough
  * that drops only occur if the DB is severely stalled.
  */
-class ConnectionLogger(
+class ConnectionLogger private constructor(
     private val dao: ConnectionDao,
     scope: CoroutineScope,
 ) {
@@ -44,10 +48,11 @@ class ConnectionLogger(
 
     private suspend fun flush(batch: List<ConnectionEntity>) {
         // A failed batch is dropped (history is disposable, e.g. while a VACUUM
-        // holds the lock), but never silently: a persistent failure would otherwise
-        // leave every history screen empty with no trace.
+        // holds the lock), but never silently.
         try {
             dao.insertAll(batch)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             if (failedBatches++ % 100 == 0) {
                 Log.w(TAG, "Dropped ${batch.size} connection rows (failure #$failedBatches)", e)
@@ -61,5 +66,14 @@ class ConnectionLogger(
         private const val TAG              = "ConnectionLogger"
         private const val BATCH_SIZE       = 50
         private const val FLUSH_INTERVAL_MS = 500L
+
+        @Volatile private var INSTANCE: ConnectionLogger? = null
+
+        /** One logger per process; [dao] belongs to the AppDatabase singleton. */
+        fun getInstance(dao: ConnectionDao): ConnectionLogger =
+            INSTANCE ?: synchronized(this) {
+                INSTANCE ?: ConnectionLogger(dao, CoroutineScope(SupervisorJob() + Dispatchers.IO))
+                    .also { INSTANCE = it }
+            }
     }
 }

@@ -8,8 +8,19 @@ import com.privacyguard.app.core.utils.NotificationHelper
 import com.privacyguard.app.workers.PruneWorker
 
 class PrivacyGuardApplication : Application() {
+    companion object {
+        /**
+         * Process-wide scope for work that must outlive one component, such as the
+         * VPN service saving its last history rows while it shuts down.
+         */
+        val appScope = kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO,
+        )
+    }
+
     override fun onCreate() {
         super.onCreate()
+        com.privacyguard.app.core.utils.ByteFormat.appContext = this
         SecureSecretStore.getInstance(this).bootstrap()
         AppSecurityMonitor.refresh(this)
         NotificationHelper.createNotificationChannels(this)

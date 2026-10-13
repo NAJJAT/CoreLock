@@ -51,7 +51,7 @@
     <string name="mitm_outbound">Uitgaand</string>
     <string name="mitm_inbound">Inkomend</string>
     <string name="mitm_analytics">Analyse</string>
-    <string name="mitm_total_requests">Totaal vastgelegde verzoeken</string>
+    <string name="mitm_total_requests">Vastgelegde items (verzoeken en antwoorden)</string>
     <string name="mitm_flagged">Gemarkeerd</string>
     <string name="mitm_warnings">Waarschuwingen</string>
     <string name="mitm_clean">Schoon</string>
@@ -132,4 +132,8 @@
     <string name="mitm_st_handshake_desc">De app weigerde het inspectiecertificaat (pinning, of gebruikers-CA’s worden niet vertrouwd). De host wordt zonder ontsleuteling doorgelaten.</string>
     <string name="mitm_st_error">Fout</string>
     <string name="mitm_st_error_desc">Bij de inspectie van deze verbinding ging iets mis; het verkeer is doorgelaten.</string>
+    <string name="mitm_metadata_only">Alleen metagegevens</string>
+    <string name="mitm_no_match">Geen overeenkomende items</string>
+    <string name="mitm_no_match_desc">Niets van wat bewaard is komt overeen met deze zoekopdracht of filter. Tik op Alle om de filters te wissen.</string>
+    <string name="mitm_list_capped">De nieuwste %1$d resultaten worden getoond. Verfijn de zoekopdracht om oudere te zien.</string>
 </resources>

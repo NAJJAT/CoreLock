@@ -18,37 +18,42 @@ class EncryptionEnforcer {
         val sniHostname: String?,
     )
 
-    fun inspect(ip: IpPacket, tcp: TcpPacket): Result {
-        val port = tcp.destinationPort
-        val data = tcp.data
+    fun inspect(ip: IpPacket, tcp: TcpPacket): Result = inspect(tcp.destinationPort, tcp.data)
 
-        Log.d(TAG, "Inspecting connection to port $port, data size ${data.size}")
+    /**
+     * Classifies the first client bytes of a TCP connection. Pass the whole
+     * reassembled first TLS record: a ClientHello split over several segments has
+     * its version and supported_versions extension past the first one.
+     *
+     * Decided by what the bytes are, never by the port: port 80 also carries
+     * encrypted protocols (WhatsApp, Facebook chat), and anything can run on 443.
+     * Only an HTTP request line is cleartext; anything we cannot recognise is UNKNOWN.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun inspect(port: Int, data: ByteArray): Result = when {
+        isTlsClientHello(data) -> inspectTls(data)
+        isPlaintextHttp(data) -> Result(EncryptionStatus.CLEARTEXT, null, null)
+        else -> Result(EncryptionStatus.UNKNOWN, null, null)
+    }
 
-        // FIXED: Don't block, just classify
-        return when {
-            port == 80 || port == 8080 -> {
-                Log.d(TAG, "Port $port detected as CLEARTEXT")
-                Result(EncryptionStatus.CLEARTEXT, null, null)
-            }
-            port == 443 || port == 8443 -> {
-                val result = inspectTls(data)
-                Log.d(TAG, "Port $port detected as ${result.encryptionStatus}")
-                result
-            }
-            data.size > 5 && isTlsClientHello(data) -> {
-                val result = inspectTls(data)
-                Log.d(TAG, "TLS ClientHello detected as ${result.encryptionStatus}")
-                result
-            }
-            data.size > 0 && isPlaintextHttp(data) -> {
-                Log.d(TAG, "Plaintext HTTP detected as CLEARTEXT")
-                Result(EncryptionStatus.CLEARTEXT, null, null)
-            }
-            else -> {
-                Log.d(TAG, "Unknown encryption status for port $port")
-                Result(EncryptionStatus.UNKNOWN, null, null)
-            }
-        }
+    /**
+     * Classifies the first datagram of a UDP flow: a QUIC long-header packet with a
+     * known version is QUIC (always encrypted, TLS 1.3 inside); anything else is UNKNOWN.
+     */
+    fun inspectUdp(data: ByteArray): EncryptionStatus =
+        if (isQuicLongHeader(data)) EncryptionStatus.QUIC else EncryptionStatus.UNKNOWN
+
+    private fun isQuicLongHeader(data: ByteArray): Boolean {
+        if (data.size < 7) return false
+        val first = data[0].toInt() and 0xFF
+        // Long header (bit 7) with the fixed bit (bit 6) set.
+        if ((first and 0xC0) != 0xC0) return false
+        val version = ((data[1].toLong() and 0xFF) shl 24) or ((data[2].toLong() and 0xFF) shl 16) or
+            ((data[3].toLong() and 0xFF) shl 8) or (data[4].toLong() and 0xFF)
+        return version == 0x00000001L ||                 // QUIC v1 (RFC 9000)
+            version == 0x6b3343cfL ||                    // QUIC v2 (RFC 9369)
+            (version and 0xFFFFFF00L) == 0xFF000000L ||  // IETF drafts
+            (version and 0xFF000000L) == 0x51000000L      // Google QUIC ("Q0xx")
     }
 
     private fun inspectTls(data: ByteArray): Result {
@@ -91,7 +96,8 @@ class EncryptionEnforcer {
         val prefix = String(data, 0, minOf(8, data.size), Charsets.ISO_8859_1)
         return prefix.startsWith("GET ") || prefix.startsWith("POST ") ||
                prefix.startsWith("HEAD ") || prefix.startsWith("PUT ") ||
-               prefix.startsWith("DELETE ") || prefix.startsWith("HTTP/")
+               prefix.startsWith("DELETE ") || prefix.startsWith("OPTIONS ") ||
+               prefix.startsWith("PATCH ") || prefix.startsWith("CONNECT ") || prefix.startsWith("HTTP/")
     }
 
     private fun extractSni(data: ByteArray): String? {

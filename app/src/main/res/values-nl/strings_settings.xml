@@ -156,4 +156,7 @@
     <string name="set_posture_low">Vertrouwde omgeving</string>
     <string name="set_posture_elevated">Beveiligd, maar met minder hardware- of integriteitsgaranties</string>
     <string name="set_posture_high">Tekenen van manipulatie gevonden</string>
+    <string name="set_level_minimal_desc">Minimaal blokkeert alleen malware- en phishingservers. Advertenties en trackers laden gewoon. Je eigen regels gelden altijd.</string>
+    <string name="set_level_standard_desc">Standaard blokkeert malware, advertenties en trackers. Je eigen regels gelden altijd.</string>
+    <string name="set_level_strict_desc">Streng blokkeert ook systeemtelemetrie (Microsoft, Apple, Amazon, Mozilla, Google Safe Browsing). Sommige functies werken dan misschien niet meer. Je eigen regels gelden altijd.</string>
 </resources>

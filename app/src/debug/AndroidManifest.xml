@@ -11,6 +11,8 @@
             <intent-filter>
                 <action android:name="com.privacyguard.debug.TLS_END_LEARNING" />
                 <action android:name="com.privacyguard.debug.ALLOW_SCREENSHOTS" />
+                <action android:name="com.privacyguard.debug.FAIL_NEXT_START" />
+                <action android:name="com.privacyguard.debug.DUMP_THREADS" />
             </intent-filter>
         </receiver>
     </application>

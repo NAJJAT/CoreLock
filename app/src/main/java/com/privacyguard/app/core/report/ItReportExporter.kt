@@ -1,5 +1,6 @@
 package com.privacyguard.app.core.report
 
+import com.privacyguard.app.data.db.host
 import android.content.Context
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
@@ -23,7 +24,8 @@ object ItReportExporter {
         connections: List<ConnectionEntity>,
         anomalies: List<DnsAnomalyEntity>,
         profiles: List<ConnectionProfile>,
-        trackersBlocked: Int,
+        /** Blocked lookups and attempts in the report window (BlockStats). */
+        blocked: com.privacyguard.app.data.repository.BlockStats.Counts,
         blocklistDomains: Int,
     ): ItReportFiles {
         val outputDir = File(context.filesDir, "exports/reports").apply { mkdirs() }
@@ -31,20 +33,22 @@ object ItReportExporter {
         val jsonFile = File(outputDir, "privacyguard-report-$stamp.json")
         val pdfFile = File(outputDir, "privacyguard-report-$stamp.pdf")
         val behavior = BehaviorDnaAnalyzer.summarizeAll(profiles)
-        val privacyScore = PrivacyScoreCalculator.calculate(connections, profiles, trackersBlocked, blocklistDomains)
+        val allowed = connections.filter { !it.wasBlocked }
+        val privacyScore = PrivacyScoreCalculator.calculate(allowed, profiles, blocklistDomains)
 
-        val backgroundCount = connections.count { it.wasBackground }
-        val cleartextCount = connections.count {
-            !it.wasBlocked && (it.encryptionStatus == "CLEARTEXT" || it.encryptionStatus == "UNKNOWN")
-        }
+        val backgroundCount = allowed.count { it.wasBackground }
+        // Only plain HTTP we actually saw; "unknown" is not evidence of cleartext.
+        val cleartextCount = allowed.count { it.encryptionStatus == "CLEARTEXT" }
         val json = JSONObject().apply {
             put("generatedAt", stamp)
             put("privacyScore", privacyScore.score)
             put("encryptedRatio", privacyScore.encryptedRatio)
             put("backgroundRatio", privacyScore.backgroundRatio)
             put("summary", JSONObject().apply {
-                put("connections", connections.size)
-                put("blocked", connections.count { it.wasBlocked })
+                put("connections", allowed.size)
+                put("blocked", blocked.total)
+                put("blockedLookups", blocked.blockedLookups)
+                put("blockedConnections", blocked.blockedConnections)
                 put("cleartext", cleartextCount)
                 put("background", backgroundCount)
                 put("anomalies", anomalies.size)
@@ -55,7 +59,7 @@ object ItReportExporter {
                     put(JSONObject().apply {
                         put("appName", connection.appName)
                         put("packageName", connection.packageName)
-                        put("domain", connection.domain ?: connection.destinationIp)
+                        put("domain", connection.host ?: connection.destinationIp)
                         put("destinationIp", connection.destinationIp)
                         put("port", connection.destinationPort)
                         put("protocol", connection.protocol)
@@ -83,7 +87,7 @@ object ItReportExporter {
             })
         }
         jsonFile.writeText(json.toString(2))
-        exportPdf(pdfFile, privacyScore.score, connections, anomalies, behavior, backgroundCount, cleartextCount)
+        exportPdf(pdfFile, privacyScore.score, allowed, blocked.total, anomalies, behavior, backgroundCount, cleartextCount)
         return ItReportFiles(jsonFile, pdfFile)
     }
 
@@ -91,6 +95,7 @@ object ItReportExporter {
         file: File,
         privacyScore: Int,
         connections: List<ConnectionEntity>,
+        blockedTotal: Int,
         anomalies: List<DnsAnomalyEntity>,
         behavior: List<com.privacyguard.app.core.behavior.AppBehaviorSummary>,
         backgroundCount: Int = 0,
@@ -107,7 +112,7 @@ object ItReportExporter {
         y += 28f
         canvas.drawText("Privacy Score: $privacyScore/100", 36f, y, bodyPaint)
         y += 20f
-        canvas.drawText("Connections: ${connections.size}  Blocked: ${connections.count { it.wasBlocked }}  Cleartext: $cleartextCount  Background: $backgroundCount  Anomalies: ${anomalies.size}", 36f, y, bodyPaint)
+        canvas.drawText("Connections: ${connections.size}  Blocked: $blockedTotal  Cleartext: $cleartextCount  Background: $backgroundCount  Anomalies: ${anomalies.size}", 36f, y, bodyPaint)
         y += 24f
         canvas.drawText("Top anomalies", 36f, y, titlePaint)
         y += 20f

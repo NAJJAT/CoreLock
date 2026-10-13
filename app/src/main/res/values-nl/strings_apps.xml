@@ -45,7 +45,7 @@
     <string name="appd_no_recent">Nog geen recente activiteit vastgelegd.</string>
     <string name="appd_timeline_24h">Tijdlijn van 24 uur</string>
     <string name="appd_hour">%1$d u</string>
-    <string name="appd_legend">Groen: toegestaan · Geel: in rust of op de achtergrond · Rood: geblokkeerd</string>
+    <string name="appd_legend">Verbindingen per uur. Groen: toegestaan · Geel: scherm uit of app niet in beeld · Rood: geblokkeerde opzoekingen en pogingen</string>
     <string name="appd_loading_mismatch">Machtigingen worden vergeleken met het waargenomen verkeer…</string>
     <string name="appd_no_mismatch">Geen afwijking tussen machtigingen en verkeer</string>
     <string name="appd_no_mismatch_desc">De gevraagde Android-machtigingen en het waargenomen verkeer passen tot nu toe bij elkaar.</string>
@@ -80,7 +80,7 @@
     <string name="rule_block_app_bg">%1$s blokkeren (achtergrond)</string>
     <string name="rule_block_app">%1$s blokkeren</string>
     <string name="apps_title">Apps</string>
-    <string name="apps_subtitle">Privacyrisico en verkeer per app</string>
+    <string name="apps_subtitle">Risico uit al het waargenomen gedrag · verkeer van de afgelopen 24 u</string>
     <plurals name="apps_high_risk_n">
         <item quantity="one">%d hoog risico</item>
         <item quantity="other">%d hoog risico</item>
@@ -104,4 +104,5 @@
     </plurals>
     <string name="apps_stalker_score">stalkerwarescore %1$d</string>
     <string name="apps_search">App of pakket zoeken…</string>
+    <string name="apps_sort_destinations">Bestemmingen</string>
 </resources>

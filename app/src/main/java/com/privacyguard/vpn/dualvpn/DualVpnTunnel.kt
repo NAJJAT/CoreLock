@@ -92,6 +92,7 @@ object DualVpnTunnel {
     private fun socks5Connect(ins: InputStream, outs: OutputStream, host: String, port: Int) {
         val hostBytes = host.toByteArray(Charsets.UTF_8)
         require(hostBytes.size in 1..255) { "SOCKS5 host name length out of range" }
+        require(port in 1..65535) { "SOCKS5 port out of range" }
         val pkt = buildList<Byte> {
             add(0x05); add(0x01); add(0x00) // VER CMD RSV
             add(0x03)                         // ATYP = domain

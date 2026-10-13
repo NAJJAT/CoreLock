@@ -74,6 +74,8 @@ data class DomainDetailState(
     val lastSeen: Long? = null,
     val historyStart: Long? = null,
     val anomalies: List<DnsAnomalyEntity> = emptyList(),
+    /** Days of the 7-day window that history actually covers (at least one). */
+    val daysCovered: Double = 7.0,
 )
 
 class DomainDetailViewModel(app: Application, saved: SavedStateHandle) : AndroidViewModel(app) {
@@ -88,7 +90,8 @@ class DomainDetailViewModel(app: Application, saved: SavedStateHandle) : Android
                 val db = AppDatabase.getInstance(ctx)
                 val since = System.currentTimeMillis() - HomeEvidence.WEEK_MS
                 val dns = db.dnsQueryDao().forDomainSince(host, since)
-                val conns = db.connectionDao().forHostSince(host, since)
+                // Blocked attempts sent nothing; they show up as blocked lookups-and-attempts elsewhere.
+                val conns = db.connectionDao().forHostSince(host, since).filter { !it.wasBlocked }
                 val byApp = (dns.map { it.appPackage } + conns.map { it.packageName.ifBlank { TrafficRows.UNKNOWN_PACKAGE } }).distinct()
                     .map { pkg ->
                         val d = dns.filter { it.appPackage == pkg }
@@ -114,9 +117,13 @@ class DomainDetailViewModel(app: Application, saved: SavedStateHandle) : Android
                     bytesSent = conns.sumOf { it.bytesSent },
                     bytesReceived = conns.sumOf { it.bytesReceived },
                     apps = byApp,
-                    firstSeen = times.minOrNull(),
+                    // First time in all the history we keep, not just this week.
+                    firstSeen = listOfNotNull(db.dnsQueryDao().firstSeen(host), db.connectionDao().firstSeen(host)).minOrNull(),
                     lastSeen = times.maxOrNull(),
                     historyStart = db.dnsQueryDao().oldestTimestamp(),
+                    daysCovered = db.dnsQueryDao().oldestTimestamp()?.let { oldest ->
+                        ((System.currentTimeMillis() - maxOf(oldest, since)).toDouble() / HomeEvidence.DAY_MS).coerceIn(1.0, 7.0)
+                    } ?: 7.0,
                     anomalies = db.dnsAnomalyDao().forDomain(host),
                 )
             }
@@ -194,7 +201,8 @@ fun DomainDetailScreen(
                         style = MaterialTheme.typography.titleMedium, color = PgText,
                     )
                     Text(
-                        stringResource(R.string.trf_per_day, nf.format((s.lookups + s.connections) / 7.0)),
+                        // One unit: a lookup usually precedes a connection, so adding both double counts.
+                        stringResource(R.string.trf_per_day, nf.format((if (s.lookups > 0) s.lookups else s.connections) / s.daysCovered)),
                         style = MaterialTheme.typography.bodySmall, color = PgTextMuted,
                     )
                     if (s.blockedLookups > 0) {

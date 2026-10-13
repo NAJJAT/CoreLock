@@ -163,7 +163,7 @@ fun LabeledProgress(
 }
 
 @Composable
-fun StatTile(label: String, value: String, tint: Color, modifier: Modifier = Modifier) {
+fun StatTile(label: String, value: String, tint: Color, modifier: Modifier = Modifier, detail: String? = null) {
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
@@ -174,6 +174,7 @@ fun StatTile(label: String, value: String, tint: Color, modifier: Modifier = Mod
             Text(text = value, style = MaterialTheme.typography.titleLarge, color = tint)
             Spacer(modifier = Modifier.height(4.dp))
             Text(text = label, style = MaterialTheme.typography.bodySmall, color = PgTextFaint)
+            if (detail != null) Text(text = detail, style = MaterialTheme.typography.labelSmall, color = PgTextFaint)
         }
     }
 }
@@ -254,15 +255,8 @@ fun ToggleChip(checked: Boolean, modifier: Modifier = Modifier) {
     }
 }
 
-fun formatBytes(bytes: Long): String {
-    val df = DecimalFormat("0.#")
-    return when {
-        bytes >= 1024L * 1024L * 1024L -> "${df.format(bytes / (1024.0 * 1024.0 * 1024.0))} GB"
-        bytes >= 1024L * 1024L -> "${df.format(bytes / (1024.0 * 1024.0))} MB"
-        bytes >= 1024L -> "${df.format(bytes / 1024.0)} KB"
-        else -> "${java.text.NumberFormat.getIntegerInstance().format(bytes)} B"
-    }
-}
+/** Decimal units in the user's language; see [com.privacyguard.app.core.utils.ByteFormat]. */
+fun formatBytes(bytes: Long): String = com.privacyguard.app.core.utils.ByteFormat.format(bytes)
 
 // Locale-aware ("5 min. ago", "5 minuten geleden", "قبل ٥ دقائق"), no Context needed.
 fun formatAgo(timeMillis: Long): String =

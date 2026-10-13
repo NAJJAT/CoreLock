@@ -52,7 +52,7 @@
     <string name="mitm_outbound">Sortant</string>
     <string name="mitm_inbound">Entrant</string>
     <string name="mitm_analytics">Analyse</string>
-    <string name="mitm_total_requests">Requêtes capturées au total</string>
+    <string name="mitm_total_requests">Entrées capturées (requêtes et réponses)</string>
     <string name="mitm_flagged">Signalées</string>
     <string name="mitm_warnings">Avertissements</string>
     <string name="mitm_clean">Sans problème</string>
@@ -135,4 +135,8 @@
     <string name="mitm_st_handshake_desc">L’app a refusé le certificat d’inspection (épinglage, ou CA utilisateur non acceptés). L’hôte passe sans déchiffrement.</string>
     <string name="mitm_st_error">Erreur</string>
     <string name="mitm_st_error_desc">L’inspection a rencontré une erreur pour cette connexion ; le trafic est passé tel quel.</string>
+    <string name="mitm_metadata_only">Métadonnées seules</string>
+    <string name="mitm_no_match">Aucune entrée correspondante</string>
+    <string name="mitm_no_match_desc">Rien de ce qui est stocké ne correspond à cette recherche ou à ce filtre. Touchez Tout pour effacer les filtres.</string>
+    <string name="mitm_list_capped">Affichage des %1$d résultats les plus récents. Affinez la recherche pour voir les plus anciens.</string>
 </resources>

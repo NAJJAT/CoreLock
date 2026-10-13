@@ -161,4 +161,7 @@
     <string name="set_posture_low">Environnement de confiance</string>
     <string name="set_posture_elevated">Renforcé, mais avec moins de garanties matérielles ou d’intégrité</string>
     <string name="set_posture_high">Signes d’altération détectés</string>
+    <string name="set_level_minimal_desc">Minimal bloque uniquement les serveurs de malware et d’hameçonnage. Les publicités et traqueurs se chargent. Vos propres règles s’appliquent toujours.</string>
+    <string name="set_level_standard_desc">Standard bloque les malwares, les publicités et les traqueurs. Vos propres règles s’appliquent toujours.</string>
+    <string name="set_level_strict_desc">Strict bloque aussi la télémétrie du système (Microsoft, Apple, Amazon, Mozilla, Google Safe Browsing). Certaines fonctions peuvent cesser de marcher. Vos propres règles s’appliquent toujours.</string>
 </resources>

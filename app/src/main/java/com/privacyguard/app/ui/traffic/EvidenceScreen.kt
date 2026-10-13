@@ -97,8 +97,14 @@ fun EvidenceScreen(
         }
         val ev = s.evidence ?: return@LazyColumn
         item {
+            val isBlockedList = s.kind == EvidenceKind.BLOCKED_24H || s.kind == EvidenceKind.BLOCKED_7D
+            val domains = (ev as? Evidence.Rows)?.rows?.mapNotNull { (it.host ?: it.ip)?.lowercase() }?.toSet()?.size ?: 0
             CountHeader(
-                pluralStringResource(R.plurals.trf_n_entries, ev.size, ev.size),
+                // Lookups for A and AAAA, and retries, are collapsed when logged; the domain
+                // count says how many distinct destinations those entries are.
+                if (isBlockedList) pluralStringResource(R.plurals.dash_blocked_count, ev.size, ev.size) + " · " +
+                    pluralStringResource(R.plurals.trf_n_domains, domains, domains)
+                else pluralStringResource(R.plurals.trf_n_entries, ev.size, ev.size),
                 listOfNotNull(definition, stringResource(R.string.ev_at, formatWhen(context, s.at))).joinToString("\n"),
             )
         }
@@ -163,8 +169,11 @@ private fun evidenceTitle(kind: EvidenceKind, ev: Evidence?): Pair<String, Strin
     EvidenceKind.CLEARTEXT_24H -> stringResource(R.string.ev_cleartext_24h) to stringResource(R.string.ev_cleartext_24h_def)
     EvidenceKind.ENCRYPTION_24H -> {
         val rows = (ev as? Evidence.Rows)?.rows.orEmpty()
+        // Same EncryptionShare as the Home percentage: encrypted of identified, unknown apart.
         val encrypted = rows.count { it.encrypted }
-        stringResource(R.string.ev_encryption_24h) to stringResource(R.string.ev_encryption_24h_def, java.text.NumberFormat.getIntegerInstance().format(encrypted), java.text.NumberFormat.getIntegerInstance().format(rows.size))
+        val identified = encrypted + rows.count { it.encryption == "CLEARTEXT" }
+        val nf = java.text.NumberFormat.getIntegerInstance()
+        stringResource(R.string.ev_encryption_24h) to stringResource(R.string.ev_encryption_24h_def, nf.format(encrypted), nf.format(identified), nf.format(rows.size - identified))
     }
     EvidenceKind.NIGHT_24H -> stringResource(R.string.ev_night_24h) to stringResource(R.string.ev_night_24h_def)
     EvidenceKind.BACKGROUND_24H -> stringResource(R.string.ev_background_24h) to stringResource(R.string.ev_background_24h_def)
@@ -172,11 +181,12 @@ private fun evidenceTitle(kind: EvidenceKind, ev: Evidence?): Pair<String, Strin
     EvidenceKind.UPLOADS_24H -> stringResource(R.string.ev_uploads_24h) to stringResource(R.string.ev_uploads_24h_def)
     EvidenceKind.BEACONS_24H -> stringResource(R.string.ev_beacons_24h) to stringResource(R.string.ev_beacons_24h_def)
     EvidenceKind.ENTROPY_7D -> stringResource(R.string.ev_entropy_7d) to stringResource(R.string.ev_entropy_7d_def)
-    EvidenceKind.BEHAVIOR -> stringResource(R.string.ev_behavior) to stringResource(R.string.ev_behavior_def)
+    EvidenceKind.BEHAVIOR_7D -> stringResource(R.string.ev_behavior) to stringResource(R.string.ev_behavior_def)
     EvidenceKind.CONNECTIONS_7D -> stringResource(R.string.ev_connections_7d) to stringResource(R.string.ev_connections_7d_def)
+    EvidenceKind.CONNECTIONS_24H -> stringResource(R.string.ev_connections_24h) to stringResource(R.string.ev_connections_7d_def)
     EvidenceKind.ANOMALIES_7D -> stringResource(R.string.ev_anomalies_7d) to stringResource(R.string.ev_anomalies_7d_def)
-    EvidenceKind.DATA_7D -> {
+    EvidenceKind.DATA_7D, EvidenceKind.DATA_24H -> {
         val rows = (ev as? Evidence.Rows)?.rows.orEmpty()
-        stringResource(R.string.ev_data_7d) to stringResource(R.string.ev_data_7d_def, formatBytes(rows.sumOf { it.bytesSent + it.bytesReceived }))
+        stringResource(if (kind == EvidenceKind.DATA_24H) R.string.ev_data_24h else R.string.ev_data_7d) to stringResource(R.string.ev_data_7d_def, formatBytes(rows.sumOf { it.bytesSent + it.bytesReceived }))
     }
 }

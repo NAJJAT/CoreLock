@@ -2,11 +2,11 @@
 <resources>
     <string name="stats_title">Statistiques</string>
     <string name="stats_subtitle">Analyse du trafic et tendances des anomalies</string>
-    <string name="stats_badge_today">Aujourd’hui</string>
+    <string name="stats_badge_today">24 h</string>
     <string name="stats_total_connections">Connexions au total</string>
     <string name="stats_data_transferred">Données transférées</string>
     <string name="stats_block_rate">Taux de blocage</string>
-    <string name="stats_share_score_text">Mon score de confidentialité est de %1$d/100 aujourd’hui.</string>
+    <string name="stats_share_score_text">Mon score de confidentialité sur les dernières 24 heures est de %1$d/100.</string>
     <string name="stats_share_score">Partager le score de confidentialité</string>
     <string name="stats_gen_it">Générer le rapport pour le service informatique</string>
     <string name="stats_gen_it_confirm">Confirmez votre identité avant d’exporter les données de sécurité</string>
@@ -16,7 +16,7 @@
     <string name="stats_share_log">Partager le journal des connexions</string>
     <string name="stats_share_csv">Partager le CSV</string>
     <string name="stats_network_map">Carte du réseau</string>
-    <string name="stats_map_legend">Arcs : vert = faible volume · orange = moyen · rouge = élevé</string>
+    <string name="stats_map_legend">Arcs : vert = peu de connexions · orange = plus · rouge = le plus (24 h)</string>
     <string name="stats_by_org">Trafic par organisation</string>
     <string name="stats_heatmap">Carte de chaleur — 7 jours × 24 heures</string>
     <string name="stats_heatmap_legend">Vert plus foncé = plus de connexions dans l’heure. Cases claires = pic d’activité.</string>
@@ -31,7 +31,7 @@
         <item quantity="many">%d anomalies DNS détectées</item>
         <item quantity="other">%d anomalies DNS détectées</item>
     </plurals>
-    <string name="stats_dns_anomalies_desc">Anomalies graves enregistrées par le bouclier DNS</string>
+    <string name="stats_dns_anomalies_desc">Anomalies DNS des 7 derniers jours. Touchez pour les voir.</string>
     <plurals name="stats_blocked_requests">
         <item quantity="one">%d requête bloquée</item>
         <item quantity="many">%d requêtes bloquées</item>
@@ -60,9 +60,13 @@
     <string name="stats_top_apps">Apps les plus gourmandes en données (24 h)</string>
     <string name="stats_f_encryption">Chiffrement</string>
     <string name="stats_f_encrypted">%1$s chiffré</string>
-    <string name="stats_f_blocked">%1$s bloqué</string>
+    <string name="stats_f_blocked">%1$s des requêtes DNS bloquées</string>
     <string name="stats_f_cleartext">En clair</string>
     <string name="stats_score_factors">Facteurs du score</string>
     <string name="stats_today">Aujourd’hui</string>
     <string name="stats_blocked_port">%1$s · port %2$d bloqué</string>
+    <string name="stats_f_high_risk">Apps à risque</string>
+    <string name="stats_f_blocklist">Liste de blocage</string>
+    <string name="stats_f_background">Arrière-plan</string>
+    <string name="stats_f_points">%1$d/%2$d</string>
 </resources>

@@ -43,7 +43,8 @@ const val NOT_DECRYPTED_PREFIX = "not-decrypted:"
  */
 /** Same as [notDecryptedReason], as a string resource for the UI. */
 fun PayloadLogEntity.notDecryptedReasonRes(): Int? {
-    if (isMitmSuccess || destinationPort != 443) return null
+    // Any TLS port: the entry says it was logged as metadata only, whatever the port.
+    if (isMitmSuccess || !bodyEncoding.startsWith(NOT_DECRYPTED_PREFIX)) return null
     return when (bodyEncoding.removePrefix(NOT_DECRYPTED_PREFIX)) {
         "mitm-off" -> com.privacyguard.app.R.string.nd_mitm_off
         "bypass" -> com.privacyguard.app.R.string.nd_bypass
@@ -54,7 +55,8 @@ fun PayloadLogEntity.notDecryptedReasonRes(): Int? {
 }
 
 fun PayloadLogEntity.notDecryptedReason(): String? {
-    if (isMitmSuccess || destinationPort != 443) return null
+    // Any TLS port: the entry says it was logged as metadata only, whatever the port.
+    if (isMitmSuccess || !bodyEncoding.startsWith(NOT_DECRYPTED_PREFIX)) return null
     return when (bodyEncoding.removePrefix(NOT_DECRYPTED_PREFIX)) {
         "mitm-off" -> "HTTPS interception is turned off or consent has expired, so this connection was passed through untouched."
         "bypass" -> "This host is on the never-intercept list (DNS-over-HTTPS / Google / Samsung services). Decrypting it breaks name resolution or sign-in, so it is passed through."

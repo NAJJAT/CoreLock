@@ -49,10 +49,13 @@ import com.privacyguard.app.ui.theme.PgWarningDim
 
 /** Friendly names only: an installed app's label, or a plain description — never a package name. */
 object AppNames {
+    fun isUnattributed(packageName: String?): Boolean =
+        packageName.isNullOrBlank() || packageName.equals(TrafficRows.UNKNOWN_PACKAGE, ignoreCase = true)
+
     fun label(context: Context, packageName: String, storedName: String? = null): String {
-        if (packageName.isBlank() || packageName == TrafficRows.UNKNOWN_PACKAGE) {
-            return context.getString(R.string.trf_unattributed)
-        }
+        // Android did not tell us which app (shared resolver, system services): "Unknown
+        // app", never "Removed app". Older anomaly rows used lower-case "unknown".
+        if (isUnattributed(packageName)) return context.getString(R.string.conn_unknown_app)
         runCatching {
             val pm = context.packageManager
             return pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()

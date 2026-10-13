@@ -3,6 +3,8 @@ package com.privacyguard.app.core.security
 import android.content.Context
 import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.util.Log
+import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.db.SupportSQLiteOpenHelper
 import net.zetetic.database.sqlcipher.SQLiteDatabase
 import net.zetetic.database.sqlcipher.SQLiteDatabaseHook
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
@@ -29,6 +31,48 @@ object DatabaseEncryption {
     private val SQLITE_HEADER = "SQLite format 3\u0000".toByteArray(StandardCharsets.US_ASCII)
 
     @Volatile private var libraryLoaded = false
+
+    /**
+     * Factory for Room that defers all key work until the database is first used.
+     * Room creates its open helper while building the database, which often happens
+     * on the main thread (a screen's first `getInstance`); unwrapping the passphrase
+     * through the Keystore, and on upgrade encrypting the old file in place, would
+     * then block it. Room only opens the file on its first query, off the main thread.
+     */
+    fun lazyOpenHelperFactory(context: Context, databaseName: String): SupportSQLiteOpenHelper.Factory {
+        val appContext = context.applicationContext
+        return SupportSQLiteOpenHelper.Factory { configuration ->
+            LazyOpenHelper(configuration.name) { openHelperFactory(appContext, databaseName).create(configuration) }
+        }
+    }
+
+    private class LazyOpenHelper(
+        override val databaseName: String?,
+        private val createDelegate: () -> SupportSQLiteOpenHelper,
+    ) : SupportSQLiteOpenHelper {
+        @Volatile private var walEnabled: Boolean? = null
+        @Volatile private var created: SupportSQLiteOpenHelper? = null
+
+        private val delegate: SupportSQLiteOpenHelper
+            get() = created ?: synchronized(this) {
+                created ?: createDelegate().also { helper ->
+                    walEnabled?.let { helper.setWriteAheadLoggingEnabled(it) }
+                    created = helper
+                }
+            }
+
+        override fun setWriteAheadLoggingEnabled(enabled: Boolean) {
+            val helper = created
+            if (helper != null) helper.setWriteAheadLoggingEnabled(enabled) else walEnabled = enabled
+        }
+
+        override val writableDatabase: SupportSQLiteDatabase get() = delegate.writableDatabase
+        override val readableDatabase: SupportSQLiteDatabase get() = delegate.readableDatabase
+
+        override fun close() {
+            created?.close()
+        }
+    }
 
     fun openHelperFactory(context: Context, databaseName: String): SupportOpenHelperFactory {
         loadLibrary()

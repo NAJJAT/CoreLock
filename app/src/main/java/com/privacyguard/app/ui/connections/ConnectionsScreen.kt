@@ -72,7 +72,8 @@ fun ConnectionsScreen(
     val storedConnections by viewModel.recentConnections.collectAsStateWithLifecycle()
     val blockedRuleKeys by viewModel.blockedRuleKeys.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
-    val connections = remember(liveConnections, storedConnections, blockedRuleKeys, filter) {
+    val tab by viewModel.tab.collectAsStateWithLifecycle()
+    val connections = remember(liveConnections, storedConnections, blockedRuleKeys, filter, tab) {
         viewModel.getFilteredConnections()
     }
     val filterActive = filter.showBlockedOnly || filter.showCleartextOnly || filter.query.isNotBlank()
@@ -99,12 +100,29 @@ fun ConnectionsScreen(
             ScreenScaffold(
                 title = stringResource(R.string.conn_title),
                 subtitle = stringResource(R.string.conn_subtitle),
-                badge = stringResource(R.string.dash_badge_live).uppercase()
+                badge = if (tab == TrafficTab.LIVE) stringResource(R.string.dash_badge_live).uppercase() else null
             ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(stringResource(R.string.conn_tab_live, liveConnections.size), tab == TrafficTab.LIVE) { viewModel.setTab(TrafficTab.LIVE) }
+                    FilterChip(stringResource(R.string.conn_tab_history, storedConnections.size), tab == TrafficTab.HISTORY) { viewModel.setTab(TrafficTab.HISTORY) }
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    stringResource(if (tab == TrafficTab.LIVE) R.string.conn_live_note else R.string.conn_history_note),
+                    style = MaterialTheme.typography.bodySmall, color = PgTextMuted,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
                 SearchShell(
                     query = filter.query,
                     onValueChange = { viewModel.setFilter(filter.copy(query = it)) }
                 )
+                // A DNS lookup is network traffic of its own: only when asked.
+                if (dnsLookup.query.isBlank() && remember(filter.query) { viewModel.queryLooksLikeHost() }) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(modifier = Modifier.clickable { viewModel.lookUpDns() }) {
+                        StatusPill(stringResource(R.string.conn_dns_lookup_action, filter.query.trim()), PgAccentDim, PgAccent)
+                    }
+                }
                 if (dnsLookup.query.isNotBlank()) {
                     Spacer(modifier = Modifier.height(10.dp))
                     DnsLookupPanel(dnsLookup)
@@ -204,8 +222,8 @@ fun ConnectionsScreen(
                             viewModel.toggleConnectionBlocked(connection)
                         }) {
                             StatusPill(
-                                text = (if (connection.isBlocked) stringResource(R.string.conn_unblock) else stringResource(R.string.ads_block)).uppercase(),
-                                background = if (connection.isBlocked) PgDangerDim else PgPanelRaised,
+                                text = (if (connection.hasBlockRule) stringResource(R.string.conn_unblock) else stringResource(R.string.ads_block)).uppercase(),
+                                background = if (connection.hasBlockRule) PgDangerDim else PgPanelRaised,
                                 content = PgDanger
                             )
                         }
@@ -226,7 +244,7 @@ fun ConnectionsScreen(
                     }
                     Text(
                         text = listOf(
-                            connection.hostName ?: connection.destination,
+                            connection.hostName ?: connection.orgHint?.let { "${connection.destination} ($it)" } ?: connection.destination,
                             connection.securityInfo.takeIf { it.isNotBlank() && !it.equals("Unknown", ignoreCase = true) },
                             connection.encryptionInfo.takeIf { it.isNotBlank() },
                         ).filterNotNull().joinToString(" • "),
@@ -299,6 +317,9 @@ private fun ConnectionDetailDialog(
                         Text(
                             text = if (geo != null) {
                                 stringResource(R.string.conn_route_country, geo.countryName, geo.countryCode)
+                            } else if (connection.destinationIp.contains(':')) {
+                                // The offline GeoIP table covers IPv4 only.
+                                stringResource(R.string.conn_route_ipv6)
                             } else {
                                 stringResource(R.string.conn_route_unknown)
                             },
@@ -338,7 +359,7 @@ private fun ConnectionDetailDialog(
                             contentColor = PgDanger
                         )
                     ) {
-                        Text(if (connection.isBlocked) stringResource(R.string.conn_unblock) else stringResource(R.string.ads_block))
+                        Text(if (connection.hasBlockRule) stringResource(R.string.conn_unblock) else stringResource(R.string.ads_block))
                     }
                     Button(
                         onClick = onClose,
@@ -419,14 +440,7 @@ private fun DnsLookupPanel(result: DnsLookupState) {
     }
 }
 
-private fun formatBytes(bytes: Long): String {
-    return when {
-        // Default-locale digits; international units.
-        bytes >= 1024 * 1024 -> String.format(Locale.getDefault(), "%.1f MB", bytes / (1024.0 * 1024.0))
-        bytes >= 1024 -> String.format(Locale.getDefault(), "%.1f KB", bytes / 1024.0)
-        else -> String.format(Locale.getDefault(), "%d B", bytes)
-    }
-}
+private fun formatBytes(bytes: Long): String = com.privacyguard.app.core.utils.ByteFormat.format(bytes)
 
 @Composable
 private fun SearchShell(query: String, onValueChange: (String) -> Unit) {

@@ -4,7 +4,7 @@
     <string name="conn_no_records">Geen DNS-records ontvangen</string>
     <string name="conn_lookup_failed">DNS-opzoeking mislukt</string>
     <string name="conn_title">Verbindingen</string>
-    <string name="conn_subtitle">Live netwerkverkeer en versleuteling</string>
+    <string name="conn_subtitle">Live en recente verbindingen</string>
     <string name="conn_cleartext">Onversleuteld</string>
     <string name="conn_no_match">Geen overeenkomende verbindingen</string>
     <string name="conn_none_yet">Nog geen verbindingen</string>
@@ -31,4 +31,10 @@
     <string name="conn_no_result">Geen resultaat</string>
     <string name="conn_ok">OK</string>
     <string name="conn_search">Host, app of IP zoeken…</string>
+    <string name="conn_tab_live">Live (%1)</string>
+    <string name="conn_tab_history">Afgelopen 24 u (%1)</string>
+    <string name="conn_live_note">Verbindingen die nu open zijn, met hun huidige snelheid.</string>
+    <string name="conn_history_note">Verbindingen die in de afgelopen 24 u eindigden, nieuwste eerst. Groottes zijn totalen, geen snelheden. Geblokkeerde pogingen staan erbij.</string>
+    <string name="conn_dns_lookup_action">%1 opzoeken in DNS</string>
+    <string name="conn_route_ipv6">Dit toestel → IPv6-adres (de offline kaart kent alleen IPv4)</string>
 </resources>

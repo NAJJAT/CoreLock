@@ -88,7 +88,7 @@ class TrafficModelTest {
         val night = Calendar.getInstance().apply { set(2026, 0, 10, 3, 0) }.timeInMillis
         val day = Calendar.getInstance().apply { set(2026, 0, 10, 14, 0) }.timeInMillis
         val list = listOf(
-            conn(1, t = night, enc = "CLEARTEXT"),
+            conn(1, t = night, enc = "CLEARTEXT", screen = false),
             conn(2, t = day, fg = false),
             conn(3, t = day, fg = null, sent = 900),
             conn(4, t = day, sent = 0),
@@ -96,8 +96,9 @@ class TrafficModelTest {
         assertEquals(listOf(1L), HomeEvidence.select(EvidenceKind.NIGHT_24H, list).map { it.id })
         assertEquals(listOf(1L), HomeEvidence.select(EvidenceKind.CLEARTEXT_24H, list).map { it.id })
         assertEquals(listOf(2L), HomeEvidence.select(EvidenceKind.BACKGROUND_24H, list).map { it.id })
-        // Largest upload first; connections that sent nothing are not uploads.
-        assertEquals(listOf(3L, 1L, 2L), HomeEvidence.select(EvidenceKind.UPLOADS_24H, list).map { it.id })
+        // Background uploads only: 2 was off screen; 3 (unknown) and 1 (on screen) are not
+        // counted, and 4 sent nothing.
+        assertEquals(listOf(2L), HomeEvidence.select(EvidenceKind.UPLOADS_24H, list).map { it.id })
     }
 
     @Test

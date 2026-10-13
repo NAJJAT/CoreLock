@@ -4,7 +4,7 @@
     <string name="conn_no_records">لم تُرجع أي سجلات DNS</string>
     <string name="conn_lookup_failed">فشل البحث في DNS</string>
     <string name="conn_title">الاتصالات</string>
-    <string name="conn_subtitle">حركة الشبكة المباشرة والتشفير</string>
+    <string name="conn_subtitle">الاتصالات المباشرة والأخيرة</string>
     <string name="conn_cleartext">غير مشفّر</string>
     <string name="conn_no_match">لا اتصالات مطابقة</string>
     <string name="conn_none_yet">لا اتصالات بعد</string>
@@ -31,4 +31,10 @@
     <string name="conn_no_result">لا نتيجة</string>
     <string name="conn_ok">سليم</string>
     <string name="conn_search">ابحث عن مضيف أو تطبيق أو IP…</string>
+    <string name="conn_tab_live">مباشر (%1)</string>
+    <string name="conn_tab_history">آخر 24 ساعة (%1)</string>
+    <string name="conn_live_note">الاتصالات المفتوحة الآن، مع سرعتها الحالية.</string>
+    <string name="conn_history_note">اتصالات انتهت خلال آخر 24 ساعة، الأحدث أولًا. الأحجام مجاميع وليست سرعات. تشمل المحاولات المحظورة.</string>
+    <string name="conn_dns_lookup_action">البحث عن %1 في DNS</string>
+    <string name="conn_route_ipv6">هذا الجهاز → عنوان IPv6 (الخريطة دون اتصال تغطي IPv4 فقط)</string>
 </resources>
