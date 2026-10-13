@@ -149,4 +149,5 @@
     <string name="ev_connections_24h">الاتصالات · آخر 24 ساعة</string>
     <string name="ev_data_24h">البيانات المنقولة · آخر 24 ساعة</string>
     <string name="trf_local_network">الشبكة المحلية</string>
+    <string name="trf_connectivity_check">فحص الاتصال</string>
 </resources>

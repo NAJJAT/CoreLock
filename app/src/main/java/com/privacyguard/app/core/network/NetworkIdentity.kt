@@ -14,9 +14,16 @@ data class NetworkId(
     val key: String,
     val label: String,
     val isWifi: Boolean,
+    /** No Wi-Fi encryption (open hotspot); null when Android does not say (before 12). */
+    val openWifi: Boolean? = null,
+    /** Android detected a captive portal (sign-in page) on this network. */
+    val captivePortal: Boolean = false,
 )
 
 object NetworkIdentity {
+
+    /** Every Wi-Fi network gets this key when Android hides the SSID (no location access). */
+    const val SHARED_WIFI_KEY = "wi-fi network"
 
     private const val CACHE_MS = 5_000L
 
@@ -59,13 +66,33 @@ object NetworkIdentity {
             .firstOrNull()
             ?: return NetworkId("offline", s(R.string.net_offline), false)
 
+        // Android's own captive-portal verdict. "Not validated" alone is also a flaky
+        // connection, which says nothing about trust.
+        val captive = underlying.hasCapability(NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL)
         return when {
-            underlying.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> ssid(context, underlying)
-                ?.let { NetworkId("wi-fi: ${it.lowercase()}", context.getString(R.string.net_wifi_named, it), true) }
-                ?: NetworkId("wi-fi network", s(R.string.net_wifi), true)
-            underlying.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> NetworkId("cellular network", s(R.string.net_cellular), false)
-            underlying.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> NetworkId("ethernet network", s(R.string.net_ethernet), false)
-            else -> NetworkId("unknown network", s(R.string.net_unknown), false)
+            underlying.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> {
+                val open = openWifi(underlying)
+                ssid(context, underlying)
+                    ?.let { NetworkId("wi-fi: ${it.lowercase()}", context.getString(R.string.net_wifi_named, it), true, open, captive) }
+                    ?: NetworkId(SHARED_WIFI_KEY, s(R.string.net_wifi), true, open, captive)
+            }
+            underlying.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> NetworkId("cellular network", s(R.string.net_cellular), false, captivePortal = captive)
+            underlying.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> NetworkId("ethernet network", s(R.string.net_ethernet), false, captivePortal = captive)
+            else -> NetworkId("unknown network", s(R.string.net_unknown), false, captivePortal = captive)
+        }
+    }
+
+    /**
+     * Open (unencrypted) Wi-Fi. The security type is not location data, so Android 12+
+     * reports it without location permission. OWE ("Enhanced Open") is encrypted.
+     */
+    private fun openWifi(caps: NetworkCapabilities): Boolean? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
+        val type = (caps.transportInfo as? WifiInfo)?.currentSecurityType ?: return null
+        return when (type) {
+            WifiInfo.SECURITY_TYPE_UNKNOWN -> null
+            WifiInfo.SECURITY_TYPE_OPEN -> true
+            else -> false
         }
     }
 

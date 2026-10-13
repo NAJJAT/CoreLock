@@ -22,6 +22,10 @@ class DnsAnomalyDetector {
         HIGH_FREQUENCY,
         EXCESSIVE_SUBDOMAINS,
         LONG_LABEL,
+        // Signs about the network itself (NetworkSignals); stored with its network key.
+        DNS_TAMPERED,
+        DNS_HIJACK,
+        TLS_INTERCEPTION,
     }
 
     data class Anomaly(

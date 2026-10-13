@@ -46,11 +46,4 @@ class LocalNetworkTest {
         assertEquals(1, share.local)
         assertEquals(1, PrivacyScoreCalculator.calculate(list, emptyList(), 0).cleartextConnections)
     }
-
-    @Test
-    fun local_cleartext_does_not_lower_network_trust() {
-        val net = NetworkId("wi-fi: home", "Home", true)
-        val lan = List(20) { conn("192.168.0.106", "CLEARTEXT").copy(networkKey = net.key) }
-        assertEquals(100, NetworkTrustAnalyzer.score(net, lan, emptyList()).score)
-    }
 }

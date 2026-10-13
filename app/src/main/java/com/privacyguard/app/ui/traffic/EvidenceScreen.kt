@@ -171,7 +171,7 @@ private fun evidenceTitle(kind: EvidenceKind, ev: Evidence?): Pair<String, Strin
         val rows = (ev as? Evidence.Rows)?.rows.orEmpty()
         // Same EncryptionShare as the Home percentage: encrypted of identified, unknown apart.
         // Local-network rows are not internet traffic and are left out, as on Home.
-        val internet = rows.filterNot { it.local }
+        val internet = rows.filterNot { it.local || it.probe }
         val encrypted = internet.count { it.encrypted }
         val identified = encrypted + internet.count { it.encryption == "CLEARTEXT" }
         val nf = java.text.NumberFormat.getIntegerInstance()

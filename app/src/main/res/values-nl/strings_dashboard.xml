@@ -165,4 +165,6 @@
     <string name="dash_ks_unchecked">Niet gecontroleerd (bescherming uit)</string>
     <string name="dash_ks_lockdown_on">Altijd aan + blokkeren</string>
     <string name="dash_ks_lockdown_off">Niet ingesteld</string>
+    <string name="dash_strict_dismiss_wifi">Niet op wifi</string>
+    <string name="dash_strict_shared_note">Zonder locatietoegang vertelt Android apps niet met welk wifinetwerk je verbonden bent, dus ‘Niet op wifi’ geldt voor alle wifinetwerken.</string>
 </resources>

@@ -696,6 +696,13 @@ private fun StrictSuggestionCard(
             style = MaterialTheme.typography.bodySmall,
             color = PgTextMuted,
         )
+        // Without location access every Wi-Fi shares one key (see NetworkIdentity), so a
+        // dismissal covers all Wi-Fi networks; say so instead of implying "this one".
+        val sharedWifiKey = suggestion.networkKey == com.privacyguard.app.core.network.NetworkIdentity.SHARED_WIFI_KEY
+        if (sharedWifiKey) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(stringResource(R.string.dash_strict_shared_note), style = MaterialTheme.typography.bodySmall, color = PgTextFaint)
+        }
         Spacer(modifier = Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Button(
@@ -707,7 +714,7 @@ private fun StrictSuggestionCard(
                 onClick = onDismiss,
                 modifier = Modifier.weight(1f),
                 colors = ButtonDefaults.buttonColors(containerColor = PgBackgroundAlt, contentColor = PgTextMuted),
-            ) { Text(stringResource(R.string.dash_strict_dismiss)) }
+            ) { Text(stringResource(if (sharedWifiKey) R.string.dash_strict_dismiss_wifi else R.string.dash_strict_dismiss)) }
         }
     }
 }

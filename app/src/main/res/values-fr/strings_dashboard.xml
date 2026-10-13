@@ -178,4 +178,6 @@
     <string name="dash_ks_unchecked">Non vérifié (protection désactivée)</string>
     <string name="dash_ks_lockdown_on">Toujours activé + blocage</string>
     <string name="dash_ks_lockdown_off">Non configuré</string>
+    <string name="dash_strict_dismiss_wifi">Pas en Wi-Fi</string>
+    <string name="dash_strict_shared_note">Sans accès à la position, Android n’indique pas aux apps à quel Wi-Fi vous êtes connecté ; « Pas en Wi-Fi » s’applique donc à tous les réseaux Wi-Fi.</string>
 </resources>

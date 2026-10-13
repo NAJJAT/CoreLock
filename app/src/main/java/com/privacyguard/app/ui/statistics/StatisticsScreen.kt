@@ -455,7 +455,14 @@ fun StatisticsScreen(
                                 Text(network.networkLabel, style = MaterialTheme.typography.titleSmall, color = PgText)
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    stringResource(R.string.stats_network_counts, pluralStringResource(R.plurals.stats_cleartext_n, network.cleartextCount, network.cleartextCount), pluralStringResource(R.plurals.stats_dns_anomaly_n, network.dnsAnomalyCount, network.dnsAnomalyCount), pluralStringResource(R.plurals.stats_weak_tls_n, network.weakTlsCount, network.weakTlsCount)),
+                                    // Only signs about the network itself (NetworkTrustAnalyzer).
+                                    listOfNotNull(
+                                        if (network.tlsIntercepted) stringResource(R.string.net_sig_intercept) else null,
+                                        if (network.dnsHijacked) stringResource(R.string.net_sig_hijack) else null,
+                                        if (network.openWifi) stringResource(R.string.net_sig_open) else null,
+                                        if (network.tamperedAnswers > 0) stringResource(R.string.net_sig_tamper, network.tamperedAnswers) else null,
+                                        if (network.captivePortal) stringResource(R.string.net_sig_captive) else null,
+                                    ).ifEmpty { listOf(stringResource(R.string.net_sig_none)) }.joinToString(" · "),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = PgTextMuted,
                                 )

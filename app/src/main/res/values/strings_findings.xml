@@ -59,4 +59,10 @@
     <string name="tcat_profiling_desc">Links your activity to a profile used for targeting, attribution or data brokering.</string>
     <string name="tcat_other">Other</string>
     <string name="tcat_other_desc">A third-party service that receives data from the app.</string>
+    <string name="dns_tampered">DNS answer looks tampered</string>
+    <string name="dns_tampered_desc">A public name was answered with a private or empty address. Networks that redirect or spy on DNS do this.</string>
+    <string name="dns_hijack">Network rewrites DNS</string>
+    <string name="dns_hijack_desc">The network answered a name that cannot exist. It intercepts or rewrites DNS, so it can send you to other servers.</string>
+    <string name="tls_interception">TLS interception detected</string>
+    <string name="tls_interception_desc">A certificate on PrivacyGuard’s own encrypted DNS connection was replaced on the way. Someone on this network can read and change HTTPS.</string>
 </resources>

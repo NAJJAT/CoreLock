@@ -9,9 +9,11 @@ data class NetworkTrustEntity(
     val networkLabel: String,
     val trustScore: Int,
     val trustLevel: String,
-    val cleartextCount: Int,
-    val dnsAnomalyCount: Int,
-    val weakTlsCount: Int,
-    val blockedCount: Int,
+    // Network-side signals only (see NetworkTrustAnalyzer); app behaviour is not here.
+    val openWifi: Boolean,
+    val captivePortal: Boolean,
+    val tamperedAnswers: Int,
+    val dnsHijacked: Boolean,
+    val tlsIntercepted: Boolean,
     val lastSeen: Long = System.currentTimeMillis(),
 )

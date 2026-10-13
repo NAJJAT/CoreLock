@@ -43,6 +43,12 @@ class DebugHooksReceiver : BroadcastReceiver() {
                 }
             }
             ACTION_DUMP_PROFILES -> dumpProfiles(context, intent.getStringExtra("package"))
+            ACTION_DUMP_NETWORK -> dumpNetwork(context)
+            // Restart protection after a test install (VPN consent must already be given).
+            ACTION_START_VPN -> runCatching {
+                androidx.core.content.ContextCompat.startForegroundService(
+                    context, com.privacyguard.platform.android.PrivacyVpnService.startIntent(context))
+            }.onFailure { Log.w(TAG, "START_VPN refused: ${it.message}") }
             ACTION_FAIL_NEXT_START -> {
                 context.getSharedPreferences(DEBUG_PREFS, Context.MODE_PRIVATE)
                     .edit().putBoolean(KEY_FAIL_NEXT_START, true).commit()
@@ -70,6 +76,29 @@ class DebugHooksReceiver : BroadcastReceiver() {
         }
     }
 
+    /**
+     * What identifies the current network without location permission (for the
+     * per-network dismissal question): our NetworkId, and the LinkProperties of every
+     * non-VPN network, which ACCESS_NETWORK_STATE alone can read.
+     */
+    private fun dumpNetwork(context: Context) {
+        val id = com.privacyguard.app.core.network.NetworkIdentity.current(context)
+        Log.i(TAG, "NETWORK id=$id")
+        val cm = context.getSystemService(android.net.ConnectivityManager::class.java) ?: return
+        @Suppress("DEPRECATION")
+        cm.allNetworks.forEach { n ->
+            val caps = cm.getNetworkCapabilities(n) ?: return@forEach
+            if (caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN)) return@forEach
+            val lp = cm.getLinkProperties(n) ?: return@forEach
+            // RouteInfo.hasGateway and transportInfo need Android 10.
+            val q = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q
+            Log.i(TAG, "NETWORK lp iface=${lp.interfaceName} addrs=${lp.linkAddresses} " +
+                "gateways=${if (q) lp.routes.filter { it.hasGateway() }.map { it.gateway?.hostAddress } else lp.routes} " +
+                "dns=${lp.dnsServers.map { it.hostAddress }} domains=${lp.domains} " +
+                "transportInfo=${if (q) caps.transportInfo else "n/a"}")
+        }
+    }
+
     private fun endLearning(context: Context, pkg: String) {
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
@@ -92,6 +121,8 @@ class DebugHooksReceiver : BroadcastReceiver() {
         const val ACTION_FAIL_NEXT_START = "com.privacyguard.debug.FAIL_NEXT_START"
         const val ACTION_DUMP_THREADS = "com.privacyguard.debug.DUMP_THREADS"
         const val ACTION_DUMP_PROFILES = "com.privacyguard.debug.DUMP_PROFILES"
+        const val ACTION_DUMP_NETWORK = "com.privacyguard.debug.DUMP_NETWORK"
+        const val ACTION_START_VPN = "com.privacyguard.debug.START_VPN"
         const val DEBUG_PREFS = "debug_hooks"
         const val KEY_ALLOW_SCREENSHOTS = "allow_screenshots"
         const val KEY_FAIL_NEXT_START = "fail_next_start"

@@ -171,6 +171,7 @@ fun ConnectionsScreen(
 
         items(connections, key = { it.id }) { connection ->
             val localLabel = stringResource(R.string.trf_local_network)
+            val probeLabel = stringResource(R.string.trf_connectivity_check)
             PanelCard(
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
@@ -181,7 +182,7 @@ fun ConnectionsScreen(
                         connection.isBlocked -> PgDanger to PgDangerDim
                         connection.securityInfo.contains("TLS 1.0", true) || connection.securityInfo.contains("TLS 1.1", true) ->
                             PgWarning to PgWarningDim
-                        connection.isLocal -> PgInfo to PgInfoDim
+                        connection.isLocal || connection.isProbe -> PgInfo to PgInfoDim
                         connection.securityInfo == "CLEARTEXT" -> PgDanger to PgDangerDim
                         else -> PgAccent to PgAccentDim
                     }
@@ -250,6 +251,7 @@ fun ConnectionsScreen(
                         text = listOf(
                             connection.hostName ?: connection.orgHint?.let { "${connection.destination} ($it)" } ?: connection.destination,
                             if (connection.isLocal) localLabel
+                            else if (connection.isProbe) probeLabel
                             else connection.securityInfo.takeIf { it.isNotBlank() && !it.equals("Unknown", ignoreCase = true) },
                             // The TLS version only when it adds something ("TLS_1_3 • TLS_1_3" said it twice).
                             connection.encryptionInfo.takeIf { it.isNotBlank() && it != connection.securityInfo },

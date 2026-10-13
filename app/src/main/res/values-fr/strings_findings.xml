@@ -56,4 +56,10 @@
     <string name="tcat_profiling_desc">Relie votre activité à un profil utilisé pour le ciblage, l’attribution ou la revente de données.</string>
     <string name="tcat_other">Autre</string>
     <string name="tcat_other_desc">Un service tiers qui reçoit des données de l’app.</string>
+    <string name="dns_tampered">Réponse DNS apparemment falsifiée</string>
+    <string name="dns_tampered_desc">Un nom public a reçu une adresse privée ou vide. Les réseaux qui redirigent ou espionnent le DNS font cela.</string>
+    <string name="dns_hijack">Le réseau réécrit le DNS</string>
+    <string name="dns_hijack_desc">Le réseau a répondu pour un nom qui ne peut pas exister. Il intercepte ou réécrit le DNS et peut donc vous envoyer vers d’autres serveurs.</string>
+    <string name="tls_interception">Interception TLS détectée</string>
+    <string name="tls_interception_desc">Un certificat de la connexion DNS chiffrée de PrivacyGuard a été remplacé en chemin. Quelqu’un sur ce réseau peut lire et modifier le HTTPS.</string>
 </resources>

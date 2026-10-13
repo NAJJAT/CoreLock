@@ -25,4 +25,11 @@
     <string name="nav_stats">الإحصاءات</string>
     <string name="nav_payload">المحتوى</string>
     <string name="nav_settings">الإعدادات</string>
+    <string name="net_sig_intercept">رُصد اعتراض TLS</string>
+    <string name="net_sig_hijack">إجابات DNS مُعاد كتابتها</string>
+    <string name="net_sig_open">Wi-Fi مفتوحة (بلا تشفير)</string>
+    <string name="net_sig_tamper">إجابات DNS مُتلاعَب بها: %1$d</string>
+    <string name="net_sig_captive">بوابة تسجيل دخول</string>
+    <string name="net_sig_none">لا علامات تحذير</string>
+    <string name="net_owner">هذه الشبكة</string>
 </resources>

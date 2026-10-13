@@ -25,4 +25,11 @@
     <string name="nav_stats">Stats</string>
     <string name="nav_payload">Payload</string>
     <string name="nav_settings">Settings</string>
+    <string name="net_sig_intercept">TLS interception detected</string>
+    <string name="net_sig_hijack">DNS answers rewritten</string>
+    <string name="net_sig_open">Open Wi-Fi (no encryption)</string>
+    <string name="net_sig_tamper">Tampered DNS answers: %1$d</string>
+    <string name="net_sig_captive">Captive portal</string>
+    <string name="net_sig_none">No warning signs</string>
+    <string name="net_owner">This network</string>
 </resources>

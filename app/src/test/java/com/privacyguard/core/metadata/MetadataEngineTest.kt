@@ -58,6 +58,15 @@ class MetadataEngineTest {
         assertEquals(30_000L, p.minIntervalMs)
     }
 
+    /** Weak TLS is the app's choice: it raises the app's risk (network trust ignores it). */
+    @Test
+    fun weak_tls_is_app_risk() {
+        val e = MetadataEngine()
+        val s = snap("1.1.1.1", 0)
+        e.record(s, false, EncryptionStatus.WEAK_TLS, TlsVersion.TLS_1_0, s.tlsSni)
+        assertTrue(e.allProfiles().single().riskSignals.any { it.code == RiskCode.WEAK_TLS })
+    }
+
     @Test
     fun blocked_attempts_are_not_behaviour() {
         val e = MetadataEngine()

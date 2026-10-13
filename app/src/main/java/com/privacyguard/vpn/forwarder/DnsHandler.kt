@@ -70,9 +70,15 @@ class DnsHandler(
         fun onQuery(ownerPackage: String?, domain: String, wasBlocked: Boolean)
     }
 
+    /** Signs about the network itself: type is a NetworkSignals constant. */
+    fun interface NetworkSignalListener {
+        fun onSignal(type: String, domain: String, detail: String)
+    }
+
     @Volatile var resolvedListener: ResolvedListener? = null
     @Volatile var anomalyListener:  AnomalyListener?  = null
     @Volatile var queryListener:    QueryListener?    = null
+    @Volatile var networkSignalListener: NetworkSignalListener? = null
 
     // ─────────────────────────────────────────────────────────────────────────
     // Entry Point
@@ -227,12 +233,37 @@ class DnsHandler(
                 // this port is spoofed or stray.
                 if (recv.address != upstream || recv.port != upstreamPort) return@use false
                 val responseData = responseBuf.copyOf(recv.length)
-                injectDnsResponse(ipPacket, udpPacket, dnsQuery, responseData, ownerPackage)
+                injectDnsResponse(ipPacket, udpPacket, dnsQuery, responseData, ownerPackage, viaDoh = false)
             }
         } catch (e: Exception) {
             Log.w(TAG, "DNS forward to $server failed: ${e.message}")
             false
         }
+    }
+
+    /**
+     * Asks the upstream resolver, over plain DNS, for a name under ".invalid" that
+     * cannot exist. An address in the answer means the network intercepts or rewrites
+     * DNS. Returns null when no usable answer came back. Runs off the packet path.
+     */
+    fun probeHijack(): Boolean? {
+        val name = com.privacyguard.app.core.network.NetworkSignals.hijackProbeName(
+            java.util.UUID.randomUUID().toString().replace("-", "").take(16))
+        val id = (Math.random() * 0xFFFF).toInt()
+        return runCatching {
+            DatagramSocket().use { socket ->
+                if (protectSocket?.invoke(socket) == false) return null
+                socket.soTimeout = upstreamTimeoutMs
+                val upstream = InetAddress.getByName(upstreamDns)
+                val query = DnsPacket.buildQuery(name, id)
+                socket.send(DatagramPacket(query, query.size, upstream, upstreamPort))
+                val buf = ByteArray(MAX_DNS_PAYLOAD)
+                val recv = DatagramPacket(buf, buf.size)
+                socket.receive(recv)
+                val response = DnsPacket.parse(buf.copyOf(recv.length))?.takeIf { it.id == id }
+                com.privacyguard.app.core.network.NetworkSignals.isHijacked(response)
+            }
+        }.getOrNull()
     }
 
     private fun injectDnsResponse(
@@ -241,6 +272,7 @@ class DnsHandler(
         dnsQuery:     DnsPacket,
         responseData: ByteArray,
         @Suppress("UNUSED_PARAMETER") ownerPackage: String?,
+        viaDoh: Boolean = true,
     ): Boolean {
         // Must be a parseable answer to this very query: otherwise a forged or
         // mismatched response (or an HTTP body that is not a DNS message) would be
@@ -252,6 +284,17 @@ class DnsHandler(
         }
         val queryName = dnsQuery.queryName
         if (queryName != null) {
+            // Plain DNS can be changed on the way; DoH answers cannot, so only check those here.
+            // Only against the built-in resolvers: some custom ones block by answering 0.0.0.0.
+            if (!viaDoh && upstreamDns in SECONDARY_ADDRESS) {
+                val answers = dnsResponse.aRecords + dnsResponse.aaaaRecords
+                if (com.privacyguard.app.core.network.NetworkSignals.looksTampered(queryName, answers)) {
+                    networkSignalListener?.onSignal(
+                        com.privacyguard.app.core.network.NetworkSignals.DNS_TAMPERED, queryName,
+                        "Public name answered with ${answers.joinToString()}",
+                    )
+                }
+            }
             for (ip in dnsResponse.aRecords)    resolvedListener?.onResolved(ip, queryName)
             for (ip in dnsResponse.aaaaRecords) resolvedListener?.onResolved(ip, queryName)
         }
@@ -288,6 +331,14 @@ class DnsHandler(
             } catch (e: Exception) {
                 // No hostname: warnings survive R8 and would put browsing history in logcat.
                 Log.w(TAG, "DoH error: ${e.message}")
+                // Our DoH provider's certificate was rejected: someone swapped it on the way.
+                if (com.privacyguard.app.core.network.NetworkSignals.isCertificateRejection(e)) {
+                    networkSignalListener?.onSignal(
+                        com.privacyguard.app.core.network.NetworkSignals.TLS_INTERCEPTION,
+                        runCatching { URL(dohProvider).host }.getOrDefault(dohProvider),
+                        "Certificate of the encrypted DNS server was not trusted",
+                    )
+                }
             }
         }
         upstreamErrors.incrementAndGet()

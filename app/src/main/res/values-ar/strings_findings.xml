@@ -59,4 +59,10 @@
     <string name="tcat_profiling_desc">يربط نشاطك بملف يُستخدم للاستهداف أو الإسناد أو تجارة البيانات.</string>
     <string name="tcat_other">أخرى</string>
     <string name="tcat_other_desc">خدمة لطرف ثالث تتلقى بيانات من التطبيق.</string>
+    <string name="dns_tampered">إجابة DNS تبدو مُتلاعَبًا بها</string>
+    <string name="dns_tampered_desc">أُجيب عن اسم عام بعنوان خاص أو فارغ. تفعل ذلك الشبكات التي تعيد توجيه DNS أو تتجسس عليه.</string>
+    <string name="dns_hijack">الشبكة تعيد كتابة DNS</string>
+    <string name="dns_hijack_desc">أجابت الشبكة عن اسم لا يمكن أن يوجد. إنها تعترض DNS أو تعيد كتابته، فيمكنها توجيهك إلى خوادم أخرى.</string>
+    <string name="tls_interception">رُصد اعتراض TLS</string>
+    <string name="tls_interception_desc">استُبدلت شهادة في اتصال DNS المشفّر الخاص بـ PrivacyGuard أثناء الطريق. يستطيع شخص على هذه الشبكة قراءة HTTPS وتعديله.</string>
 </resources>

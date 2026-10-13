@@ -148,4 +148,5 @@
     <string name="ev_connections_24h">Connections · last 24 h</string>
     <string name="ev_data_24h">Data transferred · last 24 h</string>
     <string name="trf_local_network">Local network</string>
+    <string name="trf_connectivity_check">Connectivity check</string>
 </resources>

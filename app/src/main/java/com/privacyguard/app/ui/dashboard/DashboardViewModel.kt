@@ -64,7 +64,20 @@ data class DashboardUiState(
 )
 
 /** Trust fell on this network; the user decides whether to switch to Strict. */
-data class StrictSuggestion(val networkKey: String, val networkLabel: String, val score: Int)
+data class StrictSuggestion(val networkKey: String, val networkLabel: String, val score: Int) {
+    companion object {
+        /** Shown when trust is Reduced on Wi-Fi, the level is not Strict yet, and the user has not said no. */
+        fun of(
+            trust: com.privacyguard.app.core.network.NetworkTrustSummary,
+            level: String,
+            dismissed: Set<String>,
+        ): StrictSuggestion? = trust.takeIf {
+            it.shouldRecommendStrict &&
+                level != com.privacyguard.core.filter.FilterEngine.BlockLevel.STRICT.name &&
+                it.networkKey !in dismissed
+        }?.let { StrictSuggestion(it.networkKey, it.networkLabel, it.score) }
+    }
+}
 
 data class SleepActivitySummary(
     val activeApps: Int = 0,
@@ -158,6 +171,9 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         if (level == com.privacyguard.core.filter.FilterEngine.BlockLevel.STRICT.name) {
             _uiState.value = _uiState.value.copy(strictSuggestion = null)
         }
+        // Recompute now, not at the next 15-second refresh: leaving Strict brings the
+        // suggestion back at once, so it can be dismissed right away.
+        viewModelScope.launch { runCatching { refreshSlow() } }
     }
 
     fun acceptStrictSuggestion() = setProtectionLevel(com.privacyguard.core.filter.FilterEngine.BlockLevel.STRICT.name)
@@ -191,29 +207,23 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         val behaviorFindings = evidence.behaviorFindings(at)
         val behaviorAlerts = behaviorFindings.size
 
-        val trustSummary = NetworkTrustAnalyzer.summarize(
-            getApplication(), day, weekAnomalies,
-            blockedAttempts = db.connectionDao().blockedBetween(at - HomeEvidence.DAY_MS, at),
-        )
+        val trustSummary = NetworkTrustAnalyzer.summarize(getApplication(), weekAnomalies)
         db.networkTrustDao().upsert(
             NetworkTrustEntity(
                 networkKey = trustSummary.networkKey,
                 networkLabel = trustSummary.networkLabel,
                 trustScore = trustSummary.score,
                 trustLevel = trustSummary.level,
-                cleartextCount = trustSummary.cleartextCount,
-                dnsAnomalyCount = trustSummary.dnsAnomalyCount,
-                weakTlsCount = trustSummary.weakTlsCount,
-                blockedCount = trustSummary.blockedCount,
+                openWifi = trustSummary.openWifi,
+                captivePortal = trustSummary.captivePortal,
+                tamperedAnswers = trustSummary.tamperedAnswers,
+                dnsHijacked = trustSummary.dnsHijacked,
+                tlsIntercepted = trustSummary.tlsIntercepted,
                 lastSeen = at,
             )
         )
         // Never change the level for the user: only suggest it.
-        val strictSuggestion = trustSummary.takeIf {
-            it.shouldRecommendStrict &&
-                prefs.protectionLevel.value != com.privacyguard.core.filter.FilterEngine.BlockLevel.STRICT.name &&
-                it.networkKey !in prefs.strictSuggestionDismissed.value
-        }?.let { StrictSuggestion(it.networkKey, it.networkLabel, it.score) }
+        val strictSuggestion = StrictSuggestion.of(trustSummary, prefs.protectionLevel.value, prefs.strictSuggestionDismissed.value)
         val inspectionActive = com.privacyguard.vpn.interception.TlsInterceptionFactory.isInspectionActive(getApplication())
 
         val encryption = HomeEvidence.encryptionShare(day)

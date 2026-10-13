@@ -123,7 +123,7 @@ class HomeEvidence(private val db: AppDatabase) {
         /** Encryption of a set of connections, as every screen reports it. */
         data class EncryptionShare(
             val encrypted: Int, val cleartext: Int, val unknown: Int,
-            /** Connections inside your own network (router, Chromecast, printer): not counted. */
+            /** Not counted: devices inside your own network and the OS's connectivity checks. */
             val local: Int = 0,
         ) {
             /** Connections whose encryption we could see (a handshake, or an HTTP request). */
@@ -134,15 +134,24 @@ class HomeEvidence(private val db: AppDatabase) {
 
         fun encryptionShare(connections: List<ConnectionEntity>): EncryptionShare {
             val allowed = connections.filter { !it.wasBlocked }
-            val internet = allowed.filterNot { com.privacyguard.app.core.network.LocalNetwork.isLocal(it) }
+            // Local devices and the OS's connectivity checks are not internet traffic of apps.
+            val internet = allowed.filterNot {
+                com.privacyguard.app.core.network.LocalNetwork.isLocal(it) ||
+                    com.privacyguard.app.core.network.ConnectivityProbes.isProbe(it)
+            }
             val encrypted = internet.count { isEncrypted(it) }
             val cleartext = internet.count { it.encryptionStatus == "CLEARTEXT" }
             return EncryptionShare(encrypted, cleartext, internet.size - encrypted - cleartext, allowed.size - internet.size)
         }
 
-        /** Plain HTTP that went out to the internet; plain HTTP to local devices is normal. */
+        /**
+         * Plain HTTP that went out to the internet. Plain HTTP to local devices, and the
+         * OS's own connectivity checks (captive portal, MobileWips), are normal and not counted.
+         */
         fun isInternetCleartext(c: ConnectionEntity): Boolean =
-            c.encryptionStatus == "CLEARTEXT" && !com.privacyguard.app.core.network.LocalNetwork.isLocal(c)
+            c.encryptionStatus == "CLEARTEXT" &&
+                !com.privacyguard.app.core.network.LocalNetwork.isLocal(c) &&
+                !com.privacyguard.app.core.network.ConnectivityProbes.isProbe(c)
 
         /** Counted as encrypted for the "Encryption health" percentage. */
         fun isEncrypted(c: ConnectionEntity): Boolean =

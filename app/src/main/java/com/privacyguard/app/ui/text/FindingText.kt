@@ -130,6 +130,9 @@ object FindingText {
             "HIGH_FREQUENCY" -> R.string.dns_high_frequency
             "EXCESSIVE_SUBDOMAINS" -> R.string.dns_many_subdomains
             "LONG_LABEL" -> R.string.dns_long_label
+            "DNS_TAMPERED" -> R.string.dns_tampered
+            "DNS_HIJACK" -> R.string.dns_hijack
+            "TLS_INTERCEPTION" -> R.string.tls_interception
             else -> R.string.dns_unknown
         }
     )
@@ -142,6 +145,9 @@ object FindingText {
             "HIGH_FREQUENCY" -> R.string.dns_high_frequency_desc
             "EXCESSIVE_SUBDOMAINS" -> R.string.dns_many_subdomains_desc
             "LONG_LABEL" -> R.string.dns_long_label_desc
+            "DNS_TAMPERED" -> R.string.dns_tampered_desc
+            "DNS_HIJACK" -> R.string.dns_hijack_desc
+            "TLS_INTERCEPTION" -> R.string.tls_interception_desc
             else -> R.string.dns_unknown
         }
     )

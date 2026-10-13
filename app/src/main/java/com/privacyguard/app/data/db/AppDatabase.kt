@@ -29,7 +29,7 @@ import com.privacyguard.app.core.security.DatabaseEncryption
         TlsFingerprintEntity::class,
         SensorEventEntity::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -172,6 +172,22 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Network trust is judged from network-side signals only. The table is a cache
+        // of computed scores (rebuilt within seconds), and the old scores came from app
+        // behaviour, so it is recreated rather than converted.
+        internal val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP TABLE IF EXISTS `network_trust`")
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `network_trust` (
+                        `networkKey` TEXT NOT NULL, `networkLabel` TEXT NOT NULL, `trustScore` INTEGER NOT NULL,
+                        `trustLevel` TEXT NOT NULL, `openWifi` INTEGER NOT NULL, `captivePortal` INTEGER NOT NULL,
+                        `tamperedAnswers` INTEGER NOT NULL, `dnsHijacked` INTEGER NOT NULL, `tlsIntercepted` INTEGER NOT NULL,
+                        `lastSeen` INTEGER NOT NULL, PRIMARY KEY(`networkKey`))
+                """)
+            }
+        }
+
         /**
          * Debug builds wipe on any schema mismatch so local iteration never gets stuck.
          * Release builds only wipe where no migration can exist (version 1, which
@@ -195,7 +211,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     DATABASE_NAME
-                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                     .openHelperFactory(DatabaseEncryption.lazyOpenHelperFactory(context, DATABASE_NAME))
                     .applyFallback()
                     .build().also {

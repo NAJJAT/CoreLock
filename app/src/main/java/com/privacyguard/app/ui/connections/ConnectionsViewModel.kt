@@ -54,6 +54,9 @@ data class Connection(
     val isLocal: Boolean get() =
         com.privacyguard.app.core.network.LocalNetwork.isLocalAddress(destinationIp) ||
             com.privacyguard.app.core.network.LocalNetwork.isLocalHost(hostName)
+
+    /** The OS checking for internet access (captive portal, MobileWips), not an app. */
+    val isProbe: Boolean get() = com.privacyguard.app.core.network.ConnectivityProbes.isProbe(packageName, hostName)
 }
 
 /** Live sessions now, or connections that ended in the last 24 h. */
@@ -322,7 +325,7 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
 
         if (_filter.value.showCleartextOnly) {
             // Plain HTTP actually seen (live sessions are classified as soon as data flows).
-            result = result.filter { it.securityInfo == "CLEARTEXT" && !it.isLocal }
+            result = result.filter { it.securityInfo == "CLEARTEXT" && !it.isLocal && !it.isProbe }
         }
 
         if (_filter.value.query.isNotBlank()) {

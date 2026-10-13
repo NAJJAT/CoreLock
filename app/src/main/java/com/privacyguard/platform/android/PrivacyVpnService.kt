@@ -341,6 +341,8 @@ class PrivacyVpnService : VpnService() {
             adSdkPolicy = com.privacyguard.app.adprivacy.AdSdkPolicy(enabled = { settings.adSdkBlockingEnabled.value }),
         ).also { h ->
             h.resolvedListener = DnsHandler.ResolvedListener { ip, hostname -> onDnsResolved(ip, hostname) }
+            // Signs about the network itself: stored like DNS anomalies, owned by "network".
+            h.networkSignalListener = DnsHandler.NetworkSignalListener { type, domain, detail -> reportNetworkSignal(type, domain, detail) }
             h.queryListener = DnsHandler.QueryListener { ownerPackage, domain, wasBlocked ->
                 val pkg = ownerPackage?.takeIf { it.isNotBlank() } ?: "Unknown"
                 // One row per lookup: A + AAAA (+ HTTPS) and retries of it are one entry.
@@ -799,7 +801,8 @@ class PrivacyVpnService : VpnService() {
             com.privacyguard.app.vpn.UidMapper.evict(session.key.sourcePort, session.key.protocol)
             val snapshot = session.snapshot()
             if (snapshot.encryptionStatus == EncryptionStatus.CLEARTEXT &&
-                !com.privacyguard.app.core.network.LocalNetwork.isLocalAddress(snapshot.key.destinationIp)) {
+                !com.privacyguard.app.core.network.LocalNetwork.isLocalAddress(snapshot.key.destinationIp) &&
+                !com.privacyguard.app.core.network.ConnectivityProbes.isProbe(snapshot.ownerPackage, snapshot.hostname)) {
                 totalCleartext.incrementAndGet()
                 val pkg = snapshot.ownerPackage
                 if (!pkg.isNullOrBlank() && cleartextNotifiedPackages.add(pkg)) {
@@ -915,7 +918,10 @@ class PrivacyVpnService : VpnService() {
                 runCatching { publishLiveStats() }
                 // The user may switch Always-on / "Block connections without VPN" while we
                 // run; only this service can ask, so re-check every 10 s for the Home card.
-                if (ticks++ % 10 == 0) runCatching { com.privacyguard.app.vpn.KillSwitch.updateLockdownState(this@PrivacyVpnService) }
+                if (ticks++ % 10 == 0) {
+                    runCatching { com.privacyguard.app.vpn.KillSwitch.updateLockdownState(this@PrivacyVpnService) }
+                    probeNetworkOnce()
+                }
                 kotlinx.coroutines.delay(1_000)
             }
         }
@@ -932,6 +938,44 @@ class PrivacyVpnService : VpnService() {
                 }
             }
         }
+    }
+
+    /** Networks already checked for DNS hijacking in this VPN session. */
+    private val probedNetworks = ConcurrentHashMap.newKeySet<String>()
+
+    /**
+     * Once per network: does it answer a name that cannot exist? Only with plain DNS;
+     * with DoH on, the network cannot see or change DNS at all.
+     */
+    private fun probeNetworkOnce() {
+        if (!::dnsHandler.isInitialized || dnsHandler.dohEnabled) return
+        val key = com.privacyguard.app.core.network.NetworkIdentity.current(applicationContext).key
+        if (key == "offline" || !probedNetworks.add(key)) return
+        scope.launch {
+            if (dnsHandler.probeHijack() == true) {
+                reportNetworkSignal(com.privacyguard.app.core.network.NetworkSignals.DNS_HIJACK, "invalid",
+                    "A name that cannot exist was answered with an address")
+            }
+        }
+    }
+
+    private fun reportNetworkSignal(type: String, domain: String, detail: String) {
+        val severity = when (type) {
+            com.privacyguard.app.core.network.NetworkSignals.TLS_INTERCEPTION -> 9
+            com.privacyguard.app.core.network.NetworkSignals.DNS_HIJACK -> 8
+            else -> 6
+        }
+        val anomaly = DnsAnomalyDetector.Anomaly(
+            timestamp = System.currentTimeMillis(),
+            packageName = com.privacyguard.app.core.network.NetworkSignals.NETWORK_OWNER,
+            domain = domain,
+            type = DnsAnomalyDetector.AnomalyType.valueOf(type),
+            description = detail,
+            severity = severity,
+        )
+        // Same path as app anomalies: stored with the network key, deduplicated per day,
+        // notified when severe.
+        dnsAnomalyDetector.anomalyListener?.onAnomaly(anomaly)
     }
 
     private fun publishLiveStats() {

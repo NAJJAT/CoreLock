@@ -57,6 +57,8 @@ data class TrafficRow(
     val encrypted: Boolean = false,
     /** Inside your own network (router, Chromecast, printer): not internet traffic. */
     val local: Boolean = false,
+    /** The OS checking for internet access (captive portal, MobileWips). */
+    val probe: Boolean = false,
 ) {
     val flagged: Boolean get() = reasons.isNotEmpty()
 }
@@ -95,6 +97,7 @@ object TrafficRows {
             reasons = reasons(cls, c.wasBlocked, screenOn, fg, HomeEvidence.isInternetCleartext(c), host?.let { near(anomalies[it], c.timestamp) }),
             encrypted = HomeEvidence.isEncrypted(c),
             local = com.privacyguard.app.core.network.LocalNetwork.isLocal(c),
+            probe = com.privacyguard.app.core.network.ConnectivityProbes.isProbe(c),
         )
     }
 

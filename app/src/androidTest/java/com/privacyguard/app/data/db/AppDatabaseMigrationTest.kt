@@ -152,4 +152,16 @@ class AppDatabaseMigrationTest {
         }
         db.close()
     }
+
+    @Test
+    fun migrate11To12_recreatesNetworkTrustWithNetworkSignals() {
+        helper.createDatabase(dbName, 11).apply {
+            execSQL("INSERT INTO network_trust (networkKey, networkLabel, trustScore, trustLevel, cleartextCount, dnsAnomalyCount, weakTlsCount, blockedCount, lastSeen) VALUES ('wi-fi network', 'Wi-Fi', 35, 'Reduced', 36, 0, 14, 40, 1000)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(dbName, 12, true, AppDatabase.MIGRATION_11_12)
+        // Old scores came from app behaviour; the cache starts empty and is rebuilt.
+        db.query("SELECT COUNT(*) FROM network_trust").use { c -> c.moveToFirst(); assertEquals(0, c.getInt(0)) }
+        db.close()
+    }
 }
