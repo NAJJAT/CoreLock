@@ -133,4 +133,5 @@
     <string name="adp_reason_push">مطلوب لإشعارات الدفع في كثير من التطبيقات</string>
     <string name="adp_reason_deep_links">مطلوب للروابط التي تُفتح داخل التطبيقات</string>
     <string name="adp_sdk_meta_limit">تستخدم أحداث تطبيقات Meta ومعظم إعلانات Audience Network الخادم graph.facebook.com، وهو الخادم نفسه لتسجيل الدخول عبر Facebook. لا يمكن الفصل بينهما بالحظر حسب اسم الخادم، لذلك لا يُحظران.</string>
+    <string name="adp_unknown_app_screen_off">تطبيق غير معروف (كانت الشاشة مطفأة)</string>
 </resources>

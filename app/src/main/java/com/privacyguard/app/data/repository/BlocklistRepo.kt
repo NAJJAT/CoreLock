@@ -105,6 +105,7 @@ class BlocklistRepo(
         }
 
         const val SOURCE_EASYLIST = "EasyList"
+        const val SOURCE_URLHAUS = "URLhaus"
         const val SOURCE_EASYPRIVACY = "EasyPrivacy"
         const val SOURCE_STEVEN_BLACK = "StevenBlack"
         const val SOURCE_OISD = "OISD"

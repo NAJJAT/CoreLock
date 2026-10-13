@@ -28,6 +28,13 @@ class DomainFilterTest {
     }
 
     @Test
+    fun plain_entry_also_blocks_its_subdomains() {
+        filter.addDomain("tracker.com")
+        assertTrue(filter.isBlocked("cdn.tracker.com"))
+        assertFalse(filter.isBlocked("cdn.tracker.com", allowSubdomainInheritance = false))
+    }
+
+    @Test
     fun exact_match_does_not_block_parent_domain() {
         filter.addDomain("sub.example.com")
         assertFalse(filter.isBlocked("example.com"))

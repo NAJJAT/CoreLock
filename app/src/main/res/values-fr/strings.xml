@@ -115,4 +115,5 @@
     <string name="adp_reason_push">nécessaire aux notifications push de nombreuses apps</string>
     <string name="adp_reason_deep_links">nécessaire aux liens qui s’ouvrent dans les apps</string>
     <string name="adp_sdk_meta_limit">Les événements d’app Meta et la plupart des pubs Audience Network utilisent graph.facebook.com, le même serveur que Facebook Login. Un blocage par nom de serveur ne peut pas les séparer, ils ne sont donc pas bloqués.</string>
+    <string name="adp_unknown_app_screen_off">App inconnue (écran éteint)</string>
 </resources>

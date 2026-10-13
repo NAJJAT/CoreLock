@@ -14,8 +14,8 @@ import com.privacyguard.platform.android.NotificationHelper
 /**
  * Two separate things live here:
  *
- * - The VPN drop alert ([enable]/[startMonitoring]): notifies and restarts the
- *   service when the tunnel goes away. It does NOT block traffic — once our
+ * - The VPN drop alert ([enable]/[startMonitoring]): notifies when the tunnel goes
+ *   away while this process is alive. It does not restart protection or block traffic — once our
  *   tunnel is gone, an app cannot stop other apps from using the network.
  * - The real kill switch ([lockdownActive]): Android's Always-on VPN with
  *   "Block connections without VPN". Only the OS can enforce it, so the UI
@@ -72,12 +72,9 @@ object KillSwitch {
         networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onLost(network: Network) {
                 if (!enabled) return
+                // Alert only. Restarting from here failed anyway (startService from the
+                // background is refused since Android 8); Always-on VPN restarts it.
                 helper.postKillSwitchAlert()
-                runCatching {
-                    appCtx.startService(
-                        com.privacyguard.platform.android.PrivacyVpnService.startIntent(appCtx)
-                    )
-                }
             }
 
             override fun onAvailable(network: Network) {

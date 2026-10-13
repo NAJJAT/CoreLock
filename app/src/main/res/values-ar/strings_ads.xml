@@ -54,4 +54,5 @@
     <string name="rule_security_warn_body">%1$s مدرج في قائمة مواقع البرمجيات الضارة أو التصيّد. يمكن لمثل هذه المواقع سرقة كلمات المرور أو تثبيت تطبيقات ضارة أو الاستيلاء على الحسابات.\nقاعدة السماح تتجاوز عادةً قوائم الإعلانات وأدوات التتبع فقط. إذا تابعت، فسيتوقف PrivacyGuard أيضًا عن حظر هذا الموقع كبرمجية ضارة. لا تفعل ذلك إلا إذا كنت متأكدًا من أن إدراجه خطأ.</string>
     <string name="rule_security_warn_confirm">السماح رغم ذلك</string>
     <string name="rule_security_warn_cancel">إبقاؤه محظورًا</string>
+    <string name="ads_blocked_at_level">%1$s محظورة في مستوى %2$s</string>
 </resources>

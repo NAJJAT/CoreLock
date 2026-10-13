@@ -1,133 +1,89 @@
 package com.privacyguard.vpn.firewall
 
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * High-performance domain blocklist backed by a reverse-label trie.
+ * Domain blocklist: a name on the list blocks itself and every subdomain.
  *
- * A domain is split into its labels in reverse order (e.g. "ads.example.com"
- * → ["com", "example", "ads"]) and inserted into the trie. Wildcard nodes
- * (represented by "*") match any label at that position.
+ * Example entries:
+ *  - "doubleclick.net"   → doubleclick.net and *.doubleclick.net
+ *  - "*.example.com"     → example.com and all its subdomains
  *
- * Complexity:
- *  - Insert:  O(L) where L = number of labels
- *  - Lookup:  O(L) — traverses at most L trie levels + 1 wildcard check per level
- *  - Memory:  O(N × L) total nodes for N domains with L labels average
+ * Stored as two hash sets of plain names; a lookup checks the name and each parent
+ * (a handful of set lookups). This replaced a trie with one ConcurrentHashMap per
+ * label, which needed about 100 MB of heap for the ~220k names of the default lists.
  *
- * Thread safety: the trie is rebuilt atomically via [rebuild]. Concurrent
- * [isBlocked] calls are always lock-free reads.
+ * Thread safety: the sets are immutable once published; [rebuild], [addDomain] and
+ * [removeDomain] swap in new ones, so [isBlocked] is a lock-free read.
  *
- * Example blocklist entries:
- *  - "doubleclick.net"   → blocks exact domain
- *  - "*.ads.example.com" → blocks all subdomains
- *  - "*.example.com"     → blocks example.com and all sub-domains
- */
-/**
  * [useNativeBloom]: the native bloom filter is one global instance, so only one
  * DomainFilter (the main blocklist) may use it; a second one would overwrite it.
  */
 class DomainFilter(private val useNativeBloom: Boolean = true) {
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Trie
-    // ─────────────────────────────────────────────────────────────────────────
+    /** [names]: entries as written; [wildcards]: entries written "*.name", stored as "name". */
+    private class Lists(val names: Set<String>, val wildcards: Set<String>)
 
-    private class TrieNode {
-        val children = ConcurrentHashMap<String, TrieNode>(4)
-        @Volatile var isTerminal = false  // true = domain ends here (match)
-    }
-
-    @Volatile private var root = TrieNode()
+    @Volatile private var lists = Lists(emptySet(), emptySet())
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Insertions
+    // Changes
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Adds [domain] to the blocklist.
-     *
-     * Patterns:
-     *  - "example.com"    → exact domain match
-     *  - "*.example.com"  → example.com + all subdomains
-     */
+    /** Adds one entry. Copies the sets: meant for small changes and tests, not bulk loads. */
+    @Synchronized
     fun addDomain(domain: String) {
-        val labels = parseLabels(domain)
-        if (labels.isEmpty()) return
-
-        var node = root
-        for (label in labels) {
-            node = node.children.getOrPut(label) { TrieNode() }
-        }
-        node.isTerminal = true
+        val (name, wild) = normalize(domain) ?: return
+        val current = lists
+        lists = if (wild) Lists(current.names, current.wildcards + name)
+        else Lists(current.names + name, current.wildcards)
         insertedCount.incrementAndGet()
     }
 
     /**
-     * Loads an entire blocklist, replacing the existing one atomically.
-     * More efficient than calling [addDomain] in a loop for large lists,
-     * because the new trie is built offline and then swapped in.
-     *
-     * @param domains iterable of domain strings (lines from a hosts file, etc.)
+     * Replaces the whole list atomically: the new sets are built aside and then
+     * swapped in, so lookups never see a half-loaded list.
      */
     fun rebuild(domains: Iterable<String>) {
-        val newRoot = TrieNode()
-        var count   = 0L
-        val domainList = mutableListOf<String>()
-
+        val names = HashSet<String>()
+        val wildcards = HashSet<String>()
+        val nativeList = if (useNativeBloom) mutableListOf<String>() else null
+        var count = 0L
         for (raw in domains) {
-            val domain = raw.trim().lowercase()
-            if (domain.isEmpty() || domain.startsWith('#')) continue
-
-            val labels = parseLabels(domain)
-            if (labels.isEmpty()) continue
-
-            var node = newRoot
-            for (label in labels) {
-                node = node.children.getOrPut(label) { TrieNode() }
-            }
-            node.isTerminal = true
+            val line = raw.trim()
+            if (line.isEmpty() || line.startsWith('#')) continue
+            val (name, wild) = normalize(line) ?: continue
+            if (wild) wildcards += name else names += name
+            nativeList?.add(if (wild) "*.$name" else name)
             count++
-            domainList.add(domain)
+        }
+        synchronized(this) {
+            lists = Lists(names, wildcards)
+            insertedCount.set(count)
         }
 
-        root          = newRoot   // atomic swap
-        insertedCount.set(count)
-
         // Accelerate lookups with native bloom filter when Rust is available
-        if (useNativeBloom && com.privacyguard.core.native_engine.RustBridge.isAvailable) {
-            com.privacyguard.core.native_engine.RustBridge.bloomRebuild(domainList.toTypedArray())
+        if (nativeList != null && com.privacyguard.core.native_engine.RustBridge.isAvailable) {
+            com.privacyguard.core.native_engine.RustBridge.bloomRebuild(nativeList.toTypedArray())
         }
     }
 
-    /**
-     * Removes [domain] from the blocklist.
-     * Note: does not prune empty nodes — use [rebuild] for a full reset.
-     *
-     * @return true if the domain was present and removed.
-     */
+    /** @return true if the entry was present and removed. */
+    @Synchronized
     fun removeDomain(domain: String): Boolean {
-        val labels = parseLabels(domain)
-        if (labels.isEmpty()) return false
-
-        var node = root
-        val path = mutableListOf<Pair<TrieNode, String>>()
-
-        for (label in labels) {
-            val child = node.children[label] ?: return false
-            path += Pair(node, label)
-            node = child
-        }
-
-        if (!node.isTerminal) return false
-        node.isTerminal = false
+        val (name, wild) = normalize(domain) ?: return false
+        val current = lists
+        if (name !in (if (wild) current.wildcards else current.names)) return false
+        lists = if (wild) Lists(current.names, current.wildcards - name)
+        else Lists(current.names - name, current.wildcards)
         insertedCount.decrementAndGet()
         return true
     }
 
     /** Removes all domains from the blocklist. */
+    @Synchronized
     fun clear() {
-        root = TrieNode()
+        lists = Lists(emptySet(), emptySet())
         insertedCount.set(0)
     }
 
@@ -136,13 +92,9 @@ class DomainFilter(private val useNativeBloom: Boolean = true) {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Returns true if [domain] is blocked.
-     *
-     * Matching rules (checked in order):
-     *  1. Exact match:    "ads.example.com" matches rule "ads.example.com"
-     *  2. Wildcard match: "ads.example.com" matches rule "*.example.com"
-     *  3. Parent match:   "sub.ads.example.com" matches rule "ads.example.com"
-     *     if [allowSubdomainInheritance] is true (default).
+     * Returns true if [domain] is blocked: it, or a parent of it, is on the list.
+     * With [allowSubdomainInheritance] false, a plain entry blocks only itself
+     * ("*.name" entries still cover subdomains).
      */
     fun isBlocked(domain: String, allowSubdomainInheritance: Boolean = true): Boolean {
         lookupCount.incrementAndGet()
@@ -150,51 +102,26 @@ class DomainFilter(private val useNativeBloom: Boolean = true) {
         val d = domain.lowercase().trimEnd('.')
         if (d.isEmpty()) return false
 
-        // Bloom filter fast-path: if native says no, skip trie entirely (~5x faster)
+        // Bloom filter fast-path: if native says no, skip the sets
         if (useNativeBloom && com.privacyguard.core.native_engine.RustBridge.isAvailable &&
             !mightBeInNativeBloom(d)) {
             return false
         }
 
-        val labels = d.split('.').reversed()
-        if (labels.isEmpty()) return false
-
-        val result = traverseTrie(root, labels, 0, allowSubdomainInheritance)
-        if (result) blockedCount.incrementAndGet()
-        return result
+        val current = lists
+        var suffix = d
+        while (true) {
+            if (suffix in current.wildcards) return hit()
+            if (suffix in current.names && (suffix == d || allowSubdomainInheritance)) return hit()
+            val dot = suffix.indexOf('.')
+            if (dot < 0) return false
+            suffix = suffix.substring(dot + 1)
+        }
     }
 
-    private fun traverseTrie(
-        node: TrieNode,
-        labels: List<String>,
-        index: Int,
-        allowSubdomainInheritance: Boolean,
-    ): Boolean {
-        // If this node is a terminal, the domain is blocked
-        if (node.isTerminal) return true
-
-        if (index >= labels.size) {
-            // FIXED: "*.example.com" also blocks the base domain "example.com".
-            return node.children["*"]?.isTerminal == true
-        }
-
-        val label = labels[index]
-
-        // Check wildcard child first ("*" matches any label)
-        val wildcardChild = node.children["*"]
-        if (wildcardChild != null) {
-            // "*" can either match one label (continue) or match and terminate
-            if (wildcardChild.isTerminal) return true
-            if (traverseTrie(wildcardChild, labels, index + 1, allowSubdomainInheritance)) return true
-        }
-
-        // Check exact label child
-        val exactChild = node.children[label]
-        if (exactChild != null) {
-            if (traverseTrie(exactChild, labels, index + 1, allowSubdomainInheritance)) return true
-        }
-
-        return false
+    private fun hit(): Boolean {
+        blockedCount.incrementAndGet()
+        return true
     }
 
     private fun mightBeInNativeBloom(domain: String): Boolean {
@@ -211,21 +138,12 @@ class DomainFilter(private val useNativeBloom: Boolean = true) {
     // Helpers
     // ─────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Parses [domain] into reversed label segments for trie insertion.
-     * "*.ads.example.com" → ["com", "example", "ads", "*"]
-     */
-    private fun parseLabels(domain: String): List<String> {
-        val d = domain.lowercase().trimEnd('.')
-        if (d.isEmpty()) return emptyList()
-
-        // Convert "*.example.com" to labels that support wildcard at head
-        return if (d.startsWith("*.")) {
-            val rest = d.substring(2).split('.').reversed()
-            rest + "*"
-        } else {
-            d.split('.').reversed()
-        }
+    /** "*.Example.com." → ("example.com", true); null for an empty entry. */
+    private fun normalize(domain: String): Pair<String, Boolean>? {
+        val d = domain.trim().lowercase().trimEnd('.')
+        if (d.isEmpty() || d == "*") return null
+        return if (d.startsWith("*.")) d.substring(2).takeIf { it.isNotEmpty() }?.let { it to true }
+        else d to false
     }
 
     // ─────────────────────────────────────────────────────────────────────────

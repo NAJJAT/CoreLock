@@ -145,4 +145,5 @@
     <string name="apps_stalker_score">درجة التجسس %1$d</string>
     <string name="apps_search">ابحث عن تطبيق أو حزمة…</string>
     <string name="apps_sort_destinations">الوجهات</string>
+    <string name="rule_allow_app">السماح بـ %1$s</string>
 </resources>

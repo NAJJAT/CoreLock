@@ -236,7 +236,9 @@ private fun RuleCard(
     }
 }
 
-private enum class RuleType { DOMAIN, PACKAGE, IP }
+private enum class RuleType(val labelRes: Int) {
+    DOMAIN(R.string.rules_type_domain), PACKAGE(R.string.rules_type_app), IP(R.string.rules_type_ip),
+}
 
 @Composable
 private fun AddRuleDialog(
@@ -247,6 +249,8 @@ private fun AddRuleDialog(
     var ruleType   by remember { mutableStateOf(RuleType.DOMAIN) }
     var blockAction by remember { mutableStateOf(true) }
     var typeExpanded by remember { mutableStateOf(false) }
+    // IPv6 and malformed addresses used to be dropped without a word.
+    val ipInvalid = ruleType == RuleType.IP && value.isNotBlank() && !RulesViewModel.isValidIpOrCidr(value.trim())
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -261,14 +265,14 @@ private fun AddRuleDialog(
                             onClick = { typeExpanded = true },
                             modifier = Modifier.height(36.dp),
                         ) {
-                            Text(ruleType.name, fontSize = 13.sp)
+                            Text(stringResource(ruleType.labelRes), fontSize = 13.sp)
                             Icon(Icons.Default.ArrowDropDown, contentDescription = null,
                                 modifier = Modifier.size(16.dp))
                         }
                         DropdownMenu(expanded = typeExpanded, onDismissRequest = { typeExpanded = false }) {
                             RuleType.values().forEach { t ->
                                 DropdownMenuItem(
-                                    text = { Text(t.name) },
+                                    text = { Text(stringResource(t.labelRes)) },
                                     onClick = { ruleType = t; typeExpanded = false },
                                 )
                             }
@@ -291,6 +295,12 @@ private fun AddRuleDialog(
                     },
                     singleLine    = true,
                     modifier      = Modifier.fillMaxWidth(),
+                    isError       = ipInvalid,
+                    supportingText = when {
+                        ipInvalid -> R.string.rules_ip_invalid
+                        ruleType == RuleType.DOMAIN -> R.string.rules_domain_exact
+                        else -> null
+                    }?.let { res -> @Composable { Text(stringResource(res)) } },
                 )
 
                 // Action toggle
@@ -326,7 +336,7 @@ private fun AddRuleDialog(
                         )
                     }
                 },
-                enabled = value.isNotBlank(),
+                enabled = value.isNotBlank() && !ipInvalid,
             ) {
                 Text(stringResource(R.string.rules_add_button))
             }

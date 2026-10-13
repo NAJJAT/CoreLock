@@ -115,4 +115,5 @@
     <string name="apps_stalker_score">score logiciel espion %1$d</string>
     <string name="apps_search">Rechercher une app ou un paquet…</string>
     <string name="apps_sort_destinations">Destinations</string>
+    <string name="rule_allow_app">Autoriser %1$s</string>
 </resources>

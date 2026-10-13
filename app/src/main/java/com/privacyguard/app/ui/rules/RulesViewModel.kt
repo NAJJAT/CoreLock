@@ -24,8 +24,7 @@ data class SuggestedRule(
     val label: String,
     val reason: String,
     val action: FilterRule.Action,
-    val matchPackage: String? = null,
-    val matchDomain: String? = null,
+    val candidate: RuleSuggestions.Candidate,
 )
 
 class RulesViewModel(app: Application) : AndroidViewModel(app) {
@@ -36,6 +35,7 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
     private val configDb by lazy { ConfigDatabase.getInstance(app) }
     private val engine by lazy { FilterEngine() }
     private val repo   by lazy { RulesRepo(configDb.rulesDao(), engine) }
+    private val prefs  by lazy { com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(app) }
 
     private val _allRules = MutableStateFlow<List<FilterRule>>(emptyList())
     private val _searchQuery = MutableStateFlow("")
@@ -70,75 +70,29 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun buildSuggestions() {
         val since = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000L
-        val recentConns = runCatching {
-            db.connectionDao().getRecentConnections(since, 600)
-        }.getOrDefault(emptyList())
-        val existing = _allRules.value
-        val blockedPkgs = existing
-            .filter { it.isEnabled && it.action == FilterRule.Action.DENY && !it.matchPackage.isNullOrBlank() }
-            .mapNotNull { it.matchPackage }.toSet()
-        val hasGlobalCleartextBlock = existing.any {
-            it.isEnabled && it.matchEncryption != null && it.action == FilterRule.Action.DENY
-        }
-
-        val list = mutableListOf<SuggestedRule>()
-
-        // Apps with heavy cleartext traffic not already blocked
-        if (!hasGlobalCleartextBlock) {
-            recentConns
-                .filter { com.privacyguard.app.ui.traffic.HomeEvidence.isInternetCleartext(it) && !it.wasBlocked && it.packageName.isNotBlank() }
-                .groupBy { it.packageName }
-                .filter { (pkg, _) -> pkg !in blockedPkgs }
-                .mapValues { (_, c) -> c.size }
-                .filter { (_, n) -> n >= 3 }
-                .entries.sortedByDescending { it.value }.take(3)
-                .forEach { (pkg, n) ->
-                    val name = com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), pkg, recentConns.firstOrNull { it.packageName == pkg }?.appName)
-                    list += SuggestedRule(
-                        id = "suggest:cleartext:$pkg",
-                        label = str(R.string.rule_block_app, name),
-                        reason = plural(R.plurals.rules_reason_cleartext, n),
-                        action = FilterRule.Action.DENY,
-                        matchPackage = pkg,
-                    )
-                }
-        }
-
-        // Apps with excessive background connections not already blocked
-        recentConns
-            .filter { it.wasBackground && it.packageName.isNotBlank() }
-            .groupBy { it.packageName }
-            .filter { (pkg, _) -> pkg !in blockedPkgs }
-            .mapValues { (_, c) -> c.size }
-            .filter { (_, n) -> n >= 15 }
-            .entries.sortedByDescending { it.value }.take(2)
-            .forEach { (pkg, n) ->
-                if (list.none { it.matchPackage == pkg }) {
-                    val name = com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), pkg, recentConns.firstOrNull { it.packageName == pkg }?.appName)
-                    list += SuggestedRule(
-                        id = "suggest:background:$pkg",
-                        label = str(R.string.rule_block_app, name),
-                        reason = plural(R.plurals.rules_reason_background, n),
-                        action = FilterRule.Action.DENY,
-                        matchPackage = pkg,
-                    )
-                }
+        val dao = db.connectionDao()
+        // Whole 7 days, counted in the database; a sample of recent rows missed quiet apps.
+        val cleartext = runCatching { dao.cleartextSince(since) }.getOrDefault(emptyList())
+            .filter { com.privacyguard.app.ui.traffic.HomeEvidence.isInternetCleartext(it) && it.packageName.isNotBlank() }
+        val background = runCatching { dao.backgroundCountsSince(since) }.getOrDefault(emptyList())
+        val candidates = RuleSuggestions.build(
+            cleartextByPackage = cleartext.groupingBy { it.packageName }.eachCount(),
+            backgroundByPackage = background.associate { it.packageName to it.count },
+            rules = _allRules.value,
+            dismissed = prefs.dismissedRuleSuggestions(),
+        )
+        _suggestions.value = candidates.map { c ->
+            val name = com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), c.packageName, cleartext.firstOrNull { it.packageName == c.packageName }?.appName)
+            when (c.kind) {
+                RuleSuggestions.Kind.CLEARTEXT -> SuggestedRule(c.id, str(R.string.rule_block_cleartext_app, name), plural(R.plurals.rules_reason_cleartext, c.count), FilterRule.Action.DENY, c)
+                RuleSuggestions.Kind.BACKGROUND -> SuggestedRule(c.id, str(R.string.rule_block_background_app, name), plural(R.plurals.rules_reason_background, c.count), FilterRule.Action.DENY, c)
             }
-
-        _suggestions.value = list.take(5)
+        }
     }
 
     fun acceptSuggestion(s: SuggestedRule) {
         viewModelScope.launch {
-            val rule = FilterRule(
-                id           = s.matchPackage?.let { AppsViewModel.packageBlockRuleId(it) } ?: UUID.randomUUID().toString(),
-                label        = s.label,
-                action       = s.action,
-                source       = FilterRule.Source.USER,
-                priority     = FilterRule.HIGH_PRIORITY,
-                matchPackage = s.matchPackage,
-                matchDomain  = s.matchDomain,
-            )
+            val rule = RuleSuggestions.ruleFor(s.candidate, id = UUID.randomUUID().toString(), label = s.label)
             repo.upsertRule(rule)
             _suggestions.value = _suggestions.value.filter { it.id != s.id }
             refresh()
@@ -146,6 +100,7 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun dismissSuggestion(id: String) {
+        prefs.dismissRuleSuggestion(id)
         _suggestions.value = _suggestions.value.filter { it.id != id }
     }
 
@@ -207,18 +162,21 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun isValidIpOrCidr(value: String): Boolean {
-        val parts = value.split('/')
-        if (parts.size !in 1..2) return false
-        if (!isValidIpv4(parts[0])) return false
-        val prefix = parts.getOrNull(1) ?: return true
-        return prefix.toIntOrNull()?.let { it in 0..32 } == true
-    }
+    companion object {
+        /** IPv4 address or CIDR range. Rules cannot match IPv6 yet, so the dialog says so. */
+        fun isValidIpOrCidr(value: String): Boolean {
+            val parts = value.split('/')
+            if (parts.size !in 1..2) return false
+            if (!isValidIpv4(parts[0])) return false
+            val prefix = parts.getOrNull(1) ?: return true
+            return prefix.toIntOrNull()?.let { it in 0..32 } == true
+        }
 
-    private fun isValidIpv4(value: String): Boolean {
-        val octets = value.split('.')
-        if (octets.size != 4) return false
-        return octets.all { octet -> octet.toIntOrNull()?.let { it in 0..255 } == true }
+        private fun isValidIpv4(value: String): Boolean {
+            val octets = value.split('.')
+            if (octets.size != 4) return false
+            return octets.all { octet -> octet.toIntOrNull()?.let { it in 0..255 } == true }
+        }
     }
 
     fun addPackageRule(pkg: String, action: FilterRule.Action) {
@@ -227,7 +185,9 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
             val rule = FilterRule(
                 id       = if (action == FilterRule.Action.DENY) AppsViewModel.packageBlockRuleId(trimmed)
                            else UUID.randomUUID().toString(),
-                label    = str(if (action == FilterRule.Action.DENY) R.string.rule_block_domain else R.string.rule_allow_domain, trimmed),
+                // The app's name ("WhatsApp"), not the package, as on every other screen.
+                label    = str(if (action == FilterRule.Action.DENY) R.string.rule_block_app else R.string.rule_allow_app,
+                    com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), trimmed, null)),
                 action   = action,
                 source   = FilterRule.Source.USER,
                 priority = FilterRule.HIGH_PRIORITY,

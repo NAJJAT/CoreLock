@@ -49,6 +49,7 @@ data class DashboardUiState(
     val privacyScore: PrivacyScoreBreakdown = PrivacyScoreBreakdown(score = 50, encryptedRatio = 0f, highRiskApps = 0, cleartextConnections = 0, blocklistCoverage = 0f),
     val isPcapCapturing: Boolean = false,
     val pcapPath: String? = null,
+    val pcapStoppedAtLimit: Boolean = false,
     val throughputBytesPerSec: Long = 0L,
     val activeConnectionCount: Int = 0,
     val alertBadgeCount: Int = 0,
@@ -304,7 +305,8 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         _uiState.value = _uiState.value.copy(
             isVpnActive = PrivacyVpnService.isRunning,
             isPcapCapturing = PcapWriter.isCapturing(),
-            pcapPath = PcapWriter.getCurrentFilePath() ?: PcapWriter.getLastCompletedFile()?.absolutePath,
+            pcapPath = PcapWriter.getCurrentFilePath() ?: PcapWriter.lastCapture(getApplication())?.absolutePath,
+            pcapStoppedAtLimit = PcapWriter.stoppedAtLimit,
             throughputBytesPerSec = snapshot.throughputBytesPerSec,
             // Same rows as the Traffic tab it opens, which hides PrivacyGuard's own sessions.
             activeConnectionCount = snapshot.activeConnections.count { !it.packageName.startsWith("com.privacyguard.app") },

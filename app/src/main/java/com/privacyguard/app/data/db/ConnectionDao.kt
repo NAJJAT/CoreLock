@@ -28,6 +28,10 @@ interface ConnectionDao {
      */
     @Query("SELECT * FROM connections WHERE timestamp > :since ORDER BY timestamp DESC LIMIT :limit")
     suspend fun getRecentConnections(since: Long, limit: Int = 500): List<ConnectionEntity>
+
+    /** Background connections per app since [since] (Rules suggestions). */
+    @Query("SELECT packageName, COUNT(*) AS count FROM connections WHERE timestamp > :since AND wasBackground = 1 AND packageName != '' GROUP BY packageName")
+    suspend fun backgroundCountsSince(since: Long): List<PackageCount>
     
     /**
      * Gets connections for a specific app
@@ -253,3 +257,5 @@ data class DailyStats(
     val totalBytes: Long
 )
 
+
+data class PackageCount(val packageName: String, val count: Int)

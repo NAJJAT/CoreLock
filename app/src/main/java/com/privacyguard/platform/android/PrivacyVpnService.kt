@@ -46,6 +46,7 @@ import com.privacyguard.core.tls.CipherRisk
 import com.privacyguard.core.tls.CipherSuiteAnalyzer
 import com.privacyguard.core.tls.ClientHelloParser
 import com.privacyguard.core.tls.CtMonitor
+import com.privacyguard.app.core.blocklist.BlocklistCache
 import com.privacyguard.core.tls.Ja3Fingerprinter
 import com.privacyguard.vpn.firewall.AppFilter
 import com.privacyguard.vpn.firewall.DnsBypassGuard
@@ -170,6 +171,15 @@ class PrivacyVpnService : VpnService() {
         @Volatile var isRunning = false
             private set
 
+        @Volatile private var running: PrivacyVpnService? = null
+
+        /**
+         * Diagnostics: a real lookup over the VPN's own upstream path. The app's own
+         * sockets go through the tunnel, where port 53 to outside resolvers is dropped
+         * on purpose, so only the service can test this. Null when protection is off.
+         */
+        fun probeUpstreamDns(): Boolean? = running?.takeIf { it::dnsHandler.isInitialized }?.dnsHandler?.probeUpstream()
+
         fun startIntent(ctx: Context) = Intent(ctx, PrivacyVpnService::class.java)
         fun stopIntent(ctx: Context) = Intent(ctx, PrivacyVpnService::class.java).also { it.action = ACTION_STOP }
     }
@@ -249,7 +259,19 @@ class PrivacyVpnService : VpnService() {
         rulesRepo.loadIntoEngine()
         blockCleartextRuleActive = hasBlockCleartextRule()
         filterEngine.blockLevel = parseBlockLevel(settings.protectionLevel.value)
-        reloadBlocklists()
+        blocklistVersionLoaded = BlocklistSyncBus.version.value
+        // The last loaded lists, from a plain file, take a second or two; reading them
+        // from the encrypted database takes about half a minute on a phone. The
+        // database is read right after, in case the lists changed while protection was off.
+        val cached = runCatching { BlocklistCache.read(this, filterEngine.blockLevel.name) }.getOrNull()
+        if (cached != null) {
+            domainFilter.rebuild(cached.first)
+            securityFilter.rebuild(cached.second)
+            Log.i(TAG, "Blocklists from cache: ${domainFilter.size} names")
+            scope.launch { reloadBlocklists() }
+        } else {
+            reloadBlocklists()
+        }
         currentCoroutineContext().ensureActive()
 
         dnsAnomalyDetector = DnsAnomalyDetector()
@@ -301,6 +323,7 @@ class PrivacyVpnService : VpnService() {
             if (stopRequested) return
             establishTunnel(db, settings) ?: return
             isRunning = true
+            running = this
             _isRunningFlow.value = true
         }
         com.privacyguard.app.vpn.BootReceiver.markVpnActive(this)
@@ -431,7 +454,13 @@ class PrivacyVpnService : VpnService() {
                 blockCleartextRuleActive = hasBlockCleartextRule()
             }
         }
-        scope.launch { BlocklistSyncBus.version.collect { reloadBlocklists() } }
+        // The version current at startup was loaded before the tunnel came up; only
+        // newer ones need another load (each one reads every list again).
+        scope.launch {
+            BlocklistSyncBus.version.collect { v ->
+                if (v != blocklistVersionLoaded) { blocklistVersionLoaded = v; reloadBlocklists() }
+            }
+        }
         // Opt-in: CT checks send contacted domains to crt.sh. Turning it off stops at once.
         scope.launch { settings.ctMonitoringEnabled.collect { ctMonitor.setEnabled(it) } }
         scope.launch { settings.dohEnabled.collect { dnsHandler.dohEnabled = it } }
@@ -454,14 +483,22 @@ class PrivacyVpnService : VpnService() {
      * knows every listed tracker: knowing a host is a tracker is not blocking it.
      */
     private val blocklistReloadLock = kotlinx.coroutines.sync.Mutex()
+    @Volatile private var blocklistVersionLoaded = -1L
 
     private suspend fun reloadBlocklists() = blocklistReloadLock.withLock {
         val level = filterEngine.blockLevel
         val blocked = blocklistRepo.domainsIn(com.privacyguard.core.filter.ProtectionLevels.categoriesFor(level)) +
             (if (com.privacyguard.core.filter.ProtectionLevels.includesCuratedAdHosts(level)) CuratedAdDomains.all else emptyList())
+        val security = blocklistRepo.domainsIn(setOf(com.privacyguard.app.data.repository.BlocklistRepo.CAT_MALWARE))
         domainFilter.rebuild(blocked)
-        securityFilter.rebuild(blocklistRepo.domainsIn(setOf(com.privacyguard.app.data.repository.BlocklistRepo.CAT_MALWARE)))
-        metadataEngine.knownTrackers = (blocklistRepo.allDomains() + CuratedAdDomains.all).toSet()
+        securityFilter.rebuild(security)
+        runCatching { BlocklistCache.write(this, level.name, blocked, security) }
+        Log.i(TAG, "Blocklists loaded: ${domainFilter.size} names at $level")
+        // Risk scoring only, not blocking: load it after the tunnel is up. At startup
+        // this read of every list held the tunnel back for minutes.
+        scope.launch(Dispatchers.IO) {
+            runCatching { metadataEngine.knownTrackers = (blocklistRepo.allDomains() + CuratedAdDomains.all).toSet() }
+        }
     }
 
     private suspend fun hasBlockCleartextRule(): Boolean =
@@ -1150,6 +1187,7 @@ class PrivacyVpnService : VpnService() {
      */
     private fun releaseResourcesLocked() {
         isRunning = false
+        running = null
         _isRunningFlow.value = false
         if (receiverRegistered) {
             runCatching { unregisterReceiver(stopReceiver) }
@@ -1157,6 +1195,8 @@ class PrivacyVpnService : VpnService() {
         }
         com.privacyguard.app.vpn.KillSwitch.stopMonitoring()
         com.privacyguard.app.vpn.KillSwitch.clearLockdownState()
+        // Nothing passes through the tunnel any more; an open capture would only grow stale.
+        com.privacyguard.app.core.pcap.PcapWriter.stopCapture()
         if (::ctMonitor.isInitialized) ctMonitor.stop()
         if (::tunReader.isInitialized) tunReader.stop()
         if (::sensorWatcher.isInitialized) sensorWatcher.stop()

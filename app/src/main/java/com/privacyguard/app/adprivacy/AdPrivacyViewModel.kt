@@ -35,7 +35,9 @@ class AdPrivacyViewModel(app: Application) : AndroidViewModel(app) {
 
     val sensorGroups: StateFlow<List<SensorAppGroup>> = db.sensorEventDao().recentFlow(500)
         .map { events ->
-            events.map { SensorUseRow(it, it.likelyPackage?.let(::label)) }
+            // Rows saved before screen-off uses stopped being attributed: drop their guess too.
+            events.map { it.withoutScreenOffGuess() }
+                .map { SensorUseRow(it, it.likelyPackage?.let(::label)) }
                 .groupBy { it.event.likelyPackage }
                 .map { (pkg, uses) -> SensorAppGroup(pkg, uses.first().appLabel, uses) }
                 .sortedByDescending { group -> group.uses.maxOf { it.event.startedAt } }
@@ -75,6 +77,7 @@ class AdPrivacyViewModel(app: Application) : AndroidViewModel(app) {
     fun searchMic(from: Long, to: Long) {
         viewModelScope.launch {
             val uses = db.sensorEventDao().overlapping(SensorEventEntity.SENSOR_MIC, from, to)
+                .map { it.withoutScreenOffGuess() }
                 .map { SensorUseRow(it, it.likelyPackage?.let(::label)) }
             _search.value = MicSearchResult(from, to, uses)
         }
@@ -88,3 +91,7 @@ class AdPrivacyViewModel(app: Application) : AndroidViewModel(app) {
         pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
     }.getOrElse { com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), pkg) }
 }
+
+/** An app named for a use that started with the screen off was only the last app on screen. */
+internal fun SensorEventEntity.withoutScreenOffGuess(): SensorEventEntity =
+    if (screenOnAtStart) this else copy(likelyPackage = null)

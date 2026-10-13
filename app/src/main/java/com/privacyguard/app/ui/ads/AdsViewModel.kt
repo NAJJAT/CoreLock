@@ -51,6 +51,8 @@ data class AdsState(
     val sources: List<BlocklistSourceUi> = emptyList(),
     val customRules: List<CustomDomainRuleUi> = emptyList(),
     val totalDomainsLoaded: Int = 0,
+    /** Protection level whose lists [totalDomainsLoaded] counts (MINIMAL, STANDARD, STRICT). */
+    val level: String = "STANDARD",
     val isRefreshing: Boolean = false,
     val topTrackerApps: List<TrackerAppUi> = emptyList(),
 )
@@ -74,6 +76,13 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
     fun refresh() {
         viewModelScope.launch {
             val sourceStats = runCatching { blocklistDao.getSourceToggleStats() }.getOrDefault(emptyList())
+            // What the current level really blocks (distinct names), not every list on disk.
+            val level = com.privacyguard.core.filter.ProtectionLevels.parse(
+                com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(getApplication()).protectionLevel.value)
+            val domainsAtLevel = runCatching {
+                blocklistDao.enabledCountIn(com.privacyguard.core.filter.ProtectionLevels.categoriesFor(level).toList()) +
+                    (if (com.privacyguard.core.filter.ProtectionLevels.includesCuratedAdHosts(level)) com.privacyguard.app.core.blocklist.CuratedAdDomains.all.size else 0)
+            }.getOrDefault(0)
             val categoryStats = runCatching { blocklistDao.getCategoryToggleStats() }.getOrDefault(emptyList())
             val userRules = runCatching { rulesRepo.userRules() }.getOrDefault(emptyList())
             val since = System.currentTimeMillis() - 86_400_000L
@@ -114,7 +123,8 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
                 customRules = userRules
                     .filter { !it.matchDomain.isNullOrBlank() }
                     .map { CustomDomainRuleUi(it.id, it.matchDomain.orEmpty(), it.action == FilterRule.Action.ALLOW) },
-                totalDomainsLoaded = sourceStats.sumOf { it.enabledCount },
+                totalDomainsLoaded = domainsAtLevel,
+                level = level.name,
                 isRefreshing = false,
                 topTrackerApps = topTrackerApps,
             )

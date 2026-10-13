@@ -254,6 +254,25 @@ class DnsHandler(
      * cannot exist. An address in the answer means the network intercepts or rewrites
      * DNS. Returns null when no usable answer came back. Runs off the packet path.
      */
+    /**
+     * Diagnostics: one real lookup over the path queries take right now, DoH when it
+     * is on, otherwise plain UDP to the chosen resolver, on a protected socket.
+     */
+    fun probeUpstream(): Boolean = runCatching {
+        val id = (Math.random() * 0xFFFF).toInt()
+        val query = DnsPacket.buildQuery("example.com", id)
+        val reply = if (dohEnabled) postDoh(query) else DatagramSocket().use { socket ->
+            if (protectSocket?.invoke(socket) == false) return false
+            socket.soTimeout = upstreamTimeoutMs
+            socket.send(DatagramPacket(query, query.size, InetAddress.getByName(upstreamDns), upstreamPort))
+            val buf = ByteArray(MAX_DNS_PAYLOAD)
+            val recv = DatagramPacket(buf, buf.size)
+            socket.receive(recv)
+            buf.copyOf(recv.length)
+        }
+        reply?.let { DnsPacket.parse(it) }?.let { it.isResponse && it.id == id } == true
+    }.getOrDefault(false)
+
     fun probeHijack(): Boolean? {
         val name = com.privacyguard.app.core.network.NetworkSignals.hijackProbeName(
             java.util.UUID.randomUUID().toString().replace("-", "").take(16))

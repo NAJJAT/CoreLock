@@ -51,6 +51,9 @@ class DebugHooksReceiver : BroadcastReceiver() {
             }.onFailure { Log.w(TAG, "START_VPN refused: ${it.message}") }
             ACTION_SET_DUAL_VPN -> setDualVpn(context, intent)
             ACTION_SET_SETTING -> setSetting(context, intent)
+            ACTION_UPDATE_BLOCKLISTS -> updateBlocklists(context)
+            ACTION_PCAP -> pcap(context, intent)
+            ACTION_PROBE_DNS -> probeDns()
             ACTION_DOMAIN_RULE -> domainRule(context, intent)
             ACTION_FAIL_NEXT_START -> {
                 context.getSharedPreferences(DEBUG_PREFS, Context.MODE_PRIVATE)
@@ -99,6 +102,47 @@ class DebugHooksReceiver : BroadcastReceiver() {
                 "gateways=${if (q) lp.routes.filter { it.hasGateway() }.map { it.gateway?.hostAddress } else lp.routes} " +
                 "dns=${lp.dnsServers.map { it.hostAddress }} domains=${lp.domains} " +
                 "transportInfo=${if (q) caps.transportInfo else "n/a"}")
+        }
+    }
+
+    /**
+     * Packet capture and the Diagnostics DNS probe without the UI:
+     *   adb shell am broadcast -a com.privacyguard.debug.PCAP --ez start true|false -p PKG
+     *   adb shell am broadcast -a com.privacyguard.debug.PROBE_DNS -p PKG
+     */
+    private fun pcap(context: Context, intent: Intent) {
+        val pcap = com.privacyguard.app.core.pcap.PcapWriter
+        if (intent.getBooleanExtra("start", true)) pcap.startCapture(context) else pcap.stopCapture()
+        Log.i(TAG, "PCAP capturing=${pcap.isCapturing()} file=${pcap.getCurrentFilePath() ?: pcap.lastCapture(context)}")
+    }
+
+    private fun probeDns() {
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Log.i(TAG, "PROBE_DNS upstream=${com.privacyguard.platform.android.PrivacyVpnService.probeUpstreamDns()}")
+            } finally {
+                pending.finish()
+            }
+        }
+    }
+
+    /**
+     * Downloads every blocklist now and logs the domains per category:
+     *   adb shell am broadcast -a com.privacyguard.debug.UPDATE_BLOCKLISTS -p PKG
+     */
+    private fun updateBlocklists(context: Context) {
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                com.privacyguard.app.core.blocklist.BlocklistManager.initialize(context)
+                val result = com.privacyguard.app.core.blocklist.BlocklistManager.updateAllBlocklists()
+                val dao = AppDatabase.getInstance(context).blocklistDao()
+                val perCategory = dao.categories().associateWith { dao.enabledCountIn(listOf(it)) }
+                Log.i(TAG, "BLOCKLISTS result=$result perCategory=$perCategory sources=${dao.sources()}")
+            } finally {
+                pending.finish()
+            }
         }
     }
 
@@ -197,6 +241,9 @@ class DebugHooksReceiver : BroadcastReceiver() {
         const val ACTION_START_VPN = "com.privacyguard.debug.START_VPN"
         const val ACTION_SET_DUAL_VPN = "com.privacyguard.debug.SET_DUAL_VPN"
         const val ACTION_SET_SETTING = "com.privacyguard.debug.SET_SETTING"
+        const val ACTION_UPDATE_BLOCKLISTS = "com.privacyguard.debug.UPDATE_BLOCKLISTS"
+        const val ACTION_PCAP = "com.privacyguard.debug.PCAP"
+        const val ACTION_PROBE_DNS = "com.privacyguard.debug.PROBE_DNS"
         const val ACTION_DOMAIN_RULE = "com.privacyguard.debug.DOMAIN_RULE"
         const val DEBUG_PREFS = "debug_hooks"
         const val KEY_ALLOW_SCREENSHOTS = "allow_screenshots"

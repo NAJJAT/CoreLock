@@ -203,7 +203,18 @@ fun SettingsScreen(
                     SettingUiItem(stringResource(R.string.set_external_ip), stringResource(R.string.set_external_ip_desc), externalIpCheckEnabled, Icons.Default.Warning, onClick = {
                         settingsPreferences.setExternalIpCheckEnabled(!externalIpCheckEnabled)
                     })
-                )
+                ),
+                // The drop alert only notifies; Android's Always-on VPN is what keeps
+                // protection on and blocks traffic without it.
+                footer = {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(stringResource(R.string.set_always_on_hint), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = { KillSwitch.openAlwaysOnSettings(context) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(stringResource(R.string.set_open_vpn_settings)) }
+                },
             )
         }
 

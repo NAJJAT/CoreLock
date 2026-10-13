@@ -38,7 +38,7 @@
     <string name="notif_ct_tap">%1$s. Tap to review it in the alert inbox.</string>
     <string name="notif_vpn_down_title">Protection stopped</string>
     <string name="notif_vpn_down_blocked">Android is blocking all connections until protection reconnects.</string>
-    <string name="notif_vpn_down_open">Traffic is not filtered until protection reconnects. Turn on “Block connections without VPN” in Android to block it.</string>
+    <string name="notif_vpn_down_open">Traffic is no longer filtered. Open PrivacyGuard to turn protection back on. Always-on VPN in Android restarts it for you.</string>
     <string name="notif_bg_title">Background connection blocked</string>
     <string name="notif_bg_text">%1$s tried to connect to %2$s while in the background</string>
     <string name="notif_blocklist_updated">Blocklist updated</string>

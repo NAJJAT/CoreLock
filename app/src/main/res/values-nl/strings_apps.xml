@@ -105,4 +105,5 @@
     <string name="apps_stalker_score">stalkerwarescore %1$d</string>
     <string name="apps_search">App of pakket zoeken…</string>
     <string name="apps_sort_destinations">Bestemmingen</string>
+    <string name="rule_allow_app">%1$s toestaan</string>
 </resources>

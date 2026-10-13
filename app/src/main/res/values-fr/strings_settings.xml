@@ -16,7 +16,7 @@
     <string name="set_kill_switch_on">Android bloque le trafic si le VPN se coupe</string>
     <string name="set_kill_switch_off">Désactivé : ouvrez les paramètres VPN et activez « VPN permanent » et « Bloquer les connexions sans VPN »</string>
     <string name="set_vpn_drop_alert">Alerte de coupure du VPN</string>
-    <string name="set_vpn_drop_alert_desc">Prévenir et relancer la protection si le VPN se coupe (ne bloque pas le trafic)</string>
+    <string name="set_vpn_drop_alert_desc">Vous alerte seulement si la protection s’arrête pendant que PrivacyGuard tourne. Elle ne relance pas la protection et ne bloque pas le trafic.</string>
     <string name="set_notifications">Notifications</string>
     <string name="set_notifications_desc">Toutes les alertes, le résumé hebdomadaire et les avis de mise à jour des listes de blocage. L’alerte de coupure du VPN a son propre interrupteur.</string>
     <string name="set_weekly_report">Rapport hebdomadaire</string>
@@ -128,7 +128,7 @@
     <string name="diag_lockdown_unknown">L’état du blocage n’est pas lisible avant Android 10</string>
     <string name="diag_lockdown_off">Pas de blocage : activez « VPN permanent » et « Bloquer les connexions sans VPN »</string>
     <string name="diag_dns_resolution">Résolution DNS</string>
-    <string name="diag_upstream_tcp">DNS en amont via TCP</string>
+    <string name="diag_upstream_tcp">Serveur DNS en amont</string>
     <string name="diag_ipv6">Trafic IPv6</string>
     <plurals name="diag_ipv6_detail">
         <item quantity="one">TCP et UDP sur IPv6 passent par le tunnel comme l’IPv4. %d paquet IPv6 d’un autre protocole a été rejeté.</item>
@@ -166,4 +166,8 @@
     <string name="set_level_strict_desc">Strict bloque aussi la télémétrie du système (Microsoft, Apple, Amazon, Mozilla, Google Safe Browsing). Certaines fonctions peuvent cesser de marcher. À chaque niveau, vos propres règles s’appliquent, ainsi que « Bloquer les SDK publicitaires et d’attribution » dans « Pourquoi je vois cette pub ? » s’il est activé.</string>
     <string name="set_dual_block_udp">Bloquer l’UDP hors de la chaîne</string>
     <string name="set_dual_block_udp_desc">Bloque tout autre trafic UDP tant que le double VPN est actif, pour que rien ne sorte sans la chaîne. Les appels audio et vidéo et de nombreux jeux ne fonctionneront plus.</string>
+    <string name="diag_upstream_vpn_off">Non testé : la protection est désactivée, le DNS passe donc par le résolveur du réseau.</string>
+    <string name="diag_upstream_failed">%1$s n’a pas répondu à une requête de test. Des sites peuvent ne pas se charger.</string>
+    <string name="set_always_on_hint">Pour garder la protection active, activez le VPN permanent pour PrivacyGuard dans Android. Android le relance alors après un plantage ou un redémarrage ; avec « Bloquer les connexions sans VPN », rien ne sort sans protection.</string>
+    <string name="set_open_vpn_settings">Ouvrir les réglages VPN d’Android</string>
 </resources>

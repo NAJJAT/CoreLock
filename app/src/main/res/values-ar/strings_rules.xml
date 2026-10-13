@@ -53,4 +53,11 @@
         <item quantity="many">%d اتصالًا في الخلفية (7 أيام)</item>
         <item quantity="other">%d اتصال في الخلفية (7 أيام)</item>
     </plurals>
+    <string name="rule_block_cleartext_app">حظر الاتصالات غير المشفّرة لـ %1$s</string>
+    <string name="rule_block_background_app">حظر %1$s في الخلفية</string>
+    <string name="rules_type_domain">نطاق</string>
+    <string name="rules_type_app">تطبيق</string>
+    <string name="rules_type_ip">عنوان IP</string>
+    <string name="rules_ip_invalid">أدخل عنوان IPv4 أو نطاقًا، مثل 1.2.3.4 أو 10.0.0.0/8. قواعد IPv6 غير مدعومة بعد.</string>
+    <string name="rules_domain_exact">يطابق هذا الاسم بالضبط. اكتب *.example.com لتشمل example.com وكل النطاقات الفرعية.</string>
 </resources>

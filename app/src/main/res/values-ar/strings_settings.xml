@@ -16,7 +16,7 @@
     <string name="set_kill_switch_on">يحظر Android حركة البيانات إذا انقطعت الشبكة الافتراضية</string>
     <string name="set_kill_switch_off">متوقف: افتح إعدادات VPN وفعّل «تشغيل دائم» و«حظر الاتصالات دون VPN»</string>
     <string name="set_vpn_drop_alert">تنبيه انقطاع VPN</string>
-    <string name="set_vpn_drop_alert_desc">إشعار وإعادة تشغيل الحماية عند انقطاع VPN (لا يحظر حركة البيانات)</string>
+    <string name="set_vpn_drop_alert_desc">ينبّهك فقط عند توقف الحماية أثناء تشغيل PrivacyGuard. لا يعيد تشغيل الحماية ولا يحظر الحركة.</string>
     <string name="set_notifications">الإشعارات</string>
     <string name="set_notifications_desc">كل التنبيهات والملخص الأسبوعي وإشعارات تحديث قوائم الحظر. لتنبيه انقطاع VPN مفتاح خاص به.</string>
     <string name="set_weekly_report">التقرير الأسبوعي</string>
@@ -134,7 +134,7 @@
     <string name="diag_lockdown_unknown">لا يمكن قراءة حالة الحظر قبل Android 10</string>
     <string name="diag_lockdown_off">لا حظر: فعّل «VPN دائم التشغيل» و«حظر الاتصالات دون VPN»</string>
     <string name="diag_dns_resolution">تحليل أسماء DNS</string>
-    <string name="diag_upstream_tcp">DNS الأعلى عبر TCP</string>
+    <string name="diag_upstream_tcp">خادم DNS الأعلى</string>
     <string name="diag_ipv6">حركة IPv6</string>
     <plurals name="diag_ipv6_detail">
         <item quantity="zero">يمر TCP وUDP عبر IPv6 في النفق مثل IPv4. لم تُرفض أي حزمة IPv6 من بروتوكول آخر.</item>
@@ -181,4 +181,8 @@
     <string name="set_level_strict_desc">المستوى «صارم» يحظر أيضًا قياسات النظام عن بُعد (Microsoft وApple وAmazon وMozilla وGoogle Safe Browsing). قد تتوقف بعض الميزات عن العمل. في كل المستويات تُطبَّق قواعدك الخاصة، وكذلك خيار «حظر حِزم SDK للإعلانات والإسناد» في «لماذا أرى هذا الإعلان؟» إن كان مفعّلًا.</string>
     <string name="set_dual_block_udp">حظر UDP خارج السلسلة</string>
     <string name="set_dual_block_udp_desc">يحظر كل حركة UDP الأخرى ما دام VPN المزدوج مفعّلًا، فلا يخرج شيء دون السلسلة. ستتوقف المكالمات الصوتية والمرئية وكثير من الألعاب عن العمل.</string>
+    <string name="diag_upstream_vpn_off">لم يُختبر: الحماية متوقفة، لذا يذهب DNS إلى محلِّل الشبكة نفسها.</string>
+    <string name="diag_upstream_failed">لم يُجب %1$s عن استعلام اختباري. قد لا تُحمَّل المواقع.</string>
+    <string name="set_always_on_hint">لإبقاء الحماية مفعّلة، فعّل «VPN الدائم» لـ PrivacyGuard في Android. يعيد Android تشغيله بعد أي تعطّل أو إعادة تشغيل؛ ومع «حظر الاتصالات دون VPN» لا يخرج شيء دون حماية.</string>
+    <string name="set_open_vpn_settings">فتح إعدادات VPN في Android</string>
 </resources>

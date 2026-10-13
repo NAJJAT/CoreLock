@@ -298,6 +298,7 @@ fun DashboardScreen(
                 PcapExportCard(
                     isCapturing = uiState.isPcapCapturing,
                     path = uiState.pcapPath,
+                    stoppedAtLimit = uiState.pcapStoppedAtLimit,
                     onToggle = {
                         runProtectedAction(
                             if (uiState.isPcapCapturing) resources.getString(R.string.dash_pcap_stop) else resources.getString(R.string.dash_pcap_start),
@@ -577,6 +578,7 @@ private fun WeeklyPrivacyReportCard(
 private fun PcapExportCard(
     isCapturing: Boolean,
     path: String?,
+    stoppedAtLimit: Boolean,
     onToggle: () -> Unit,
     onShare: (String) -> Unit,
 ) {
@@ -585,7 +587,7 @@ private fun PcapExportCard(
             icon = Icons.Default.Router,
             tint = if (isCapturing) PgDanger else PgInfo,
             title = stringResource(R.string.dash_pcap_title),
-            subtitle = path ?: stringResource(R.string.dash_pcap_desc),
+            subtitle = stringResource(R.string.dash_pcap_desc),
             trailing = (if (isCapturing) stringResource(R.string.dash_pcap_rec) else stringResource(R.string.dash_pcap_ready)).uppercase(),
         )
         Spacer(modifier = Modifier.height(12.dp))
@@ -600,6 +602,16 @@ private fun PcapExportCard(
             Text(if (isCapturing) stringResource(R.string.dash_stop_capture) else stringResource(R.string.dash_start_capture))
         }
         if (!isCapturing && path != null) {
+            val file = File(path)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                stringResource(
+                    if (stoppedAtLimit) R.string.dash_pcap_file_limit else R.string.dash_pcap_file,
+                    file.name, android.text.format.Formatter.formatShortFileSize(LocalContext.current, file.length()),
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = PgTextMuted,
+            )
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = { onShare(path) },

@@ -37,4 +37,11 @@
         <item quantity="one">%d background connection (7 days)</item>
         <item quantity="other">%d background connections (7 days)</item>
     </plurals>
+    <string name="rule_block_cleartext_app">Block unencrypted connections of %1$s</string>
+    <string name="rule_block_background_app">Block %1$s in the background</string>
+    <string name="rules_type_domain">Domain</string>
+    <string name="rules_type_app">App</string>
+    <string name="rules_type_ip">IP address</string>
+    <string name="rules_ip_invalid">Enter an IPv4 address or range, like 1.2.3.4 or 10.0.0.0/8. IPv6 rules are not supported yet.</string>
+    <string name="rules_domain_exact">Matches this exact name. Write *.example.com to include example.com and every subdomain.</string>
 </resources>

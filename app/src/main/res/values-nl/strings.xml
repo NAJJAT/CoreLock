@@ -109,4 +109,5 @@
     <string name="adp_reason_push">nodig voor pushmeldingen in veel apps</string>
     <string name="adp_reason_deep_links">nodig voor links die in apps openen</string>
     <string name="adp_sdk_meta_limit">Meta-app-events en de meeste Audience Network-advertenties gebruiken graph.facebook.com, dezelfde server als Facebook Login. Blokkeren op servernaam kan ze niet scheiden, dus ze worden niet geblokkeerd.</string>
+    <string name="adp_unknown_app_screen_off">App onbekend (scherm was uit)</string>
 </resources>

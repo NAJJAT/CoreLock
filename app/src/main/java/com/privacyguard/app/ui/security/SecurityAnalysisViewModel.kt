@@ -49,17 +49,26 @@ class SecurityAnalysisViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         viewModelScope.launch {
-            db.tlsAlertDao().recentFlow(200).collect { all ->
-                _uiState.value = _uiState.value.copy(
-                    ja3Threats      = all.filter { it.alertType == "JA3_THREAT"  }.take(20),
-                    ctAlerts        = all.filter { it.alertType == "CT_NEW_CERT" }.take(10),
-                    cipherAlerts    = all.filter { it.alertType == "WEAK_CIPHER" }.take(20),
-                    ja3ThreatCount  = all.count  { it.alertType == "JA3_THREAT"  },
-                    weakCipherCount = all.count  { it.alertType == "WEAK_CIPHER" },
-                    ctNewCertCount  = all.count  { it.alertType == "CT_NEW_CERT" },
-                    totalScanned    = all.size,
+            val dao = db.tlsAlertDao()
+            // Counts over all stored alerts; each list has its own newest rows, so a
+            // burst of one type cannot push the others off the screen.
+            combine(
+                dao.countsByTypeFlow(),
+                dao.recentOfTypeFlow("JA3_THREAT", 20),
+                dao.recentOfTypeFlow("CT_NEW_CERT", 10),
+                dao.recentOfTypeFlow("WEAK_CIPHER", 20),
+            ) { counts, ja3, ct, weak ->
+                val n = counts.associate { it.alertType to it.count }
+                _uiState.value.copy(
+                    ja3Threats      = ja3,
+                    ctAlerts        = ct,
+                    cipherAlerts    = weak,
+                    ja3ThreatCount  = n["JA3_THREAT"] ?: 0,
+                    weakCipherCount = n["WEAK_CIPHER"] ?: 0,
+                    ctNewCertCount  = n["CT_NEW_CERT"] ?: 0,
+                    totalScanned    = n.values.sum(),
                 )
-            }
+            }.collect { _uiState.value = it }
         }
         viewModelScope.launch {
             val dao = db.tlsBaselineDao()

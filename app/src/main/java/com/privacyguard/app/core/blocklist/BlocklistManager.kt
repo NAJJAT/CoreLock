@@ -44,10 +44,11 @@ object BlocklistManager {
         initScope.launch {
             runCatching {
                 val repo = blocklistRepo(context.applicationContext)
-                // Also re-seeds built-in rows lost before lists stopped overwriting
-                // each other's domains (database version 7).
+                // Re-seeds when the stored built-in rows differ from this version's seed:
+                // rows lost before lists stopped overwriting each other (database version 7),
+                // or entries removed from the seed since (replaceSource drops them).
                 val builtInRows = BUILTIN_SEED.values.sumOf { cats -> cats.values.sumOf { it.distinct().size } }
-                if (repo.countBySourcePrefix(BlocklistRepo.SOURCE_BUILTIN) < builtInRows) {
+                if (repo.countBySourcePrefix(BlocklistRepo.SOURCE_BUILTIN) != builtInRows) {
                     seedBuiltInBlocklists(repo)
                     com.privacyguard.app.data.repository.BlocklistSyncBus.publish()
                 }
@@ -109,7 +110,7 @@ object BlocklistManager {
     }
 
     private fun parseBlocklist(source: BlocklistSource, raw: String): List<String> = when (source) {
-        BlocklistSource.STEVENBLACK                             -> parseHostsFormat(raw)
+        BlocklistSource.STEVENBLACK, BlocklistSource.URLHAUS    -> parseHostsFormat(raw)
         BlocklistSource.EASYLIST, BlocklistSource.EASYPRIVACY  -> parseEasyListFormat(raw)
         BlocklistSource.OISD_BASIC, BlocklistSource.OISD_FULL,
         BlocklistSource.HAGEZI_LIGHT                           -> parseDomainListFormat(raw)
@@ -176,6 +177,7 @@ object BlocklistManager {
         BlocklistSource.OISD_BASIC   -> Pair(BlocklistRepo.SOURCE_OISD, BlocklistRepo.CAT_ADS)
         BlocklistSource.OISD_FULL    -> Pair(BlocklistRepo.SOURCE_OISD, BlocklistRepo.CAT_ADS)
         BlocklistSource.HAGEZI_LIGHT -> Pair(BlocklistRepo.SOURCE_HAGEZI, BlocklistRepo.CAT_ADS)
+        BlocklistSource.URLHAUS      -> Pair(BlocklistRepo.SOURCE_URLHAUS, BlocklistRepo.CAT_MALWARE)
         BlocklistSource.CUSTOM       -> Pair("Custom", BlocklistRepo.CAT_ADS)
     }
 
@@ -251,7 +253,6 @@ object BlocklistManager {
             BlocklistRepo.CAT_MALWARE to listOf(
                 "malware.testcategory.com",
                 "phishing.testcategory.com",
-                "urlhaus.abuse.ch",
                 "tracker.badexample.ru",
                 "c2-tracker.ru",
                 "command-and-control.example",

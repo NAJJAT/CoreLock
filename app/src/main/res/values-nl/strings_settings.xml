@@ -16,7 +16,7 @@
     <string name="set_kill_switch_on">Android blokkeert verkeer als de VPN wegvalt</string>
     <string name="set_kill_switch_off">Uit: open de VPN-instellingen en zet ‘Altijd aan’ en ‘Verbindingen zonder VPN blokkeren’ aan</string>
     <string name="set_vpn_drop_alert">Melding bij VPN-uitval</string>
-    <string name="set_vpn_drop_alert_desc">Melden en de bescherming herstarten als de VPN wegvalt (blokkeert geen verkeer)</string>
+    <string name="set_vpn_drop_alert_desc">Waarschuwt alleen als de bescherming stopt terwijl PrivacyGuard draait. Het start de bescherming niet opnieuw en blokkeert geen verkeer.</string>
     <string name="set_notifications">Meldingen</string>
     <string name="set_notifications_desc">Alle waarschuwingen, het weekoverzicht en meldingen over blokkeerlijst-updates. De melding bij uitval van de VPN heeft een eigen schakelaar.</string>
     <string name="set_weekly_report">Weekrapport</string>
@@ -126,7 +126,7 @@
     <string name="diag_lockdown_unknown">De blokkeerstatus is vóór Android 10 niet uit te lezen</string>
     <string name="diag_lockdown_off">Blokkeert niet: zet ‘Altijd-aan-VPN’ en ‘Verbindingen zonder VPN blokkeren’ aan</string>
     <string name="diag_dns_resolution">DNS-resolutie</string>
-    <string name="diag_upstream_tcp">Upstream-DNS via TCP</string>
+    <string name="diag_upstream_tcp">Upstream-DNS-server</string>
     <string name="diag_ipv6">IPv6-verkeer</string>
     <plurals name="diag_ipv6_detail">
         <item quantity="one">TCP en UDP over IPv6 gaan net als IPv4 door de tunnel. %d IPv6-pakket van een ander protocol werd weggegooid.</item>
@@ -161,4 +161,8 @@
     <string name="set_level_strict_desc">Streng blokkeert ook systeemtelemetrie (Microsoft, Apple, Amazon, Mozilla, Google Safe Browsing). Sommige functies werken dan misschien niet meer. Op elk niveau gelden je eigen regels, en ook ‘Advertentie- en attributie-SDK’s blokkeren’ in ‘Waarom zie ik deze advertentie?’ als dat aanstaat.</string>
     <string name="set_dual_block_udp">UDP buiten de keten blokkeren</string>
     <string name="set_dual_block_udp_desc">Blokkeert al het andere UDP-verkeer zolang Dubbele VPN aanstaat, zodat niets zonder de keten vertrekt. Spraak- en videogesprekken en veel games werken dan niet meer.</string>
+    <string name="diag_upstream_vpn_off">Niet getest: de bescherming staat uit, dus DNS gaat naar de resolver van het netwerk.</string>
+    <string name="diag_upstream_failed">%1$s gaf geen antwoord op een testopzoeking. Websites laden misschien niet.</string>
+    <string name="set_always_on_hint">Zet in Android Altijd-aan-VPN aan voor PrivacyGuard om de bescherming aan te houden. Android start hem dan opnieuw na een crash of herstart; met ‘Verbindingen zonder VPN blokkeren’ gaat er niets onbeschermd naar buiten.</string>
+    <string name="set_open_vpn_settings">VPN-instellingen van Android openen</string>
 </resources>

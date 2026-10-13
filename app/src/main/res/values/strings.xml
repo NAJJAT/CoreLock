@@ -129,8 +129,5 @@
     <string name="adp_reason_deep_links">needed for links that open inside apps</string>
     <string name="adp_sdk_meta_limit">Meta app events and most Audience Network ads use graph.facebook.com, the same server as Facebook Login. Blocking by server name can\'t separate them, so they are not blocked.</string>
     <string name="tls_fp_no_apps_yet">No apps fingerprinted yet. Turn on protection and use your apps; learning starts with each app\'s first encrypted connection.</string>
+    <string name="adp_unknown_app_screen_off">App not known (screen was off)</string>
 </resources>
-
-
-
-

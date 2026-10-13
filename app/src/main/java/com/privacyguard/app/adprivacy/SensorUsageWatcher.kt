@@ -95,7 +95,7 @@ class SensorUsageWatcher(
             (active.keys - openMic.keys).forEach { session ->
                 val id = insert(SensorEventEntity.SENSOR_MIC, now, screenOn, active[session])
                 openMic[session] = id
-                attributeLater(id, now)
+                attributeLater(id, now, screenOn)
             }
         }
     }
@@ -109,7 +109,7 @@ class SensorUsageWatcher(
             if (cameraRow == null) {
                 val id = insert(SensorEventEntity.SENSOR_CAMERA, now, screenOn, null)
                 cameraRow = id
-                attributeLater(id, now)
+                attributeLater(id, now, screenOn)
             }
         }
     }
@@ -137,13 +137,12 @@ class SensorUsageWatcher(
      * Android has logged it as foreground; asking right away returns the previous
      * app. So ask a little later, for the moment just after the start.
      */
-    private fun attributeLater(rowId: Long, startedAt: Long) {
+    private fun attributeLater(rowId: Long, startedAt: Long, screenOn: Boolean) {
+        // Screen off: the last app on screen is not the one using the sensor, so name none.
+        if (!screenOn) return
         scope.launch(Dispatchers.IO) {
             delay(ATTRIBUTION_DELAY_MS)
-            val pkg = foreground.packageAt(startedAt + ATTRIBUTION_WINDOW_MS)
-                // This app never uses the mic or camera itself; if it was on screen,
-                // the real user is something in the background.
-                ?.takeIf { it != context.packageName }
+            val pkg = likelyUser(screenOn, foreground.packageAt(startedAt + ATTRIBUTION_WINDOW_MS), context.packageName)
             if (pkg != null) dao.setLikelyPackage(rowId, pkg)
         }
     }
@@ -157,9 +156,17 @@ class SensorUsageWatcher(
         else -> "SOURCE_$source"
     }
 
-    private companion object {
-        const val TAG = "SensorUsageWatcher"
-        const val ATTRIBUTION_DELAY_MS = 2_500L
-        const val ATTRIBUTION_WINDOW_MS = 1_500L
+    companion object {
+        /**
+         * Which app most likely used the camera or mic: the one on screen just after
+         * use started. None when the screen was off (the last app on screen is not
+         * the user then), and never PrivacyGuard itself, which uses neither.
+         */
+        fun likelyUser(screenOn: Boolean, onScreen: String?, ownPackage: String): String? =
+            onScreen?.takeIf { screenOn && it != ownPackage }
+
+        private const val TAG = "SensorUsageWatcher"
+        private const val ATTRIBUTION_DELAY_MS = 2_500L
+        private const val ATTRIBUTION_WINDOW_MS = 1_500L
     }
 }

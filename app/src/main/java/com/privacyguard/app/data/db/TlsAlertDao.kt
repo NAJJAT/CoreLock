@@ -41,6 +41,13 @@ interface TlsAlertDao {
     @Query("SELECT * FROM tls_alerts ORDER BY timestamp DESC LIMIT :limit")
     fun recentFlow(limit: Int): Flow<List<TlsAlertEntity>>
 
+    /** Every stored alert per type; the screen used to count only the newest 200 rows. */
+    @Query("SELECT alertType, COUNT(*) AS count FROM tls_alerts GROUP BY alertType")
+    fun countsByTypeFlow(): Flow<List<AlertTypeCount>>
+
+    @Query("SELECT * FROM tls_alerts WHERE alertType = :type ORDER BY timestamp DESC LIMIT :limit")
+    fun recentOfTypeFlow(type: String, limit: Int): Flow<List<TlsAlertEntity>>
+
     @Query("SELECT COUNT(*) FROM tls_alerts WHERE alertType = 'JA3_THREAT'")
     fun ja3ThreatCountFlow(): Flow<Int>
 
@@ -69,3 +76,5 @@ interface TlsAlertDao {
     suspend fun pruneOld(before: Long)
 }
 
+
+data class AlertTypeCount(val alertType: String, val count: Int)

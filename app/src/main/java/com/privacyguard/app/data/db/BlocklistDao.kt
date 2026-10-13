@@ -104,11 +104,14 @@ interface BlocklistDao {
     @Query("SELECT COUNT(DISTINCT domain) FROM blocklist WHERE isEnabled = 1")
     suspend fun getSize(): Int
 
-    @Query("SELECT DISTINCT domain FROM blocklist WHERE isEnabled = 1 ORDER BY domain")
+    // Callers put the names in a set; sorting here only cost time.
+    @Query("SELECT domain FROM blocklist WHERE isEnabled = 1")
     suspend fun enabledDomains(): List<String>
 
     /** Enabled domains in [categories]: what the current protection level blocks. */
-    @Query("SELECT DISTINCT domain FROM blocklist WHERE isEnabled = 1 AND category IN (:categories) ORDER BY domain")
+    // No DISTINCT / ORDER BY: sorting ~460k rows in the encrypted database took over a
+    // minute, and DomainFilter keeps each name once anyway.
+    @Query("SELECT domain FROM blocklist WHERE isEnabled = 1 AND category IN (:categories)")
     suspend fun enabledDomainsIn(categories: List<String>): List<String>
 
     @Query("SELECT COUNT(DISTINCT domain) FROM blocklist WHERE isEnabled = 1 AND category IN (:categories)")

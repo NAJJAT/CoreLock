@@ -147,7 +147,18 @@ fun AdsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     SectionLabel(stringResource(R.string.ads_blocklists_active))
-                    StatusPill(pluralStringResource(R.plurals.appd_domains, state.totalDomainsLoaded, state.totalDomainsLoaded), PgAccentDim, PgAccent)
+                    StatusPill(
+                        stringResource(
+                            R.string.ads_blocked_at_level,
+                            pluralStringResource(R.plurals.appd_domains, state.totalDomainsLoaded, state.totalDomainsLoaded),
+                            stringResource(when (state.level) {
+                                "MINIMAL" -> R.string.set_level_minimal
+                                "STRICT" -> R.string.set_level_strict
+                                else -> R.string.set_level_standard
+                            }),
+                        ),
+                        PgAccentDim, PgAccent,
+                    )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 state.sources.forEachIndexed { index, source ->
@@ -357,6 +368,7 @@ private fun CategoryCard(
         modifier = Modifier
             .fillMaxWidth()
             .background(PgBackgroundAlt, RoundedCornerShape(14.dp))
+            .clickable(onClick = onToggle)
             .padding(horizontal = 14.dp, vertical = 13.dp),
     ) {
         Row(
@@ -434,6 +446,7 @@ private fun SourceRow(
         modifier = Modifier
             .fillMaxWidth()
             .background(PgBackgroundAlt, RoundedCornerShape(12.dp))
+            .clickable(onClick = onToggle)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,

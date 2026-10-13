@@ -41,7 +41,7 @@
     <string name="notif_ct_tap">%1$s. Touchez pour le consulter dans la boîte des alertes.</string>
     <string name="notif_vpn_down_title">Protection interrompue</string>
     <string name="notif_vpn_down_blocked">Android bloque toutes les connexions jusqu’au rétablissement de la protection.</string>
-    <string name="notif_vpn_down_open">Le trafic n’est pas filtré jusqu’au rétablissement de la protection. Activez « Bloquer les connexions sans VPN » dans Android pour le bloquer.</string>
+    <string name="notif_vpn_down_open">Le trafic n’est plus filtré. Ouvrez PrivacyGuard pour réactiver la protection. Le VPN permanent d’Android la relance pour vous.</string>
     <string name="notif_bg_title">Connexion en arrière-plan bloquée</string>
     <string name="notif_bg_text">%1$s a tenté de se connecter à %2$s en arrière-plan</string>
     <string name="notif_blocklist_updated">Liste de blocage mise à jour</string>

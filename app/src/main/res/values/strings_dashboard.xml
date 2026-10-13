@@ -144,7 +144,7 @@
     <string name="dash_score">Score</string>
     <string name="dash_transferred">Transferred %1$s</string>
     <string name="dash_pcap_title">PCAP export</string>
-    <string name="dash_pcap_desc">Capture raw IP packets for Wireshark analysis</string>
+    <string name="dash_pcap_desc">Records raw packets in both directions for Wireshark. The file is not encrypted: it stays in the app’s private storage until you share it, stops at 100 MB or when protection stops, and is deleted after 24 hours.</string>
     <string name="dash_pcap_rec">Rec</string>
     <string name="dash_pcap_ready">Ready</string>
     <string name="dash_stop_capture">Stop capture</string>
@@ -168,4 +168,6 @@
     <string name="dash_ks_lockdown_off">Not set up</string>
     <string name="dash_strict_dismiss_wifi">Not on Wi-Fi</string>
     <string name="dash_strict_shared_note">Android does not tell apps which Wi-Fi you are on without location access, so “Not on Wi-Fi” applies to all Wi-Fi networks.</string>
+    <string name="dash_pcap_file">%1$s · %2$s</string>
+    <string name="dash_pcap_file_limit">%1$s · %2$s · stopped at the 100 MB limit</string>
 </resources>

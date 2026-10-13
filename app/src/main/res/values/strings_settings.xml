@@ -16,7 +16,7 @@
     <string name="set_kill_switch_on">Android blocks traffic if the VPN drops</string>
     <string name="set_kill_switch_off">Off: open VPN settings, turn on Always-on and Block connections without VPN</string>
     <string name="set_vpn_drop_alert">VPN drop alert</string>
-    <string name="set_vpn_drop_alert_desc">Notify and restart protection if the VPN drops (does not block traffic)</string>
+    <string name="set_vpn_drop_alert_desc">Only alerts you when protection stops while PrivacyGuard is running. It does not restart protection or block traffic.</string>
     <string name="set_notifications">Notifications</string>
     <string name="set_notifications_desc">Every alert, the weekly summary and blocklist update notices. The VPN drop alert has its own switch.</string>
     <string name="set_weekly_report">Weekly report</string>
@@ -126,7 +126,7 @@
     <string name="diag_lockdown_unknown">Lockdown state cannot be read before Android 10</string>
     <string name="diag_lockdown_off">Not blocking: enable Always-on VPN and Block connections without VPN</string>
     <string name="diag_dns_resolution">DNS resolution</string>
-    <string name="diag_upstream_tcp">Upstream DNS TCP</string>
+    <string name="diag_upstream_tcp">Upstream DNS server</string>
     <string name="diag_ipv6">IPv6 traffic</string>
     <plurals name="diag_ipv6_detail">
         <item quantity="one">TCP and UDP over IPv6 go through the tunnel like IPv4. %d IPv6 packet of another protocol was dropped.</item>
@@ -162,4 +162,8 @@
     <string name="set_level_strict_desc">Strict also blocks system telemetry (Microsoft, Apple, Amazon, Mozilla, Google Safe Browsing). Some features may stop working. At every level, your own rules apply, and so does “Block ad and attribution SDKs” in “Why am I seeing this ad?” when it is on.</string>
     <string name="set_dual_block_udp">Block UDP outside the chain</string>
     <string name="set_dual_block_udp_desc">Drops all other UDP while Dual VPN is on, so nothing leaves without the chain. Voice and video calls and many games will stop working.</string>
+    <string name="diag_upstream_vpn_off">Not tested: protection is off, so DNS goes to the network’s own resolver.</string>
+    <string name="diag_upstream_failed">%1$s did not answer a test lookup. Websites may fail to load.</string>
+    <string name="set_always_on_hint">To keep protection on, turn on Always-on VPN for PrivacyGuard in Android. Android then restarts it after a crash or reboot; with “Block connections without VPN” nothing goes out unprotected.</string>
+    <string name="set_open_vpn_settings">Open Android VPN settings</string>
 </resources>

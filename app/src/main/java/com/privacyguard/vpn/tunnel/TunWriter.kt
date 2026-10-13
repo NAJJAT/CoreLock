@@ -133,6 +133,8 @@ class TunWriter(
             }
 
             if (sink.writePacket(packet)) {
+                // Incoming direction for the capture: what apps actually receive.
+                if (com.privacyguard.app.core.pcap.PcapWriter.isCapturing()) com.privacyguard.app.core.pcap.PcapWriter.write(packet)
                 totalPacketsWritten.incrementAndGet()
                 totalBytesWritten.addAndGet(packet.size.toLong())
             } else {

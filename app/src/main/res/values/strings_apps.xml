@@ -105,4 +105,5 @@
     <string name="apps_stalker_score">stalkerware score %1$d</string>
     <string name="apps_search">Search app or package…</string>
     <string name="apps_sort_destinations">Destinations</string>
+    <string name="rule_allow_app">Allow %1$s</string>
 </resources>

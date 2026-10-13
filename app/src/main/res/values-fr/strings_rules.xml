@@ -41,4 +41,11 @@
         <item quantity="many">%d connexions en arrière-plan (7 jours)</item>
         <item quantity="other">%d connexions en arrière-plan (7 jours)</item>
     </plurals>
+    <string name="rule_block_cleartext_app">Bloquer les connexions non chiffrées de %1$s</string>
+    <string name="rule_block_background_app">Bloquer %1$s en arrière-plan</string>
+    <string name="rules_type_domain">Domaine</string>
+    <string name="rules_type_app">App</string>
+    <string name="rules_type_ip">Adresse IP</string>
+    <string name="rules_ip_invalid">Saisissez une adresse ou une plage IPv4, comme 1.2.3.4 ou 10.0.0.0/8. Les règles IPv6 ne sont pas encore prises en charge.</string>
+    <string name="rules_domain_exact">Correspond à ce nom exact. Écrivez *.example.com pour inclure example.com et tous ses sous-domaines.</string>
 </resources>

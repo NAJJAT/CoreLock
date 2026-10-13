@@ -29,6 +29,7 @@ class SettingsPreferences private constructor(context: Context) {
         private const val KEY_AD_SDK_BLOCKING_ENABLED    = "ad_sdk_blocking_enabled"
         private const val KEY_AD_CHECKLIST_DONE          = "ad_checklist_done"
         private const val KEY_STRICT_DISMISSED           = "strict_suggestion_dismissed"
+        private const val KEY_RULE_SUGGESTIONS_DISMISSED = "rule_suggestions_dismissed"
         private const val KEY_EXTERNAL_IP_CHECK_ENABLED  = "external_ip_check_enabled"
         private const val KEY_DOH_PROVIDER               = "doh_provider"
         private const val KEY_RETENTION_DAYS             = "retention_days"
@@ -137,6 +138,14 @@ class SettingsPreferences private constructor(context: Context) {
     /** Networks (NetworkIdentity keys) where the user said no to "switch to Strict". */
     private val _strictSuggestionDismissed = MutableStateFlow(prefs.getStringSet(KEY_STRICT_DISMISSED, emptySet()).orEmpty().toSet())
     val strictSuggestionDismissed: StateFlow<Set<String>> = _strictSuggestionDismissed.asStateFlow()
+
+    /** Rules suggestions the user dismissed; they stay dismissed across restarts. */
+    fun dismissedRuleSuggestions(): Set<String> =
+        prefs.getStringSet(KEY_RULE_SUGGESTIONS_DISMISSED, emptySet()).orEmpty().toSet()
+
+    fun dismissRuleSuggestion(id: String) {
+        prefs.edit().putStringSet(KEY_RULE_SUGGESTIONS_DISMISSED, dismissedRuleSuggestions() + id).apply()
+    }
 
     fun dismissStrictSuggestion(networkKey: String) {
         val next = _strictSuggestionDismissed.value + networkKey

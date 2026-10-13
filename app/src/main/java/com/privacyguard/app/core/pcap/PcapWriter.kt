@@ -7,7 +7,26 @@ import java.io.FileOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+/**
+ * Raw packet capture for Wireshark, both directions: what apps send (TunReader) and
+ * what the tunnel delivers to them (TunWriter, including answers PrivacyGuard makes
+ * itself, such as DNS).
+ *
+ * The file is plain PCAP so other tools can read it. It stays in the app's private
+ * storage, stops at [MAX_BYTES] or when protection stops, and PruneWorker deletes it
+ * after a day.
+ */
 object PcapWriter {
+
+    const val MAX_BYTES = 100L * 1024 * 1024
+    private const val DIR = "exports/pcap"
+
+    // Lowered by tests.
+    internal var maxBytes = MAX_BYTES
+    private var bytesWritten = 0L
+    /** True when the last capture ended because it reached [MAX_BYTES]. */
+    @Volatile var stoppedAtLimit = false
+        private set
 
     @Volatile var isEnabled: Boolean = false
     @Volatile private var capturing: Boolean = false
@@ -21,11 +40,18 @@ object PcapWriter {
     fun startCapture(context: Context) {
         if (capturing) return
         // files/exports/ is the only app-private folder the FileProvider shares.
-        val dir = File(context.filesDir, "exports/pcap").apply { mkdirs() }
-        val file = File(dir, "capture_${System.currentTimeMillis()}.pcap")
+        val dir = File(context.filesDir, DIR).apply { mkdirs() }
+        startCaptureTo(File(dir, "capture_${System.currentTimeMillis()}.pcap"))
+    }
+
+    @Synchronized
+    internal fun startCaptureTo(file: File) {
+        if (capturing) return
         val os = BufferedOutputStream(FileOutputStream(file))
         os.write(globalHeader())
         os.flush()
+        bytesWritten = 24
+        stoppedAtLimit = false
         outputStream = os
         currentFile = file
         capturing = true
@@ -50,6 +76,16 @@ object PcapWriter {
 
     fun getLastCompletedFile(): File? = lastCompletedFile
 
+    /**
+     * The newest finished capture, also after the app restarted (the in-memory
+     * reference is gone then, the file is not).
+     */
+    @Synchronized
+    fun lastCapture(context: Context): File? =
+        lastCompletedFile?.takeIf { it.exists() }
+            ?: File(context.filesDir, DIR).listFiles { f -> f.isFile && f.name.endsWith(".pcap") && f != currentFile }
+                ?.maxByOrNull { it.lastModified() }
+
     fun getCurrentFilePath(): String? = currentFile?.absolutePath
 
     @Synchronized
@@ -59,7 +95,13 @@ object PcapWriter {
     fun write(packet: ByteArray) {
         if (!capturing) return
         val os = outputStream ?: return
-        runCatching { os.write(packetRecord(packet)) }
+        val record = packetRecord(packet)
+        if (bytesWritten + record.size > maxBytes) {
+            stopCapture()
+            stoppedAtLimit = true
+            return
+        }
+        runCatching { os.write(record) }.onSuccess { bytesWritten += record.size }
     }
 
     @Synchronized

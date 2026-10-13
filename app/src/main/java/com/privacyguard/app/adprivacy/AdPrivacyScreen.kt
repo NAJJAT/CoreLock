@@ -303,7 +303,7 @@ private fun SensorUseLine(row: SensorUseRow, showApp: Boolean) {
         else -> stringResource(R.string.adp_end_unknown)
     }
     val parts = buildList {
-        if (showApp) add(row.appLabel ?: stringResource(R.string.adp_unknown_app))
+        if (showApp) add(row.appLabel ?: stringResource(if (e.screenOnAtStart) R.string.adp_unknown_app else R.string.adp_unknown_app_screen_off))
         add(sensor)
         add(stringResource(R.string.adp_time_range, formatDateTime(context, e.startedAt), end))
         add(stringResource(if (e.screenOnAtStart) R.string.adp_screen_on else R.string.adp_screen_off))

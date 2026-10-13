@@ -144,7 +144,7 @@
     <string name="dash_score">Score</string>
     <string name="dash_transferred">Overgedragen: %1$s</string>
     <string name="dash_pcap_title">PCAP-export</string>
-    <string name="dash_pcap_desc">Ruwe IP-pakketten vastleggen voor analyse in Wireshark</string>
+    <string name="dash_pcap_desc">Legt ruwe pakketten in beide richtingen vast voor Wireshark. Het bestand is niet versleuteld: het blijft in de privéopslag van de app tot je het deelt, stopt bij 100 MB of wanneer de bescherming stopt, en wordt na 24 uur verwijderd.</string>
     <string name="dash_pcap_rec">Opname</string>
     <string name="dash_pcap_ready">Klaar</string>
     <string name="dash_stop_capture">Opname stoppen</string>
@@ -167,4 +167,6 @@
     <string name="dash_ks_lockdown_off">Niet ingesteld</string>
     <string name="dash_strict_dismiss_wifi">Niet op wifi</string>
     <string name="dash_strict_shared_note">Zonder locatietoegang vertelt Android apps niet met welk wifinetwerk je verbonden bent, dus ‘Niet op wifi’ geldt voor alle wifinetwerken.</string>
+    <string name="dash_pcap_file">%1$s · %2$s</string>
+    <string name="dash_pcap_file_limit">%1$s · %2$s · gestopt bij de limiet van 100 MB</string>
 </resources>

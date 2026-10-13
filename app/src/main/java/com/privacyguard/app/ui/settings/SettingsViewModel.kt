@@ -22,8 +22,6 @@ import com.privacyguard.core.filter.FilterRule
 import com.privacyguard.core.metadata.EncryptionStatus
 import java.net.HttpURLConnection
 import java.net.InetAddress
-import java.net.InetSocketAddress
-import java.net.Socket
 import java.net.URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -239,7 +237,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             ),
             privateDnsCheck(),
             resolveHostCheck(str(R.string.diag_dns_resolution), "google.com"),
-            tcpReachabilityCheck(str(R.string.diag_upstream_tcp), settingsPreferences.upstreamDns.value, 53),
+            upstreamDnsCheck(),
             externalIpCheck(),
             dnsLeakCheck(),
             DiagnosticCheck(
@@ -273,14 +271,19 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun tcpReachabilityCheck(label: String, host: String, port: Int): DiagnosticCheck {
-        return runCatching {
-            Socket().use { socket ->
-                socket.connect(InetSocketAddress(host, port), 2_500)
-            }
-            DiagnosticCheck(label, DiagnosticStatus.PASS, str(R.string.diag_reachable, "$host:$port"))
-        }.getOrElse { error ->
-            DiagnosticCheck(label, DiagnosticStatus.WARN, "$host:$port ${error.message ?: str(R.string.diag_unreachable)}")
+    /**
+     * Asks the running VPN to look up a name the way it forwards every query (DoH or
+     * plain UDP to the chosen resolver). A socket opened here would itself go through
+     * the tunnel, where DNS to outside resolvers is dropped, and always fail.
+     */
+    private fun upstreamDnsCheck(): DiagnosticCheck {
+        val label = str(R.string.diag_upstream_tcp)
+        val target = if (settingsPreferences.dohEnabled.value) java.net.URL(settingsPreferences.dohProvider.value).host
+            else settingsPreferences.upstreamDns.value
+        return when (PrivacyVpnService.probeUpstreamDns()) {
+            null -> DiagnosticCheck(label, DiagnosticStatus.WARN, str(R.string.diag_upstream_vpn_off))
+            true -> DiagnosticCheck(label, DiagnosticStatus.PASS, str(R.string.diag_reachable, target))
+            false -> DiagnosticCheck(label, DiagnosticStatus.FAIL, str(R.string.diag_upstream_failed, target))
         }
     }
 

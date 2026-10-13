@@ -196,7 +196,7 @@
     <string name="dash_score">الدرجة</string>
     <string name="dash_transferred">البيانات المنقولة: %1$s</string>
     <string name="dash_pcap_title">تصدير PCAP</string>
-    <string name="dash_pcap_desc">التقاط حزم IP الخام لتحليلها في Wireshark</string>
+    <string name="dash_pcap_desc">يسجّل الحزم الخام في الاتجاهين لتحليلها في Wireshark. الملف غير مشفّر: يبقى في التخزين الخاص بالتطبيق حتى تشاركه، ويتوقف عند 100 ميغابايت أو عند توقف الحماية، ويُحذف بعد 24 ساعة.</string>
     <string name="dash_pcap_rec">تسجيل</string>
     <string name="dash_pcap_ready">جاهز</string>
     <string name="dash_stop_capture">إيقاف الالتقاط</string>
@@ -219,4 +219,6 @@
     <string name="dash_ks_lockdown_off">غير مُعدّ</string>
     <string name="dash_strict_dismiss_wifi">ليس على Wi-Fi</string>
     <string name="dash_strict_shared_note">لا يُخبر Android التطبيقات بشبكة Wi-Fi التي تتصل بها دون إذن الموقع، لذا ينطبق «ليس على Wi-Fi» على كل شبكات Wi-Fi.</string>
+    <string name="dash_pcap_file">%1$s · %2$s</string>
+    <string name="dash_pcap_file_limit">%1$s · %2$s · توقف عند حد 100 ميغابايت</string>
 </resources>

@@ -25,9 +25,9 @@ object BlocklistSource {
     /** Download URLs keyed by source identifier. */
     val urls: Map<String, String> = mapOf(
         STEVEN_BLACK to "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
-        OISD_BASIC   to "https://basic.oisd.nl/domains",
-        OISD_FULL    to "https://full.oisd.nl/domains",
-        HAGEZI_LIGHT to "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/light.txt",
-        HAGEZI_PRO   to "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/domains/pro.txt",
+        OISD_BASIC   to "https://small.oisd.nl/domainswild2",
+        OISD_FULL    to "https://big.oisd.nl/domainswild2",
+        HAGEZI_LIGHT to "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/light-onlydomains.txt",
+        HAGEZI_PRO   to "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro-onlydomains.txt",
     )
 }

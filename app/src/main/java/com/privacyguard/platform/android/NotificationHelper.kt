@@ -431,6 +431,12 @@ class NotificationHelper(private val context: Context) {
             ))
             .setContentIntent(pendingTap)
             .setOngoing(true)
+            // Always-on VPN is what restarts protection; this alert only tells.
+            .addAction(0, context.getString(R.string.set_open_vpn_settings), PendingIntent.getActivity(
+                context, NOTIFICATION_ID_KILL_SWITCH + 1,
+                Intent(android.provider.Settings.ACTION_VPN_SETTINGS),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            ))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
 
