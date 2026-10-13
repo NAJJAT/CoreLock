@@ -114,6 +114,9 @@ class PrivacyVpnService : VpnService() {
     private lateinit var metadataRepo: MetadataRepo
     private lateinit var dnsAnomalyRepo: DnsAnomalyRepo
     private lateinit var interception: TlsInterception
+
+    // Read per UDP packet; SettingsPreferences is a singleton holding the values in memory.
+    private fun dualVpnSettings() = SettingsPreferences.getInstance(this).getDualVpnConfig()
     private lateinit var ctMonitor: CtMonitor
     private lateinit var tlsFingerprintMonitor: com.privacyguard.app.vpn.TlsFingerprintMonitor
     private lateinit var sensorWatcher: com.privacyguard.app.adprivacy.SensorUsageWatcher
@@ -339,6 +342,7 @@ class PrivacyVpnService : VpnService() {
             protectTcpSocket = { sock -> protect(sock) },
             domainFilter = domainFilter,
             adSdkPolicy = com.privacyguard.app.adprivacy.AdSdkPolicy(enabled = { settings.adSdkBlockingEnabled.value }),
+            dualVpnConfig = { settings.getDualVpnConfig() },
         ).also { h ->
             h.resolvedListener = DnsHandler.ResolvedListener { ip, hostname -> onDnsResolved(ip, hostname) }
             // Signs about the network itself: stored like DNS anomalies, owned by "network".
@@ -590,6 +594,7 @@ class PrivacyVpnService : VpnService() {
                 sessionTable.remove(key)
                 return
             }
+            if (dualVpnSettings().dropsUdp(dstPort)) return
             if (dstPort == 443 && interception.blockQuic) return
             udpForwarder.handle(key, data, existing.ownerUid, existing.ownerPackage)
             return
@@ -598,6 +603,9 @@ class PrivacyVpnService : VpnService() {
         val uid = resolveOwnerUid(OsConstants.IPPROTO_UDP, key)
         val pkg = appTracker.packageForUid(uid)
         if (v4 != null && dnsHandler.handle(v4.first, v4.second, pkg)) return
+        // Dual-hop carries TCP only. QUIC is always dropped so apps retry over TCP
+        // through the chain; other UDP only when the user asked for it.
+        if (dualVpnSettings().dropsUdp(dstPort)) return
         val decision = filterEngine.evaluate(uid, pkg, null, dstIp, dstPort, IpPacket.PROTO_UDP,
             isBackground = isKnownBackground(pkg))
         if (decision.isBlocked) {

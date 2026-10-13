@@ -49,6 +49,7 @@ class DebugHooksReceiver : BroadcastReceiver() {
                 androidx.core.content.ContextCompat.startForegroundService(
                     context, com.privacyguard.platform.android.PrivacyVpnService.startIntent(context))
             }.onFailure { Log.w(TAG, "START_VPN refused: ${it.message}") }
+            ACTION_SET_DUAL_VPN -> setDualVpn(context, intent)
             ACTION_FAIL_NEXT_START -> {
                 context.getSharedPreferences(DEBUG_PREFS, Context.MODE_PRIVATE)
                     .edit().putBoolean(KEY_FAIL_NEXT_START, true).commit()
@@ -99,6 +100,25 @@ class DebugHooksReceiver : BroadcastReceiver() {
         }
     }
 
+    /**
+     * Configures dual-hop without the UI (the phone may be locked during a test run):
+     *   adb shell am broadcast -a com.privacyguard.debug.SET_DUAL_VPN --ez enabled true \
+     *       --es hop1 127.0.0.1 --ei hop1port 1080 --es hop2 127.0.0.1 --ei hop2port 1081 \
+     *       [--ez blockudp true] [--ez doh true] -p PKG_OF_APP
+     * Takes effect for new connections at once.
+     */
+    private fun setDualVpn(context: Context, intent: Intent) {
+        val s = com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(context)
+        intent.getStringExtra("hop1")?.let(s::setDualVpnHop1Host)
+        if (intent.hasExtra("hop1port")) s.setDualVpnHop1Port(intent.getIntExtra("hop1port", 1080))
+        intent.getStringExtra("hop2")?.let(s::setDualVpnHop2Host)
+        if (intent.hasExtra("hop2port")) s.setDualVpnHop2Port(intent.getIntExtra("hop2port", 1080))
+        if (intent.hasExtra("blockudp")) s.setDualVpnBlockUdp(intent.getBooleanExtra("blockudp", false))
+        if (intent.hasExtra("doh")) s.setDohEnabled(intent.getBooleanExtra("doh", false))
+        if (intent.hasExtra("enabled")) s.setDualVpnEnabled(intent.getBooleanExtra("enabled", false))
+        Log.i(TAG, "DUAL config valid=${s.getDualVpnConfig().isValid} blockUdp=${s.dualVpnBlockUdp.value} doh=${s.dohEnabled.value}")
+    }
+
     private fun endLearning(context: Context, pkg: String) {
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
@@ -123,6 +143,7 @@ class DebugHooksReceiver : BroadcastReceiver() {
         const val ACTION_DUMP_PROFILES = "com.privacyguard.debug.DUMP_PROFILES"
         const val ACTION_DUMP_NETWORK = "com.privacyguard.debug.DUMP_NETWORK"
         const val ACTION_START_VPN = "com.privacyguard.debug.START_VPN"
+        const val ACTION_SET_DUAL_VPN = "com.privacyguard.debug.SET_DUAL_VPN"
         const val DEBUG_PREFS = "debug_hooks"
         const val KEY_ALLOW_SCREENSHOTS = "allow_screenshots"
         const val KEY_FAIL_NEXT_START = "fail_next_start"

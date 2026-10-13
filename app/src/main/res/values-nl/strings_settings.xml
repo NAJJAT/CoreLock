@@ -97,14 +97,14 @@
     <string name="set_nav_flutter_desc">Platformonafhankelijke interface — tik om te starten</string>
     <string name="set_dual_vpn">Dubbele VPN</string>
     <string name="set_dual_enable">Dubbele VPN inschakelen</string>
-    <string name="set_dual_desc">Koppel twee SOCKS5-servers. Geen van beide weet zowel wie je bent als waar je naartoe gaat.</string>
+    <string name="set_dual_desc">Stuurt je verbindingen via twee SOCKS5-servers, zodat geen van beide weet wie je bent én waar je naartoe gaat. SOCKS5 vervoert alleen TCP; zie hieronder wat dat betekent.</string>
     <string name="set_hop1">Eerste server (server 1)</string>
     <string name="set_hop2">Tweede server (server 2)</string>
     <string name="set_host">Host</string>
     <string name="set_port">Poort</string>
     <string name="set_username_opt">Gebruikersnaam (optioneel)</string>
     <string name="set_password_opt">Wachtwoord (optioneel)</string>
-    <string name="set_dual_flow">Verkeer: jij → server 1 → server 2 → internet. Geen enkele server heeft het volledige beeld.</string>
+    <string name="set_dual_flow">Via de keten (jij → server 1 → server 2 → internet): elke TCP-verbinding, en je DNS-opzoekingen als DoH (versleutelde DNS) aanstaat.\nNiet via de keten: gewone DNS gaat bij uitgeschakelde DoH rechtstreeks naar je resolver, dus zet DoH aan. QUIC (UDP-poort 443) wordt altijd geblokkeerd zolang Dubbele VPN aanstaat, zodat apps terugvallen op TCP via de keten. Ander UDP-verkeer (bellen, games, videochat) gaat rechtstreeks, tenzij je de schakelaar hieronder aanzet.</string>
     <string name="set_danger">Gevaar</string>
     <string name="set_status_pass">Oké</string>
     <string name="set_status_warn">Let op</string>
@@ -127,10 +127,10 @@
     <string name="diag_lockdown_off">Blokkeert niet: zet ‘Altijd-aan-VPN’ en ‘Verbindingen zonder VPN blokkeren’ aan</string>
     <string name="diag_dns_resolution">DNS-resolutie</string>
     <string name="diag_upstream_tcp">Upstream-DNS via TCP</string>
-    <string name="diag_ipv6">Bescherming tegen IPv6-lekken</string>
+    <string name="diag_ipv6">IPv6-verkeer</string>
     <plurals name="diag_ipv6_detail">
-        <item quantity="one">%d IPv6-pakket geblokkeerd of gevolgd</item>
-        <item quantity="other">%d IPv6-pakketten geblokkeerd of gevolgd</item>
+        <item quantity="one">TCP en UDP over IPv6 gaan net als IPv4 door de tunnel. %d IPv6-pakket van een ander protocol werd weggegooid.</item>
+        <item quantity="other">TCP en UDP over IPv6 gaan net als IPv4 door de tunnel. %d IPv6-pakketten van andere protocollen werden weggegooid.</item>
     </plurals>
     <string name="diag_inventory">App-overzicht</string>
     <plurals name="diag_inventory_detail">
@@ -156,7 +156,9 @@
     <string name="set_posture_low">Vertrouwde omgeving</string>
     <string name="set_posture_elevated">Beveiligd, maar met minder hardware- of integriteitsgaranties</string>
     <string name="set_posture_high">Tekenen van manipulatie gevonden</string>
-    <string name="set_level_minimal_desc">Minimaal blokkeert alleen malware- en phishingservers. Advertenties en trackers laden gewoon. Je eigen regels gelden altijd.</string>
-    <string name="set_level_standard_desc">Standaard blokkeert malware, advertenties en trackers. Je eigen regels gelden altijd.</string>
-    <string name="set_level_strict_desc">Streng blokkeert ook systeemtelemetrie (Microsoft, Apple, Amazon, Mozilla, Google Safe Browsing). Sommige functies werken dan misschien niet meer. Je eigen regels gelden altijd.</string>
+    <string name="set_level_minimal_desc">Minimaal blokkeert alleen malware- en phishingservers. Advertenties en trackers laden, behalve de advertentie-SDK-servers die ‘Advertentie- en attributie-SDK’s blokkeren’ in ‘Waarom zie ik deze advertentie?’ blokkeert (standaard aan). Je eigen regels gelden altijd.</string>
+    <string name="set_level_standard_desc">Standaard blokkeert malware, advertenties en trackers. Op elk niveau gelden je eigen regels, en ook ‘Advertentie- en attributie-SDK’s blokkeren’ in ‘Waarom zie ik deze advertentie?’ als dat aanstaat.</string>
+    <string name="set_level_strict_desc">Streng blokkeert ook systeemtelemetrie (Microsoft, Apple, Amazon, Mozilla, Google Safe Browsing). Sommige functies werken dan misschien niet meer. Op elk niveau gelden je eigen regels, en ook ‘Advertentie- en attributie-SDK’s blokkeren’ in ‘Waarom zie ik deze advertentie?’ als dat aanstaat.</string>
+    <string name="set_dual_block_udp">UDP buiten de keten blokkeren</string>
+    <string name="set_dual_block_udp_desc">Blokkeert al het andere UDP-verkeer zolang Dubbele VPN aanstaat, zodat niets zonder de keten vertrekt. Spraak- en videogesprekken en veel games werken dan niet meer.</string>
 </resources>

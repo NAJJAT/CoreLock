@@ -15,7 +15,7 @@
     <string name="sec_ct_desc">Off by default. When turned on in Settings, it checks crt.sh every 6 hours for new certificates issued for domains your device contacts; crt.sh then sees those domains.</string>
     <string name="sec_ct_on">CT monitor is on: new certificate events appear here</string>
     <string name="sec_ct_off">CT monitor is off: turn it on in Settings → Certificate Transparency checks</string>
-    <string name="sec_dual_desc">Chain two SOCKS5 servers so no single server knows both who you are and where you go.</string>
+    <string name="sec_dual_desc">Chain two SOCKS5 servers so no single server knows both who you are and where you go. Carries TCP, and DNS when DoH is on. QUIC is blocked so apps use TCP; other UDP goes direct unless you block it.</string>
     <string name="sec_hop_you">You</string>
     <string name="sec_hop_you_desc">Your real IP</string>
     <string name="sec_hop_1">Server 1</string>

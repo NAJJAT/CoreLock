@@ -24,11 +24,11 @@
     <string name="onb_consent_title">ما الذي يفعله هذا التطبيق</string>
     <string name="onb_consent_body">يُرجى قراءة كل بند وتأكيده قبل المتابعة.</string>
     <string name="onb_c_net">مراقبة الشبكة</string>
-    <string name="onb_c_net_body">تُنشأ شبكة VPN محلية على هذا الجهاز. تمرّ عبرها كل حركة الشبكة ليتمكّن التطبيق من إظهار التطبيقات التي تتواصل ومع من. لا تغادر أي بيانات جهازك.</string>
+    <string name="onb_c_net_body">تُنشأ شبكة VPN محلية على هذا الجهاز. تمر عبرها كل حركة الشبكة ليُظهر التطبيق أي التطبيقات تتواصل مع مَن. لا يُرسَل أي شيء أبدًا إلى صانعي PrivacyGuard.\nما يغادر هذا الهاتف فعلًا:\n• طلبات DNS الخاصة بك، إلى المحلِّل الذي تختاره في الإعدادات (Cloudflare 1.1.1.1 افتراضيًا؛ ومشفّرة إلى cloudflare-dns.com أو dns.google أو dns.quad9.net فقط عند تفعيل DoH).\n• تنزيل قوائم الحظر، مرة في الأسبوع تقريبًا: raw.githubusercontent.com (StevenBlack وHagezi) وeasylist.to وoisd.nl.\n• قائمة متتبّعات Exodus، مرة في الأسبوع على الأكثر: reports.exodus-privacy.eu.org.\nفقط إذا فعّلتها في الإعدادات:\n• فحوص Certificate Transparency: تُرسَل النطاقات التي تزورها إلى crt.sh.\n• فحص عنوان IP العام في التشخيص: يسأل api.ipify.org.</string>
     <string name="onb_c_https">فحص حركة HTTPS (اختياري)</string>
-    <string name="onb_c_https_body">لقراءة محتوى حركة البيانات المشفّرة، يعمل التطبيق كوكيل HTTPS محلي. يتطلب ذلك تثبيت شهادة أمان. تبقى الشهادة على هذا الجهاز فقط وتُحذف عند إزالة التطبيق. يمكنك استخدام التطبيق دون هذه الميزة.</string>
+    <string name="onb_c_https_body">لقراءة محتوى حركة HTTPS، يعمل PrivacyGuard كوكيل محلي وتثبّت شهادته في إعدادات Android. تحديد هذا المربع يسجّل موافقتك؛ ويبقى الفحص متوقفًا حتى تشغّله من شاشة Payload.\nيحتفظ Android بتلك الشهادة بعد إلغاء تثبيت PrivacyGuard. احذفها بنفسك: افتح الإعدادات وابحث عن «شهادات المستخدم» (عادةً ضمن الأمان ← إعدادات أمان إضافية ← التشفير وبيانات الاعتماد)، ثم اضغط «PrivacyGuard Enterprise CA» واختر إزالة.</string>
     <string name="onb_c_storage">التخزين المحلي</string>
-    <string name="onb_c_storage_body">تُحفظ سجلات حركة البيانات في مساحة التخزين الخاصة بالتطبيق على هذا الجهاز فقط، ولا تُرفع إلى أي مكان. يمكنك حذفها في أي وقت من الإعدادات.</string>
+    <string name="onb_c_storage_body">تُحفظ سجلات الحركة مشفّرة في التخزين الخاص بالتطبيق على هذا الجهاز. لا تُرفع أبدًا. لا تغادر الهاتف إلا إذا شاركت بنفسك ملف تصدير (PCAP أو CSV أو تقرير IT). يمكنك حذفها في أي وقت من الإعدادات.</string>
     <string name="onb_required_note">يجب تحديد البنود المطلوبة للمتابعة.</string>
     <string name="onb_required">مطلوب</string>
     <string name="onb_optional">اختياري</string>

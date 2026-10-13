@@ -97,14 +97,14 @@
     <string name="set_nav_flutter_desc">Cross-platform UI — tap to launch</string>
     <string name="set_dual_vpn">Dual VPN</string>
     <string name="set_dual_enable">Enable Dual VPN</string>
-    <string name="set_dual_desc">Chain two SOCKS5 hops. Neither server knows both who you are and your destination.</string>
+    <string name="set_dual_desc">Sends your connections through two SOCKS5 servers, so neither server knows both who you are and where you go. SOCKS5 carries TCP only; see below for what that means.</string>
     <string name="set_hop1">First hop (server 1)</string>
     <string name="set_hop2">Second hop (server 2)</string>
     <string name="set_host">Host</string>
     <string name="set_port">Port</string>
     <string name="set_username_opt">Username (optional)</string>
     <string name="set_password_opt">Password (optional)</string>
-    <string name="set_dual_flow">Traffic: You → Hop 1 → Hop 2 → Internet. Neither hop has the full picture.</string>
+    <string name="set_dual_flow">Through the chain (You → Hop 1 → Hop 2 → Internet): every TCP connection, and your DNS lookups when DoH (encrypted DNS) is on.\nNot through the chain: plain DNS when DoH is off goes straight to your resolver, so turn on DoH. QUIC (UDP port 443) is always blocked while Dual VPN is on, so apps fall back to TCP through the chain. Other UDP (calls, games, video chat) goes direct, unless you turn on the switch below.</string>
     <string name="set_danger">Danger</string>
     <string name="set_status_pass">Pass</string>
     <string name="set_status_warn">Warn</string>
@@ -127,10 +127,10 @@
     <string name="diag_lockdown_off">Not blocking: enable Always-on VPN and Block connections without VPN</string>
     <string name="diag_dns_resolution">DNS resolution</string>
     <string name="diag_upstream_tcp">Upstream DNS TCP</string>
-    <string name="diag_ipv6">IPv6 leak prevention</string>
+    <string name="diag_ipv6">IPv6 traffic</string>
     <plurals name="diag_ipv6_detail">
-        <item quantity="one">%d IPv6 packet blocked or tracked</item>
-        <item quantity="other">%d IPv6 packets blocked or tracked</item>
+        <item quantity="one">TCP and UDP over IPv6 go through the tunnel like IPv4. %d IPv6 packet of another protocol was dropped.</item>
+        <item quantity="other">TCP and UDP over IPv6 go through the tunnel like IPv4. %d IPv6 packets of other protocols were dropped.</item>
     </plurals>
     <string name="diag_inventory">App inventory</string>
     <plurals name="diag_inventory_detail">
@@ -157,7 +157,9 @@
     <string name="set_posture_elevated">Hardened, but hardware or integrity guarantees are reduced</string>
     <string name="set_posture_high">Tamper signals detected</string>
     <!-- What each protection level blocks; see core/filter/ProtectionLevels.kt -->
-    <string name="set_level_minimal_desc">Minimal blocks malware and phishing hosts only. Ads and trackers load. Your own rules always apply.</string>
-    <string name="set_level_standard_desc">Standard blocks malware, ads and trackers. Your own rules always apply.</string>
-    <string name="set_level_strict_desc">Strict also blocks system telemetry (Microsoft, Apple, Amazon, Mozilla, Google Safe Browsing). Some features may stop working. Your own rules always apply.</string>
+    <string name="set_level_minimal_desc">Minimal blocks malware and phishing hosts only. Ads and trackers load, except the ad-SDK servers that “Block ad and attribution SDKs” in “Why am I seeing this ad?” blocks (on by default). Your own rules always apply.</string>
+    <string name="set_level_standard_desc">Standard blocks malware, ads and trackers. At every level, your own rules apply, and so does “Block ad and attribution SDKs” in “Why am I seeing this ad?” when it is on.</string>
+    <string name="set_level_strict_desc">Strict also blocks system telemetry (Microsoft, Apple, Amazon, Mozilla, Google Safe Browsing). Some features may stop working. At every level, your own rules apply, and so does “Block ad and attribution SDKs” in “Why am I seeing this ad?” when it is on.</string>
+    <string name="set_dual_block_udp">Block UDP outside the chain</string>
+    <string name="set_dual_block_udp_desc">Drops all other UDP while Dual VPN is on, so nothing leaves without the chain. Voice and video calls and many games will stop working.</string>
 </resources>

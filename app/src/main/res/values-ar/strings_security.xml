@@ -15,7 +15,7 @@
     <string name="sec_ct_desc">متوقفة افتراضيًا. عند تفعيلها من الإعدادات تتحقق من crt.sh كل 6 ساعات من الشهادات الجديدة الصادرة للنطاقات التي يتصل بها جهازك؛ وعندها يرى crt.sh تلك النطاقات.</string>
     <string name="sec_ct_on">مراقبة CT مفعّلة: تظهر هنا أحداث الشهادات الجديدة</string>
     <string name="sec_ct_off">مراقبة CT متوقفة: فعّلها من الإعدادات ← فحوص شفافية الشهادات</string>
-    <string name="sec_dual_desc">اربط خادمي SOCKS5 بالتتابع حتى لا يعرف أي خادم هويتك ووجهتك معًا.</string>
+    <string name="sec_dual_desc">اربط خادمي SOCKS5 بالتتابع حتى لا يعرف أي خادم هويتك ووجهتك معًا. ينقل TCP، وDNS عند تفعيل DoH. يُحظر QUIC لتستخدم التطبيقات TCP؛ وبقية UDP تذهب مباشرةً إلا إذا حظرتها.</string>
     <string name="sec_hop_you">أنت</string>
     <string name="sec_hop_you_desc">عنوان IP الحقيقي</string>
     <string name="sec_hop_1">الخادم 1</string>

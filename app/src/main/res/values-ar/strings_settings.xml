@@ -105,14 +105,14 @@
     <string name="set_nav_flutter_desc">واجهة متعددة المنصات — اضغط للتشغيل</string>
     <string name="set_dual_vpn">VPN مزدوج</string>
     <string name="set_dual_enable">تفعيل VPN المزدوج</string>
-    <string name="set_dual_desc">يربط خادمي SOCKS5 بالتتابع. لا يعرف أي منهما هويتك ووجهتك معًا.</string>
+    <string name="set_dual_desc">يمرّر اتصالاتك عبر خادمي SOCKS5، فلا يعرف أي منهما هويتك ووجهتك معًا. لا ينقل SOCKS5 إلا حركة TCP؛ انظر أدناه ماذا يعني ذلك.</string>
     <string name="set_hop1">الخادم الأول (الخادم 1)</string>
     <string name="set_hop2">الخادم الثاني (الخادم 2)</string>
     <string name="set_host">المضيف</string>
     <string name="set_port">المنفذ</string>
     <string name="set_username_opt">اسم المستخدم (اختياري)</string>
     <string name="set_password_opt">كلمة المرور (اختيارية)</string>
-    <string name="set_dual_flow">حركة البيانات: أنت ← الخادم 1 ← الخادم 2 ← الإنترنت. لا يملك أي خادم الصورة الكاملة.</string>
+    <string name="set_dual_flow">عبر السلسلة (أنت ← الخادم 1 ← الخادم 2 ← الإنترنت): كل اتصالات TCP، وطلبات DNS عند تفعيل DoH (DNS المشفّر).\nخارج السلسلة: عند إيقاف DoH يذهب DNS العادي مباشرةً إلى المحلِّل، لذا فعّل DoH. يُحظر QUIC (منفذ UDP 443) دائمًا ما دام VPN المزدوج مفعّلًا، فتعود التطبيقات إلى TCP عبر السلسلة. بقية حركة UDP (المكالمات والألعاب ومحادثات الفيديو) تذهب مباشرةً، إلا إذا فعّلت الخيار أدناه.</string>
     <string name="set_danger">خطر</string>
     <string name="set_status_pass">سليم</string>
     <string name="set_status_warn">تحذير</string>
@@ -135,14 +135,14 @@
     <string name="diag_lockdown_off">لا حظر: فعّل «VPN دائم التشغيل» و«حظر الاتصالات دون VPN»</string>
     <string name="diag_dns_resolution">تحليل أسماء DNS</string>
     <string name="diag_upstream_tcp">DNS الأعلى عبر TCP</string>
-    <string name="diag_ipv6">منع تسرّب IPv6</string>
+    <string name="diag_ipv6">حركة IPv6</string>
     <plurals name="diag_ipv6_detail">
-        <item quantity="zero">لم تُحظر أو تُتتبّع أي حزمة IPv6</item>
-        <item quantity="one">حزمة IPv6 واحدة محظورة أو متتبَّعة</item>
-        <item quantity="two">حزمتا IPv6 محظورتان أو متتبَّعتان</item>
-        <item quantity="few">%d حزم IPv6 محظورة أو متتبَّعة</item>
-        <item quantity="many">%d حزمةً IPv6 محظورة أو متتبَّعة</item>
-        <item quantity="other">%d حزمة IPv6 محظورة أو متتبَّعة</item>
+        <item quantity="zero">يمر TCP وUDP عبر IPv6 في النفق مثل IPv4. لم تُرفض أي حزمة IPv6 من بروتوكول آخر.</item>
+        <item quantity="one">يمر TCP وUDP عبر IPv6 في النفق مثل IPv4. رُفضت حزمة IPv6 واحدة من بروتوكول آخر.</item>
+        <item quantity="two">يمر TCP وUDP عبر IPv6 في النفق مثل IPv4. رُفضت حزمتا IPv6 من بروتوكولات أخرى.</item>
+        <item quantity="few">يمر TCP وUDP عبر IPv6 في النفق مثل IPv4. رُفضت %d حزم IPv6 من بروتوكولات أخرى.</item>
+        <item quantity="many">يمر TCP وUDP عبر IPv6 في النفق مثل IPv4. رُفضت %d حزمةً IPv6 من بروتوكولات أخرى.</item>
+        <item quantity="other">يمر TCP وUDP عبر IPv6 في النفق مثل IPv4. رُفضت %d حزمة IPv6 من بروتوكولات أخرى.</item>
     </plurals>
     <string name="diag_inventory">جرد التطبيقات</string>
     <plurals name="diag_inventory_detail">
@@ -176,7 +176,9 @@
     <string name="set_posture_low">بيئة تشغيل موثوقة</string>
     <string name="set_posture_elevated">محمية، لكن ضمانات العتاد أو السلامة أقل</string>
     <string name="set_posture_high">رُصدت مؤشرات عبث</string>
-    <string name="set_level_minimal_desc">المستوى «أدنى» يحظر خوادم البرمجيات الضارة والتصيّد فقط. تُحمَّل الإعلانات وأدوات التتبع. قواعدك الخاصة تُطبَّق دائمًا.</string>
-    <string name="set_level_standard_desc">المستوى «قياسي» يحظر البرمجيات الضارة والإعلانات وأدوات التتبع. قواعدك الخاصة تُطبَّق دائمًا.</string>
-    <string name="set_level_strict_desc">المستوى «صارم» يحظر أيضًا قياسات النظام عن بُعد (Microsoft وApple وAmazon وMozilla وGoogle Safe Browsing). قد تتوقف بعض الميزات عن العمل. قواعدك الخاصة تُطبَّق دائمًا.</string>
+    <string name="set_level_minimal_desc">المستوى «أدنى» يحظر خوادم البرمجيات الضارة والتصيّد فقط. تُحمَّل الإعلانات وأدوات التتبع، باستثناء خوادم حِزم الإعلانات التي يحظرها خيار «حظر حِزم SDK للإعلانات والإسناد» في «لماذا أرى هذا الإعلان؟» (مفعّل افتراضيًا). قواعدك الخاصة تُطبَّق دائمًا.</string>
+    <string name="set_level_standard_desc">المستوى «قياسي» يحظر البرمجيات الضارة والإعلانات وأدوات التتبع. في كل المستويات تُطبَّق قواعدك الخاصة، وكذلك خيار «حظر حِزم SDK للإعلانات والإسناد» في «لماذا أرى هذا الإعلان؟» إن كان مفعّلًا.</string>
+    <string name="set_level_strict_desc">المستوى «صارم» يحظر أيضًا قياسات النظام عن بُعد (Microsoft وApple وAmazon وMozilla وGoogle Safe Browsing). قد تتوقف بعض الميزات عن العمل. في كل المستويات تُطبَّق قواعدك الخاصة، وكذلك خيار «حظر حِزم SDK للإعلانات والإسناد» في «لماذا أرى هذا الإعلان؟» إن كان مفعّلًا.</string>
+    <string name="set_dual_block_udp">حظر UDP خارج السلسلة</string>
+    <string name="set_dual_block_udp_desc">يحظر كل حركة UDP الأخرى ما دام VPN المزدوج مفعّلًا، فلا يخرج شيء دون السلسلة. ستتوقف المكالمات الصوتية والمرئية وكثير من الألعاب عن العمل.</string>
 </resources>

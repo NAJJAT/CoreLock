@@ -26,6 +26,12 @@ object TlsInterceptionFactory {
     fun isInspectionActive(context: Context): Boolean =
         MitmConfig(context).let { isInspectionActive(it.isEnabled, it.isConsentValid()) }
 
+    /**
+     * Onboarding's "HTTPS traffic inspection" box: the same consent the Payload screen
+     * asks for. It does not switch inspection on.
+     */
+    fun recordConsent(context: Context) = MitmConfig(context).recordConsent()
+
     /** Decrypting only when switched on and consented to; either alone is not enough. */
     internal fun isInspectionActive(enabled: Boolean, consentValid: Boolean): Boolean = enabled && consentValid
 

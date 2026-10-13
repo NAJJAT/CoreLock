@@ -122,6 +122,7 @@ fun SettingsScreen(
     val dualVpnHop2Port by settingsPreferences.dualVpnHop2Port.collectAsStateWithLifecycle()
     val dualVpnHop2User by settingsPreferences.dualVpnHop2User.collectAsStateWithLifecycle()
     val dualVpnHop2Pass by settingsPreferences.dualVpnHop2Pass.collectAsStateWithLifecycle()
+    val dualVpnBlockUdp by settingsPreferences.dualVpnBlockUdp.collectAsStateWithLifecycle()
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -579,6 +580,19 @@ fun SettingsScreen(
                             shape = RoundedCornerShape(12.dp),
                             visualTransformation = PasswordVisualTransformation(),
                         )
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { settingsPreferences.setDualVpnBlockUdp(!dualVpnBlockUdp) },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.set_dual_block_udp), style = MaterialTheme.typography.titleMedium, color = PgText)
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(stringResource(R.string.set_dual_block_udp_desc), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                        }
+                        ToggleChip(dualVpnBlockUdp)
                     }
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(

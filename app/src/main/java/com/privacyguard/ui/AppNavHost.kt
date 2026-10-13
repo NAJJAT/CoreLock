@@ -175,7 +175,7 @@ fun AppNavHost(
                 OnboardingScreen(
                     onEnableVpn = { tlsAccepted ->
                         settingsPreferences.recordVpnConsent()
-                        if (tlsAccepted) settingsPreferences.recordTlsConsent()
+                        if (tlsAccepted) com.privacyguard.vpn.interception.TlsInterceptionFactory.recordConsent(context)
                         settingsPreferences.setOnboardingCompleted(true)
                         navController.navigate("dashboard") {
                             popUpTo("onboarding") { inclusive = true }
@@ -185,7 +185,7 @@ fun AppNavHost(
                     },
                     onGetStarted = { tlsAccepted ->
                         settingsPreferences.recordVpnConsent()
-                        if (tlsAccepted) settingsPreferences.recordTlsConsent()
+                        if (tlsAccepted) com.privacyguard.vpn.interception.TlsInterceptionFactory.recordConsent(context)
                         settingsPreferences.setOnboardingCompleted(true)
                         navController.navigate("dashboard") {
                             popUpTo("onboarding") { inclusive = true }

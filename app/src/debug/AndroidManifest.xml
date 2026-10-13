@@ -16,6 +16,7 @@
                 <action android:name="com.privacyguard.debug.DUMP_PROFILES" />
                 <action android:name="com.privacyguard.debug.DUMP_NETWORK" />
                 <action android:name="com.privacyguard.debug.START_VPN" />
+                <action android:name="com.privacyguard.debug.SET_DUAL_VPN" />
             </intent-filter>
         </receiver>
     </application>

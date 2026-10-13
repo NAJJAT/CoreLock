@@ -30,10 +30,17 @@ object DualVpnTunnel {
         targetHost: String,
         targetPort: Int,
         timeoutMs: Int = 15_000,
+        /** VpnService.protect: without it the socket would be routed back into the tunnel. */
+        protect: ((Socket) -> Boolean)? = null,
     ): Socket {
         val socket = Socket()
         socket.soTimeout = timeoutMs
         try {
+            if (protect != null) {
+                // An unconnected socket has no file descriptor yet; binding creates it.
+                socket.bind(null)
+                if (!protect(socket)) throw IOException("protect() failed")
+            }
             socket.connect(InetSocketAddress(config.firstHopHost, config.firstHopPort), timeoutMs)
             val ins = socket.getInputStream()
             val outs = socket.getOutputStream()

@@ -50,6 +50,8 @@ class DnsHandler(
     private val protectTcpSocket:  ((Socket) -> Boolean)? = null,
     private val domainFilter:      DomainFilter? = null,
     private val adSdkPolicy:       com.privacyguard.app.adprivacy.AdSdkPolicy? = null,
+    // Dual-hop: DoH goes through the SOCKS chain like every other TCP connection.
+    private val dualVpnConfig:     () -> com.privacyguard.vpn.dualvpn.DualVpnConfig = { com.privacyguard.vpn.dualvpn.DualVpnConfig() },
 ) {
     // ─────────────────────────────────────────────────────────────────────────
     // Listeners
@@ -352,20 +354,30 @@ class DnsHandler(
         val port = if (url.port > 0) url.port else 443
         val path = if (url.query.isNullOrBlank()) url.path else "${url.path}?${url.query}"
 
-        Socket().use { rawSocket ->
-            // An unconnected Socket has no file descriptor yet, so protect() always
-            // returned false and every DoH query silently fell back to plain DNS.
-            // Binding creates the descriptor.
-            rawSocket.bind(null)
-            val protected = protectTcpSocket?.invoke(rawSocket) ?: true
-            if (!protected) {
-                Log.e(TAG, "VpnService.protect() returned false for DoH socket to $host")
-                return null
+        // With dual-hop on, the DoH connection goes through both SOCKS servers; hop 2
+        // resolves the provider's name, so nothing about it is looked up locally.
+        val chain = dualVpnConfig().takeIf { it.isValid }
+        val socket = if (chain != null) {
+            runCatching {
+                com.privacyguard.vpn.dualvpn.DualVpnTunnel.connect(chain, host, port, upstreamTimeoutMs, protectTcpSocket)
+            }.getOrElse { Log.w(TAG, "DoH via dual-hop failed: ${it.message}"); return null }
+        } else Socket()
+        socket.use { rawSocket ->
+            if (chain == null) {
+                // An unconnected Socket has no file descriptor yet, so protect() always
+                // returned false and every DoH query silently fell back to plain DNS.
+                // Binding creates the descriptor.
+                rawSocket.bind(null)
+                val protected = protectTcpSocket?.invoke(rawSocket) ?: true
+                if (!protected) {
+                    Log.e(TAG, "VpnService.protect() returned false for DoH socket to $host")
+                    return null
+                }
+                // Connect by address: resolving the DoH host would go back through this
+                // tunnel to this same DoH path. TLS below still verifies the hostname.
+                val address = DOH_BOOTSTRAP[host]?.let { InetAddress.getByName(it) }
+                rawSocket.connect(if (address != null) InetSocketAddress(address, port) else InetSocketAddress(host, port), upstreamTimeoutMs)
             }
-            // Connect by address: resolving the DoH host would go back through this
-            // tunnel to this same DoH path. TLS below still verifies the hostname.
-            val address = DOH_BOOTSTRAP[host]?.let { InetAddress.getByName(it) }
-            rawSocket.connect(if (address != null) InetSocketAddress(address, port) else InetSocketAddress(host, port), upstreamTimeoutMs)
             rawSocket.soTimeout = upstreamTimeoutMs
 
             val sslFactory = SSLSocketFactory.getDefault() as SSLSocketFactory

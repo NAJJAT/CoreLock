@@ -15,7 +15,7 @@
     <string name="sec_ct_desc">Désactivé par défaut. Une fois activé dans les paramètres, il interroge crt.sh toutes les 6 heures sur les nouveaux certificats émis pour les domaines contactés par votre appareil ; crt.sh voit alors ces domaines.</string>
     <string name="sec_ct_on">Le moniteur CT est actif : les nouveaux certificats s’affichent ici</string>
     <string name="sec_ct_off">Le moniteur CT est désactivé : activez-le dans Paramètres → Vérifications Certificate Transparency</string>
-    <string name="sec_dual_desc">Enchaînez deux serveurs SOCKS5 pour qu’aucun ne sache à la fois qui vous êtes et où vous allez.</string>
+    <string name="sec_dual_desc">Enchaînez deux serveurs SOCKS5 pour qu’aucun ne sache à la fois qui vous êtes et où vous allez. Transporte le TCP, et le DNS quand DoH est activé. QUIC est bloqué pour que les apps utilisent TCP ; le reste de l’UDP part directement, sauf si vous le bloquez.</string>
     <string name="sec_hop_you">Vous</string>
     <string name="sec_hop_you_desc">Votre véritable IP</string>
     <string name="sec_hop_1">Serveur 1</string>

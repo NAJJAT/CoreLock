@@ -15,7 +15,7 @@
     <string name="sec_ct_desc">Standaard uit. Als je hem in Instellingen aanzet, controleert hij elke 6 uur bij crt.sh of er nieuwe certificaten zijn uitgegeven voor domeinen waarmee je toestel verbindt; crt.sh ziet dan die domeinen.</string>
     <string name="sec_ct_on">CT-monitor staat aan: nieuwe certificaatgebeurtenissen verschijnen hier</string>
     <string name="sec_ct_off">CT-monitor staat uit: zet hem aan via Instellingen → Certificate Transparency-controles</string>
-    <string name="sec_dual_desc">Koppel twee SOCKS5-servers, zodat geen enkele server weet wie je bent én waar je naartoe gaat.</string>
+    <string name="sec_dual_desc">Koppel twee SOCKS5-servers, zodat geen enkele server weet wie je bent én waar je naartoe gaat. Vervoert TCP, en DNS als DoH aanstaat. QUIC wordt geblokkeerd zodat apps TCP gebruiken; ander UDP gaat rechtstreeks, tenzij je het blokkeert.</string>
     <string name="sec_hop_you">Jij</string>
     <string name="sec_hop_you_desc">Je echte IP-adres</string>
     <string name="sec_hop_1">Server 1</string>

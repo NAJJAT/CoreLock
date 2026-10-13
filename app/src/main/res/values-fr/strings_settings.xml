@@ -99,14 +99,14 @@
     <string name="set_nav_flutter_desc">Interface multiplateforme — touchez pour lancer</string>
     <string name="set_dual_vpn">Double VPN</string>
     <string name="set_dual_enable">Activer le double VPN</string>
-    <string name="set_dual_desc">Enchaîne deux serveurs SOCKS5. Aucun ne sait à la fois qui vous êtes et où vous allez.</string>
+    <string name="set_dual_desc">Fait passer vos connexions par deux serveurs SOCKS5, pour qu’aucun ne sache à la fois qui vous êtes et où vous allez. SOCKS5 ne transporte que le TCP ; voir ci-dessous ce que cela implique.</string>
     <string name="set_hop1">Premier serveur (serveur 1)</string>
     <string name="set_hop2">Second serveur (serveur 2)</string>
     <string name="set_host">Hôte</string>
     <string name="set_port">Port</string>
     <string name="set_username_opt">Nom d’utilisateur (facultatif)</string>
     <string name="set_password_opt">Mot de passe (facultatif)</string>
-    <string name="set_dual_flow">Trafic : vous → serveur 1 → serveur 2 → Internet. Aucun serveur n’a la vue complète.</string>
+    <string name="set_dual_flow">Par la chaîne (vous → serveur 1 → serveur 2 → Internet) : toutes les connexions TCP, et vos requêtes DNS quand DoH (DNS chiffré) est activé.\nHors de la chaîne : le DNS classique, quand DoH est désactivé, va directement à votre résolveur ; activez donc DoH. QUIC (UDP port 443) est toujours bloqué tant que le double VPN est actif, pour que les apps se rabattent sur TCP par la chaîne. Le reste de l’UDP (appels, jeux, visio) part directement, sauf si vous activez l’option ci-dessous.</string>
     <string name="set_danger">Danger</string>
     <string name="set_status_pass">OK</string>
     <string name="set_status_warn">Attention</string>
@@ -129,11 +129,11 @@
     <string name="diag_lockdown_off">Pas de blocage : activez « VPN permanent » et « Bloquer les connexions sans VPN »</string>
     <string name="diag_dns_resolution">Résolution DNS</string>
     <string name="diag_upstream_tcp">DNS en amont via TCP</string>
-    <string name="diag_ipv6">Protection contre les fuites IPv6</string>
+    <string name="diag_ipv6">Trafic IPv6</string>
     <plurals name="diag_ipv6_detail">
-        <item quantity="one">%d paquet IPv6 bloqué ou suivi</item>
-        <item quantity="many">%d paquets IPv6 bloqués ou suivis</item>
-        <item quantity="other">%d paquets IPv6 bloqués ou suivis</item>
+        <item quantity="one">TCP et UDP sur IPv6 passent par le tunnel comme l’IPv4. %d paquet IPv6 d’un autre protocole a été rejeté.</item>
+        <item quantity="many">TCP et UDP sur IPv6 passent par le tunnel comme l’IPv4. %d paquets IPv6 d’autres protocoles ont été rejetés.</item>
+        <item quantity="other">TCP et UDP sur IPv6 passent par le tunnel comme l’IPv4. %d paquets IPv6 d’autres protocoles ont été rejetés.</item>
     </plurals>
     <string name="diag_inventory">Inventaire des apps</string>
     <plurals name="diag_inventory_detail">
@@ -161,7 +161,9 @@
     <string name="set_posture_low">Environnement de confiance</string>
     <string name="set_posture_elevated">Renforcé, mais avec moins de garanties matérielles ou d’intégrité</string>
     <string name="set_posture_high">Signes d’altération détectés</string>
-    <string name="set_level_minimal_desc">Minimal bloque uniquement les serveurs de malware et d’hameçonnage. Les publicités et traqueurs se chargent. Vos propres règles s’appliquent toujours.</string>
-    <string name="set_level_standard_desc">Standard bloque les malwares, les publicités et les traqueurs. Vos propres règles s’appliquent toujours.</string>
-    <string name="set_level_strict_desc">Strict bloque aussi la télémétrie du système (Microsoft, Apple, Amazon, Mozilla, Google Safe Browsing). Certaines fonctions peuvent cesser de marcher. Vos propres règles s’appliquent toujours.</string>
+    <string name="set_level_minimal_desc">Minimal bloque uniquement les serveurs de malware et d’hameçonnage. Les publicités et traqueurs se chargent, sauf les serveurs de SDK publicitaires que bloque « Bloquer les SDK publicitaires et d’attribution » dans « Pourquoi je vois cette pub ? » (activé par défaut). Vos propres règles s’appliquent toujours.</string>
+    <string name="set_level_standard_desc">Standard bloque les malwares, les publicités et les traqueurs. À chaque niveau, vos propres règles s’appliquent, ainsi que « Bloquer les SDK publicitaires et d’attribution » dans « Pourquoi je vois cette pub ? » s’il est activé.</string>
+    <string name="set_level_strict_desc">Strict bloque aussi la télémétrie du système (Microsoft, Apple, Amazon, Mozilla, Google Safe Browsing). Certaines fonctions peuvent cesser de marcher. À chaque niveau, vos propres règles s’appliquent, ainsi que « Bloquer les SDK publicitaires et d’attribution » dans « Pourquoi je vois cette pub ? » s’il est activé.</string>
+    <string name="set_dual_block_udp">Bloquer l’UDP hors de la chaîne</string>
+    <string name="set_dual_block_udp_desc">Bloque tout autre trafic UDP tant que le double VPN est actif, pour que rien ne sorte sans la chaîne. Les appels audio et vidéo et de nombreux jeux ne fonctionneront plus.</string>
 </resources>
