@@ -31,10 +31,10 @@
     <string name="conn_no_result">Aucun résultat</string>
     <string name="conn_ok">OK</string>
     <string name="conn_search">Rechercher un hôte, une app, une IP…</string>
-    <string name="conn_tab_live">En direct (%1)</string>
-    <string name="conn_tab_history">Dernières 24 h (%1)</string>
+    <string name="conn_tab_live">En direct (%1$d)</string>
+    <string name="conn_tab_history">Dernières 24 h (%1$d)</string>
     <string name="conn_live_note">Connexions ouvertes en ce moment, avec leur débit actuel.</string>
     <string name="conn_history_note">Connexions terminées ces dernières 24 h, plus récentes d’abord. Les tailles sont des totaux, pas des débits. Les tentatives bloquées sont incluses.</string>
-    <string name="conn_dns_lookup_action">Rechercher %1 dans le DNS</string>
+    <string name="conn_dns_lookup_action">Rechercher %1$s dans le DNS</string>
     <string name="conn_route_ipv6">Cet appareil → adresse IPv6 (la carte hors ligne ne couvre que l’IPv4)</string>
 </resources>

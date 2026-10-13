@@ -31,10 +31,10 @@
     <string name="conn_no_result">لا نتيجة</string>
     <string name="conn_ok">سليم</string>
     <string name="conn_search">ابحث عن مضيف أو تطبيق أو IP…</string>
-    <string name="conn_tab_live">مباشر (%1)</string>
-    <string name="conn_tab_history">آخر 24 ساعة (%1)</string>
+    <string name="conn_tab_live">مباشر (%1$d)</string>
+    <string name="conn_tab_history">آخر 24 ساعة (%1$d)</string>
     <string name="conn_live_note">الاتصالات المفتوحة الآن، مع سرعتها الحالية.</string>
     <string name="conn_history_note">اتصالات انتهت خلال آخر 24 ساعة، الأحدث أولًا. الأحجام مجاميع وليست سرعات. تشمل المحاولات المحظورة.</string>
-    <string name="conn_dns_lookup_action">البحث عن %1 في DNS</string>
+    <string name="conn_dns_lookup_action">البحث عن %1$s في DNS</string>
     <string name="conn_route_ipv6">هذا الجهاز → عنوان IPv6 (الخريطة دون اتصال تغطي IPv4 فقط)</string>
 </resources>
