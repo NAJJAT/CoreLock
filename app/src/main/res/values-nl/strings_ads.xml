@@ -35,11 +35,11 @@
     </plurals>
     <string name="ads_off">Advertenties blokkeren staat uit</string>
     <string name="ads_blocked_today">Vandaag geblokkeerd</string>
-    <string name="ads_cat_counts">%1$d actief · %2$s</string>
+    <string name="ads_cat_counts">%1$,d actief · %2$s</string>
     <string name="ads_custom_allow">Eigen toestaanregel</string>
     <string name="ads_custom_block">Eigen blokkeerregel</string>
     <string name="ads_delete_rule">Regel verwijderen</string>
-    <string name="ads_source_counts">%1$d van %2$s ingeschakeld</string>
+    <string name="ads_source_counts">%1$,d van %2$s ingeschakeld</string>
     <string name="ads_on">Aan</string>
     <string name="rule_allow_domain_risky">%1$s toestaan (malwarewaarschuwing geaccepteerd)</string>
     <string name="rule_security_warn_title">Deze site staat op een malwarelijst</string>

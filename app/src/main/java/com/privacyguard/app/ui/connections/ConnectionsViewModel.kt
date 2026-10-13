@@ -203,7 +203,7 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun orgHintForIp(ip: String): String? {
         val geo = com.privacyguard.app.core.geoip.GeoIpResolver.lookup(ip) ?: return null
-        return if (geo.org == "Unknown") null else geo.org
+        return geo.org?.takeIf { it != "Unknown" }
     }
 
     private fun displayAppName(appName: String, packageName: String): String {

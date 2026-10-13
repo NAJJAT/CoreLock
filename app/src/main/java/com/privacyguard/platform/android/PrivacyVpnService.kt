@@ -994,8 +994,31 @@ class PrivacyVpnService : VpnService() {
                 if (recorded != lastSaved) {
                     lastSaved = recorded
                     runCatching { metadataRepo.saveAll(metadataEngine.allProfiles()) }
+                    runCatching { notifyBehaviorChanges() }
                 }
             }
+        }
+    }
+
+    /**
+     * Large background uploads and other HIGH behaviour findings, as a notification.
+     * Runs here, not on a screen, so it works while the app is closed.
+     */
+    private fun notifyBehaviorChanges() {
+        val prefs = getSharedPreferences(com.privacyguard.app.core.behavior.BehaviorNotifier.PREFS, MODE_PRIVATE)
+        val notified = prefs.all.mapNotNull { (k, v) -> (v as? Long)?.let { k to it } }.toMap()
+        val findings = com.privacyguard.app.core.behavior.BehaviorDnaAnalyzer
+            .summarizeAll(metadataEngine.allProfiles()).flatMap { it.findings }
+        val (due, record) = com.privacyguard.app.core.behavior.BehaviorNotifier.select(findings, notified, System.currentTimeMillis())
+        if (due.isEmpty() && record.size == notified.size) return
+        prefs.edit().clear().apply { record.forEach { (k, t) -> putLong(k, t) } }.apply()
+        due.forEach { f ->
+            notifHelper.postBehaviorAlert(
+                packageName = f.packageName,
+                title = com.privacyguard.app.ui.text.FindingText.title(this, f),
+                summary = com.privacyguard.app.ui.text.FindingText.summary(this, f),
+                mainActivityClass = MainActivity::class.java,
+            )
         }
     }
 

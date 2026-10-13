@@ -170,8 +170,8 @@ half a minute with the full lists.
 | Built-in seed (about 70 hand-picked names) | ads, trackers, malware, telemetry | in the app |
 
 On a test phone in October 2026 this gave about 179,000 ad names, 43,000 tracker
-names, 428 malware names and the built-in telemetry names; 278,000 names in total
-at Strict. Lists are held in memory as two hash sets (`vpn/firewall/DomainFilter.kt`);
+names, 428 malware names and the built-in telemetry names; about 216,000 distinct names at Strict
+(the lists overlap). Lists are held in memory as two hash sets (`vpn/firewall/DomainFilter.kt`);
 an entry blocks the name and every subdomain.
 
 ---
@@ -291,7 +291,10 @@ An app's baseline is ready after 7 days of history or 40 connections. Then:
 | Upload spike | 2 MB or more sent to one host in the last 24 h, mostly in the background, and 3× the app's average per host. |
 | Background beacon | ≥ 85 % background, 8+ connections, average interval 10 s – 15 min, not a push host. |
 
-All are *medium*: reasons to look, not proof.
+All are *medium* (reasons to look, not proof), except an upload spike of 10 MB or
+more, which is *high*. High findings raise a notification from the VPN service, so
+also while the app is closed, once a day per app, host and kind (the record of
+what was notified keeps only hashes).
 
 ### 5.5 Timer-like contacts (Home card, `HomeEvidence.beacons`)
 
@@ -402,9 +405,13 @@ tracker label (5.1), its anomalies and every app that contacted it.
 
 Tiles for the last 24 h: connections, blocked, cleartext, data, block rate,
 encryption, and the same privacy score as Home. Top blocked names come from
-`dns_queries`. "Countries" uses a built-in table of 64 address ranges of large
-providers (Google, Amazon, Microsoft, Meta, Cloudflare…); any other address shows
-as unknown rather than guessed. The timeline mixes DNS anomalies (critical at
+`dns_queries`. "Countries" first checks a built-in table of 64 address ranges of large providers
+(Google, Amazon, Microsoft, Meta, Cloudflare…), which also names the owner; any
+other IPv4 address gets the country its block is registered in, from the five
+regional internet registries' public allocation files (`assets/geoip_v4.bin`,
+rebuilt with `tools/geoip/GenerateGeoIp.java`). That is the registrant's country,
+not where the server stands: a CDN address shows the CDN's home country. IPv6
+addresses show as unknown. The timeline mixes DNS anomalies (critical at
 severity ≥ 9, high ≥ 7, else medium), blocked items and behaviour findings.
 Remembered networks show their trust score.
 
@@ -512,9 +519,8 @@ uninstalled**; onboarding tells the user how to remove it (Settings → search
 "User certificates" → "PrivacyGuard Enterprise CA" → Remove).
 
 **SIEM**: inspected payload records are queued and sent to the configured
-endpoint in batches (100 events or 60 seconds), only over HTTPS, with a bearer API
-key, an optional certificate pin and an optional body signature (`SiemEndpoint.kt`). An older metadata shipper class
-(`EnterpriseMetadataShipper`) exists but nothing calls it.
+endpoint in batches (100 events or 60 seconds; the queue is held in memory only), only over HTTPS, with a bearer API
+key, an optional certificate pin and an optional body signature (`SiemEndpoint.kt`).
 
 ---
 
@@ -529,9 +535,11 @@ key, an optional certificate pin and an optional body signature (`SiemEndpoint.k
 - **Apps that bring their own resolver** over TLS, QUIC or DoH to unknown servers,
   or connect to hard-coded addresses, are not filtered by DNS blocking. Only known
   DoH addresses and the standard encrypted-DNS ports are blocked.
-- **First start after install:** blocking needs the lists, so the very first
-  tunnel waits about half a minute. Later starts use the cache. Until the first
-  download (about a minute after install), only the built-in lists apply.
+- **First start after install:** until the first download (about a minute after
+  install) only the built-in lists apply. A download writes the start-up cache, so
+  later starts take a few seconds. Only a start whose cache is missing (for example
+  the first one after this cache was introduced) waits about half a minute for the
+  database.
 - **Memory:** with all lists loaded the app uses about 200–260 MB (PSS) on a test
   phone, about 68 MB of it Java heap.
 - **The VPN drop alert only alerts.** It cannot restart protection or block
@@ -544,11 +552,9 @@ key, an optional certificate pin and an optional body signature (`SiemEndpoint.k
   even when the server picks a strong suite.
 - **JA3 threat matching** uses 35 published hashes. JA3 values are shared by many
   programs that use the same TLS library, so a match is a lead, not proof.
-- **Behaviour findings are all "medium"**, and the behaviour notification fires
-  only for "high", so behaviour changes appear on Home and in the inbox but never
-  as a notification.
-- **Countries** come from 64 built-in address ranges; most addresses show as
-  unknown.
+- **Countries** are registration countries (RIR data), not server locations;
+  IPv6 addresses have none, and the network owner is known only for 64 big
+  provider ranges. The table is as current as the last time it was rebuilt.
 - **Network trust "No thanks"** applies to all Wi-Fi networks (no location
   permission, so networks cannot be told apart reliably).
 - **TLS fingerprints:** learning covers what an app does in its first 7 days, so a
@@ -564,5 +570,9 @@ key, an optional certificate pin and an optional body signature (`SiemEndpoint.k
   so they cannot be blocked at DNS without breaking login.
 - **PCAP files are not encrypted** while they exist (at most 24 hours).
 - **No retro-hunt** (5.9).
-- **The Flutter UI** (`flutter/`) is a separate front end and is not covered by
-  this document.
+- **The Flutter UI** (`flutter/`) is a preview that is not built into the APK
+  (it needs `flutter pub get`; until then Settings hides its entry). If it is
+  built, it is not trustworthy yet: its privacy score is fixed at 50 and its
+  cleartext count at 0, "throughput" adds up total bytes, the risk and grade
+  formulas differ from the main app, alert titles are untranslated codes, and its
+  settings switches and three menu entries do nothing.

@@ -43,11 +43,11 @@
     </plurals>
     <string name="ads_off">حظر الإعلانات متوقف</string>
     <string name="ads_blocked_today">المحظور اليوم</string>
-    <string name="ads_cat_counts">%1$d مفعّل · %2$s</string>
+    <string name="ads_cat_counts">%1$,d مفعّل · %2$s</string>
     <string name="ads_custom_allow">سماح مخصّص</string>
     <string name="ads_custom_block">حظر مخصّص</string>
     <string name="ads_delete_rule">حذف القاعدة</string>
-    <string name="ads_source_counts">%1$d من %2$s مفعّلة</string>
+    <string name="ads_source_counts">%1$,d من %2$s مفعّلة</string>
     <string name="ads_on">مفعّل</string>
     <string name="rule_allow_domain_risky">السماح بـ %1$s (مع قبول تحذير البرمجيات الضارة)</string>
     <string name="rule_security_warn_title">هذا الموقع مدرج في قائمة برمجيات ضارة</string>

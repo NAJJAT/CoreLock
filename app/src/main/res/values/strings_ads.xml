@@ -35,11 +35,11 @@
     </plurals>
     <string name="ads_off">Ad blocking is off</string>
     <string name="ads_blocked_today">Blocked today</string>
-    <string name="ads_cat_counts">%1$d active · %2$s</string>
+    <string name="ads_cat_counts">%1$,d active · %2$s</string>
     <string name="ads_custom_allow">Custom allow</string>
     <string name="ads_custom_block">Custom block</string>
     <string name="ads_delete_rule">Delete rule</string>
-    <string name="ads_source_counts">%1$d of %2$s enabled</string>
+    <string name="ads_source_counts">%1$,d of %2$s enabled</string>
     <string name="ads_on">On</string>
     <string name="rule_allow_domain_risky">Allow %1$s (malware warning accepted)</string>
     <string name="rule_security_warn_title">This site is on a malware list</string>

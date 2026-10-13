@@ -410,7 +410,7 @@ fun StatisticsScreen(
                                 Spacer(modifier = Modifier.padding(horizontal = 4.dp))
                                 Column {
                                     Text(item.countryName, style = MaterialTheme.typography.titleSmall, color = PgText)
-                                    Text(item.org, style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                                    item.org?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = PgTextMuted) }
                                 }
                             }
                             Text(

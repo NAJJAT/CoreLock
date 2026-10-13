@@ -3,7 +3,8 @@ package com.privacyguard.app.core.geoip
 data class GeoResult(
     val countryCode: String,
     val countryName: String,
-    val org: String,
+    /** Network owner ("Google LLC"), from the built-in table only; null when only the country is known. */
+    val org: String?,
 )
 
 /** Country name in the current UI language ("Belgium" / "België" / "بلجيكا"). */
@@ -12,11 +13,19 @@ private fun displayCountry(code: String, fallback: String): String =
 
 object GeoIpResolver {
 
+    /**
+     * The built-in table first (it also names the network owner), then the country
+     * the address block is registered in (RIR data, [RegistryTable]). IPv6: null.
+     */
     fun lookup(ip: String): GeoResult? {
-        if (ip.contains(':')) return null  // IPv6 — fallback only
+        if (ip.contains(':')) return null
         val ipInt = ipToInt(ip) ?: return null
         return hardcodedLookup(ipInt, ip)
+            ?: RegistryTable.countryOf(ipInt)?.let { GeoResult(it, displayCountry(it, it), null) }
     }
+
+    /** Loads the registry table in the background; lookups before that use the built-in table only. */
+    fun init(context: android.content.Context) = RegistryTable.load(context)
 
     private fun hardcodedLookup(ipInt: Long, ip: String): GeoResult? {
         for ((network, bits, country, countryName, org) in KNOWN_RANGES) {

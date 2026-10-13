@@ -29,8 +29,10 @@ object LocalDataEraser {
     fun register(l: Listener) { listeners += l }
     fun unregister(l: Listener) { listeners -= l }
 
-    suspend fun eraseAll(context: Context) = withContext(Dispatchers.IO) {
-        val db = AppDatabase.getInstance(context)
+    suspend fun eraseAll(context: Context) = eraseAll(context, AppDatabase.getInstance(context), context.filesDir)
+
+    /** [db] and [filesDir] are parameters so a test can erase its own copies, not the user's. */
+    internal suspend fun eraseAll(context: Context, db: AppDatabase, filesDir: File) = withContext(Dispatchers.IO) {
         com.privacyguard.app.core.pcap.PcapWriter.stopCapture()
         deleteTables(db)
         // The VPN saves its in-memory profiles every few minutes; one save may already
@@ -39,8 +41,9 @@ object LocalDataEraser {
         deleteTables(db)
         com.privacyguard.app.core.pcap.PcapWriter.forgetLastCapture()
         // PCAPs, reports and CSV exports: plaintext copies of history.
-        File(context.filesDir, "exports").deleteRecursively()
+        File(filesDir, "exports").deleteRecursively()
         com.privacyguard.core.tls.SharedPrefsCtBaselineStore.clear(context)
+        context.getSharedPreferences(com.privacyguard.app.core.behavior.BehaviorNotifier.PREFS, Context.MODE_PRIVATE).edit().clear().apply()
         // Deleted rows stay in free pages until the file is rewritten.
         runCatching { db.openHelper.writableDatabase.execSQL("VACUUM") }
         Unit

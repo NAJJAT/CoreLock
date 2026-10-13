@@ -109,6 +109,12 @@ class DomainFilterTest {
     }
 
     @Test
+    fun size_counts_each_name_once() {
+        filter.rebuild(listOf("a.com", "a.com", "*.b.com", "*.b.com", "b.com"))
+        assertEquals(3L, filter.size)
+    }
+
+    @Test
     fun rebuild_skips_blank_and_comment_lines() {
         filter.rebuild(listOf("# comment", "", "  ", "valid.com"))
         assertEquals(1L, filter.size)

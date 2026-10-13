@@ -239,8 +239,8 @@ SQLCipher, WorkManager, AppCompat per-app locales, BouncyCastle and OkHttp
 - **Encryption at rest.** SQLCipher, with a passphrase wrapped by an Android
   Keystore key, so the database files are unreadable off the device.
   Plaintext databases from older installs are encrypted in place. The key is
-  only unwrapped when a database is first used, off the main thread. Queued
-  SIEM batch files (enterprise) are encrypted with a Keystore key as well.
+  only unwrapped when a database is first used, off the main thread. SIEM
+  events waiting to be sent (enterprise) are held in memory only.
 - **History tables:**
   - `connections`: app, IP/port, hostname, SNI, bytes, time, encryption, foreground, screen.
   - `dns_queries`: app (when known), domain, blocked, screen off, app foreground.

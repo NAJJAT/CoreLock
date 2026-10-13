@@ -37,6 +37,11 @@ object BehaviorDnaAnalyzer {
     private const val LEARNING_WINDOW_MS = 7L * DAY_MS
     private const val NEW_DESTINATION_WINDOW_MS = DAY_MS
     private const val UPLOAD_SPIKE_MIN_BYTES = 2_000_000L
+    /** A background upload this big is worth a notification, not only a line on Home. */
+    const val UPLOAD_HIGH_BYTES = 10_000_000L
+
+    fun uploadSeverity(bytesOut: Long): BehaviorSeverity =
+        if (bytesOut >= UPLOAD_HIGH_BYTES) BehaviorSeverity.HIGH else BehaviorSeverity.MEDIUM
 
     fun summarizeAll(profiles: List<ConnectionProfile>, now: Long = System.currentTimeMillis()): List<AppBehaviorSummary> =
         profiles
@@ -142,7 +147,7 @@ object BehaviorDnaAnalyzer {
                     findings += BehaviorFinding(
                         packageName = packageName,
                         hostname = profile.hostname,
-                        severity = BehaviorSeverity.MEDIUM,
+                        severity = uploadSeverity(profile.totalBytesOut),
                         title = "Upload spike",
                         summary = "${profile.hostname} uploaded much more data than this app normally sends.",
                         evidence = listOf(

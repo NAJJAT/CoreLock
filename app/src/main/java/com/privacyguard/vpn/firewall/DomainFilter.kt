@@ -35,6 +35,7 @@ class DomainFilter(private val useNativeBloom: Boolean = true) {
     fun addDomain(domain: String) {
         val (name, wild) = normalize(domain) ?: return
         val current = lists
+        if (name in (if (wild) current.wildcards else current.names)) return
         lists = if (wild) Lists(current.names, current.wildcards + name)
         else Lists(current.names + name, current.wildcards)
         insertedCount.incrementAndGet()
@@ -48,18 +49,17 @@ class DomainFilter(private val useNativeBloom: Boolean = true) {
         val names = HashSet<String>()
         val wildcards = HashSet<String>()
         val nativeList = if (useNativeBloom) mutableListOf<String>() else null
-        var count = 0L
         for (raw in domains) {
             val line = raw.trim()
             if (line.isEmpty() || line.startsWith('#')) continue
             val (name, wild) = normalize(line) ?: continue
             if (wild) wildcards += name else names += name
             nativeList?.add(if (wild) "*.$name" else name)
-            count++
         }
         synchronized(this) {
             lists = Lists(names, wildcards)
-            insertedCount.set(count)
+            // Distinct entries: the lists overlap, and counting lines overstated the size.
+            insertedCount.set((names.size + wildcards.size).toLong())
         }
 
         // Accelerate lookups with native bloom filter when Rust is available

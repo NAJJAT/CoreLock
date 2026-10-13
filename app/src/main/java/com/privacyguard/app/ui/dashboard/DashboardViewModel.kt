@@ -17,13 +17,11 @@ import com.privacyguard.app.data.db.DnsAnomalyEntity
 import com.privacyguard.app.data.db.NetworkTrustEntity
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
 import com.privacyguard.app.data.repository.MetadataRepo
-import com.privacyguard.app.core.behavior.BehaviorSeverity
 import com.privacyguard.app.ui.components.formatBytes
 import com.privacyguard.app.vpn.KillSwitch
 import com.privacyguard.app.ui.alerts.AlertFeed
 import com.privacyguard.app.ui.traffic.EvidenceKind
 import com.privacyguard.app.ui.traffic.HomeEvidence
-import com.privacyguard.platform.android.NotificationHelper
 import com.privacyguard.platform.android.PrivacyVpnService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -119,8 +117,6 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     private val db = AppDatabase.getInstance(app)
     private val prefs = SettingsPreferences.getInstance(app)
     private val metadataRepo = MetadataRepo(db.connectionProfileDao())
-    private val notifHelper = NotificationHelper(app)
-    private val notifiedBehaviorKeys = mutableSetOf<String>()
     private val evidence = HomeEvidence(db)
     private val alertFeed = AlertFeed(app)
 
@@ -277,27 +273,6 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             evidenceAt = at,
         )
         slowCacheReady = true
-
-        // Notify once per HIGH-severity behavior finding per VPN session
-        run {
-            behaviorFindings
-                .filter { it.severity == BehaviorSeverity.HIGH }
-                .forEach { finding ->
-                    val key = "${finding.packageName}|${finding.hostname}|${finding.title}"
-                    if (notifiedBehaviorKeys.add(key) && prefs.notificationsEnabled.value) {
-                        notifHelper.postBehaviorAlert(
-                            packageName = finding.packageName,
-                            title = com.privacyguard.app.ui.text.FindingText.title(getApplication(), finding),
-                            summary = com.privacyguard.app.ui.text.FindingText.summary(getApplication(), finding),
-                            mainActivityClass = try {
-                                Class.forName("com.privacyguard.app.MainActivity")
-                            } catch (_: ClassNotFoundException) {
-                                DashboardViewModel::class.java
-                            },
-                        )
-                    }
-                }
-        }
     }
 
     private fun refreshFast() {

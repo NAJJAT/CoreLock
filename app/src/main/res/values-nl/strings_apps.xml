@@ -15,8 +15,8 @@
         <item quantity="other">%d signalen</item>
     </plurals>
     <plurals name="appd_domains">
-        <item quantity="one">%d domein</item>
-        <item quantity="other">%d domeinen</item>
+        <item quantity="one">%,d domein</item>
+        <item quantity="other">%,d domeinen</item>
     </plurals>
     <plurals name="appd_sdks">
         <item quantity="one">%d SDK</item>

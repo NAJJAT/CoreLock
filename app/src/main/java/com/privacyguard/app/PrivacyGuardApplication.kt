@@ -25,6 +25,8 @@ class PrivacyGuardApplication : Application() {
         AppSecurityMonitor.refresh(this)
         NotificationHelper.createNotificationChannels(this)
         BlocklistManager.initialize(this)
+        // Country table for the Stats map and connection details (loads on its own thread).
+        com.privacyguard.app.core.geoip.GeoIpResolver.init(this)
         FlavorStartup.onCreate(this)
         PruneWorker.schedule(this)
     }

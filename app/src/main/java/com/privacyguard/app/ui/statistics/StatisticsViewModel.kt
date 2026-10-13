@@ -46,7 +46,8 @@ data class BlockedDomainStat(
 data class CountryStat(
     val countryCode: String,
     val countryName: String,
-    val org: String,
+    /** Largest known network owner among the connections; null when none is known. */
+    val org: String?,
     val connectionCount: Int,
 )
 
@@ -204,7 +205,7 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
                 CountryStat(
                     countryCode     = results.first().countryCode,
                     countryName     = results.first().countryName,
-                    org             = results.first().org,
+                    org             = results.mapNotNull { it.org }.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key,
                     connectionCount = results.size,
                 )
             }

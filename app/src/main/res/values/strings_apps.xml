@@ -15,8 +15,8 @@
         <item quantity="other">%d flags</item>
     </plurals>
     <plurals name="appd_domains">
-        <item quantity="one">%d domain</item>
-        <item quantity="other">%d domains</item>
+        <item quantity="one">%,d domain</item>
+        <item quantity="other">%,d domains</item>
     </plurals>
     <plurals name="appd_sdks">
         <item quantity="one">%d SDK</item>

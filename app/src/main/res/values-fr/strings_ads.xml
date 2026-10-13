@@ -37,11 +37,11 @@
     </plurals>
     <string name="ads_off">Le blocage des pubs est désactivé</string>
     <string name="ads_blocked_today">Bloquées aujourd’hui</string>
-    <string name="ads_cat_counts">%1$d actifs · %2$s</string>
+    <string name="ads_cat_counts">%1$,d actifs · %2$s</string>
     <string name="ads_custom_allow">Autorisation personnalisée</string>
     <string name="ads_custom_block">Blocage personnalisé</string>
     <string name="ads_delete_rule">Supprimer la règle</string>
-    <string name="ads_source_counts">%1$d sur %2$s activés</string>
+    <string name="ads_source_counts">%1$,d sur %2$s activés</string>
     <string name="ads_on">Activé</string>
     <string name="rule_allow_domain_risky">Autoriser %1$s (alerte malware acceptée)</string>
     <string name="rule_security_warn_title">Ce site figure sur une liste de malwares</string>

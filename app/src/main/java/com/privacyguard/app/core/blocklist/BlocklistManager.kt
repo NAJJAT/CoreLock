@@ -72,6 +72,8 @@ object BlocklistManager {
             }
             _size.value = repo.totalCount()
             _lastUpdate.value = System.currentTimeMillis()
+            // With protection on, the VPN reloads and refreshes the start-up cache itself.
+            if (!com.privacyguard.platform.android.PrivacyVpnService.isRunning) runCatching { writeStartupCache(ctx, repo) }
             // The running VPN keeps its own in-memory filter; tell it to reload.
             com.privacyguard.app.data.repository.BlocklistSyncBus.publish()
             UpdateResult.Success(totalEntries)
@@ -93,6 +95,18 @@ object BlocklistManager {
         } catch (e: Exception) {
             UpdateResult.Failure(e.message ?: "Unknown error")
         }
+    }
+
+    /**
+     * Lists downloaded while protection was off: write the cache the next VPN start
+     * reads, so it does not wait half a minute for the encrypted database.
+     */
+    private suspend fun writeStartupCache(ctx: Context, repo: BlocklistRepo) {
+        val levels = com.privacyguard.core.filter.ProtectionLevels
+        val level = levels.parse(com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(ctx).protectionLevel.value)
+        val blocked = repo.domainsIn(levels.categoriesFor(level)) +
+            (if (levels.includesCuratedAdHosts(level)) CuratedAdDomains.all else emptyList())
+        BlocklistCache.write(ctx, level.name, blocked, repo.domainsIn(setOf(BlocklistRepo.CAT_MALWARE)))
     }
 
     private fun blocklistRepo(ctx: Context) = BlocklistRepo(

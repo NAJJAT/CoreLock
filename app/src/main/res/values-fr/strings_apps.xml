@@ -16,9 +16,9 @@
         <item quantity="other">%d signaux</item>
     </plurals>
     <plurals name="appd_domains">
-        <item quantity="one">%d domaine</item>
-        <item quantity="many">%d domaines</item>
-        <item quantity="other">%d domaines</item>
+        <item quantity="one">%,d domaine</item>
+        <item quantity="many">%,d domaines</item>
+        <item quantity="other">%,d domaines</item>
     </plurals>
     <plurals name="appd_sdks">
         <item quantity="one">%d SDK</item>

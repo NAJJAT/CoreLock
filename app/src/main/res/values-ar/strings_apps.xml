@@ -22,9 +22,9 @@
         <item quantity="zero">لا نطاقات</item>
         <item quantity="one">نطاق واحد</item>
         <item quantity="two">نطاقان</item>
-        <item quantity="few">%d نطاقات</item>
-        <item quantity="many">%d نطاقًا</item>
-        <item quantity="other">%d نطاق</item>
+        <item quantity="few">%,d نطاقات</item>
+        <item quantity="many">%,d نطاقًا</item>
+        <item quantity="other">%,d نطاق</item>
     </plurals>
     <plurals name="appd_sdks">
         <item quantity="zero">لا حِزم SDK</item>
