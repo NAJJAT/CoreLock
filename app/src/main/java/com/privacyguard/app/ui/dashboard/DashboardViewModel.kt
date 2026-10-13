@@ -364,21 +364,13 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             ),
             // Read from the inspection setting itself, never assumed: enterprise builds
             // with HTTPS inspection on do decrypt traffic.
-            if (inspectionActive) SecurityCardState(
-                kind = CardKind.NO_DECRYPTION,
-                title = str(R.string.dash_card_decrypt_on),
-                subtitle = str(R.string.dash_card_decrypt_on_desc),
-                status = str(R.string.dash_status_decrypting),
-                severity = CardSeverity.WARNING,
-                value = str(R.string.dash_payloads),
-            ) else SecurityCardState(
-                kind = CardKind.NO_DECRYPTION,
-                title = str(R.string.dash_card_no_decrypt),
-                subtitle = str(R.string.dash_card_no_decrypt_desc),
-                status = str(R.string.dash_status_off),
-                severity = CardSeverity.GOOD,
-                value = str(R.string.dash_headers_only),
-            ),
+            DecryptionCard.of(inspectionActive).let { d ->
+                SecurityCardState(
+                    kind = CardKind.NO_DECRYPTION,
+                    title = str(d.title), subtitle = str(d.subtitle), status = str(d.status),
+                    severity = d.severity, value = str(d.value),
+                )
+            },
             SecurityCardState(
                 kind = CardKind.ENTROPY,
                 title = str(R.string.dash_card_entropy),
@@ -510,3 +502,27 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
     }
 }
 
+
+/**
+ * What the decryption card says. Read from the real inspection state, never assumed:
+ * an enterprise build with HTTPS inspection on does decrypt traffic, and saying
+ * "No payload decryption" then would be false.
+ */
+data class DecryptionCard(
+    @androidx.annotation.StringRes val title: Int,
+    @androidx.annotation.StringRes val subtitle: Int,
+    @androidx.annotation.StringRes val status: Int,
+    @androidx.annotation.StringRes val value: Int,
+    val severity: CardSeverity,
+) {
+    companion object {
+        fun of(inspectionActive: Boolean): DecryptionCard =
+            if (inspectionActive) DecryptionCard(
+                R.string.dash_card_decrypt_on, R.string.dash_card_decrypt_on_desc,
+                R.string.dash_status_decrypting, R.string.dash_payloads, CardSeverity.WARNING,
+            ) else DecryptionCard(
+                R.string.dash_card_no_decrypt, R.string.dash_card_no_decrypt_desc,
+                R.string.dash_status_off, R.string.dash_headers_only, CardSeverity.GOOD,
+            )
+    }
+}

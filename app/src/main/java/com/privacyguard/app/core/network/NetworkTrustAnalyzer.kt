@@ -45,7 +45,8 @@ object NetworkTrustAnalyzer {
         var penalty = 0
         val reasons = mutableListOf<String>()
 
-        val cleartext = connections.count { it.encryptionStatus == "CLEARTEXT" }
+        // Plain HTTP to devices on this network (router, Chromecast) is not a trust signal.
+        val cleartext = connections.count { com.privacyguard.app.ui.traffic.HomeEvidence.isInternetCleartext(it) }
         if (cleartext > 0) {
             penalty += minOf(25, cleartext * 3)
             reasons += "$cleartext cleartext sessions"

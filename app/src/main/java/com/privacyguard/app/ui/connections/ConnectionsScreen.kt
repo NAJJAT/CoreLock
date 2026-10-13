@@ -49,6 +49,8 @@ import com.privacyguard.app.ui.theme.PgAccent
 import com.privacyguard.app.ui.theme.PgAccentDim
 import com.privacyguard.app.ui.theme.PgBackgroundAlt
 import com.privacyguard.app.ui.theme.PgDanger
+import com.privacyguard.app.ui.theme.PgInfo
+import com.privacyguard.app.ui.theme.PgInfoDim
 import com.privacyguard.app.ui.theme.PgDangerDim
 import com.privacyguard.app.ui.theme.PgPanelRaised
 import com.privacyguard.app.ui.theme.PgText
@@ -168,6 +170,7 @@ fun ConnectionsScreen(
         }
 
         items(connections, key = { it.id }) { connection ->
+            val localLabel = stringResource(R.string.trf_local_network)
             PanelCard(
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
@@ -178,6 +181,7 @@ fun ConnectionsScreen(
                         connection.isBlocked -> PgDanger to PgDangerDim
                         connection.securityInfo.contains("TLS 1.0", true) || connection.securityInfo.contains("TLS 1.1", true) ->
                             PgWarning to PgWarningDim
+                        connection.isLocal -> PgInfo to PgInfoDim
                         connection.securityInfo == "CLEARTEXT" -> PgDanger to PgDangerDim
                         else -> PgAccent to PgAccentDim
                     }
@@ -245,8 +249,10 @@ fun ConnectionsScreen(
                     Text(
                         text = listOf(
                             connection.hostName ?: connection.orgHint?.let { "${connection.destination} ($it)" } ?: connection.destination,
-                            connection.securityInfo.takeIf { it.isNotBlank() && !it.equals("Unknown", ignoreCase = true) },
-                            connection.encryptionInfo.takeIf { it.isNotBlank() },
+                            if (connection.isLocal) localLabel
+                            else connection.securityInfo.takeIf { it.isNotBlank() && !it.equals("Unknown", ignoreCase = true) },
+                            // The TLS version only when it adds something ("TLS_1_3 • TLS_1_3" said it twice).
+                            connection.encryptionInfo.takeIf { it.isNotBlank() && it != connection.securityInfo },
                         ).filterNotNull().joinToString(" • "),
                         style = MaterialTheme.typography.bodySmall,
                         color = PgTextMuted,
@@ -305,7 +311,7 @@ private fun ConnectionDetailDialog(
                 DetailRow(stringResource(R.string.conn_app), connection.appName)
                 DetailRow(stringResource(R.string.conn_package), connection.packageName)
                 DetailRow(stringResource(R.string.conn_dns_name), connection.hostName ?: detail.reverseDns ?: if (detail.isResolvingReverseDns) stringResource(R.string.conn_resolving) else stringResource(R.string.conn_unknown))
-                DetailRow(stringResource(R.string.conn_security), listOf(connection.securityInfo, connection.encryptionInfo).filter { it.isNotBlank() }.joinToString(" / "))
+                DetailRow(stringResource(R.string.conn_security), if (connection.isLocal) stringResource(R.string.trf_local_network) else listOf(connection.securityInfo, connection.encryptionInfo).filter { it.isNotBlank() }.distinct().joinToString(" / "))
                 DetailRow(stringResource(R.string.conn_transferred), stringResource(R.string.conn_up_down, formatBytes(connection.bytesSent), formatBytes(connection.bytesReceived)))
 
                 Spacer(modifier = Modifier.height(12.dp))

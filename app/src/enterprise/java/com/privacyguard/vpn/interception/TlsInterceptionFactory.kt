@@ -24,7 +24,10 @@ object TlsInterceptionFactory {
      * consent still valid, the same test [MitmTlsInterception] applies per connection.
      */
     fun isInspectionActive(context: Context): Boolean =
-        MitmConfig(context).let { it.isEnabled && it.isConsentValid() }
+        MitmConfig(context).let { isInspectionActive(it.isEnabled, it.isConsentValid()) }
+
+    /** Decrypting only when switched on and consented to; either alone is not enough. */
+    internal fun isInspectionActive(enabled: Boolean, consentValid: Boolean): Boolean = enabled && consentValid
 
     /**
      * Called from the VPN's background startup. The CA (a key that can sign for any

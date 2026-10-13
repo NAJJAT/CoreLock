@@ -18,7 +18,7 @@ class DnsAnomalyRepo(private val dnsAnomalyDao: DnsAnomalyDao) {
             description = anomaly.description,
             severity = anomaly.severity,
             networkKey = networkKey,
-        ))
+        ), dedupeBase = DnsAnomalyDetector.baseForDedupe(anomaly))
     }
 
     suspend fun recent(limit: Int = 100): List<DnsAnomalyDetector.Anomaly> = withContext(Dispatchers.IO) {

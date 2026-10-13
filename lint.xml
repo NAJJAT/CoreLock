@@ -8,4 +8,9 @@
     <issue id="TypographyEllipsis" severity="ignore" />
     <issue id="PluralsCandidate" severity="ignore" />
     <issue id="ModifierParameter" severity="ignore" />
+    <!-- A translation whose format arguments differ from English crashes at runtime
+         (UnknownFormatConversionException), so these must fail the build. -->
+    <issue id="StringFormatInvalid" severity="error" />
+    <issue id="StringFormatMatches" severity="error" />
+    <issue id="StringFormatCount" severity="error" />
 </lint>

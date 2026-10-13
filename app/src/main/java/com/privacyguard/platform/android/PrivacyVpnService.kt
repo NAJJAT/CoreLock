@@ -798,7 +798,8 @@ class PrivacyVpnService : VpnService() {
 
             com.privacyguard.app.vpn.UidMapper.evict(session.key.sourcePort, session.key.protocol)
             val snapshot = session.snapshot()
-            if (snapshot.encryptionStatus == EncryptionStatus.CLEARTEXT) {
+            if (snapshot.encryptionStatus == EncryptionStatus.CLEARTEXT &&
+                !com.privacyguard.app.core.network.LocalNetwork.isLocalAddress(snapshot.key.destinationIp)) {
                 totalCleartext.incrementAndGet()
                 val pkg = snapshot.ownerPackage
                 if (!pkg.isNullOrBlank() && cleartextNotifiedPackages.add(pkg)) {

@@ -38,7 +38,7 @@ object ItReportExporter {
 
         val backgroundCount = allowed.count { it.wasBackground }
         // Only plain HTTP we actually saw; "unknown" is not evidence of cleartext.
-        val cleartextCount = allowed.count { it.encryptionStatus == "CLEARTEXT" }
+        val cleartextCount = allowed.count { com.privacyguard.app.ui.traffic.HomeEvidence.isInternetCleartext(it) }
         val json = JSONObject().apply {
             put("generatedAt", stamp)
             put("privacyScore", privacyScore.score)

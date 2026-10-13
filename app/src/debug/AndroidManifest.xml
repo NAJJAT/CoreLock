@@ -13,6 +13,7 @@
                 <action android:name="com.privacyguard.debug.ALLOW_SCREENSHOTS" />
                 <action android:name="com.privacyguard.debug.FAIL_NEXT_START" />
                 <action android:name="com.privacyguard.debug.DUMP_THREADS" />
+                <action android:name="com.privacyguard.debug.DUMP_PROFILES" />
             </intent-filter>
         </receiver>
     </application>

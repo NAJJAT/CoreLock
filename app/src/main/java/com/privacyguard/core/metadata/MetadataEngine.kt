@@ -91,7 +91,10 @@ class MetadataEngine {
         // Risk scoring
         val signals = mutableListOf<RiskSignal>()
         if (isKnownTracker(host)) signals += RiskSignal(RiskCode.KNOWN_TRACKER, "Known tracker domain", 6)
-        if (encStatus == EncryptionStatus.CLEARTEXT) signals += RiskSignal(RiskCode.CLEARTEXT, "Unencrypted connection", 7)
+        // Plain HTTP to a device on your own network (router, Chromecast) is not a privacy risk.
+        val local = com.privacyguard.app.core.network.LocalNetwork.isLocalAddress(snapshot.key.destinationIp) ||
+            com.privacyguard.app.core.network.LocalNetwork.isLocalHost(host)
+        if (encStatus == EncryptionStatus.CLEARTEXT && !local) signals += RiskSignal(RiskCode.CLEARTEXT, "Unencrypted connection", 7)
         if (encStatus == EncryptionStatus.WEAK_TLS) signals += RiskSignal(RiskCode.WEAK_TLS, "Weak TLS version", 4)
         if (bgRatio > 0.8f && count > 5) signals += RiskSignal(RiskCode.BACKGROUND_ONLY, "Mostly background connections", 5)
         if (avgInterval in 1L..60_000L && count > 10 && !com.privacyguard.app.core.detection.KnownPushHosts.isPushHost(host)) {

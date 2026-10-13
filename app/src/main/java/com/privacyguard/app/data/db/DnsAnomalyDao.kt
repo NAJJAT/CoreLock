@@ -15,9 +15,19 @@ interface DnsAnomalyDao {
      * One anomaly per app and host per day, whatever its type, so the detector's
      * in-memory cooldown also holds across VPN restarts. Returns whether stored.
      */
+    @Query("""
+        SELECT COUNT(*) FROM dns_anomalies
+        WHERE packageName = :pkg AND (domain = :base OR domain LIKE '%.' || :base) AND timestamp > :since
+    """)
+    suspend fun countForBaseSince(pkg: String, base: String, since: Long): Int
+
     @Transaction
-    suspend fun insert(anomaly: DnsAnomalyEntity): Boolean {
-        if (countForSince(anomaly.packageName, anomaly.domain, anomaly.timestamp - TlsAlertDao.ALERT_DEDUP_MS) > 0) return false
+    suspend fun insert(anomaly: DnsAnomalyEntity, dedupeBase: String? = null): Boolean {
+        val since = anomaly.timestamp - TlsAlertDao.ALERT_DEDUP_MS
+        // Name-shape findings: once per app and base domain (their hosts are all unique).
+        val seen = if (dedupeBase != null) countForBaseSince(anomaly.packageName, dedupeBase, since)
+            else countForSince(anomaly.packageName, anomaly.domain, since)
+        if (seen > 0) return false
         insertRow(anomaly)
         return true
     }

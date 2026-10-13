@@ -113,7 +113,7 @@
     <string name="ev_uploads_24h">Uploads · laatste 24 u</string>
     <string name="ev_uploads_24h_def">Verbindingen die gegevens verstuurden terwijl de app niet in beeld was, grootste upload eerst. Uploads die je zelf doet (app in beeld) staan er niet bij.</string>
     <string name="ev_beacons_24h">Herhalende patronen · laatste 24 u</string>
-    <string name="ev_beacons_24h_def">Dezelfde app die dezelfde host met bijna vaste tussenpozen benadert (6 keer of vaker, spreiding onder 25 %), als een timer en niet als een mens.</string>
+    <string name="ev_beacons_24h_def" formatted="false">Dezelfde app die dezelfde host met bijna vaste tussenpozen benadert (6 keer of vaker, spreiding onder 25 %), als een timer en niet als een mens.</string>
     <string name="ev_entropy_7d">Willekeurig ogende domeinen · laatste 7 dagen</string>
     <string name="ev_entropy_7d_def">DNS-namen die door een computer gemaakt lijken. Sommige CDN’s doen dat ook.</string>
     <string name="ev_behavior">Gedragsveranderingen</string>
@@ -132,4 +132,5 @@
     <string name="sleep_definition">‘Inactief’ betekent dat het scherm uit stond. Apps worden gerangschikt op de DNS-opzoekingen die ze deden terwijl het scherm uit stond in de gekozen periode. Tik op een app om alle verbindingen te zien.</string>
     <string name="ev_connections_24h">Verbindingen · afgelopen 24 u</string>
     <string name="ev_data_24h">Overgedragen gegevens · afgelopen 24 u</string>
+    <string name="trf_local_network">Lokaal netwerk</string>
 </resources>

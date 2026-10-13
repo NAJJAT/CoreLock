@@ -42,10 +42,30 @@ class DebugHooksReceiver : BroadcastReceiver() {
                     stack.take(25).forEach { Log.w(TAG, "    at $it") }
                 }
             }
+            ACTION_DUMP_PROFILES -> dumpProfiles(context, intent.getStringExtra("package"))
             ACTION_FAIL_NEXT_START -> {
                 context.getSharedPreferences(DEBUG_PREFS, Context.MODE_PRIVATE)
                     .edit().putBoolean(KEY_FAIL_NEXT_START, true).commit()
                 Log.i(TAG, "Next VPN start will fail right after the tunnel is established")
+            }
+        }
+    }
+
+    /**
+     * Behaviour-profile totals in logcat (the database is encrypted): used to check
+     * that counts accumulate across VPN restarts.
+     *   adb shell am broadcast -a com.privacyguard.debug.DUMP_PROFILES [--es package PKG] -p PKG_OF_APP
+     */
+    private fun dumpProfiles(context: Context, pkg: String?) {
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val rows = AppDatabase.getInstance(context).connectionProfileDao().allProfiles()
+                    .filter { pkg == null || it.packageName == pkg }
+                Log.i(TAG, "PROFILES package=${pkg ?: "*"} profiles=${rows.size} connections=${rows.sumOf { it.connectionCount }} " +
+                    "maxCount=${rows.maxOfOrNull { it.connectionCount } ?: 0}")
+            } finally {
+                pending.finish()
             }
         }
     }
@@ -71,6 +91,7 @@ class DebugHooksReceiver : BroadcastReceiver() {
         const val ACTION_ALLOW_SCREENSHOTS = "com.privacyguard.debug.ALLOW_SCREENSHOTS"
         const val ACTION_FAIL_NEXT_START = "com.privacyguard.debug.FAIL_NEXT_START"
         const val ACTION_DUMP_THREADS = "com.privacyguard.debug.DUMP_THREADS"
+        const val ACTION_DUMP_PROFILES = "com.privacyguard.debug.DUMP_PROFILES"
         const val DEBUG_PREFS = "debug_hooks"
         const val KEY_ALLOW_SCREENSHOTS = "allow_screenshots"
         const val KEY_FAIL_NEXT_START = "fail_next_start"

@@ -117,7 +117,7 @@
     <string name="ev_uploads_24h">Envois · 24 dernières h</string>
     <string name="ev_uploads_24h_def">Connexions qui ont envoyé des données pendant que l’app n’était pas à l’écran, plus gros envoi en premier. Les envois que vous faites vous-même (app à l’écran) ne sont pas listés.</string>
     <string name="ev_beacons_24h">Motifs répétitifs · 24 dernières h</string>
-    <string name="ev_beacons_24h_def">La même app qui contacte le même hôte à intervalles presque constants (6 fois ou plus, écart inférieur à 25 %), comme une minuterie plutôt qu’une personne.</string>
+    <string name="ev_beacons_24h_def" formatted="false">La même app qui contacte le même hôte à intervalles presque constants (6 fois ou plus, écart inférieur à 25 %), comme une minuterie plutôt qu’une personne.</string>
     <string name="ev_entropy_7d">Domaines d’apparence aléatoire · 7 derniers jours</string>
     <string name="ev_entropy_7d_def">Noms DNS qui semblent générés par une machine. Certains CDN le font aussi.</string>
     <string name="ev_behavior">Changements de comportement</string>
@@ -136,4 +136,5 @@
     <string name="sleep_definition">« Inactif » signifie écran éteint. Les apps sont classées selon les requêtes DNS faites écran éteint sur la période choisie. Touchez une app pour voir toutes ses connexions.</string>
     <string name="ev_connections_24h">Connexions · dernières 24 h</string>
     <string name="ev_data_24h">Données transférées · dernières 24 h</string>
+    <string name="trf_local_network">Réseau local</string>
 </resources>

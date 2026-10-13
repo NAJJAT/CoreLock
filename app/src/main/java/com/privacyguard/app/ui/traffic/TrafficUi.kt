@@ -194,7 +194,8 @@ fun TrafficRowItem(
         }
         Spacer(Modifier.height(4.dp))
         Text(
-            listOf(
+            listOfNotNull(
+                if (row.local) stringResource(R.string.trf_local_network) else null,
                 if (row.isLookup) stringResource(R.string.trf_lookup_only)
                 else stringResource(R.string.trf_bytes, formatBytes(row.bytesSent), formatBytes(row.bytesReceived)),
                 stringResource(

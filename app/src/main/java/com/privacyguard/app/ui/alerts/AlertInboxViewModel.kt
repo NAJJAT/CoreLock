@@ -74,6 +74,7 @@ class AlertFeed(private val app: Application) {
         val tlsItems = db.tlsAlertDao().since(since).map { it.toAlertItem() }
         val cleartextItems = db.connectionDao()
             .cleartextSince(since)
+            .filter { com.privacyguard.app.ui.traffic.HomeEvidence.isInternetCleartext(it) }
             .distinctBy { it.packageName }
             .map { conn ->
                 AlertItem(

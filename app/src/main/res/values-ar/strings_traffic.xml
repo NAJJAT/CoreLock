@@ -129,7 +129,7 @@
     <string name="ev_uploads_24h">عمليات الرفع · آخر 24 ساعة</string>
     <string name="ev_uploads_24h_def">اتصالات أرسلت بيانات بينما لم يكن التطبيق على الشاشة، الأكبر أولًا. لا تُعرض عمليات الرفع التي تقوم بها بنفسك (والتطبيق على الشاشة).</string>
     <string name="ev_beacons_24h">أنماط متكررة · آخر 24 ساعة</string>
-    <string name="ev_beacons_24h_def">التطبيق نفسه يتصل بالمضيف نفسه على فترات شبه ثابتة (6 مرات أو أكثر، بتفاوت أقل من 25 %)، كمؤقّت لا كإنسان.</string>
+    <string name="ev_beacons_24h_def" formatted="false">التطبيق نفسه يتصل بالمضيف نفسه على فترات شبه ثابتة (6 مرات أو أكثر، بتفاوت أقل من 25 %)، كمؤقّت لا كإنسان.</string>
     <string name="ev_entropy_7d">نطاقات تبدو عشوائية · آخر 7 أيام</string>
     <string name="ev_entropy_7d_def">أسماء DNS تبدو مولّدة آليًا. تفعل بعض شبكات CDN ذلك أيضًا.</string>
     <string name="ev_behavior">تغيّرات في السلوك</string>
@@ -148,4 +148,5 @@
     <string name="sleep_definition">«الخمول» يعني أن الشاشة كانت مطفأة. تُرتَّب التطبيقات حسب طلبات DNS التي أجرتها والشاشة مطفأة خلال الفترة المختارة. اضغط تطبيقًا لعرض كل اتصالاته.</string>
     <string name="ev_connections_24h">الاتصالات · آخر 24 ساعة</string>
     <string name="ev_data_24h">البيانات المنقولة · آخر 24 ساعة</string>
+    <string name="trf_local_network">الشبكة المحلية</string>
 </resources>

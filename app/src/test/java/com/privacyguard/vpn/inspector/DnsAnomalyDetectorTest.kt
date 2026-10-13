@@ -45,6 +45,22 @@ class DnsAnomalyDetectorTest {
     }
 
     @Test
+    fun cdn_names_are_not_reported_for_their_shape() {
+        val d = DnsAnomalyDetector()
+        val host = "35fa45fc-6c51-49ae-a008-f4490c1608d3-netseer-ipaddr-assoc.xy.fbcdn.net"
+        assertTrue(d.analyze("com.instagram.android", host).isEmpty())
+    }
+
+    @Test
+    fun unique_long_names_under_one_base_domain_report_once() {
+        val d = DnsAnomalyDetector()
+        val a = d.analyze("com.app", "b463e45b-57ac-4aa7-993d-876de14e10b6-assoc.xy.example.org")
+        val b = d.analyze("com.app", "c573f56c-68bd-5bb8-aa4e-987ef25f21c7-assoc.xy.example.org")
+        assertEquals(1, a.size)
+        assertTrue(b.isEmpty())
+    }
+
+    @Test
     fun unattributed_lookups_use_the_unknown_key() {
         val d = DnsAnomalyDetector()
         val a = d.analyze(null, "x".repeat(60) + ".example.com")

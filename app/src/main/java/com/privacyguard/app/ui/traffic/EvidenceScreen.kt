@@ -170,10 +170,12 @@ private fun evidenceTitle(kind: EvidenceKind, ev: Evidence?): Pair<String, Strin
     EvidenceKind.ENCRYPTION_24H -> {
         val rows = (ev as? Evidence.Rows)?.rows.orEmpty()
         // Same EncryptionShare as the Home percentage: encrypted of identified, unknown apart.
-        val encrypted = rows.count { it.encrypted }
-        val identified = encrypted + rows.count { it.encryption == "CLEARTEXT" }
+        // Local-network rows are not internet traffic and are left out, as on Home.
+        val internet = rows.filterNot { it.local }
+        val encrypted = internet.count { it.encrypted }
+        val identified = encrypted + internet.count { it.encryption == "CLEARTEXT" }
         val nf = java.text.NumberFormat.getIntegerInstance()
-        stringResource(R.string.ev_encryption_24h) to stringResource(R.string.ev_encryption_24h_def, nf.format(encrypted), nf.format(identified), nf.format(rows.size - identified))
+        stringResource(R.string.ev_encryption_24h) to stringResource(R.string.ev_encryption_24h_def, nf.format(encrypted), nf.format(identified), nf.format(internet.size - identified))
     }
     EvidenceKind.NIGHT_24H -> stringResource(R.string.ev_night_24h) to stringResource(R.string.ev_night_24h_def)
     EvidenceKind.BACKGROUND_24H -> stringResource(R.string.ev_background_24h) to stringResource(R.string.ev_background_24h_def)

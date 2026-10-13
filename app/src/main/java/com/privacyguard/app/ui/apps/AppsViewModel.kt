@@ -169,8 +169,8 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
                     packageName       = pkg,
                     totalDestinations = hosts.size,
                     suspiciousCount   = rows.count { it.riskScore >= 40 },
-                    cleartextCount    = connectionRows.count { it.encryptionStatus == "CLEARTEXT" } +
-                        liveRows.count { it.securityInfo == "CLEARTEXT" },
+                    cleartextCount    = connectionRows.count { com.privacyguard.app.ui.traffic.HomeEvidence.isInternetCleartext(it) } +
+                        liveRows.count { it.securityInfo == "CLEARTEXT" && !com.privacyguard.app.core.network.LocalNetwork.isLocalAddress(it.destinationIp) },
                     totalBytesOut     = connectionRows.sumOf { it.bytesSent + it.bytesReceived } + liveRows.sumOf { it.bytesTransferred },
                     maxRiskScore      = rows.maxOfOrNull { it.riskScore } ?: fallbackMetrics.maxRiskScore,
                     isBlocked         = pkg in blockedPackages,
@@ -212,7 +212,7 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
             .distinct()
             .size
         val suspicious = rows.count { it.wasBlocked }
-        val cleartext = rows.count { it.encryptionStatus.equals("CLEARTEXT", ignoreCase = true) }
+        val cleartext = rows.count { com.privacyguard.app.ui.traffic.HomeEvidence.isInternetCleartext(it) }
         val totalBytes = rows.sumOf { it.bytesSent + it.bytesReceived }
         val risk = when {
             suspicious > 0 -> 40

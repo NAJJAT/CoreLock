@@ -86,7 +86,7 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
         // Apps with heavy cleartext traffic not already blocked
         if (!hasGlobalCleartextBlock) {
             recentConns
-                .filter { it.encryptionStatus == "CLEARTEXT" && !it.wasBlocked && it.packageName.isNotBlank() }
+                .filter { com.privacyguard.app.ui.traffic.HomeEvidence.isInternetCleartext(it) && !it.wasBlocked && it.packageName.isNotBlank() }
                 .groupBy { it.packageName }
                 .filter { (pkg, _) -> pkg !in blockedPkgs }
                 .mapValues { (_, c) -> c.size }
