@@ -7,7 +7,8 @@ edition = "2021"
 name       = "privacyguard_core"
 # cdylib  = Android .so / Linux .so
 # staticlib = iOS .a / macOS .a (linked into the host app)
-crate-type = ["cdylib", "staticlib"]
+# rlib: lets tests and the cargo-fuzz targets in fuzz/ link the crate.
+crate-type = ["cdylib", "staticlib", "rlib"]
 
 [dependencies]
 jni = { version = "0.21", default-features = false, optional = true }

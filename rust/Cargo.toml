@@ -5,6 +5,8 @@ members = [
     "privacyguard-windows",
     "privacyguard-ebpf",
 ]
+# Built only by `cargo fuzz` (nightly); see privacyguard-core/fuzz.
+exclude = ["privacyguard-core/fuzz"]
 resolver = "2"
 
 [workspace.dependencies]

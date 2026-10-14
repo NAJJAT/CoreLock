@@ -3,6 +3,8 @@ mod entropy;
 mod ja3;
 mod packet;
 pub mod ffi;
+#[cfg(test)]
+mod fuzz_tests;
 
 use bloom::BloomFilter;
 #[cfg(feature = "android")]
