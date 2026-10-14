@@ -167,6 +167,6 @@
     <string name="set_dual_block_udp_desc">Blokkeert al het andere UDP-verkeer zolang Dubbele VPN aanstaat, zodat niets zonder de keten vertrekt. Spraak- en videogesprekken en veel games werken dan niet meer.</string>
     <string name="diag_upstream_vpn_off">Niet getest: de bescherming staat uit, dus DNS gaat naar de resolver van het netwerk.</string>
     <string name="diag_upstream_failed">%1$s gaf geen antwoord op een testopzoeking. Websites laden misschien niet.</string>
-    <string name="set_always_on_hint">Zet in Android Altijd-aan-VPN aan voor PrivacyGuard om de bescherming aan te houden. Android start hem dan opnieuw na een crash of herstart; met ‘Verbindingen zonder VPN blokkeren’ gaat er niets onbeschermd naar buiten.</string>
+    <string name="set_always_on_hint">Zet in Android Altijd-aan-VPN aan voor PrivacyGuard om de bescherming aan te houden. Android start hem dan na een herstart. Met ‘Verbindingen zonder VPN blokkeren’ gaat er niets onbeschermd naar buiten, maar als PrivacyGuard crasht, blijft de telefoon offline tot je PrivacyGuard opnieuw opent.</string>
     <string name="set_open_vpn_settings">VPN-instellingen van Android openen</string>
 </resources>

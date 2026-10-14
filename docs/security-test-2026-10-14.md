@@ -44,6 +44,7 @@ Result: VULNERABLE / OK / NOT TESTED. "Confirmed" = shown by a test or on the de
 | V-14 | A4 supply chain | CVEs and build integrity | Low | Low | OSV: `guava 31.0.1-jre` (GHSA-5mg8-w23w-74h3, GHSA-7g45-4rm6-3mm3; temp-dir issues, low on Android); `windows 0.17.2` (RUSTSEC-2022-0008) only in the desktop tool. No `gradle/verification-metadata.xml`. `.gitignore` does not exclude `*.jks`/`*.keystore`. | Force guava ≥ 33 (or drop coroutines-guava if unused); add Gradle dependency verification; ignore key files globally; add OSV scan to CI. |
 | V-15 | A5 / reverse engineer | `META-INF/version-control-info.textproto` in release | Info | Info | Release APK carries the git commit hash. | `android.vcsInfo { include = false }` if not wanted. |
 | V-16 | A1 | CNAME cloaking / second question | VULNERABLE (code) | Low | Answers are not checked for CNAMEs to blocked names; only the first question is checked (existing `DnsBlockingPropertyTest.a_second_question_is_not_checked`). | Check CNAME targets in `injectDnsResponse`; reject QDCOUNT ≠ 1. |
+| V-17 | A1, A2 | Subdomain of a user Block rule | BY DESIGN, documented (confirmed, phone) | Low (usability) | The rule dialog says "Matches this exact name. Write *.example.com…" and HOW_IT_WORKS §4.2 says the same; still easy to miss. Custom rule "Block `example.net`" (`AdsViewModel.addCustomRule` → `FilterRule.blockDomain`) stores the bare name; `FilterRule.domainMatches` only matches subdomains for `*.` patterns. On the Note20, `example.net` failed to resolve but `www.example.net` and `x.203.0.113.7.nip.io` (rule `203.0.113.7.nip.io`) resolved. A user blocking `tiktok.com` still lets `www.`/`api.tiktok.com` through. Blocklists are not affected (`BlocklistRepo` adds `x` and `*.x`). | Store a user Block rule as both `name` and `*.name` (or match `name` and its subdomains), as blocklists do; regression test on `FilterRule.matches`. |
 
 ## 3. Checks that passed (OK)
 
@@ -61,11 +62,11 @@ Result: VULNERABLE / OK / NOT TESTED. "Confirmed" = shown by a test or on the de
 
 | Item | Why |
 |---|---|
-| Leaks during VPN start/stop/crash, Wi-Fi↔mobile, airplane mode, captive portal | No emulator (hypervisor missing). Design note: outside Always-on + lockdown, Android sends traffic directly whenever the tunnel is down; that is platform behaviour. |
+| Leaks during user stop, captive portal, and anything under Always-on + lockdown | Tested later (§6) except these. A user stop leaves no protection by design. |
 | Runtime egress capture vs the onboarding list (A3 in onboarding) | Needs a capture setup; only the static `OutboundHostsDisclosureTest` exists. |
 | DoT, IPv6, QUIC on the device; domain fronting; alert flooding at runtime | Code review only (V-07, DnsBypassGuard drops 853 and listed DoH IPs). |
 | V-02 on the device | Stopped before a conclusive result. |
-| cargo-fuzz on `rust/privacyguard-core` | No Rust toolchain. Note: the Android APK currently ships no Rust `.so`. |
+| ~~cargo-fuzz on `rust/privacyguard-core`~~ | Done later (§6). Note: the Android APK currently ships no Rust `.so`. |
 | Enterprise release on the device | Same package id as the installed debug build with another key; installing it would mean uninstalling (data loss). |
 
 ## 5. Test files added (uncommitted)
@@ -77,3 +78,75 @@ Result: VULNERABLE / OK / NOT TESTED. "Confirmed" = shown by a test or on the de
 - `app/src/testEnterprise/java/com/privacyguard/sectest/JazzerTargets.kt`
 
 The failing tests are the regression tests for V-01, V-04 and V-05; they pass once fixed.
+
+## 6. Follow-up, same day (after the fixes)
+
+### cargo-fuzz (WSL Ubuntu 26.04, nightly 2026-10-13, cargo-fuzz 0.13.2, ASan)
+
+| Target | Time | Runs | Coverage | Crashes |
+|---|---|---|---|---|
+| `classify_packet` (+ `pg_shannon_entropy`) | 4 workers × 30 min | ~1.6 billion | cov 49 | 0 |
+| `ja3` | 4 workers × 30 min | ~76 million | cov 247 | 0 |
+
+Seeded with an IPv4 TLS/DNS/HTTP/QUIC packet each and two ClientHellos. The fuzz crate
+did not build at first: four JNI exports in `src/lib.rs` were not behind
+`#[cfg(feature = "android")]` (the attribute covered only the first one), so any
+`--no-default-features` build failed. Fixed (uncommitted).
+
+### VPN leak test (Note20, enterprise debug at c1ef12b, Private DNS "opportunistic", no Always-on)
+
+Method: a shell loop resolves a unique name under a blocked canary (`*.10.0.0.1.nip.io`)
+about 4 times a second; a name that resolves got past the filter. Control: an unblocked
+`nip.io` name resolves. Rules and logs removed afterwards.
+
+| Scenario | Probes | Leaked | Note |
+|---|---|---|---|
+| Steady state | ~130 | 0 | |
+| Airplane mode 8 s, then 25 s after | ~300 | 0 | Tunnel stays up across the change |
+| Wi-Fi off (mobile data) 15 s, Wi-Fi back 25 s | ~340 | 0 | Same |
+| App process crash (`am crash`), run 1 | 21 in window | 21 | No restart scheduled by Android; tunnel down until a manual start at +26 s |
+| App process crash, run 2 | 64 in window | 3 | Android restarted the service after 1 s; leaks +3.4 s to +5.9 s |
+
+Same test with **Always-on + "Block connections without VPN"** on (set through
+Settings, restored to off afterwards). Each probe also looked up an unblocked control
+name:
+
+| Scenario | Probes | Leaked | Control failed | Note |
+|---|---|---|---|---|
+| Steady state | 11 | 0 | 0 | |
+| Crash, run 1 | 64 | 0 | 64 | No restart by Android; manual start after ~20 s |
+| Crash, run 2 | 26 | 0 | 15 | Restarted after 1 s ("crashed quickly"), tunnel back at +6 s |
+| Crash, run 3, no manual start | — | — | — | **Not recovered after 120 s**; phone had no internet until the VPN was started again |
+
+Conclusion: no leaks while the tunnel exists. Without lockdown, blocked names resolve
+directly while it is down after a crash. With lockdown nothing leaks, but nothing
+else works either: Android scheduled a service restart only when the process had
+crashed shortly before ("crashed quickly"); after an ordinary crash it logged
+`am_proc_died` and no restart, and Always-on did not bring the VPN back either
+(Samsung, Android 13).
+
+| ID | Attacker | What was tried | Result | Sev | How to reproduce | Proposed fix |
+|---|---|---|---|---|---|---|
+| V-18 | Crash (bug or A1 crafted input) | Recovery after the VPN process dies | VULNERABLE (confirmed, phone) | Medium (availability) | `adb shell am crash com.privacyguard.app.enterprise`: tunnel gone, no `Scheduling restart` in the log, not back after 120 s. Without lockdown: unfiltered until the user reopens the app. With lockdown: no internet until then. | A watchdog outside the process that restarts the service when `BootReceiver` says protection should be on but the tunnel is down (e.g. a periodic JobScheduler job or an `AlarmManager` alarm set while running); a "Protection stopped" notification with a Restart action; keep the native/packet paths panic- and exception-safe. Re-test with this scenario. |
+
+Emulator: on the API 37 image the console packet capture saw nothing; a logging DNS
+forwarder (`-dns-server`) worked. The emulator subdomain probe was invalid (V-17), so no
+emulator results are reported.
+
+## 7. Feature checks on the phone (enterprise debug, uncommitted fixes included)
+
+| Feature | Check | Result |
+|---|---|---|
+| TLS fingerprint baseline | Test app, BouncyCastle client offering N fewer suites (`--es probe tls_bc --ei mb N`) gives a JA4 never sent before | OK. After learning: new JA4 → **Alert**, repeat → nothing. Right after an update (versionCode 3 → 4): new JA4 → **Learned** silently. After the window: new JA4s → one **Alert** each. |
+| Ad-SDK blocking | Test app resolves ad and login hosts (`probe ad_hosts`) | OK. `an.facebook.com`, `app.adjust.com`, `inapps.appsflyersdk.com`, `app-measurement.com` blocked; `graph.facebook.com`, `m.facebook.com`, `firebaseinstallations.googleapis.com` resolve (Facebook login keeps working). |
+| Mic timeline | Test app records 5 s (`probe mic`, RECORD_AUDIO granted for the test and revoked after) | Recorded (23:08, screen on, "Unknown app": no Usage Access). **Bug, fixed:** the "Did any app use my mic?" search reported 3 uses instead of 1: two rows from 13 Oct whose process had died stayed open ("in use now") and matched every window. Watching now closes such rows as "end not recorded" when it starts, and a search counts them only if they started inside the window. Verified on the phone after the fix. |
+| Location audit | Compared with `dumpsys package` | OK: the two user apps with background location are the ones shown as "Always". |
+| Reduce ad tracking checklist | Each "Open" | OK: Google Ads settings, Meta Accounts Center and My Ad Center (browser), Google Maps (Timeline lives there). |
+| Purpose groups, domain detail | Facebook → every connection → By purpose; `graph.facebook.com` | OK: groups with explanations, owner, purpose, tracker entry, 7-day frequency, data, first/last seen, apps, and "not what is inside it". |
+
+Other findings:
+- **Settings text was wrong** (`set_always_on_hint`): it said Android restarts PrivacyGuard after a crash with Always-on; V-18 shows it does not. Corrected in all four languages.
+- **Bottom navigation is invisible to accessibility services:** its items report zero-size bounds and are not clickable nodes in `uiautomator dump`, so TalkBack users probably cannot switch tabs. Not fixed; needs a TalkBack check.
+- **Shell UID (2000) is labelled "Removed app" or "Android System"** in alerts. Minor; only adb-driven traffic.
+- **Apps list:** Chrome shows HIGH risk next to "0 destinations · 0 B": risk is from all history, counts from 24 h. Confusing; not fixed.
+- Test traffic left items in the alert inbox (test-app TLS changes, nip.io subdomain alerts). The test app stays at versionCode 4 (going back would need an uninstall).

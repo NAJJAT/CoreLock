@@ -187,6 +187,6 @@
     <string name="set_dual_block_udp_desc">يحظر كل حركة UDP الأخرى ما دام VPN المزدوج مفعّلًا، فلا يخرج شيء دون السلسلة. ستتوقف المكالمات الصوتية والمرئية وكثير من الألعاب عن العمل.</string>
     <string name="diag_upstream_vpn_off">لم يُختبر: الحماية متوقفة، لذا يذهب DNS إلى محلِّل الشبكة نفسها.</string>
     <string name="diag_upstream_failed">لم يُجب %1$s عن استعلام اختباري. قد لا تُحمَّل المواقع.</string>
-    <string name="set_always_on_hint">لإبقاء الحماية مفعّلة، فعّل «VPN الدائم» لـ PrivacyGuard في Android. يعيد Android تشغيله بعد أي تعطّل أو إعادة تشغيل؛ ومع «حظر الاتصالات دون VPN» لا يخرج شيء دون حماية.</string>
+    <string name="set_always_on_hint">لإبقاء الحماية مفعّلة، فعّل «VPN الدائم» لـ PrivacyGuard في Android. يشغّله Android بعد إعادة تشغيل الهاتف. ومع «حظر الاتصالات دون VPN» لا يخرج شيء دون حماية، لكن إذا تعطّل PrivacyGuard يبقى الهاتف دون إنترنت حتى تفتح PrivacyGuard من جديد.</string>
     <string name="set_open_vpn_settings">فتح إعدادات VPN في Android</string>
 </resources>

@@ -51,7 +51,10 @@ class TlsFingerprintMonitor(
         val ja3 = hello.ja3Hash()
         scope.launch {
             try {
-                val verdict = engine.observe(uid, packageName, ja4, ja3, hello.sni, environmentFor(packageName))
+                val env = environmentFor(packageName)
+                val verdict = engine.observe(uid, packageName, ja4, ja3, hello.sni, env)
+                // Debug only (release strips Log.d): which path a new fingerprint took.
+                Log.d(TAG, "verdict=${verdict.javaClass.simpleName} ja4=$ja4 versionCode=${env.versionCode}")
                 if (verdict is BaselineVerdict.Alert) raise(verdict.fingerprint)
             } catch (e: Exception) {
                 Log.w(TAG, "TLS baseline update failed: ${e.javaClass.simpleName}")

@@ -29,7 +29,6 @@ pub(crate) fn bloom() -> std::sync::MutexGuard<'static, Option<BloomFilter>> {
 }
 
 // ── JNI exports (Android only) ────────────────────────────────────────────────
-#[cfg(feature = "android")]
 // Package: com.privacyguard.core.native_engine
 // Class:   RustBridge  (Kotlin object → singleton class in bytecode)
 //
@@ -40,6 +39,7 @@ pub(crate) fn bloom() -> std::sync::MutexGuard<'static, Option<BloomFilter>> {
 ///   0x01 = should be blocked by domain filter
 ///   0x02 = contains TLS ClientHello (port 443, flags detected)
 ///   0x04 = is a DNS query (UDP port 53)
+#[cfg(feature = "android")]
 #[no_mangle]
 pub extern "C" fn Java_com_privacyguard_core_native_1engine_RustBridge_processIpv4Packet(
     _env: JNIEnv,
@@ -58,6 +58,7 @@ pub extern "C" fn Java_com_privacyguard_core_native_1engine_RustBridge_processIp
 
 /// Extract a JA3 fingerprint from raw TLS ClientHello bytes.
 /// Returns the MD5 hex string, or null if parsing fails.
+#[cfg(feature = "android")]
 #[no_mangle]
 pub extern "C" fn Java_com_privacyguard_core_native_1engine_RustBridge_computeJa3(
     env: JNIEnv,
@@ -78,6 +79,7 @@ pub extern "C" fn Java_com_privacyguard_core_native_1engine_RustBridge_computeJa
 }
 
 /// Query whether a domain is present in the native bloom filter.
+#[cfg(feature = "android")]
 #[no_mangle]
 pub extern "C" fn Java_com_privacyguard_core_native_1engine_RustBridge_bloomCheck(
     mut env: JNIEnv,
@@ -93,6 +95,7 @@ pub extern "C" fn Java_com_privacyguard_core_native_1engine_RustBridge_bloomChec
 }
 
 /// Rebuild the bloom filter from a domain array.
+#[cfg(feature = "android")]
 #[no_mangle]
 pub extern "C" fn Java_com_privacyguard_core_native_1engine_RustBridge_bloomRebuild(
     mut env: JNIEnv,
@@ -116,6 +119,7 @@ pub extern "C" fn Java_com_privacyguard_core_native_1engine_RustBridge_bloomRebu
 }
 
 /// Compute Shannon entropy of a byte slice (used for DNS tunneling detection).
+#[cfg(feature = "android")]
 #[no_mangle]
 pub extern "C" fn Java_com_privacyguard_core_native_1engine_RustBridge_shannonEntropy(
     env: JNIEnv,

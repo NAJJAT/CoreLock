@@ -70,7 +70,10 @@ Say a news app opens `https://ads.example.net/pixel`.
    connects. Otherwise the query goes to the resolver you chose: plain DNS to
    Cloudflare `1.1.1.1` by default, or DNS over HTTPS when you turn DoH on. The
    answer is checked (it must match the question) and handed back to the app.
-   PrivacyGuard remembers which address belongs to which name.
+   If the answer's CNAME chain points at a blocked name, the app gets NXDOMAIN
+   instead (CNAME cloaking). A query with more than one question is dropped.
+   PrivacyGuard remembers which address belongs to which name. Every UDP packet
+   to port 53 goes to `DnsHandler`, whatever else is open on that flow.
 4. **Connection.** The app sends a TCP SYN to the returned address. `TunReader`
    reads the packet and `PrivacyVpnService.onTcp` takes over:
    - DNS-over-TLS (port 853), DNS over QUIC, and DoH to the IP addresses of
@@ -85,20 +88,28 @@ Say a news app opens `https://ads.example.net/pixel`.
    then copies bytes both ways, respecting the app's TCP window.
 6. **First bytes.** For HTTPS the first bytes are a TLS *ClientHello*. It carries
    the server name (SNI) in clear text, so the hostname is known even if DNS was
-   cached. The ClientHello is also fingerprinted (JA3 and JA4), checked for weak
+   cached. The SNI gets the same block decision as a DNS lookup (section 4.2); a
+   blocked one resets the connection, so a blocked name reached without our DNS
+   (hard-coded address, own resolver) is still stopped. An SNI that is not a valid
+   hostname is not used and raises *Invalid server name*; an SNI naming another
+   site than the one DNS gave this address out for raises *Server name does not
+   match DNS*, and the connection is recorded under the DNS name. The ClientHello
+   is also fingerprinted (JA3 and JA4), checked for weak
    cipher suites, and compared with the app's learned TLS baseline (section 5.3).
    For plain HTTP the request line marks the connection as *cleartext*.
 7. **Close.** When the connection ends, one row is written to the `connections`
-   table: app, hostname (SNI, else the DNS name for that address, else the IP),
+   table: app, hostname (valid SNI, else the DNS name for that address, else the IP),
    bytes each way, duration, encryption, whether the app was on screen and whether
    the screen was on when it started, and the network it used. The app's profile
    for that host is updated (section 5.1). DNS lookups made by the system resolver
    on the app's behalf in the 60 seconds before are credited to the app.
 
 UDP takes the same path through `UdpForwarder`, without a handshake. QUIC
-(HTTP/3 over UDP port 443) is forwarded normally, except that it is dropped when
-HTTPS inspection asks for it (enterprise) or while dual-hop is on, so apps retry
-over TCP.
+(HTTP/3 over UDP port 443) is forwarded, but its SNI is read first: the
+ClientHello sits in the client's Initial packets, whose keys come from public
+values (RFC 9001/9369), so no interception is needed. A blocked SNI drops the
+flow for two minutes. QUIC is dropped outright when HTTPS inspection asks for it
+(enterprise) or while dual-hop is on, so apps retry over TCP.
 
 ---
 
@@ -133,7 +144,7 @@ half a minute with the full lists.
 |---|---|
 | Resolver | Plain DNS to the address you set (default Cloudflare `1.1.1.1`, with its second address as fallback). Never a different company's resolver. If it cannot be reached, the app gets *SERVFAIL*. |
 | DoH | Optional, off by default. Cloudflare (`cloudflare-dns.com`), Google (`dns.google`) or Quad9 (`dns.quad9.net`). Connects to a fixed bootstrap address so looking up the DoH server does not loop through the tunnel; TLS still checks the name. A failed DoH lookup answers *SERVFAIL* and is never resent as plain DNS. |
-| Answer checks | The answer must parse and match the question's ID and name, or it is dropped. |
+| Answer checks | The answer must parse and match the question's ID and name, or it is dropped. A CNAME to a blocked name turns the answer into NXDOMAIN. Queries with more than one question are dropped. |
 | Network checks | On plain DNS, a public name answered with a private or null address is recorded as *tampered*. A lookup of a random `.invalid` name that gets an address means the network *hijacks* DNS. A DoH certificate that does not validate means something is *intercepting* TLS. These feed network trust (section 5.6). |
 
 ### 3.3 Storage
@@ -173,6 +184,13 @@ On a test phone in October 2026 this gave about 179,000 ad names, 43,000 tracker
 names, 428 malware names and the built-in telemetry names; about 216,000 distinct names at Strict
 (the lists overlap). Lists are held in memory as two hash sets (`vpn/firewall/DomainFilter.kt`);
 an entry blocks the name and every subdomain.
+
+Downloads are HTTPS only, without redirects, and read line by line. Each entry is
+checked (`app/core/blocklist/ListEntryValidator.kt`): converted to punycode, and
+refused if it is not a valid name, is a public suffix (`co.uk`, `com.au`; the Public
+Suffix List bundled with OkHttp), or mixes scripts within a label (look-alike
+names). A source with more than 1.5 million names is refused whole. A failed or
+refused download keeps the lists already loaded.
 
 ---
 
@@ -265,6 +283,10 @@ queries for one name within 1 second count as one lookup.
 | Lookup burst | More than 30 *different* names in 10 seconds | 4 |
 | Repeated lookups | The same name 8 or more times in 10 seconds (possible beaconing) | 5 |
 
+Two more findings come from the TLS server name (section 2, step 6;
+`core/tls/SniCheck.kt`): *Invalid server name* (the SNI is not a hostname: an IP,
+bidi or control characters, HTML) and *Server name does not match DNS*.
+
 Each finding is reported once per app and host per 24 hours. For the three
 name-shape findings the base domain is used instead of the host, because CDN-like
 hosts are unique by design. CDN suffixes (CloudFront, Akamai, Fastly, Facebook and
@@ -278,7 +300,7 @@ TikTok CDNs, Google video…) are exempt from the shape checks.
 | Weak ciphers offered | The ClientHello *offers* NULL, EXPORT or anonymous suites (critical, severity 9), or more than two of RC4 / DES / 3DES (severity 6). It checks what is offered, not what the server picked. | Alert. |
 | TLS version | TLS below 1.2 on the connection marks it *weak TLS*. | Encryption status, risk signal. |
 | Fingerprint baseline (`TlsBaselineEngine.kt`) | Per app, the JA4 fingerprints it uses. For the first 7 days every new one is learned. Within 24 hours after the app, the OS build, WebView or Conscrypt is updated, new ones are learned silently. Otherwise a new fingerprint is stored and raises **one** alert. | "TLS fingerprint changed" alert and notification. |
-| Certificate Transparency (opt-in) | Every 6 hours, the base domain of up to 50 contacted servers is looked up on crt.sh. The first answer is the baseline; later certificates with a higher ID raise an alert. Turning it off stops at once and forgets the queue. | "New certificate" alert. |
+| Certificate Transparency (opt-in) | Every 6 hours, the registrable domain (`bbc.co.uk`, not `co.uk`) of up to 50 contacted servers is looked up on crt.sh, without redirects and reading at most 2 MB. The first answer is the baseline; later certificates with a higher ID raise an alert. Turning it off stops at once and forgets the queue. | "New certificate" alert. |
 
 ### 5.4 Behaviour changes ("App Behavior DNA", `app/core/behavior/BehaviorDnaAnalyzer.kt`)
 
@@ -347,6 +369,10 @@ records start and end and whether the screen was on. If the screen was on, it
 names the app that was on screen 1.5 seconds after the start (needs Usage access).
 If the screen was off, it names no app ("App not known (screen was off)"),
 because the last app on screen is then not the one using the sensor.
+Watching runs only while protection runs. A use still open when the process died
+(crash, app update) is marked "end not recorded" when watching starts again; the
+"Did any app use my mic?" search counts such a use only if it started inside the
+chosen window.
 
 ### 5.9 Is there a "retro-hunt"?
 
@@ -463,6 +489,21 @@ Raw packets in both directions (what apps send and what they receive, including
 DNS answers PrivacyGuard makes) in Wireshark format. Stops at 100 MB or when
 protection stops; deleted after 24 hours.
 
+### CSV export (Stats)
+
+Every cell goes through `core/utils/CsvCell.kt`: a cell starting with `=`, `+`,
+`-`, `@`, a tab or a carriage return gets a leading apostrophe and is quoted, so a
+spreadsheet never runs an app label or host name as a formula.
+
+### Screenshots
+
+In release builds every screen except onboarding sets `FLAG_SECURE` from its first
+frame (`ui/SecureScreens.kt`): no screenshots, screen recording or recent-apps
+preview of your history. Settings → "Allow screenshots" (off by default) turns
+this off at once. Debug builds never set it. Hosts and app labels are escaped
+where they are stored (bidi overrides, control characters), so no screen or
+export shows them raw.
+
 ---
 
 ## 7. Privacy: what is stored, for how long, and what leaves the phone
@@ -495,6 +536,19 @@ Exports (PCAP, CSV, IT report) leave the phone only when you share them. A test
 (`OutboundHostsDisclosureTest`) fails if the code contacts a host that the
 onboarding text does not name.
 
+### 7.3 Notifications and logs
+
+Notifications are built through `platform/android/PrivateNotifications.kt`: private
+on the lock screen, with a public version that names no app or server. By default
+the full text also says only what kind of alert it is ("Unencrypted connection",
+"Possible malware connection"), and the weekly report leaves out the top app.
+Settings → "Show details in notifications" (off by default) brings the names
+back. Note that an app with notification-listener access can still read and
+dismiss them; the alert inbox is the record.
+
+Release builds strip debug and info logs. Warnings and errors on the network
+paths do not log addresses, ports, hosts, package names or exception messages.
+
 ---
 
 ## 8. Consumer and enterprise builds
@@ -513,7 +567,10 @@ user installs in Android's settings, and acts as a proxy for apps that trust use
 certificates (most apps do not, since Android 7; browsers and apps that opt in
 do). It records requests and responses up to a size limit, flags apps that pin
 their certificates, can redact personal data, and keeps payloads for its own
-retention period. Turning inspection off deletes the CA key and the stored
+retention period. Only PrivacyGuard's own UID is exempt from inspection.
+Redaction runs on two bounded workers, not the capture thread; its scanners are
+one-pass and each call has a time budget. When time runs out the text is
+replaced, never stored or shipped unredacted. Turning inspection off deletes the CA key and the stored
 payloads. **Android keeps the installed certificate after PrivacyGuard is
 uninstalled**; onboarding tells the user how to remove it (Settings → search
 "User certificates" → "PrivacyGuard Enterprise CA" → Remove).
@@ -533,8 +590,20 @@ key, an optional certificate pin and an optional body signature (`SiemEndpoint.k
   name within 60 seconds. Camera and mic use is credited to the app on screen,
   which can be wrong; with the screen off no app is named.
 - **Apps that bring their own resolver** over TLS, QUIC or DoH to unknown servers,
-  or connect to hard-coded addresses, are not filtered by DNS blocking. Only known
-  DoH addresses and the standard encrypted-DNS ports are blocked.
+  or connect to hard-coded addresses, skip DNS blocking. Their TLS and QUIC
+  connections are still blocked by server name (section 2, step 6), but a
+  connection without a server name (plain TCP or UDP to an address, encrypted
+  ClientHello) is not. Only known DoH addresses and the standard encrypted-DNS
+  ports are blocked as DNS.
+- **When the tunnel is down, nothing is filtered.** A test on 14 October 2026
+  (Samsung, Android 13): after the app crashed, blocked names resolved directly
+  until protection was back. Network changes (airplane mode, Wi-Fi to mobile)
+  leaked nothing, because the tunnel stays up. With Always-on VPN and "Block
+  connections without VPN", nothing leaked, but nothing else got through either.
+- **A crash is not always recovered.** Android restarted the service after a
+  quick second crash, but after an ordinary crash it did not, even with
+  Always-on: protection stayed off (or, with lockdown, the phone stayed offline)
+  until the app was opened again. There is no watchdog yet.
 - **First start after install:** until the first download (about a minute after
   install) only the built-in lists apply. A download writes the start-up cache, so
   later starts take a few seconds. Only a start whose cache is missing (for example

@@ -295,9 +295,11 @@ private fun SensorUseLine(row: SensorUseRow, showApp: Boolean) {
     val context = LocalContext.current
     val e = row.event
     val sensor = stringResource(if (e.sensor == SensorEventEntity.SENSOR_MIC) R.string.adp_sensor_mic else R.string.adp_sensor_camera)
-    // Watching stops with protection and closes open rows; an open row while
-    // protection is off therefore lost its end (crash), it is not still running.
+    // Watching stops with protection and closes open rows, and closes rows a dead
+    // process left open when it starts; an open row while protection is off
+    // therefore lost its end too, it is not still running.
     val end = when {
+        e.endedAt == SensorEventEntity.END_NOT_RECORDED -> stringResource(R.string.adp_end_unknown)
         e.endedAt != null -> formatTime(context, e.endedAt)
         com.privacyguard.platform.android.PrivacyVpnService.isRunning -> stringResource(R.string.adp_ongoing)
         else -> stringResource(R.string.adp_end_unknown)

@@ -22,10 +22,15 @@ describes what the code actually does: the path of one connection, how every
 number on every screen is calculated, each detector and its thresholds, what is
 stored and for how long, what leaves the phone, and the known limits. In short:
 all traffic runs through a local VPN on the phone; DNS names are checked against
-your rules, the lists for your protection level and an ad-SDK policy; every
+your rules, the lists for your protection level and an ad-SDK policy, and the
+TLS/QUIC server name of every connection gets the same check, so a blocked name
+reached without our DNS is stopped too; every
 connection is relayed and recorded with its app, server, size, timing and
 encryption; detectors look for odd DNS names, TLS changes, timer-like contacts,
-behaviour changes and stalkerware traits; history stays encrypted on the phone.
+behaviour changes and stalkerware traits; history stays encrypted on the phone,
+screens are hidden from screenshots and notifications name no app or server
+unless you allow it. While the tunnel is down (for example right after a crash)
+nothing is filtered unless Android's Always-on VPN with lockdown is on.
 
 ---
 
@@ -59,7 +64,7 @@ behaviour changes and stalkerware traits; history stays encrypted on the phone.
 | Feature | Details |
 |---|---|
 | **Local VPN engine** | A TUN interface carries all IPv4 and IPv6 traffic (TCP and UDP). Both address families run through the same TCP state machine (`TcpForwarder`, with flow control and retransmission toward the app) and UDP forwarder (oversized replies are fragmented). The tunnel only opens once rules and blocklists are loaded. Every finished flow is written to history with its app, hostname, bytes and timing. |
-| **DNS filtering** | Every lookup goes through `DnsHandler`: blocklists (hosts, EasyList and domain-list formats, hash-set lookup), your own rules, and the per-app ad-SDK policy. A user Allow beats ad, tracker and telemetry lists and the ad-SDK policy; malware and phishing hosts stay blocked unless the user accepts a warning. Blocked names get *NXDOMAIN*, so no connection is made. Lookups go only to the resolver you chose (and that provider's second address); if it cannot be reached the app gets *SERVFAIL*. |
+| **DNS filtering** | Every lookup goes through `DnsHandler`: blocklists (hosts, EasyList and domain-list formats, hash-set lookup), your own rules, and the per-app ad-SDK policy. A user Allow beats ad, tracker and telemetry lists and the ad-SDK policy; malware and phishing hosts stay blocked unless the user accepts a warning. Blocked names get *NXDOMAIN*, so no connection is made; so do answers whose CNAME points at a blocked name. The TLS SNI and QUIC SNI of each connection get the same decision, which also stops apps with their own resolver or hard-coded addresses when they send a server name. Lookups go only to the resolver you chose (and that provider's second address); if it cannot be reached the app gets *SERVFAIL*. |
 | **DNS over HTTPS** | Optional RFC 8484 DoH to Cloudflare, Google or Quad9. Connects to the provider's literal bootstrap address so the DoH host lookup cannot loop through the tunnel. If DoH fails the lookup is answered with *SERVFAIL*; it is never resent as plain DNS. |
 | **Encrypted-DNS bypass guard** | Drops DNS-over-TLS/QUIC and DoH to known resolver IPs from other apps, so they fall back to DNS that the filter can see. |
 | **Filter rules** | Block by domain, IP/CIDR, app or globally, optionally "only in the background". Three protection levels (Minimal, Standard, Strict). Rules apply instantly without restarting the VPN. Hit counters and suggested rules. |

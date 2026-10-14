@@ -21,7 +21,8 @@ data class SensorEventEntity(
     val sensor: String,            // SENSOR_MIC | SENSOR_CAMERA
     val startedAt: Long,
     // Null while in use. Watching stops with the VPN, which ends open rows at that
-    // time; a row still null after that means the end was not recorded (crash).
+    // time. A row the process died with (crash, app update) is set to
+    // [END_NOT_RECORDED] when watching starts again: it is not still running.
     val endedAt: Long?,
     val screenOnAtStart: Boolean,
     val likelyPackage: String?,
@@ -30,6 +31,8 @@ data class SensorEventEntity(
     companion object {
         const val SENSOR_MIC = "MIC"
         const val SENSOR_CAMERA = "CAMERA"
+        /** [endedAt] of a use whose end was lost with the process. */
+        const val END_NOT_RECORDED = -1L
     }
 }
 
@@ -47,10 +50,24 @@ interface SensorEventDao {
     @Query("SELECT * FROM sensor_events ORDER BY startedAt DESC LIMIT :limit")
     fun recentFlow(limit: Int): Flow<List<SensorEventEntity>>
 
-    /** Every use that overlaps [from, to], including ones still running. */
+    /**
+     * Uses left open by a process that died: nothing watches them any more, so they
+     * cannot be running. Call before watching starts.
+     */
+    @Query("UPDATE sensor_events SET endedAt = ${SensorEventEntity.END_NOT_RECORDED} WHERE endedAt IS NULL")
+    suspend fun closeOrphans(): Int
+
+    /**
+     * Every use that overlaps [from, to], including ones still running. A use whose
+     * end was not recorded counts only if it started inside the window: it may have
+     * lasted seconds, so it says nothing about later hours.
+     */
     @Query("""
         SELECT * FROM sensor_events
-        WHERE sensor = :sensor AND startedAt <= :to AND (endedAt IS NULL OR endedAt >= :from)
+        WHERE sensor = :sensor AND startedAt <= :to AND (
+            endedAt IS NULL
+            OR (endedAt != ${SensorEventEntity.END_NOT_RECORDED} AND endedAt >= :from)
+            OR (endedAt = ${SensorEventEntity.END_NOT_RECORDED} AND startedAt >= :from))
         ORDER BY startedAt
     """)
     suspend fun overlapping(sensor: String, from: Long, to: Long): List<SensorEventEntity>

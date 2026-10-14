@@ -168,6 +168,6 @@
     <string name="set_dual_block_udp_desc">Drops all other UDP while Dual VPN is on, so nothing leaves without the chain. Voice and video calls and many games will stop working.</string>
     <string name="diag_upstream_vpn_off">Not tested: protection is off, so DNS goes to the network’s own resolver.</string>
     <string name="diag_upstream_failed">%1$s did not answer a test lookup. Websites may fail to load.</string>
-    <string name="set_always_on_hint">To keep protection on, turn on Always-on VPN for PrivacyGuard in Android. Android then restarts it after a crash or reboot; with “Block connections without VPN” nothing goes out unprotected.</string>
+    <string name="set_always_on_hint">To keep protection on, turn on Always-on VPN for PrivacyGuard in Android. Android then starts it after a reboot. With “Block connections without VPN” nothing goes out unprotected, but if PrivacyGuard crashes the phone stays offline until you open PrivacyGuard again.</string>
     <string name="set_open_vpn_settings">Open Android VPN settings</string>
 </resources>

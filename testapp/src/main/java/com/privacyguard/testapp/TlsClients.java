@@ -56,6 +56,16 @@ final class TlsClients {
      * platform hooks from touching the handshake.
      */
     static String bouncyCastle(String host) throws Exception {
+        return bouncyCastle(host, 0);
+    }
+
+    /**
+     * variant > 0 offers that many fewer cipher suites (BouncyCastle enables all it
+     * supports, so adding is not possible). Each variant has its own ClientHello (and
+     * JA4), so an unused one is a fingerprint that is new for certain, for testing the
+     * baseline's learn / update / alert paths. Distinct up to about 28.
+     */
+    static String bouncyCastle(String host, int variant) throws Exception {
         Provider bc = new BouncyCastleProvider();
         Provider jsse = new BouncyCastleJsseProvider(bc);
         KeyStore androidCas = KeyStore.getInstance("AndroidCAStore");
@@ -66,6 +76,11 @@ final class TlsClients {
         ctx.init(null, tmf.getTrustManagers(), new SecureRandom());
 
         try (SSLSocket s = (SSLSocket) ctx.getSocketFactory().createSocket(host, 443)) {
+            if (variant > 0) {
+                // Drop that many suites from the end; the TLS 1.3 ones come first and stay.
+                String[] suites = s.getEnabledCipherSuites();
+                s.setEnabledCipherSuites(java.util.Arrays.copyOf(suites, Math.max(3, suites.length - variant)));
+            }
             s.setSoTimeout(15000);
             s.startHandshake();
             OutputStream out = s.getOutputStream();

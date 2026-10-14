@@ -61,6 +61,8 @@ class SensorUsageWatcher(
     }
 
     fun start() {
+        // Queued on [db] before any callback can insert a new row.
+        scope.launch(db) { runCatching { dao.closeOrphans() } }
         try {
             audio.registerAudioRecordingCallback(audioCallback, handler)
             // The callback only reports changes; pick up a recording already running.

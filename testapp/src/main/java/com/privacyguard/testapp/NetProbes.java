@@ -299,6 +299,12 @@ final class NetProbes {
             case "dns_flood": return dnsFlood(mb > 0 ? mb : 5000);
             case "upload": return upload(host, port, mb > 0 ? mb : 200);
             case "https": return httpsGet("HTTPS", "https://www.example.com/");
+            // TLS fingerprint baseline tests; tls_bc with --ei mb N offers N fewer suites.
+            case "tls_okhttp": return TlsClients.okHttp("https://www.example.com/") + "\n";
+            case "tls_platform": return TlsClients.platform("https://www.example.com/") + "\n";
+            case "tls_bc": return TlsClients.bouncyCastle("www.example.com", mb) + "\n";
+            case "ad_hosts": return PrivacyProbes.resolveHosts();
+            case "mic": return PrivacyProbes.recordMic() + "\n";
             default: return "FAIL unknown probe " + probe + "\n";
         }
     }
