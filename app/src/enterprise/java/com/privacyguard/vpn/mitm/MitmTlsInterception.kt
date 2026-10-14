@@ -1,7 +1,6 @@
 package com.privacyguard.vpn.mitm
 
 import android.util.Log
-import com.privacyguard.app.BuildConfig
 import com.privacyguard.app.data.db.NOT_DECRYPTED_PREFIX
 import com.privacyguard.app.data.db.PayloadLogEntity
 import com.privacyguard.core.session.Session
@@ -31,6 +30,8 @@ class MitmTlsInterception(
     private val payloadLogRepository: PayloadLogRepository,
     /** Creates the CA on first use; it is only generated once inspection is on and consented to. */
     private val ensureCa: suspend () -> Boolean,
+    /** This app's UID; its own connections are never inspected. */
+    private val ownUid: Int = android.os.Process.myUid(),
 ) : TlsInterception {
 
     companion object {
@@ -69,7 +70,7 @@ class MitmTlsInterception(
                 try {
                     accumulate(item)
                 } catch (e: Exception) {
-                    Log.w(TAG, "Capture failed: ${e.message}")
+                    Log.w(TAG, "Capture failed: ${e.javaClass.simpleName}")
                 }
             }
         }
@@ -88,8 +89,9 @@ class MitmTlsInterception(
 
     // PrivacyGuard's own requests (blocklist and tracker updates, SIEM shipping)
     // are never inspected: the app does not trust its own CA, so they would fail.
-    override fun shouldIntercept(ownerPackage: String?, sni: String): Boolean {
-        if (ownerPackage == BuildConfig.APPLICATION_ID || !mitmConfig.isEnabled || !mitmConfig.isConsentValid()) {
+    // Recognised by our exact UID: a package name can be imitated (V-11).
+    override fun shouldIntercept(ownerUid: Int, ownerPackage: String?, sni: String): Boolean {
+        if (isPrivacyGuardTraffic(ownerUid) || !mitmConfig.isEnabled || !mitmConfig.isConsentValid()) {
             return false
         }
         if (pinningDetector.isPinned(ownerPackage, sni)) return false
@@ -253,7 +255,7 @@ class MitmTlsInterception(
     // ── Payload parse + save ─────────────────────────────────────────────────
     private fun processPayload(direction: String, bytes: ByteArray, session: Session) {
         try {
-            if (isPrivacyGuardTraffic(session.ownerPackage)) return
+            if (isPrivacyGuardTraffic(session.ownerUid)) return
 
             val parsed = payloadParser.parse(bytes, direction, session)
             val redacted = payloadParser.redactForExport(parsed)
@@ -304,12 +306,10 @@ class MitmTlsInterception(
             session.payloadCount.incrementAndGet()
             Log.d(TAG, "MITM payload processed: ${parsed.protocol} ${parsed.sizeBytes} bytes")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to process MITM payload", e)
+            Log.e(TAG, "Failed to process MITM payload: ${e.javaClass.simpleName}")
         }
     }
 
-    private fun isPrivacyGuardTraffic(ownerPackage: String?): Boolean {
-        return ownerPackage == BuildConfig.APPLICATION_ID ||
-                ownerPackage?.startsWith("com.privacyguard.app") == true
-    }
+    /** Only our own UID: an app named "com.privacyguard.app.x" is inspected and logged like any other. */
+    internal fun isPrivacyGuardTraffic(ownerUid: Int): Boolean = ownerUid == ownUid
 }

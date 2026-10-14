@@ -28,3 +28,19 @@ fun InputStream.readBytesCapped(maxBytes: Long): ByteArray {
 
 fun InputStream.readUtf8Capped(maxBytes: Long): String =
     String(readBytesCapped(maxBytes), Charsets.UTF_8)
+
+/**
+ * Passes reads through until [maxBytes] have been read, then fails with
+ * [ResponseTooLargeException]: for streaming a body without holding it all.
+ */
+class CappedInputStream(private val source: InputStream, private val maxBytes: Long) : java.io.FilterInputStream(source) {
+    private var total = 0L
+
+    private fun count(n: Int): Int {
+        if (n > 0) { total += n; if (total > maxBytes) throw ResponseTooLargeException(maxBytes) }
+        return n
+    }
+
+    override fun read(): Int = source.read().also { if (it >= 0) count(1) }
+    override fun read(b: ByteArray, off: Int, len: Int): Int = count(source.read(b, off, len))
+}

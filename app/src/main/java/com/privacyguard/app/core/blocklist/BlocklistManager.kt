@@ -115,35 +115,46 @@ object BlocklistManager {
     )
 
     private suspend fun updateBlocklistInternal(source: BlocklistSource, repo: BlocklistRepo): UpdateResult {
-        val raw = downloader.download(source) ?: return UpdateResult.Failure("Download failed for $source")
-        val domains = parseBlocklist(source, raw)
+        // Streamed and validated line by line (V-10); null also when the list is
+        // implausibly large, which a tampered source could use to exhaust memory.
+        val domains = downloader.downloadLines(source) { lines -> parseLines(source, lines) }
+            ?: return UpdateResult.Failure("Download failed for $source")
         if (domains.isEmpty()) return UpdateResult.Failure("No valid domains parsed from $source")
         val (sourceName, category) = sourceMetadata(source)
-        repo.replaceSource(sourceName, category, domains)
+        repo.replaceSource(sourceName, category, domains.toList())
         return UpdateResult.Success(domains.size)
     }
 
-    private fun parseBlocklist(source: BlocklistSource, raw: String): List<String> = when (source) {
-        BlocklistSource.STEVENBLACK, BlocklistSource.URLHAUS    -> parseHostsFormat(raw)
-        BlocklistSource.EASYLIST, BlocklistSource.EASYPRIVACY  -> parseEasyListFormat(raw)
-        BlocklistSource.OISD_BASIC, BlocklistSource.OISD_FULL,
-        BlocklistSource.HAGEZI_LIGHT                           -> parseDomainListFormat(raw)
-        BlocklistSource.CUSTOM                                 -> emptyList()
+    /** Distinct valid names of a list, or null past [ListEntryValidator.MAX_ENTRIES_PER_SOURCE]. */
+    internal fun parseLines(
+        source: BlocklistSource,
+        lines: Sequence<String>,
+        max: Int = ListEntryValidator.MAX_ENTRIES_PER_SOURCE,
+    ): Set<String>? {
+        val parseLine: (String) -> String? = when (source) {
+            BlocklistSource.STEVENBLACK, BlocklistSource.URLHAUS    -> ::hostsLine
+            BlocklistSource.EASYLIST, BlocklistSource.EASYPRIVACY  -> ::easyListLine
+            BlocklistSource.OISD_BASIC, BlocklistSource.OISD_FULL,
+            BlocklistSource.HAGEZI_LIGHT                           -> ::domainListLine
+            BlocklistSource.CUSTOM                                 -> return emptySet()
+        }
+        val out = LinkedHashSet<String>()
+        for (line in lines) {
+            val domain = parseLine(line) ?: continue
+            out += domain
+            if (out.size > max) return null
+        }
+        return out
     }
 
-    private fun parseHostsFormat(raw: String): List<String> {
-        val result = mutableListOf<String>()
-        for (line in raw.lineSequence()) {
-            val trimmed = line.trim()
-            if (trimmed.isEmpty() || trimmed.startsWith('#')) continue
-            val commentStripped = trimmed.substringBefore('#').trim()
-            val parts = commentStripped.split(Regex("\\s+"))
-            if (parts.size < 2) continue
-            val domain = parts[1].lowercase()
-            if (domain == "localhost" || domain == "broadcasthost" || domain == "local") continue
-            if (isValidDomain(domain)) result += domain
-        }
-        return result
+    private fun hostsLine(line: String): String? {
+        val trimmed = line.trim()
+        if (trimmed.isEmpty() || trimmed.startsWith('#')) return null
+        val parts = trimmed.substringBefore('#').trim().split(WHITESPACE)
+        if (parts.size < 2) return null
+        val domain = parts[1].lowercase()
+        if (domain == "localhost" || domain == "broadcasthost" || domain == "local") return null
+        return ListEntryValidator.normalize(domain)
     }
 
     /**
@@ -153,36 +164,25 @@ object BlocklistManager {
      * (`||github.com^$third-party`) must be skipped. Truncating them to the host
      * blocked google.com, youtube.com, wikipedia.org, github.com and other sites.
      */
-    internal fun parseEasyListFormat(raw: String): List<String> {
-        val result = mutableListOf<String>()
-        for (line in raw.lineSequence()) {
-            val match = EASYLIST_DOMAIN_RULE.matchEntire(line.trim()) ?: continue
-            val options = match.groupValues[2].takeIf { it.isNotEmpty() }?.split(',').orEmpty()
-            if (options.any { it !in WHOLE_DOMAIN_OPTIONS }) continue
-            val domain = match.groupValues[1].lowercase()
-            if (isValidDomain(domain)) result += domain
-        }
-        return result
+    private fun easyListLine(line: String): String? {
+        val match = EASYLIST_DOMAIN_RULE.matchEntire(line.trim()) ?: return null
+        val options = match.groupValues[2].takeIf { it.isNotEmpty() }?.split(',').orEmpty()
+        if (options.any { it !in WHOLE_DOMAIN_OPTIONS }) return null
+        return ListEntryValidator.normalize(match.groupValues[1])
     }
 
-    private fun parseDomainListFormat(raw: String): List<String> {
-        val result = mutableListOf<String>()
-        for (line in raw.lineSequence()) {
-            val trimmed = line.trim()
-            if (trimmed.isEmpty() || trimmed.startsWith('#')) continue
-            val domain = trimmed.substringBefore('#').trim().lowercase()
-            if (isValidDomain(domain)) result += domain
-        }
-        return result
+    private fun domainListLine(line: String): String? {
+        val trimmed = line.trim()
+        if (trimmed.isEmpty() || trimmed.startsWith('#')) return null
+        return ListEntryValidator.normalize(trimmed.substringBefore('#').trim())
     }
 
-    private fun isValidDomain(domain: String): Boolean {
-        if (domain.isEmpty() || domain.length > 253) return false
-        if (domain.startsWith('.') || domain.endsWith('.')) return false
-        if (!domain.contains('.')) return false
-        if (domain.all { it.isDigit() || it == '.' }) return false  // skip IPv4
-        return domain.all { it.isLetterOrDigit() || it == '.' || it == '-' || it == '_' }
-    }
+    // Whole-text forms of the line parsers (tests).
+    internal fun parseEasyListFormat(raw: String): List<String> = raw.lineSequence().mapNotNull(::easyListLine).toList()
+    private fun parseHostsFormat(raw: String): List<String> = raw.lineSequence().mapNotNull(::hostsLine).toList()
+    private fun parseDomainListFormat(raw: String): List<String> = raw.lineSequence().mapNotNull(::domainListLine).toList()
+
+    private val WHITESPACE = Regex("\\s+")
 
     private fun sourceMetadata(source: BlocklistSource): Pair<String, String> = when (source) {
         BlocklistSource.STEVENBLACK  -> Pair(BlocklistRepo.SOURCE_STEVEN_BLACK, BlocklistRepo.CAT_ADS)

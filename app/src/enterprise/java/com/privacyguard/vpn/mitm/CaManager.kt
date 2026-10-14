@@ -139,7 +139,7 @@ class CaManager(private val context: Context) {
                     else -> false   // unreachable
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "initialize: FAILED — ${e.javaClass.simpleName}: ${e.message}", e)
+                Log.e(TAG, "initialize: FAILED — ${e.javaClass.simpleName}")
                 false
             }
         }
@@ -168,7 +168,7 @@ class CaManager(private val context: Context) {
             }
             entry?.privateKey
         } catch (e: Exception) {
-            Log.e(TAG, "getCaKey: exception — ${e.message}", e)
+            Log.e(TAG, "getCaKey: exception: ${e.javaClass.simpleName}")
             null
         }
     }
@@ -332,7 +332,7 @@ class CaManager(private val context: Context) {
                 "encoded=${cert.encoded.size}B")
             cert
         } catch (e: Exception) {
-            Log.e(TAG, "loadPersistedCert: corrupt DER in SharedPreferences — ${e.message}", e)
+            Log.e(TAG, "loadPersistedCert: corrupt DER in SharedPreferences: ${e.javaClass.simpleName}")
             // Remove the corrupted entry so the next initialize() regenerates cleanly.
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit().remove(PREFS_KEY_CERT).apply()

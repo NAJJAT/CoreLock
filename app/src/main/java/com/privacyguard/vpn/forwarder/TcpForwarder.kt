@@ -214,7 +214,7 @@ class TcpForwarder(
 
             connectingCount.incrementAndGet()
         } catch (e: Exception) {
-            Log.w(TAG, "SYN error $key: ${e.message}")
+            Log.w(TAG, "SYN error: ${e.javaClass.simpleName}")
             runCatching { channel?.close() }
             sessionTable.remove(key)
             sendRst(key, tcp)
@@ -258,7 +258,7 @@ class TcpForwarder(
                     Log.d(TAG, "Dual VPN tunnel ready for ${session.key}")
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Dual VPN SYN failed for $key: ${e.message}")
+                Log.w(TAG, "Dual VPN SYN failed: ${e.javaClass.simpleName}")
                 runCatching { channel?.close() }
                 sessionTable.remove(key)
                 sendRst(key, tcp)
@@ -315,12 +315,12 @@ class TcpForwarder(
             }
             if (session.encryptionStatus == EncryptionStatus.CLEARTEXT) {
                 runCatching { interception.capture("OUTBOUND", payload, session) }
-                    .onFailure { Log.w(TAG, "Outbound capture failed: ${it.message}") }
+                    .onFailure { Log.w(TAG, "Outbound capture failed: ${it.javaClass.simpleName}") }
             }
         }
 
         val channel = session.tcpChannel ?: run {
-            Log.w(TAG, "No channel for data packet: $key")
+            Log.w(TAG, "No channel for data packet:")
             return
         }
         try {
@@ -331,7 +331,7 @@ class TcpForwarder(
             forwardedBytesOut.addAndGet(payload.size.toLong())
             sendAckToDevice(session, payload.size)
         } catch (e: Exception) {
-            Log.w(TAG, "Forward failed for $key: ${e.message}")
+            Log.w(TAG, "Forward failed: ${e.javaClass.simpleName}")
             resetSession(session)
             errorCount.incrementAndGet()
         }
@@ -366,7 +366,7 @@ class TcpForwarder(
         if (key.destinationPort == 443 && clientHelloBytes.isNotEmpty() &&
             (clientHelloBytes[0].toInt() and 0xFF) == 0x16) {
             runCatching { onClientHello?.invoke(session, clientHelloBytes) }
-                .onFailure { Log.w(TAG, "ClientHello listener failed: ${it.message}") }
+                .onFailure { Log.w(TAG, "ClientHello listener failed: ${it.javaClass.simpleName}") }
         }
 
         // Classified on the whole record: the last segment alone has neither the
@@ -401,7 +401,7 @@ class TcpForwarder(
         }
 
         if (sni != null && key.destinationPort == 443 && !session.isMitmIntercepted &&
-            interception.shouldIntercept(session.ownerPackage, sni) &&
+            interception.shouldIntercept(session.ownerUid, session.ownerPackage, sni) &&
             redirectToMitm(session, clientHelloBytes, sni)) {
             sendAckToDevice(session, payload.size)
             return true
@@ -442,7 +442,7 @@ class TcpForwarder(
                 forwardedBytesOut.addAndGet(clientHelloBytes.size.toLong())
                 sendAckToDevice(session, payload.size)
             } catch (e: Exception) {
-                Log.w(TAG, "Forward buffered ClientHello failed for $key: ${e.message}")
+                Log.w(TAG, "Forward buffered ClientHello failed: ${e.javaClass.simpleName}")
                 resetSession(session)
             }
             return true
@@ -464,7 +464,7 @@ class TcpForwarder(
         val mitmChannel = try {
             SocketChannel.open().apply { bind(InetSocketAddress(InetAddress.getLoopbackAddress(), 0)) }
         } catch (e: Exception) {
-            Log.w(TAG, "MITM loopback bind failed: ${e.message}")
+            Log.w(TAG, "MITM loopback bind failed: ${e.javaClass.simpleName}")
             return false
         }
         val clientPort = (mitmChannel.localAddress as? InetSocketAddress)?.port ?: run {
@@ -507,7 +507,7 @@ class TcpForwarder(
             session.selectionKey = mitmChannel.register(selector, SelectionKey.OP_CONNECT, session)
             connectingCount.incrementAndGet()
         } catch (e: Exception) {
-            Log.w(TAG, "MITM redirect failed: ${e.message}")
+            Log.w(TAG, "MITM redirect failed: ${e.javaClass.simpleName}")
             runCatching { mitmChannel.close() }
             // The real upstream is gone, so this connection cannot continue. Pass the
             // host through from now on so the app's retry is not intercepted again.
@@ -740,7 +740,7 @@ class TcpForwarder(
 
         if (interception.isEnabled && session.encryptionStatus == EncryptionStatus.CLEARTEXT) {
             runCatching { interception.capture("INBOUND", data, session) }
-                .onFailure { Log.w(TAG, "Inbound capture failed: ${it.message}") }
+                .onFailure { Log.w(TAG, "Inbound capture failed: ${it.javaClass.simpleName}") }
         }
 
         injectDataToDevice(session, data)
@@ -824,7 +824,7 @@ class TcpForwarder(
                 runTimers(System.currentTimeMillis())
             } catch (e: Exception) {
                 if (!running.get()) break
-                Log.e(TAG, "Selector loop error: ${e.message}")
+                Log.e(TAG, "Selector loop error: ${e.javaClass.simpleName}")
             }
         }
         Log.d(TAG, "Selector loop exited")
@@ -846,7 +846,7 @@ class TcpForwarder(
                 if (selKey.isValid && selKey.isReadable) readFromRemote(selKey, session, buffer)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Selector error for ${session.key}: ${e.message}")
+            Log.w(TAG, "Selector error: ${e.javaClass.simpleName}")
             discard(selKey)
             resetSession(session)
             errorCount.incrementAndGet()
@@ -905,7 +905,7 @@ class TcpForwarder(
                 }
             }
             if (giveUp) {
-                Log.w(TAG, "Device stopped acknowledging ${session.key}; resetting")
+                Log.w(TAG, "Device stopped acknowledging; resetting")
                 resetSession(session)
             } else {
                 resend?.let {
@@ -944,7 +944,7 @@ class TcpForwarder(
                 }
                 onRegistered?.invoke()
             } catch (e: Exception) {
-                Log.w(TAG, "Selector registration failed: ${e.message}")
+                Log.w(TAG, "Selector registration failed: ${e.javaClass.simpleName}")
                 runCatching { channel.close() }
                 resetSession(session)
                 errorCount.incrementAndGet()
@@ -986,7 +986,7 @@ class TcpForwarder(
                 }
             }
         } catch (e: Exception) {
-            Log.w(TAG, "finishConnect failed for ${session.key}: ${e.message}")
+            Log.w(TAG, "finishConnect failed: ${e.javaClass.simpleName}")
             discard(selKey)
             if (session.mitmRedirect) resetSession(session) else {
                 // Connection refused/unreachable before the device got a SYN-ACK.

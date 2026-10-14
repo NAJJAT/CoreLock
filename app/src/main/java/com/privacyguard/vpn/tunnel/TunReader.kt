@@ -142,7 +142,7 @@ class TunReader(
                     for (handler in handlers) {
                         try { handler.onPacket(packet) }
                         catch (e: Exception) {
-                            Log.e(TAG, "handler error: ${e.message}")
+                            Log.e(TAG, "handler error: ${e.javaClass.simpleName}")
                             handlerExceptions.incrementAndGet()
                         }
                     }
@@ -152,7 +152,7 @@ class TunReader(
                     for (handler in ipv6Handlers) {
                         try { handler.onIpv6Packet(raw) }
                         catch (e: Exception) {
-                            Log.e(TAG, "ipv6 handler error: ${e.message}")
+                            Log.e(TAG, "ipv6 handler error: ${e.javaClass.simpleName}")
                             handlerExceptions.incrementAndGet()
                         }
                     }

@@ -169,7 +169,7 @@ class PayloadShipper private constructor(
                 }
                 response.close()
             } catch (e: Exception) {
-                Log.e(TAG, "SIEM ship failed, re-queuing ${events.size} events", e)
+                Log.e(TAG, "SIEM ship failed, re-queuing ${events.size} events: ${e.javaClass.simpleName}")
                 events.forEach { queue.offer(it) }
             } finally {
                 shipping.set(false)

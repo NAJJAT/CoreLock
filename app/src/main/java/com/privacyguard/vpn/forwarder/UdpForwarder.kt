@@ -152,7 +152,7 @@ class UdpForwarder(
 
         val channel = session.udpChannel
         if (channel == null) {
-            Log.w(TAG, "UDP channel is null for $key")
+            Log.w(TAG, "UDP channel is null")
             return
         }
 
@@ -160,7 +160,7 @@ class UdpForwarder(
             // Connected channel: write() goes to the flow's own destination.
             channel.write(ByteBuffer.wrap(data))
         } catch (e: Exception) {
-            Log.e(TAG, "UDP send error for $key: ${e.message}")
+            Log.e(TAG, "UDP send error: ${e.javaClass.simpleName}")
             sessionTable.remove(key)
             errorCount.incrementAndGet()
         }
@@ -194,7 +194,7 @@ class UdpForwarder(
 
             session
         } catch (e: Exception) {
-            Log.e(TAG, "UDP session creation error: ${e.message}")
+            Log.e(TAG, "UDP session creation error: ${e.javaClass.simpleName}")
             runCatching { channel?.close() }
             sessionTable.get(key)?.takeIf { it.udpChannel == null || it.udpChannel === channel }
                 ?.let { sessionTable.remove(key) }
@@ -224,14 +224,14 @@ class UdpForwarder(
                     try {
                         readFromRemote(selKey, session, buffer)
                     } catch (e: Exception) {
-                        Log.e(TAG, "UDP read error: ${e.message}")
+                        Log.e(TAG, "UDP read error: ${e.javaClass.simpleName}")
                         sessionTable.remove(session.key)
                         errorCount.incrementAndGet()
                     }
                 }
             } catch (e: Exception) {
                 if (!running.get()) break
-                Log.e(TAG, "UDP selector error: ${e.message}")
+                Log.e(TAG, "UDP selector error: ${e.javaClass.simpleName}")
             }
         }
 

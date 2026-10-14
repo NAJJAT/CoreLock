@@ -103,18 +103,17 @@ class UntrustedInputFuzzTest {
         }
     }
 
-    /** A tampered list can add a public suffix; nothing stops it blocking a whole TLD. */
-    @Test fun tamperedListCanBlockAPublicSuffix() {
-        val out = invokePrivateParser("parseDomainListFormat", "co.uk\ncom.au\ngoogleapis.com\n")
-        println("Accepted from a tampered list: $out")
-        assertTrue(out.contains("co.uk"))
+    /** A tampered list must not block a whole public suffix (V-10). */
+    @Test fun tamperedListCannotBlockAPublicSuffix() {
+        val out = invokePrivateParser("parseDomainListFormat", "co.uk\ncom.au\nads.example.co.uk\n")
+        assertTrue("public suffix accepted: $out", "co.uk" !in out && "com.au" !in out)
+        assertTrue(out.contains("ads.example.co.uk"))
     }
 
-    /** Non-ASCII letters pass isValidDomain (isLetterOrDigit), so homoglyph entries load. */
-    @Test fun blocklistAcceptsUnicodeHomoglyphs() {
+    /** A label mixing scripts (Latin and Cyrillic o) is a look-alike and is refused (V-10). */
+    @Test fun blocklistRejectsMixedScriptHomoglyphs() {
         val out = invokePrivateParser("parseDomainListFormat", "gоogle.com\n")   // Cyrillic o
-        println("Homoglyph accepted: $out")
-        assertTrue(out.isNotEmpty())
+        assertTrue("homoglyph accepted: $out", out.isEmpty())
     }
 
     @Test fun blocklistParserScalesLinearly() {

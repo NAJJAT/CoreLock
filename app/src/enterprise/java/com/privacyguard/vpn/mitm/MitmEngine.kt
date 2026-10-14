@@ -126,7 +126,7 @@ class MitmEngine(
                 it.soTimeout = 10_000  // 10 s for TcpForwarder to connect back to us
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to create MITM server socket", e)
+            Log.e(TAG, "Failed to create MITM server socket: ${e.javaClass.simpleName}")
             return -1
         }
         val localPort = serverSocket.localPort
@@ -158,7 +158,7 @@ class MitmEngine(
                 session.isMitmIntercepted = false
                 serverSocket.runCatching { close() }
             } catch (e: Exception) {
-                Log.e(TAG, "MITM interception failed for ${session.key}", e)
+                Log.e(TAG, "MITM interception failed: ${e.javaClass.simpleName}")
                 _statusFlow.value = MitmRuntimeStatus(
                     state = "ERROR",
                     message = e.message ?: e::class.java.simpleName,
@@ -410,7 +410,7 @@ class MitmEngine(
         pinningDetector.markAsPinned(domain)
         val who = if (e.deviceSide) "${session.ownerPackage ?: "app"} rejected the PrivacyGuard certificate"
                   else "upstream TLS to $domain failed"
-        Log.w(TAG, "MITM handshake failed (${if (e.deviceSide) "device" else "upstream"} side) — passing this host through: ${e.cause?.message}")
+        Log.w(TAG, "MITM handshake failed (${if (e.deviceSide) "device" else "upstream"} side) — passing this host through: ${e.cause?.javaClass?.simpleName}")
         _statusFlow.value = MitmRuntimeStatus(
             state = "HANDSHAKE_FAILED",
             message = if (e.deviceSide)

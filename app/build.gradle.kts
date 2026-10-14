@@ -170,6 +170,8 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             isDebuggable = false
+            // No META-INF/version-control-info.textproto (git commit) in the APK (V-15).
+            vcsInfo.include = false
             // No debug fallback: without a release key the artifact tasks fail (see taskGraph check above).
             if (releaseSigningConfigured) signingConfig = signingConfigs.getByName("release")
             buildConfigField(
@@ -251,7 +253,6 @@ dependencies {
     implementation(libs.androidx.startup.runtime)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.kotlinx.coroutines.guava)
     // MDM / Device Admin
     implementation("androidx.legacy:legacy-preference-v14:1.0.0")
     implementation("androidx.enterprise:enterprise-feedback:1.1.0")

@@ -54,7 +54,7 @@ class TlsFingerprintMonitor(
                 val verdict = engine.observe(uid, packageName, ja4, ja3, hello.sni, environmentFor(packageName))
                 if (verdict is BaselineVerdict.Alert) raise(verdict.fingerprint)
             } catch (e: Exception) {
-                Log.w(TAG, "TLS baseline update failed for $packageName: ${e.message}")
+                Log.w(TAG, "TLS baseline update failed: ${e.javaClass.simpleName}")
             }
         }
     }

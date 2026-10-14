@@ -18,8 +18,8 @@ interface TlsInterception {
     /** Drop UDP/443 so QUIC apps fall back to TCP/TLS, where inspection works. */
     val blockQuic: Boolean
 
-    /** Whether a new TLS session to [sni] should be redirected to the local MITM server. */
-    fun shouldIntercept(ownerPackage: String?, sni: String): Boolean
+    /** Whether a new TLS session of [ownerUid] to [sni] should be redirected to the local MITM server. */
+    fun shouldIntercept(ownerUid: Int, ownerPackage: String?, sni: String): Boolean
 
     /**
      * Starts a local TLS server for [session] that accepts only the loopback
@@ -40,7 +40,7 @@ interface TlsInterception {
     object None : TlsInterception {
         override val isEnabled = false
         override val blockQuic = false
-        override fun shouldIntercept(ownerPackage: String?, sni: String) = false
+        override fun shouldIntercept(ownerUid: Int, ownerPackage: String?, sni: String) = false
         override fun intercept(session: Session, clientPort: Int) = -1
         override fun markPinned(sni: String) = Unit
         override fun logNotDecrypted(session: Session, sizeBytes: Int) = Unit

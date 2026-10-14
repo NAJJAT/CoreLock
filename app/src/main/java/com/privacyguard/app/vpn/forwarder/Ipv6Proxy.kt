@@ -149,7 +149,7 @@ class Ipv6Proxy(
                 // Start relay loop
                 relay.startRelay()
             } catch (e: Exception) {
-                Log.e(TAG, "IPv6 TCP connect failed: ${e.message}")
+                Log.e(TAG, "IPv6 TCP connect failed: ${e.javaClass.simpleName}")
                 if (session == null) runCatching { channel?.close() }
                 sendRst(ipv6, tcp)
             } finally {

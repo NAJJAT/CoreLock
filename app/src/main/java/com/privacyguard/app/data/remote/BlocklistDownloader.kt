@@ -1,6 +1,5 @@
 package com.privacyguard.app.data.remote
 
-import com.privacyguard.app.core.utils.readUtf8Capped
 import com.privacyguard.app.core.blocklist.BlocklistSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -19,6 +18,15 @@ class BlocklistDownloader {
     }
 
     suspend fun download(source: BlocklistSource): String? = withContext(Dispatchers.IO) {
+        downloadLines(source) { lines -> lines.joinToString("\n") }
+    }
+
+    /**
+     * Streams the list line by line into [parse] (V-10): a 32 MB list used to be
+     * held as one String, then split, then parsed (~240 MB of heap). [parse] runs
+     * once per attempt; a failure mid-way (network, size cap) discards its result.
+     */
+    suspend fun <T> downloadLines(source: BlocklistSource, parse: (Sequence<String>) -> T): T? = withContext(Dispatchers.IO) {
         val url = source.downloadUrl() ?: return@withContext null
         if (!url.startsWith("https://", ignoreCase = true)) return@withContext null
 
@@ -41,7 +49,8 @@ class BlocklistDownloader {
                         connection.disconnect()
                         return@withContext null
                     }
-                    return@withContext connection.inputStream.use { it.readUtf8Capped(MAX_LIST_BYTES) }
+                    return@withContext com.privacyguard.app.core.utils.CappedInputStream(connection.inputStream, MAX_LIST_BYTES)
+                        .bufferedReader(Charsets.UTF_8).useLines(parse)
                 }
                 connection.disconnect()
             } catch (_: com.privacyguard.app.core.utils.ResponseTooLargeException) {

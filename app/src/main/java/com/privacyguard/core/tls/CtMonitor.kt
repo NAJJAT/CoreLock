@@ -2,6 +2,7 @@ package com.privacyguard.core.tls
 
 import android.util.Log
 import kotlinx.coroutines.*
+import com.privacyguard.app.core.utils.readUtf8Capped
 import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -84,7 +85,10 @@ class CtMonitor(
         const val CHECK_INTERVAL_MS = 6L * 60 * 60 * 1000L // 6 hours
         const val MAX_WATCHED_DOMAINS = 50
 
-        fun queryUrl(domain: String) = "https://crt.sh/?q=%25.$domain&output=json&limit=10"
+        /** limit=10 is advisory: crt.sh may ignore it, so the body is capped as well. */
+        const val MAX_RESPONSE_BYTES = 2L * 1024 * 1024
+
+        fun queryUrl(domain: String) = "https://crt.sh/?q=%25.${java.net.URLEncoder.encode(domain, "UTF-8")}&output=json&limit=10"
 
         fun parse(body: String): List<CtEntry>? {
             if (!body.startsWith("[")) return null
@@ -108,6 +112,9 @@ class CtMonitor(
         OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
+            // crt.sh answers directly; a redirect (possibly to http or another host) is refused (V-12).
+            .followRedirects(false)
+            .followSslRedirects(false)
             .build()
     }
 
@@ -172,7 +179,7 @@ class CtMonitor(
             val newEntries = entries.filter { it.id > known.first }
             if (newEntries.isNotEmpty()) onNewCert(domain, newEntries)
         } catch (e: Exception) {
-            if (enabled) Log.w(TAG, "CT check failed: ${e.message}")
+            if (enabled) Log.w(TAG, "CT check failed: ${e.javaClass.simpleName}")
         }
     }
 
@@ -185,14 +192,17 @@ class CtMonitor(
         // No domain in the log: it would put browsing history in logcat.
         Log.i(TAG, "crt.sh request")
         try {
-            return call.execute().use { it.body?.string() }
+            return call.execute().use { response ->
+                if (!response.isSuccessful) return null
+                response.body?.byteStream()?.use { it.readUtf8Capped(MAX_RESPONSE_BYTES) }
+            }
         } finally {
             inFlight = null
         }
     }
 
-    private fun apexDomain(hostname: String): String {
-        val parts = hostname.trimStart('.').split('.')
-        return if (parts.size >= 2) parts.takeLast(2).joinToString(".") else hostname
-    }
+    // The registrable domain (Public Suffix List): bbc.co.uk, not co.uk, whose
+    // certificates would be every British site's.
+    private fun apexDomain(hostname: String): String =
+        com.privacyguard.core.utils.PublicSuffix.registrableDomain(hostname.trimStart('.')) ?: hostname
 }

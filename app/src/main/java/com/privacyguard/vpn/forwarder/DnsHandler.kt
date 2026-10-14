@@ -239,7 +239,7 @@ class DnsHandler(
                 // DNS query loops back into the handler instead of reaching the internet.
                 val protected = protectSocket?.invoke(socket) ?: true
                 if (!protected) {
-                    Log.e(TAG, "VpnService.protect() returned false for DNS socket to $server — socket is unprotected!")
+                    Log.e(TAG, "VpnService.protect() returned false for DNS socket — socket is unprotected!")
                     return@use false
                 }
                 socket.soTimeout = upstreamTimeoutMs
@@ -261,7 +261,7 @@ class DnsHandler(
                 injectDnsResponse(ipPacket, udpPacket, dnsQuery, responseData, ownerPackage, viaDoh = false)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "DNS forward to $server failed: ${e.message}")
+            Log.w(TAG, "DNS forward failed: ${e.javaClass.simpleName}")
             false
         }
     }
@@ -388,7 +388,7 @@ class DnsHandler(
                 }
             } catch (e: Exception) {
                 // No hostname: warnings survive R8 and would put browsing history in logcat.
-                Log.w(TAG, "DoH error: ${e.message}")
+                Log.w(TAG, "DoH error: ${e.javaClass.simpleName}")
                 // Our DoH provider's certificate was rejected: someone swapped it on the way.
                 if (com.privacyguard.app.core.network.NetworkSignals.isCertificateRejection(e)) {
                     networkSignalListener?.onSignal(
@@ -416,7 +416,7 @@ class DnsHandler(
         val socket = if (chain != null) {
             runCatching {
                 com.privacyguard.vpn.dualvpn.DualVpnTunnel.connect(chain, host, port, upstreamTimeoutMs, protectTcpSocket)
-            }.getOrElse { Log.w(TAG, "DoH via dual-hop failed: ${it.message}"); return null }
+            }.getOrElse { Log.w(TAG, "DoH via dual-hop failed: ${it.javaClass.simpleName}"); return null }
         } else Socket()
         socket.use { rawSocket ->
             if (chain == null) {
@@ -426,7 +426,7 @@ class DnsHandler(
                 rawSocket.bind(null)
                 val protected = protectTcpSocket?.invoke(rawSocket) ?: true
                 if (!protected) {
-                    Log.e(TAG, "VpnService.protect() returned false for DoH socket to $host")
+                    Log.e(TAG, "VpnService.protect() returned false for DoH socket")
                     return null
                 }
                 // Connect by address: resolving the DoH host would go back through this

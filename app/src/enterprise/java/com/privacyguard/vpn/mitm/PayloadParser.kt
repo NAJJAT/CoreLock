@@ -102,7 +102,7 @@ class PayloadParser(
                 )
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Payload parse failed: ${e.message}")
+            Log.w(TAG, "Payload parse failed: ${e.javaClass.simpleName}")
             ParsedPayload(
                 raw = bytes,
                 timestamp = System.currentTimeMillis(),

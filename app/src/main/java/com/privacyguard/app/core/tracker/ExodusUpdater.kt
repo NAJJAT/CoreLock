@@ -58,7 +58,7 @@ object ExodusUpdater {
                 true
             } else false
         } catch (e: Exception) {
-            Log.w("ExodusUpdater", "Tracker refresh failed: ${e.message}")
+            Log.w("ExodusUpdater", "Tracker refresh failed: ${e.javaClass.simpleName}")
             false
         }
     }

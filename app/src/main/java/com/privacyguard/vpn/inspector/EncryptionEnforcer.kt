@@ -141,7 +141,7 @@ class EncryptionEnforcer {
                 offset += extLen
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to extract SNI: ${e.message}")
+            Log.w(TAG, "Failed to extract SNI: ${e.javaClass.simpleName}")
         }
         return null
     }
@@ -184,7 +184,7 @@ class EncryptionEnforcer {
                 offset += extDataLen
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to check TLS 1.3: ${e.message}")
+            Log.w(TAG, "Failed to check TLS 1.3: ${e.javaClass.simpleName}")
         }
         return false
     }
