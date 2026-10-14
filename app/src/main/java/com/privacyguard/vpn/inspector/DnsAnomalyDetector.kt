@@ -26,6 +26,9 @@ class DnsAnomalyDetector {
         DNS_TAMPERED,
         DNS_HIJACK,
         TLS_INTERCEPTION,
+        // Server names (TLS/QUIC SNI) an app sent: see core/tls/SniCheck.
+        INVALID_SNI,
+        SNI_MISMATCH,
     }
 
     data class Anomaly(

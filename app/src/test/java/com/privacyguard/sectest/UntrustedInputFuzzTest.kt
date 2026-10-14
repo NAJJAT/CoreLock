@@ -47,8 +47,8 @@ class UntrustedInputFuzzTest {
         EncryptionEnforcer().inspectUdp(data)
     }
 
-    /** SNI is attacker-chosen: what can an app make PrivacyGuard record as its host? */
-    @Test fun sniIsNotValidatedAsAHostname() {
+    /** SNI is attacker-chosen: only a valid hostname may become the recorded host (V-06). */
+    @Test fun sniIsValidatedAsAHostname() {
         val evil = "‮moc.elgoog‬=HYPERLINK(\"http://x\")<script>"
         val name = evil.toByteArray(Charsets.UTF_8)
         fun u16(v: Int) = byteArrayOf((v ushr 8).toByte(), v.toByte())
@@ -58,8 +58,9 @@ class UntrustedInputFuzzTest {
         val record = byteArrayOf(0x16, 3, 1) + u16(hs.size) + hs
         val parsed = ClientHelloParser.parse(record)?.sni
         val classified = EncryptionEnforcer().inspect(443, record).sniHostname
-        println("SNI accepted by ClientHelloParser: ${parsed == evil}; by EncryptionEnforcer: ${classified == evil}")
-        assertTrue("finding: bidi/HTML/formula SNI is accepted verbatim", parsed == evil || classified == evil)
+        // Fixed (V-06): neither parser keeps a name that is not a hostname.
+        assertTrue("bidi/HTML/formula SNI must be rejected", parsed == null && classified == null)
+        assertTrue(ClientHelloParser.parse(record)!!.sniRejected)
     }
 
     /** crt.sh body: production catches Exception only (CtMonitor.checkDomain). */

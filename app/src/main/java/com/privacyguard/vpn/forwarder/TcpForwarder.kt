@@ -61,6 +61,11 @@ class TcpForwarder(
     private val dualVpnConfig: () -> DualVpnConfig = { DualVpnConfig() },
     // Gets the whole first TLS record, reassembled across segments, once per session.
     private val onClientHello: ((Session, ByteArray) -> Unit)? = null,
+    // The block decision DNS uses (DnsHandler.blockReasonFor): true = reset.
+    private val nameBlocked: ((ownerPackage: String?, host: String) -> Boolean)? = null,
+    // Every SNI seen (null if none or invalid; rejected = one was sent but was not a
+    // hostname), before it becomes the session host. Runs on the packet thread.
+    private val onSni: ((Session, String?, Boolean) -> Unit)? = null,
 ) : Runnable {
 
     companion object {
@@ -96,6 +101,8 @@ class TcpForwarder(
     val connectingCount = AtomicLong(0)
     val errorCount = AtomicLong(0)
     val encryptionBlocked = AtomicLong(0)
+    /** Connections reset because their TLS SNI is on a blocklist or a Block rule. */
+    val sniBlocked = AtomicLong(0)
     val mitmInterceptedCount = AtomicLong(0)
     val retransmittedSegments = AtomicLong(0)
 
@@ -370,12 +377,24 @@ class TcpForwarder(
         session.encryptionStatus = result.encryptionStatus
         session.tlsVersion = result.tlsVersion
         session.encryptionClassified = true
+        val hello = if (clientHelloBytes.isNotEmpty() && (clientHelloBytes[0].toInt() and 0xFF) == 0x16)
+            com.privacyguard.core.tls.ClientHelloParser.parse(clientHelloBytes) else null
+        onSni?.invoke(session, sni, hello?.sniRejected == true)
         if (sni != null) session.tlsSni = sni
 
         // DoH endpoints carry DNS past the blocklist; reset so the app falls back
         // to plain DNS through the tunnel.
         if (com.privacyguard.vpn.firewall.DnsBypassGuard.isDohHost(sni)) {
             encryptionBlocked.incrementAndGet()
+            session.blocked = true
+            resetSession(session)
+            return true
+        }
+
+        // A blocked name reached without our DNS (hard-coded address, own resolver,
+        // cached answer): the SNI gets the same decision as a DNS lookup (V-07).
+        if (sni != null && nameBlocked?.invoke(session.ownerPackage, sni) == true) {
+            sniBlocked.incrementAndGet()
             session.blocked = true
             resetSession(session)
             return true

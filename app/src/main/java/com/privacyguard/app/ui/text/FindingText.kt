@@ -133,6 +133,8 @@ object FindingText {
             "DNS_TAMPERED" -> R.string.dns_tampered
             "DNS_HIJACK" -> R.string.dns_hijack
             "TLS_INTERCEPTION" -> R.string.tls_interception
+            "INVALID_SNI" -> R.string.sni_invalid
+            "SNI_MISMATCH" -> R.string.sni_mismatch
             else -> R.string.dns_unknown
         }
     )
@@ -148,6 +150,8 @@ object FindingText {
             "DNS_TAMPERED" -> R.string.dns_tampered_desc
             "DNS_HIJACK" -> R.string.dns_hijack_desc
             "TLS_INTERCEPTION" -> R.string.tls_interception_desc
+            "INVALID_SNI" -> R.string.sni_invalid_desc
+            "SNI_MISMATCH" -> R.string.sni_mismatch_desc
             else -> R.string.dns_unknown
         }
     )

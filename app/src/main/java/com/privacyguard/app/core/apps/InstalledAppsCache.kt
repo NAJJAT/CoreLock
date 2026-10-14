@@ -95,7 +95,7 @@ object InstalledAppsCache {
                 .map { info ->
                     InstalledApp(
                         packageName = info.packageName,
-                        appName = info.applicationInfo?.loadLabel(pm)?.toString()
+                        appName = info.applicationInfo?.loadLabel(pm)?.toString()?.let(com.privacyguard.core.utils.Hostnames::label)
                             ?: info.packageName.substringAfterLast('.'),
                         requestedPermissions = info.requestedPermissions?.toSet().orEmpty(),
                     )

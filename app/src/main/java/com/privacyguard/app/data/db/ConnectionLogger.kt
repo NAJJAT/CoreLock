@@ -60,7 +60,15 @@ class ConnectionLogger private constructor(
         }
     }
 
-    fun log(entity: ConnectionEntity) { channel.trySend(entity) }
+    // Hosts and app labels come from apps and the network: stored escaped, so no
+    // screen or export ever shows bidi overrides or control characters (V-06).
+    fun log(entity: ConnectionEntity) {
+        channel.trySend(entity.copy(
+            appName = com.privacyguard.core.utils.Hostnames.label(entity.appName),
+            domain = entity.domain?.let(com.privacyguard.core.utils.Hostnames::display),
+            sniHostname = entity.sniHostname?.let(com.privacyguard.core.utils.Hostnames::display),
+        ))
+    }
 
     companion object {
         private const val TAG              = "ConnectionLogger"

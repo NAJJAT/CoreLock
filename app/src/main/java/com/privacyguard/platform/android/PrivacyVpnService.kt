@@ -46,6 +46,7 @@ import com.privacyguard.core.tls.CipherRisk
 import com.privacyguard.core.tls.CipherSuiteAnalyzer
 import com.privacyguard.core.tls.ClientHelloParser
 import com.privacyguard.core.tls.CtMonitor
+import com.privacyguard.core.tls.QuicSniTracker
 import com.privacyguard.app.core.blocklist.BlocklistCache
 import com.privacyguard.core.tls.Ja3Fingerprinter
 import com.privacyguard.vpn.firewall.AppFilter
@@ -155,6 +156,10 @@ class PrivacyVpnService : VpnService() {
         private const val TAG = "PrivacyVpnService"
         /** Virtual resolver inside the tunnel subnet; see DnsHandler. */
         private const val TUNNEL_DNS_V4 = "10.0.0.1"
+        // After a QUIC flow is blocked for its SNI, its later packets are dropped this long.
+        private const val QUIC_BLOCK_MEMORY_MS = 120_000L
+        // No SNI mismatch findings right after start: apps still use DNS answers cached before.
+        private const val SNI_MISMATCH_GRACE_MS = 5 * 60_000L
         const val ACTION_STOP = "com.privacyguard.action.STOP_VPN"
         private const val DNS_ATTRIBUTION_WINDOW_MS = 60_000L
         /** How often a live connection is re-checked against the rules. */
@@ -364,6 +369,7 @@ class PrivacyVpnService : VpnService() {
         Log.i(TAG, "TUN fd established")
 
         tunFd = fd
+        tunnelStartedAt = System.currentTimeMillis()
         tunInterface = TunInterface(fd.fileDescriptor)
         tunWriter = TunWriter(tunInterface).also { it.start() }
         failIfDebugHookArmed()
@@ -397,7 +403,7 @@ class PrivacyVpnService : VpnService() {
                         timestamp = System.currentTimeMillis(),
                         appPackage = pkg,
                         appName = appName,
-                        domain = domain,
+                        domain = com.privacyguard.core.utils.Hostnames.display(domain),
                         wasBlocked = wasBlocked,
                         phoneWasIdle = idle,
                         appForeground = foreground,
@@ -421,6 +427,8 @@ class PrivacyVpnService : VpnService() {
             onClientHello = { session, bytes ->
                 inspectTlsClientHello(bytes, session.ownerUid, session.ownerPackage ?: appTracker.packageForUid(session.ownerUid))
             },
+            nameBlocked = { pkg, host -> dnsHandler.blockReasonFor(host, pkg) != null },
+            onSni = { session, sni, rejected -> onSniSeen(session, sni, rejected) },
         ).also { it.start() }
         udpForwarder = UdpForwarder(sessionTable, tunWriter, ::protect).also { it.start() }
 
@@ -649,6 +657,9 @@ class PrivacyVpnService : VpnService() {
             return
         }
         val key = SessionKey.of(srcIp, srcPort, dstIp, dstPort, IpPacket.PROTO_UDP)
+        // A QUIC flow whose SNI was blocked: drop the rest of it (later packets have
+        // short headers and no SNI, so they would otherwise start a new session).
+        if (dstPort == 443 && isBlockedQuicFlow(key)) return
         val existing = sessionTable.get(key)
         if (existing != null) {
             if (blockedOnRecheck(existing)) {
@@ -658,6 +669,11 @@ class PrivacyVpnService : VpnService() {
             }
             if (dualVpnSettings().dropsUdp(dstPort)) return
             if (dstPort == 443 && interception.blockQuic) return
+            if (dstPort == 443 && !existing.quicSniChecked && quicSniBlocks(key, data, existing.ownerPackage, existing)) {
+                existing.blocked = true
+                sessionTable.remove(key)
+                return
+            }
             udpForwarder.handle(key, data, existing.ownerUid, existing.ownerPackage)
             return
         }
@@ -677,14 +693,93 @@ class PrivacyVpnService : VpnService() {
         // Drop QUIC (UDP/443) when inspection asks for it: QUIC-capable apps then
         // retry on TCP/TLS, where interception is possible.
         if (dstPort == 443 && interception.blockQuic) return
+        val quic = if (dstPort == 443) quicSni.offer(key, data) else null
+        if (quic is QuicSniTracker.Result.Hello && quicHelloBlocked(key, quic.hello, pkg)) {
+            logBlockedAttempt(key, uid, pkg)
+            return
+        }
         udpForwarder.handle(key, data, uid, pkg)
         sessionTable.get(key)?.let { session ->
             if (!session.encryptionClassified) {
                 session.encryptionStatus = encEnforcer.inspectUdp(data)
                 session.encryptionClassified = true
             }
+            when (quic) {
+                is QuicSniTracker.Result.Hello -> applyQuicHello(session, quic.hello)
+                QuicSniTracker.Result.Unreadable -> session.quicSniChecked = true
+                else -> {}
+            }
             onSessionOpened(session, pkg)
         }
+    }
+
+    // ── QUIC: the ClientHello in the client's Initial packets (V-07) ─────────
+
+    private val quicSni = QuicSniTracker<SessionKey>()
+
+    /** QUIC flows dropped for their SNI, with the time they were blocked. */
+    private val blockedQuicFlows = ConcurrentHashMap<SessionKey, Long>()
+
+    private fun isBlockedQuicFlow(key: SessionKey): Boolean {
+        val at = blockedQuicFlows[key] ?: return false
+        if (System.currentTimeMillis() - at < QUIC_BLOCK_MEMORY_MS) return true
+        blockedQuicFlows.remove(key)
+        return false
+    }
+
+    /** Feeds a datagram of an open flow to the tracker; true if its SNI is blocked. */
+    private fun quicSniBlocks(key: SessionKey, data: ByteArray, pkg: String?, session: Session): Boolean =
+        when (val r = quicSni.offer(key, data)) {
+            is QuicSniTracker.Result.Hello -> quicHelloBlocked(key, r.hello, pkg).also { if (!it) applyQuicHello(session, r.hello) }
+            QuicSniTracker.Result.Unreadable -> { session.quicSniChecked = true; false }
+            QuicSniTracker.Result.Pending -> false
+        }
+
+    private fun quicHelloBlocked(key: SessionKey, hello: com.privacyguard.core.tls.ClientHello, pkg: String?): Boolean {
+        val sni = hello.sni ?: return false
+        if (DnsBypassGuard.isDohHost(sni) || dnsHandler.blockReasonFor(sni, pkg) != null) {
+            if (blockedQuicFlows.size > 4_096) blockedQuicFlows.clear()
+            blockedQuicFlows[key] = System.currentTimeMillis()
+            recordBlock()
+            return true
+        }
+        return false
+    }
+
+    private fun applyQuicHello(session: Session, hello: com.privacyguard.core.tls.ClientHello) {
+        session.quicSniChecked = true
+        onSniSeen(session, hello.sni, hello.sniRejected)
+        hello.sni?.let { session.tlsSni = it }
+    }
+
+    // ── SNI checks (TLS and QUIC, V-06) ─────────────────────────────────────
+
+    /**
+     * Flags an invalid SNI, or one that names another site than DNS gave this
+     * address out for (SniCheck). Runs before the SNI becomes the session's host.
+     */
+    private fun onSniSeen(session: Session, sni: String?, rejected: Boolean) {
+        val dstIp = session.key.destinationIp
+        val dnsName = hostByIp[dstIp]
+        val finding = com.privacyguard.core.tls.SniCheck.evaluate(
+            sni, rejected, dnsName, sniWasResolved = sni != null && resolvedNames.containsKey(sni),
+        ) ?: return
+        val mismatch = finding.kind == com.privacyguard.core.tls.SniCheck.Kind.SNI_MISMATCH
+        // Apps keep DNS answers from before the tunnel started; give their caches time.
+        if (mismatch && System.currentTimeMillis() - tunnelStartedAt < SNI_MISMATCH_GRACE_MS) return
+        if (mismatch) {
+            session.sniMismatch = true
+            if (session.resolvedHostname == null) session.resolvedHostname = dnsName
+        }
+        val pkg = session.ownerPackage?.takeIf { it.isNotBlank() } ?: "Unknown"
+        dnsAnomalyDetector.anomalyListener?.onAnomaly(DnsAnomalyDetector.Anomaly(
+            timestamp = System.currentTimeMillis(),
+            packageName = pkg,
+            domain = finding.sni ?: dnsName ?: dstIp,
+            type = if (mismatch) DnsAnomalyDetector.AnomalyType.SNI_MISMATCH else DnsAnomalyDetector.AnomalyType.INVALID_SNI,
+            description = if (mismatch) "Claimed ${finding.sni}; DNS gave this address out for $dnsName" else "Server name is not a hostname ($dstIp)",
+            severity = if (mismatch) 6 else 7,
+        ))
     }
 
     /** Records the app and screen state once, and any hostname DNS already gave this address. */
@@ -1113,10 +1208,15 @@ class PrivacyVpnService : VpnService() {
     /** Last DNS name seen for each answer address, in canonical text form. */
     private val hostByIp = ConcurrentHashMap<String, String>()
 
+    /** Names looked up through our DNS, with when (for SniCheck: was the SNI resolved?). */
+    private val resolvedNames = ConcurrentHashMap<String, Long>()
+
     private fun onDnsResolved(ip: String, hostname: String) {
         val address = normalizeIp(ip)
         if (hostByIp.size > 8_192) hostByIp.clear()
         hostByIp[address] = hostname
+        if (resolvedNames.size > 16_384) resolvedNames.clear()
+        resolvedNames[hostname.lowercase().trimEnd('.')] = System.currentTimeMillis()
         sessionTable.allSessions()
             .filter { it.key.destinationIp == address && it.resolvedHostname == null }
             .forEach { it.resolvedHostname = hostname }
@@ -1243,6 +1343,8 @@ class PrivacyVpnService : VpnService() {
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
+
+    @Volatile private var tunnelStartedAt = 0L
 
     private val stopReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {

@@ -65,4 +65,8 @@
     <string name="dns_hijack_desc">أجابت الشبكة عن اسم لا يمكن أن يوجد. إنها تعترض DNS أو تعيد كتابته، فيمكنها توجيهك إلى خوادم أخرى.</string>
     <string name="tls_interception">رُصد اعتراض TLS</string>
     <string name="tls_interception_desc">استُبدلت شهادة في اتصال DNS المشفّر الخاص بـ PrivacyGuard أثناء الطريق. يستطيع شخص على هذه الشبكة قراءة HTTPS وتعديله.</string>
+    <string name="sni_invalid">اسم خادم غير صالح</string>
+    <string name="sni_invalid_desc">أرسل التطبيق اسم خادم TLS ليس اسم مضيف. التطبيقات العادية لا تفعل ذلك أبدًا، وقد يكون ذلك محاولة لتضليل المرشّحات أو لإخفاء وجهة الاتصال.</string>
+    <string name="sni_mismatch">اسم الخادم لا يطابق DNS</string>
+    <string name="sni_mismatch_desc">اتصل التطبيق بعنوان أعطاه DNS لموقع ما، لكنه ذكر موقعًا آخر لم يبحث عنه قط. يظهر الاتصال باسم DNS.</string>
 </resources>

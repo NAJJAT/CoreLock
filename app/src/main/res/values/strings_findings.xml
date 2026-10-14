@@ -65,4 +65,8 @@
     <string name="dns_hijack_desc">The network answered a name that cannot exist. It intercepts or rewrites DNS, so it can send you to other servers.</string>
     <string name="tls_interception">TLS interception detected</string>
     <string name="tls_interception_desc">A certificate on PrivacyGuard’s own encrypted DNS connection was replaced on the way. Someone on this network can read and change HTTPS.</string>
+    <string name="sni_invalid">Invalid server name</string>
+    <string name="sni_invalid_desc">The app sent a TLS server name that is not a hostname. Normal apps never do this; it can be an attempt to confuse filters or to hide where the connection goes.</string>
+    <string name="sni_mismatch">Server name does not match DNS</string>
+    <string name="sni_mismatch_desc">The app connected to an address that DNS gave out for one site, but named another site it never looked up. The connection is shown under the DNS name.</string>
 </resources>

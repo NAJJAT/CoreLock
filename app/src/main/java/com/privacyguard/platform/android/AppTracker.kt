@@ -55,7 +55,7 @@ class AppTracker(
      */
     fun labelForPackage(packageName: String): String? = try {
         val info = pm.getApplicationInfo(packageName, 0)
-        pm.getApplicationLabel(info).toString()
+        com.privacyguard.core.utils.Hostnames.label(pm.getApplicationLabel(info).toString())
     } catch (_: PackageManager.NameNotFoundException) {
         null
     }

@@ -133,7 +133,7 @@ class EncryptionEnforcer {
                             val nameLen = ((data[offset + 3].toInt() and 0xFF) shl 8) or (data[offset + 4].toInt() and 0xFF)
                             val nameStart = offset + 5
                             if (nameStart + nameLen <= data.size) {
-                                return String(data, nameStart, nameLen, Charsets.US_ASCII)
+                                return com.privacyguard.core.utils.Hostnames.validSni(data, nameStart, nameLen)
                             }
                         }
                     }

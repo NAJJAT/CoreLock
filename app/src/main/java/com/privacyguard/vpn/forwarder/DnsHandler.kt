@@ -110,8 +110,10 @@ class DnsHandler(
             return true
         }
 
-        // Only client queries with a question are forwarded; anything else is dropped.
-        if (dns.isResponse) { malformedDns.incrementAndGet(); return true }
+        // Only client queries with exactly one question are forwarded; anything else is
+        // dropped. Only the first question was checked, so a second one in the same
+        // query (which some resolvers answer) went through unfiltered (V-16).
+        if (dns.isResponse || dns.questions.size != 1) { malformedDns.incrementAndGet(); return true }
         val queryName = dns.queryName ?: run { malformedDns.incrementAndGet(); return true }
 
         // ── Layer 2: Anomaly Detection (always, before blocking) ─────────────
@@ -119,18 +121,7 @@ class DnsHandler(
         anomalies.forEach { anomalyListener?.onAnomaly(it) }
 
         // ── Layer 1: Blocklist ───────────────────────────────────────────────
-        // Ad-SDK policy is per app (DomainFilter is not): it blocks SDK hosts in
-        // other apps, and keeps login/push/deep-link hosts open even when a
-        // downloaded list contains them. Precedence: see [DnsBlockDecision].
-        val sdkVerdict = adSdkPolicy?.decide(ownerPackage, queryName)
-        val userRule = filterEngine.domainRuleFor(queryName, ownerPackage)
-        val blockReason = DnsBlockDecision.decide(
-            userRule = userRule,
-            onSecurityList = securityFilter?.isBlocked(queryName) == true,
-            onLevelBlocklist = sdkVerdict !is com.privacyguard.app.adprivacy.AdSdkVerdict.KeepOpen &&
-                domainFilter?.isBlocked(queryName) == true,
-            adSdkBlocks = sdkVerdict is com.privacyguard.app.adprivacy.AdSdkVerdict.Block,
-        ) ?: if (userRule == null && filterEngine.isDomainBlocked(queryName)) DnsBlockDecision.Reason.USER_RULE else null
+        val blockReason = blockReasonFor(queryName, ownerPackage)
         if (blockReason != null) {
             queryListener?.onQuery(ownerPackage, queryName, true)
             blockedCount.incrementAndGet()
@@ -162,6 +153,30 @@ class DnsHandler(
         }
         return true
     }
+
+    /**
+     * Why [name] is blocked for [ownerPackage], or null. The one decision for DNS
+     * names, CNAME targets, TLS SNI and QUIC SNI, so they can never disagree.
+     *
+     * Ad-SDK policy is per app (DomainFilter is not): it blocks SDK hosts in other
+     * apps, and keeps login/push/deep-link hosts open even when a downloaded list
+     * contains them. Precedence: see [DnsBlockDecision].
+     */
+    fun blockReasonFor(name: String, ownerPackage: String?): DnsBlockDecision.Reason? {
+        val sdkVerdict = adSdkPolicy?.decide(ownerPackage, name)
+        val userRule = filterEngine.domainRuleFor(name, ownerPackage)
+        return DnsBlockDecision.decide(
+            userRule = userRule,
+            onSecurityList = securityFilter?.isBlocked(name) == true,
+            onLevelBlocklist = sdkVerdict !is com.privacyguard.app.adprivacy.AdSdkVerdict.KeepOpen &&
+                domainFilter?.isBlocked(name) == true,
+            adSdkBlocks = sdkVerdict is com.privacyguard.app.adprivacy.AdSdkVerdict.Block,
+        ) ?: if (userRule == null && filterEngine.isDomainBlocked(name)) DnsBlockDecision.Reason.USER_RULE else null
+    }
+
+    /** CNAME targets in [response] that are blocked for [ownerPackage] (CNAME cloaking). */
+    internal fun blockedCnameTarget(response: DnsPacket, ownerPackage: String?): String? =
+        response.cnameRecords.firstOrNull { blockReasonFor(it, ownerPackage) != null }
 
     private val forwardExecutor = java.util.concurrent.ThreadPoolExecutor(
         // core == max: with a bounded queue, extra threads would start only once it is full.
@@ -300,7 +315,7 @@ class DnsHandler(
         udpPacket:    UdpPacket,
         dnsQuery:     DnsPacket,
         responseData: ByteArray,
-        @Suppress("UNUSED_PARAMETER") ownerPackage: String?,
+        ownerPackage: String?,
         viaDoh: Boolean = true,
     ): Boolean {
         // Must be a parseable answer to this very query: otherwise a forged or
@@ -310,6 +325,20 @@ class DnsHandler(
         if (dnsResponse == null || !dnsResponse.isResponse || dnsResponse.id != dnsQuery.id) {
             Log.w(TAG, "Dropping DNS response that does not match the query")
             return false
+        }
+        // CNAME cloaking: an allowed first-party name that is an alias of a blocked
+        // tracker resolves to the tracker. Answer NXDOMAIN as for the tracker itself.
+        blockedCnameTarget(dnsResponse, ownerPackage)?.let { target ->
+            queryListener?.onQuery(ownerPackage, target, true)
+            cnameBlocked.incrementAndGet()
+            tunWriter.enqueueWithChecksums(buildUdpResponse(
+                srcIp   = ipPacket.destinationIp,
+                dstIp   = ipPacket.sourceIp,
+                srcPort = DNS_PORT,
+                dstPort = udpPacket.sourcePort,
+                data    = DnsPacket.buildBlockedResponse(dnsQuery),
+            ))
+            return true
         }
         val queryName = dnsQuery.queryName
         if (queryName != null) {
@@ -494,6 +523,8 @@ class DnsHandler(
     val malformedDns   = AtomicLong(0)
     val upstreamErrors = AtomicLong(0)
     val droppedQueries = AtomicLong(0)
+    /** Answers turned into NXDOMAIN because a CNAME pointed at a blocked name. */
+    val cnameBlocked   = AtomicLong(0)
     /** DoH lookups answered with SERVFAIL because DoH could not be reached. */
     val dohFailures    = AtomicLong(0)
 

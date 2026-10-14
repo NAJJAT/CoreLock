@@ -14,6 +14,8 @@ data class ClientHello(
     val supportedVersions: List<Int>,
     // JA4 hashes these in wire order, so they are kept unsorted.
     val signatureAlgorithms: List<Int> = emptyList(),
+    /** An SNI was sent but was not a valid hostname (then [sni] is null). */
+    val sniRejected: Boolean = false,
 ) {
     fun ja3String(): String {
         val version = tlsVersion.toString()
@@ -83,6 +85,7 @@ object ClientHelloParser {
         val pointFmts = mutableListOf<Int>()
         val versions = mutableListOf<Int>()
         var sni: String? = null
+        var sniRejected = false
         val alpn = mutableListOf<String>()
         val sigAlgs = mutableListOf<Int>()
 
@@ -92,7 +95,10 @@ object ClientHelloParser {
             val eEnd = (pos + eLen).coerceAtMost(data.size)
             extTypes += eType
             when (eType) {
-                0x0000 -> sni = parseSni(data, pos, eEnd)
+                0x0000 -> {
+                    sni = parseSni(data, pos, eEnd)
+                    sniRejected = sni == null && eLen > 0
+                }
                 0x000a -> parseGroups(data, pos, eEnd, groups)
                 0x000b -> parsePointFormats(data, pos, eEnd, pointFmts)
                 0x000d -> parseGroups(data, pos, eEnd, sigAlgs) // same u16-list layout
@@ -103,7 +109,20 @@ object ClientHelloParser {
         }
 
         return ClientHello(clientVersion, ciphers, comprMethods, extTypes, groups,
-            pointFmts, sni, alpn, versions, sigAlgs)
+            pointFmts, sni, alpn, versions, sigAlgs, sniRejected)
+    }
+
+    /**
+     * Parses a bare ClientHello handshake message (type 1, 3-byte length, body), as
+     * QUIC carries it in CRYPTO frames, by giving it the TLS record header [parse] expects.
+     */
+    fun parseHandshake(message: ByteArray): ClientHello? {
+        if (message.size < 4 || message[0].toInt() != 0x01 || message.size > 0xFFFF) return null
+        val record = ByteArray(5 + message.size)
+        record[0] = 0x16; record[1] = 0x03; record[2] = 0x01
+        record[3] = (message.size ushr 8).toByte(); record[4] = message.size.toByte()
+        message.copyInto(record, 5)
+        return parse(record)
     }
 
     private fun parseSni(data: ByteArray, start: Int, end: Int): String? {
@@ -115,7 +134,8 @@ object ClientHelloParser {
         if (p + 2 > end) return null
         val nameLen = readU16(data, p); p += 2
         if (p + nameLen > data.size) return null
-        return String(data, p, nameLen, Charsets.UTF_8)
+        // Attacker-chosen: only a real hostname is kept (no bidi text, HTML, IP literal).
+        return com.privacyguard.core.utils.Hostnames.validSni(data, p, nameLen)
     }
 
     private fun parseGroups(data: ByteArray, start: Int, end: Int, out: MutableList<Int>) {

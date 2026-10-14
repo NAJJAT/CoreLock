@@ -128,8 +128,17 @@ class Session(
      */
     @Volatile var resolvedHostname: String? = null
 
-    /** Best-effort hostname: SNI preferred, DNS-resolved as fallback. */
-    val hostname: String? get() = tlsSni ?: resolvedHostname
+    /**
+     * The SNI names another site than the one DNS gave this address out for, and
+     * was never looked up (SniCheck): the app's claim is not trusted as the host.
+     */
+    @Volatile var sniMismatch: Boolean = false
+
+    /** QUIC: the SNI of this flow was read from its Initial packets, or cannot be. */
+    @Volatile var quicSniChecked: Boolean = false
+
+    /** Best-effort hostname: SNI preferred, DNS-resolved as fallback (or first, on a mismatch). */
+    val hostname: String? get() = if (sniMismatch) resolvedHostname ?: tlsSni else tlsSni ?: resolvedHostname
 
     // ─────────────────────────────────────────────────────────────────────────
     // Encryption Metadata (no decryption required)

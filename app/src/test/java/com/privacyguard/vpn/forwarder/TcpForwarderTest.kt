@@ -155,6 +155,49 @@ class TcpForwarderTest {
         assertEquals(1234L, rst.sequenceNumber)
     }
 
+    /** Regression for V-07: a TLS connection to a blocked name is reset, even without DNS. */
+    @Test
+    fun client_hello_with_a_blocked_sni_is_reset_and_never_reaches_the_server() {
+        forwarder.stop()
+        val seenSni = mutableListOf<String?>()
+        forwarder = TcpForwarder(
+            sessionTable, tunWriter, EncryptionEnforcer(), FilterEngine(),
+            protectSocket = { true }, interception = TlsInterception.None,
+            nameBlocked = { _, host -> host == "ads.example.com" || host.endsWith(".ads.example.com") },
+            onSni = { _, sni, _ -> seenSni += sni },
+        ).also { it.start() }
+
+        for ((port, sni, blocked) in listOf(Triple(40_010, "cdn.ads.example.com", true), Triple(40_011, "news.example.org", false))) {
+            val serverSocket = ServerSocket(0, 1, InetAddress.getLoopbackAddress())
+            val got = ByteArrayOutputStream()
+            val t = thread(isDaemon = true) {
+                runCatching { serverSocket.accept().use { s -> s.soTimeout = 2_000; runCatching { val b = ByteArray(4096); val n = s.getInputStream().read(b); if (n > 0) got.write(b, 0, n) } } }
+            }
+            val key = SessionKey.of("10.0.0.2", port, "127.0.0.1", serverSocket.localPort, IpPacket.PROTO_TCP)
+            forwarder.handle(key, segment(seq = 1_000, ack = 0, syn = true, window = 65_535))
+            val synAck = nextSegment()!!
+            val hello = tlsClientHello(sni)
+            forwarder.handle(key, segment(seq = 1_001, ack = (synAck.sequenceNumber + 1) and 0xFFFFFFFFL, ack_ = true, window = 65_535, data = hello))
+            var sawRst = false
+            val deadline = System.currentTimeMillis() + 3_000
+            while (System.currentTimeMillis() < deadline) { val s = nextSegment(500) ?: continue; if (s.flagRst) { sawRst = true; break } }
+            t.join(3_000); serverSocket.close()
+            assertEquals("RST for $sni", blocked, sawRst)
+            assertEquals("bytes at server for $sni", if (blocked) 0 else hello.size, got.size())
+        }
+        assertEquals(listOf("cdn.ads.example.com", "news.example.org"), seenSni)
+        assertEquals(1L, forwarder.sniBlocked.get())
+    }
+
+    private fun tlsClientHello(sni: String): ByteArray {
+        fun u16(v: Int) = byteArrayOf((v ushr 8).toByte(), v.toByte())
+        val name = sni.toByteArray()
+        val ext = u16(0) + u16(name.size + 5) + u16(name.size + 3) + byteArrayOf(0) + u16(name.size) + name
+        val body = u16(0x0303) + ByteArray(32) + byteArrayOf(0) + u16(2) + u16(0x1301) + byteArrayOf(1, 0) + u16(ext.size) + ext
+        val hs = byteArrayOf(1, 0) + u16(body.size) + body
+        return byteArrayOf(0x16, 3, 1) + u16(hs.size) + hs
+    }
+
     // ── helpers ──────────────────────────────────────────────────────────────
 
     private fun nextSegment(timeoutMs: Long = 5_000): TcpPacket? {

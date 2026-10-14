@@ -119,6 +119,28 @@ class DnsHandlerTest {
         assertEquals(listOf("doubleclick.net" to true, "doubleclick.net" to true), seen)
     }
 
+    /** Regression for V-16: an allowed name that is a CNAME alias of a blocked one. */
+    @Test
+    fun cname_to_a_blocked_name_is_detected() {
+        blockDomain("*.tracker.example")
+        val cloaked = cnameResponse("metrics.news.example", "x1.tracker.example")
+        assertEquals("x1.tracker.example", handler.blockedCnameTarget(DnsPacket.parse(cloaked)!!, null))
+        val clean = cnameResponse("www.news.example", "edge.cdn.example")
+        assertNull(handler.blockedCnameTarget(DnsPacket.parse(clean)!!, null))
+    }
+
+    /** A response for [name] with one CNAME answer pointing at [target]. */
+    private fun cnameResponse(name: String, target: String): ByteArray {
+        val q = DnsPacket.buildQuery(name, id = 5)
+        val out = java.io.ByteArrayOutputStream()
+        out.write(q.copyOfRange(0, 2)); out.write(byteArrayOf(0x81.toByte(), 0x80.toByte(), 0, 1, 0, 1, 0, 0, 0, 0))
+        out.write(q.copyOfRange(12, q.size))
+        val t = DnsPacket.encodeName(target)
+        out.write(byteArrayOf(0xC0.toByte(), 12, 0, 5, 0, 1, 0, 0, 0, 60, (t.size ushr 8).toByte(), t.size.toByte()))
+        out.write(t)
+        return out.toByteArray()
+    }
+
     // ── queryListener — blocked path ──────────────────────────────────────────
 
     @Test

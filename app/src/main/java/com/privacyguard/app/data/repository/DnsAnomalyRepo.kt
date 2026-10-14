@@ -13,9 +13,9 @@ class DnsAnomalyRepo(private val dnsAnomalyDao: DnsAnomalyDao) {
         dnsAnomalyDao.insert(DnsAnomalyEntity(
             timestamp = anomaly.timestamp,
             packageName = anomaly.packageName,
-            domain = anomaly.domain,
+            domain = com.privacyguard.core.utils.Hostnames.display(anomaly.domain),
             anomalyType = anomaly.type.name,
-            description = anomaly.description,
+            description = com.privacyguard.core.utils.Hostnames.label(anomaly.description, max = 500),
             severity = anomaly.severity,
             networkKey = networkKey,
         ), dedupeBase = DnsAnomalyDetector.baseForDedupe(anomaly))

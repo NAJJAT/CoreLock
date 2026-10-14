@@ -61,4 +61,8 @@
     <string name="dns_hijack_desc">Het netwerk beantwoordde een naam die niet kan bestaan. Het onderschept of herschrijft DNS en kan je dus naar andere servers sturen.</string>
     <string name="tls_interception">TLS-onderschepping gedetecteerd</string>
     <string name="tls_interception_desc">Een certificaat op de eigen versleutelde DNS-verbinding van PrivacyGuard werd onderweg vervangen. Iemand op dit netwerk kan HTTPS lezen en wijzigen.</string>
+    <string name="sni_invalid">Ongeldige servernaam</string>
+    <string name="sni_invalid_desc">De app stuurde een TLS-servernaam die geen hostnaam is. Gewone apps doen dat nooit; het kan een poging zijn om filters te misleiden of te verbergen waar de verbinding heen gaat.</string>
+    <string name="sni_mismatch">Servernaam past niet bij DNS</string>
+    <string name="sni_mismatch_desc">De app maakte verbinding met een adres dat DNS voor de ene site gaf, maar noemde een andere site die ze nooit opzocht. De verbinding staat onder de DNS-naam.</string>
 </resources>

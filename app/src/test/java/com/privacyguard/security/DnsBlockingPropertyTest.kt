@@ -98,9 +98,9 @@ class DnsBlockingPropertyTest {
         }
     }
 
-    /** FINDING CANDIDATE: only the first question is checked. */
+    /** Regression for V-16: only the first question was checked; QDCOUNT ≠ 1 is now dropped. */
     @Test
-    fun a_second_question_is_not_checked() {
+    fun a_query_with_a_second_question_is_dropped() {
         val (h, seen) = handler()
         val q = query("allowed.example", 1, 7)
         // Same header, QDCOUNT=2, then a second question for a blocked name.
@@ -109,9 +109,9 @@ class DnsBlockingPropertyTest {
             "doubleclick.net".split('.').forEach { write(it.length); write(it.toByteArray()) }
             write(0); write(byteArrayOf(0, 1, 0, 1))
         }.toByteArray()
-        h.handle(ip, udp(q + second))
-        // Records what the handler did: passes when the blocked second question is forwarded.
-        assertEquals(listOf("allowed.example" to false), seen)
+        assertTrue(h.handle(ip, udp(q + second)))
+        // Consumed and never forwarded: nothing is looked up for either question.
+        assertEquals(emptyList<Pair<String, Boolean>>(), seen)
         h.shutdown()
     }
 
