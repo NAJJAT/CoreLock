@@ -147,7 +147,8 @@ class SessionTable(
      */
     fun startReaper() {
         reaperFuture = reaperExecutor.scheduleWithFixedDelay(
-            ::reap,
+            // A scheduled task that throws is never run again: idle sessions would pile up.
+            { com.privacyguard.vpn.WorkerGuard.guard("session-reaper") { reap() } },
             reaperIntervalMs,
             reaperIntervalMs,
             TimeUnit.MILLISECONDS,

@@ -44,10 +44,7 @@ class TunWriter(
 
     fun start() {
         if (running.getAndSet(true)) return
-        thread = Thread(this, "tun-writer").also {
-            it.isDaemon = true
-            it.start()
-        }
+        thread = com.privacyguard.vpn.WorkerGuard.thread(this, "tun-writer").also { it.start() }
         Log.d(TAG, "TunWriter started")
     }
 
@@ -132,16 +129,22 @@ class TunWriter(
                 break
             }
 
-            if (sink.writePacket(packet)) {
-                // Incoming direction for the capture: what apps actually receive.
-                if (com.privacyguard.app.core.pcap.PcapWriter.isCapturing()) com.privacyguard.app.core.pcap.PcapWriter.write(packet)
-                totalPacketsWritten.incrementAndGet()
-                totalBytesWritten.addAndGet(packet.size.toLong())
-            } else {
+            // A failure here would end this thread, and with it the tunnel: drop the packet.
+            try {
+                if (sink.writePacket(packet)) {
+                    // Incoming direction for the capture: what apps actually receive.
+                    if (com.privacyguard.app.core.pcap.PcapWriter.isCapturing()) com.privacyguard.app.core.pcap.PcapWriter.write(packet)
+                    totalPacketsWritten.incrementAndGet()
+                    totalBytesWritten.addAndGet(packet.size.toLong())
+                } else {
+                    droppedWriteError.incrementAndGet()
+                    Log.w(TAG, "Failed to write packet to TUN")
+                }
+                if (queue.size == lowWaterMark) onDrained?.invoke()
+            } catch (e: Exception) {
                 droppedWriteError.incrementAndGet()
-                Log.w(TAG, "Failed to write packet to TUN")
+                Log.e(TAG, "write error: ${e.javaClass.simpleName}")
             }
-            if (queue.size == lowWaterMark) onDrained?.invoke()
         }
 
         running.set(false)

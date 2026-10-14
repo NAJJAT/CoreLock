@@ -469,6 +469,33 @@ class NotificationHelper(private val context: Context) {
 
     fun cancelKillSwitchAlert() = manager.cancel(NOTIFICATION_ID_KILL_SWITCH)
 
+    /**
+     * Protection died with the process (see ProtectionWatchdog). Not silenced by the
+     * Notifications switch: like the VPN drop alert it says protection is off. A tap
+     * starts protection again (a notification tap may start a foreground service).
+     */
+    fun postProtectionStopped() {
+        createChannels()  // may be the first thing a freshly started process does
+        val start = PrivacyVpnService.startIntent(context)
+        val restart = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            PendingIntent.getForegroundService(context, NOTIFICATION_ID_PROTECTION_STOPPED, start,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        else
+            PendingIntent.getService(context, NOTIFICATION_ID_PROTECTION_STOPPED, start,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val notification = PrivateNotifications.builder(context, CHANNEL_ALERTS)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
+            .setContentTitle(context.getString(R.string.notif_vpn_down_title))
+            .setContentText(context.getString(R.string.notif_protection_stopped_text))
+            .setContentIntent(restart)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+        manager.notify(NOTIFICATION_ID_PROTECTION_STOPPED, notification)
+    }
+
+    fun cancelProtectionStopped() = manager.cancel(NOTIFICATION_ID_PROTECTION_STOPPED)
+
     fun postBackgroundBlockAlert(
         packageName: String,
         destination: String,
@@ -516,6 +543,7 @@ class NotificationHelper(private val context: Context) {
         const val NOTIFICATION_ID_CLEARTEXT    = 7
         const val NOTIFICATION_ID_BEHAVIOR        = 8
         const val NOTIFICATION_ID_BACKGROUND_BLOCK = 9
+        const val NOTIFICATION_ID_PROTECTION_STOPPED = 10
         // 1000..5095: one slot per app (see postTlsFingerprintChange).
         const val NOTIFICATION_ID_TLS_FP_BASE  = 1000
 

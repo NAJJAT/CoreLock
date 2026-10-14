@@ -30,10 +30,7 @@ class TunReader(
 
     fun start() {
         if (running.getAndSet(true)) return
-        thread = Thread(this, "tun-reader").also {
-            it.isDaemon = true
-            it.start()
-        }
+        thread = com.privacyguard.vpn.WorkerGuard.thread(this, "tun-reader").also { it.start() }
     }
 
     fun stop() {
@@ -126,12 +123,15 @@ class TunReader(
             // IpPacket.parse() copies the bytes it needs — safe to reuse buf after this call.
             val raw = buf.copyOf(n)
 
-            if (PcapWriter.isCapturing()) PcapWriter.write(raw)
+            // A failure here would end this thread, and with it the tunnel: drop the packet.
+            if (PcapWriter.isCapturing()) {
+                try { PcapWriter.write(raw) } catch (e: Exception) { Log.e(TAG, "pcap error: ${e.javaClass.simpleName}") }
+            }
 
             val version = (buf[0].toInt() ushr 4) and 0xF
             when (version) {
                 4 -> {
-                    val packet = IpPacket.parse(raw)
+                    val packet = try { IpPacket.parse(raw) } catch (_: Exception) { null }
                     if (packet == null) { droppedMalformed.incrementAndGet(); continue }
                     // Fragments are dropped, never parsed: a later fragment has no
                     // TCP/UDP header, and fragmentation is a classic way past port,

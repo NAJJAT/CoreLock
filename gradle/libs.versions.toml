@@ -23,6 +23,9 @@ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 # The real org.json for JVM unit tests (android.jar only has stubs there).
 org-json = { group = "org.json", name = "json", version = "20231013" }
+# Android framework on the JVM, for unit tests that need a real Context or SQLite (Room).
+# 4.16 is the first release with SDK 36 (needs JDK 21).
+robolectric = { group = "org.robolectric", name = "robolectric", version = "4.16.1" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }

@@ -118,7 +118,7 @@ class CtMonitor(
             .build()
     }
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob() + com.privacyguard.vpn.WorkerGuard.coroutineHandler)
     private val watchedDomains = ConcurrentHashMap.newKeySet<String>()
     @Volatile private var enabled = false
     @Volatile private var loop: Job? = null

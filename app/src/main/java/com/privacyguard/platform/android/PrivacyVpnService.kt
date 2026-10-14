@@ -90,7 +90,7 @@ import java.util.concurrent.atomic.AtomicLong
  */
 class PrivacyVpnService : VpnService() {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.privacyguard.vpn.WorkerGuard.coroutineHandler)
     /** History writes that must complete even while this service shuts down. */
     private val persistScope = PrivacyGuardApplication.appScope
 
@@ -219,6 +219,9 @@ class PrivacyVpnService : VpnService() {
             NotificationHelper.NOTIFICATION_ID_VPN,
             notifHelper.buildVpnActiveNotification(0, MainActivity::class.java),
         )
+        // Starting counts as alive: no "Protection stopped" while the tunnel comes up.
+        com.privacyguard.app.vpn.ProtectionWatchdog.arm(this)
+        notifHelper.cancelProtectionStopped()
         startJob = scope.launch {
             try {
                 startVpnInternal()
@@ -332,6 +335,8 @@ class PrivacyVpnService : VpnService() {
             _isRunningFlow.value = true
         }
         com.privacyguard.app.vpn.BootReceiver.markVpnActive(this)
+        com.privacyguard.vpn.WorkerGuard.onWorkerDied = ::onWorkerDied
+        keepWatchdogArmed()
         watchSettings(settings)
         com.privacyguard.app.data.repository.LocalDataEraser.register(dataClearListener)
         startLiveStats()
@@ -1298,6 +1303,9 @@ class PrivacyVpnService : VpnService() {
     private fun stopVpn() {
         stopRequested = true
         startJob?.cancel()
+        // Stopped on purpose (or for good): nothing for the watchdog to report.
+        com.privacyguard.vpn.WorkerGuard.onWorkerDied = null
+        com.privacyguard.app.vpn.ProtectionWatchdog.disarm(this)
         val wasRunning = isRunning
         isRunning = false
         _isRunningFlow.value = false
@@ -1320,15 +1328,27 @@ class PrivacyVpnService : VpnService() {
         isRunning = false
         running = null
         _isRunningFlow.value = false
+        // Nothing passes through the tunnel any more; an open capture would only grow stale.
+        com.privacyguard.app.core.pcap.PcapWriter.stopCapture()
+        if (::ctMonitor.isInitialized) ctMonitor.stop()
+        teardownTunnelLocked()
+        StatsManager.reset()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
+    /**
+     * Closes the TUN interface and stops every thread that serves it, leaving the
+     * service, its filters and its foreground notification in place: [establishTunnel]
+     * can build it again. Caller holds [lifecycleLock].
+     */
+    private fun teardownTunnelLocked() {
         if (receiverRegistered) {
             runCatching { unregisterReceiver(stopReceiver) }
             receiverRegistered = false
         }
         com.privacyguard.app.vpn.KillSwitch.stopMonitoring()
         com.privacyguard.app.vpn.KillSwitch.clearLockdownState()
-        // Nothing passes through the tunnel any more; an open capture would only grow stale.
-        com.privacyguard.app.core.pcap.PcapWriter.stopCapture()
-        if (::ctMonitor.isInitialized) ctMonitor.stop()
         if (::tunReader.isInitialized) tunReader.stop()
         if (::sensorWatcher.isInitialized) sensorWatcher.stop()
         if (::tcpForwarder.isInitialized) tcpForwarder.stop()
@@ -1337,11 +1357,51 @@ class PrivacyVpnService : VpnService() {
         if (::sessionTable.isInitialized) sessionTable.clear()
         if (::tunWriter.isInitialized) tunWriter.stop()
         com.privacyguard.app.vpn.UidMapper.clear()
-        StatsManager.reset()
         runCatching { tunFd?.close() }
         tunFd = null
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Recovery
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private val restartBudget = com.privacyguard.vpn.RestartBudget()
+
+    /**
+     * A packet-path thread died (see WorkerGuard). Without it the tunnel carries
+     * nothing, so it is rebuilt in place; the process, the filters and the foreground
+     * notification stay. Past the budget, protection stops and the user is told.
+     */
+    private fun onWorkerDied(worker: String) {
+        // Not on the dying thread, which is still unwinding.
+        scope.launch {
+            if (stopRequested) return@launch
+            if (!restartBudget.tryAcquire(System.currentTimeMillis())) {
+                Log.e(TAG, "Packet path keeps failing; stopping protection")
+                stopVpn()
+                notifHelper.postProtectionStopped()
+                return@launch
+            }
+            Log.w(TAG, "Worker $worker died; rebuilding the tunnel")
+            val rebuilt = synchronized(lifecycleLock) {
+                if (stopRequested) return@launch
+                teardownTunnelLocked()
+                // Null: establishTunnel already released everything (permission gone).
+                establishTunnel(buildDatabase(), SettingsPreferences.getInstance(this@PrivacyVpnService)) != null
+            }
+            if (rebuilt) Log.i(TAG, "Tunnel rebuilt after $worker died")
+            else notifHelper.postProtectionStopped()
+        }
+    }
+
+    /** Pushes the deadman alarm ahead for as long as protection is meant to run. */
+    private fun keepWatchdogArmed() {
+        scope.launch {
+            while (!stopRequested) {
+                com.privacyguard.app.vpn.ProtectionWatchdog.arm(this@PrivacyVpnService)
+                kotlinx.coroutines.delay(com.privacyguard.app.vpn.ProtectionWatchdog.REARM_MS)
+            }
+        }
     }
 
     @Volatile private var tunnelStartedAt = 0L

@@ -61,7 +61,7 @@ class MitmEngine(
             address != null && address.isLoopbackAddress && expectedClientPort > 0 && port == expectedClientPort
     }
 
-    private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + com.privacyguard.vpn.WorkerGuard.coroutineHandler)
 
     /**
      * Cheap pre-check, before a session is moved off its real server: a host we

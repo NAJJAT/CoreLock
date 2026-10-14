@@ -67,7 +67,7 @@ class PayloadShipper private constructor(
     }
 
     private val queue = LinkedBlockingQueue<ShipEvent>(MAX_QUEUE_SIZE)
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.privacyguard.vpn.WorkerGuard.coroutineHandler)
     private val shipScheduled = AtomicBoolean(false)
     private val shipping = AtomicBoolean(false)
 

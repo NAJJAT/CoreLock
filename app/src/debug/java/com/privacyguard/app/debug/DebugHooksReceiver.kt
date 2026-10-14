@@ -48,6 +48,18 @@ class DebugHooksReceiver : BroadcastReceiver() {
             ACTION_DUMP_ALERTS -> dumpAlerts(context, intent)
             ACTION_PROBE_DNS -> probeDns()
             ACTION_DOMAIN_RULE -> domainRule(context, intent)
+            ACTION_DELETE_TEST_ALERTS -> deleteTestAlerts(context, intent.getBooleanExtra("apply", false))
+            // Recovery tests (V-18). FAIL_WORKER: reports the TUN reader as dead, as its
+            // uncaught-exception handler would, so the tunnel is rebuilt in place.
+            // CRASH_PROCESS: an uncaught exception on the main thread, like a UI crash.
+            ACTION_FAIL_WORKER -> {
+                val reader = Thread.getAllStackTraces().keys.firstOrNull { it.name == "tun-reader" }
+                if (reader == null) Log.w(TAG, "FAIL_WORKER: no tun-reader thread")
+                else com.privacyguard.vpn.WorkerGuard.threadHandler.uncaughtException(reader, IllegalStateException("debug hook"))
+            }
+            ACTION_CRASH_PROCESS -> android.os.Handler(android.os.Looper.getMainLooper()).post {
+                throw IllegalStateException("Debug hook: simulated crash")
+            }
             ACTION_FAIL_NEXT_START -> {
                 context.getSharedPreferences(DEBUG_PREFS, Context.MODE_PRIVATE)
                     .edit().putBoolean(KEY_FAIL_NEXT_START, true).commit()
@@ -231,6 +243,38 @@ class DebugHooksReceiver : BroadcastReceiver() {
         Log.i(TAG, "DUAL config valid=${s.getDualVpnConfig().isValid} blockUdp=${s.dualVpnBlockUdp.value} doh=${s.dohEnabled.value}")
     }
 
+    /**
+     * Removes alerts that tests created, nothing else: TLS alerts of the test app and
+     * DNS anomalies for nip.io names (the leak-test canaries). Lists them only,
+     * unless apply is true:
+     *   adb shell am broadcast -a com.privacyguard.debug.DELETE_TEST_ALERTS [--ez apply true] -p PKG
+     */
+    private fun deleteTestAlerts(context: Context, apply: Boolean) {
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val sql = AppDatabase.getInstance(context).openHelper.writableDatabase
+                val tls = "FROM tls_alerts WHERE packageName = '$TEST_APP'"
+                val dns = "FROM dns_anomalies WHERE domain = 'nip.io' OR domain LIKE '%.nip.io'"
+                sql.query("SELECT id, alertType, packageName, timestamp $tls").use { c ->
+                    while (c.moveToNext()) Log.i(TAG, "TEST_ALERT tls id=${c.getLong(0)} ${c.getString(1)} ${c.getString(2)} at=${c.getLong(3)}")
+                }
+                sql.query("SELECT id, anomalyType, packageName, domain, timestamp $dns").use { c ->
+                    while (c.moveToNext()) Log.i(TAG, "TEST_ALERT dns id=${c.getLong(0)} ${c.getString(1)} ${c.getString(2)} ${c.getString(3)} at=${c.getLong(4)}")
+                }
+                if (apply) {
+                    val nTls = sql.delete("tls_alerts", "packageName = ?", arrayOf(TEST_APP))
+                    val nDns = sql.delete("dns_anomalies", "domain = 'nip.io' OR domain LIKE '%.nip.io'", null)
+                    Log.i(TAG, "TEST_ALERT deleted tls=$nTls dns=$nDns")
+                } else {
+                    Log.i(TAG, "TEST_ALERT dry run; add --ez apply true to delete")
+                }
+            } finally {
+                pending.finish()
+            }
+        }
+    }
+
     private fun endLearning(context: Context, pkg: String) {
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
@@ -261,6 +305,10 @@ class DebugHooksReceiver : BroadcastReceiver() {
         const val ACTION_DUMP_ALERTS = "com.privacyguard.debug.DUMP_ALERTS"
         const val ACTION_PROBE_DNS = "com.privacyguard.debug.PROBE_DNS"
         const val ACTION_DOMAIN_RULE = "com.privacyguard.debug.DOMAIN_RULE"
+        const val ACTION_DELETE_TEST_ALERTS = "com.privacyguard.debug.DELETE_TEST_ALERTS"
+        const val ACTION_FAIL_WORKER = "com.privacyguard.debug.FAIL_WORKER"
+        const val ACTION_CRASH_PROCESS = "com.privacyguard.debug.CRASH_PROCESS"
+        private const val TEST_APP = "com.privacyguard.testapp"
         const val DEBUG_PREFS = "debug_hooks"
         const val KEY_FAIL_NEXT_START = "fail_next_start"
     }

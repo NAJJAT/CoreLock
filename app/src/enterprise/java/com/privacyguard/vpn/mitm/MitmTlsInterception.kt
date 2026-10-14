@@ -45,7 +45,7 @@ class MitmTlsInterception(
         private const val MESSAGE_WORKERS = 2
     }
 
-    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.privacyguard.vpn.WorkerGuard.coroutineHandler)
     private val caInitStarted = AtomicBoolean(false)
 
     /** Chunks dropped because the capture worker fell behind (capture is best effort). */

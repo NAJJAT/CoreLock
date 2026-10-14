@@ -119,10 +119,7 @@ class UdpForwarder(
 
     fun start() {
         if (running.getAndSet(true)) return
-        thread = Thread(this, "udp-selector").also {
-            it.isDaemon = true
-            it.start()
-        }
+        thread = com.privacyguard.vpn.WorkerGuard.thread(this, "udp-selector").also { it.start() }
         Log.d(TAG, "UDP Forwarder started")
     }
 

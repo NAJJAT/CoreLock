@@ -9,16 +9,19 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 
 /**
- * Restarts the VPN service after device reboot if it was active before shutdown (FR-VPN-10).
+ * Restarts the VPN service after device reboot (FR-VPN-10), and after an update of
+ * this app (which kills the process), if it was active before.
  *
- * Only BOOT_COMPLETED, a protected broadcast that only the system can send. The
- * old HTC-style QUICKBOOT_POWERON action is not protected, so any app could send
- * it to this exported receiver.
+ * Only BOOT_COMPLETED and MY_PACKAGE_REPLACED, protected broadcasts that only the
+ * system can send, and both may start a foreground service from the background.
+ * The old HTC-style QUICKBOOT_POWERON action is not protected, so any app could
+ * send it to this exported receiver.
  */
 class BootReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
+        if (intent.action != Intent.ACTION_BOOT_COMPLETED &&
+            intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
         if (!prefs(context).getBoolean(KEY_VPN_WAS_ACTIVE, false)) return
 
         // Another VPN app took the permission since: starting would only fail.
@@ -45,6 +48,9 @@ class BootReceiver : BroadcastReceiver() {
         /** Call once the VPN is actually up. */
         fun markVpnActive(context: Context) =
             prefs(context).edit().putBoolean(KEY_VPN_WAS_ACTIVE, true).apply()
+
+        /** True until protection is stopped on purpose: a crash leaves it set. */
+        fun shouldBeActive(context: Context): Boolean = prefs(context).getBoolean(KEY_VPN_WAS_ACTIVE, false)
 
         /** Call when VPN stops intentionally, or can no longer start. */
         fun markVpnStopped(context: Context) =

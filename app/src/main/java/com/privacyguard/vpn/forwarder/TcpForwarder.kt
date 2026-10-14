@@ -94,7 +94,7 @@ class TcpForwarder(
     private val selector = Selector.open()
     private val running = AtomicBoolean(false)
     @Volatile private var thread: Thread? = null
-    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.privacyguard.vpn.WorkerGuard.coroutineHandler)
 
     val forwardedBytesIn = AtomicLong(0)
     val forwardedBytesOut = AtomicLong(0)
@@ -118,7 +118,7 @@ class TcpForwarder(
 
     fun start() {
         if (running.getAndSet(true)) return
-        thread = Thread(this, "tcp-selector").also { it.isDaemon = true; it.start() }
+        thread = com.privacyguard.vpn.WorkerGuard.thread(this, "tcp-selector").also { it.start() }
         Log.d(TAG, "TCP Forwarder started")
     }
 

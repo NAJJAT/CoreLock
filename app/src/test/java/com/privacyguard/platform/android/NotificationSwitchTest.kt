@@ -7,11 +7,12 @@ import java.io.File
 
 /**
  * The Settings "Notifications" switch must silence every alert and summary. Each
- * post function checks it first; only the VPN drop alert (its own switch) is exempt.
+ * post function checks it first. Exempt: the VPN drop alert (its own switch) and
+ * "Protection stopped" after the process died; both say that protection is off.
  */
 class NotificationSwitchTest {
 
-    private val exempt = setOf("postKillSwitchAlert")
+    private val exempt = setOf("postKillSwitchAlert", "postProtectionStopped")
 
     @Test
     fun every_alert_checks_the_switch_first() {

@@ -103,14 +103,20 @@
 
         <!-- ── Receivers ──────────────────────────────────────────────────── -->
 
-        <!-- Restart VPN after device reboot -->
+        <!-- Restart VPN after device reboot or an update of this app -->
         <receiver
             android:name=".vpn.BootReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <!-- Deadman alarm: "Protection stopped" when the process died with protection on -->
+        <receiver
+            android:name=".vpn.ProtectionWatchdogReceiver"
+            android:exported="false" />
 
         <receiver
             android:name=".core.utils.NotificationDismissReceiver"

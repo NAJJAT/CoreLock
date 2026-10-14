@@ -144,9 +144,10 @@ class DnsHandler(
         // process ran out of threads/memory. Overflow is dropped; resolvers retry.
         try {
             if (dohEnabled) {
-                forwardExecutor.execute { forwardViaDoh(ipPacket, udpPacket, dns, ownerPackage) }
+                // Guarded: an exception in an execute() task ends the process.
+                forwardExecutor.execute { com.privacyguard.vpn.WorkerGuard.guard("dns-doh") { forwardViaDoh(ipPacket, udpPacket, dns, ownerPackage) } }
             } else {
-                forwardExecutor.execute { forwardBlocking(ipPacket, udpPacket, dns, ownerPackage) }
+                forwardExecutor.execute { com.privacyguard.vpn.WorkerGuard.guard("dns") { forwardBlocking(ipPacket, udpPacket, dns, ownerPackage) } }
             }
         } catch (_: java.util.concurrent.RejectedExecutionException) {
             droppedQueries.incrementAndGet()

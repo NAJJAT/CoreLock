@@ -14,7 +14,8 @@ class PrivacyGuardApplication : Application() {
          * VPN service saving its last history rows while it shuts down.
          */
         val appScope = kotlinx.coroutines.CoroutineScope(
-            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO,
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO +
+                com.privacyguard.vpn.WorkerGuard.coroutineHandler,
         )
     }
 
