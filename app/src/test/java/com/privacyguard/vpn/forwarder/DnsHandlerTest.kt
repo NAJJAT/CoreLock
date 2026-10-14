@@ -83,6 +83,42 @@ class DnsHandlerTest {
         assertFalse(handler.handle(makeIp(), udp))
     }
 
+    // ── V-02: nothing sent to port 53 reaches the generic UDP forwarder ─────
+
+    /**
+     * Regression for V-02 (security test 2026-10-14): a datagram to port 53 that
+     * handle() did not consume opened a plain UDP session, and later queries on
+     * that session skipped the blocklist. Property: whatever an app sends to port
+     * 53, handle() consumes it.
+     */
+    @Test
+    fun every_datagram_to_port_53_is_consumed() {
+        val rnd = kotlin.random.Random(20261014)
+        val seeds = listOf(
+            dnsResponseBytes("doubleclick.net"),                            // QR=1
+            ByteArray(12).also { it[0] = 0xAB.toByte(); it[2] = 1 },         // QDCOUNT=0
+            DnsPacket.buildQuery("doubleclick.net", id = 9),
+        )
+        repeat(5_000) { i ->
+            val data = if (i % 4 == 0) rnd.nextBytes(rnd.nextInt(0, 600))
+            else seeds[i % seeds.size].copyOf().also { b -> if (b.isNotEmpty() && i % 3 == 0) b[rnd.nextInt(b.size)] = rnd.nextInt(256).toByte() }
+            assertTrue("datagram #$i to port 53 was handed on", handler.handle(makeIp(), makeUdp(40000, 53, data)))
+        }
+    }
+
+    @Test
+    fun blocked_query_after_a_priming_datagram_is_still_blocked() {
+        blockDomain("doubleclick.net")
+        val seen = mutableListOf<Pair<String, Boolean>>()
+        handler.queryListener = DnsHandler.QueryListener { _, d, b -> seen += d to b }
+        val primers = listOf(dnsResponseBytes("example.com"), ByteArray(12).also { it[2] = 1 })
+        for (p in primers) {
+            assertTrue(handler.handle(makeIp(), makeUdp(40000, 53, p)))
+            assertTrue(handler.handle(makeIp(), makeUdp(40000, 53, DnsPacket.buildQuery("doubleclick.net", id = 7))))
+        }
+        assertEquals(listOf("doubleclick.net" to true, "doubleclick.net" to true), seen)
+    }
+
     // ── queryListener — blocked path ──────────────────────────────────────────
 
     @Test

@@ -431,12 +431,13 @@ class PrivacyVpnService : VpnService() {
         }
         Log.i(TAG, "Forwarders and TunReader started")
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(stopReceiver, IntentFilter(NotificationHelper.ACTION_STOP_VPN), RECEIVER_NOT_EXPORTED)
-        } else {
-            @Suppress("UnspecifiedRegisterReceiverFlag")
-            registerReceiver(stopReceiver, IntentFilter(NotificationHelper.ACTION_STOP_VPN))
-        }
+        // Not exported on every API level: below Android 13 a plain registerReceiver
+        // is exported, so any app could stop protection. ContextCompat guards older
+        // versions with the app-private DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION.
+        androidx.core.content.ContextCompat.registerReceiver(
+            this, stopReceiver, IntentFilter(NotificationHelper.ACTION_STOP_VPN),
+            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
         receiverRegistered = true
 
         com.privacyguard.app.vpn.KillSwitch.updateLockdownState(this)
@@ -639,6 +640,14 @@ class PrivacyVpnService : VpnService() {
             logBlockedAttempt(SessionKey.of(srcIp, srcPort, dstIp, dstPort, IpPacket.PROTO_UDP))
             return
         }
+        // Plain DNS goes to DnsHandler on every packet, before any session lookup, so
+        // no UDP session to port 53 can carry queries past the blocklist (V-02).
+        if (v4 != null && dstPort == DnsHandler.DNS_PORT) {
+            val pkg = appTracker.packageForUid(resolveOwnerUid(OsConstants.IPPROTO_UDP,
+                SessionKey.of(srcIp, srcPort, dstIp, dstPort, IpPacket.PROTO_UDP)))
+            dnsHandler.handle(v4.first, v4.second, pkg)
+            return
+        }
         val key = SessionKey.of(srcIp, srcPort, dstIp, dstPort, IpPacket.PROTO_UDP)
         val existing = sessionTable.get(key)
         if (existing != null) {
@@ -655,7 +664,6 @@ class PrivacyVpnService : VpnService() {
 
         val uid = resolveOwnerUid(OsConstants.IPPROTO_UDP, key)
         val pkg = appTracker.packageForUid(uid)
-        if (v4 != null && dnsHandler.handle(v4.first, v4.second, pkg)) return
         // Dual-hop carries TCP only. QUIC is always dropped so apps retry over TCP
         // through the chain; other UDP only when the user asked for it.
         if (dualVpnSettings().dropsUdp(dstPort)) return

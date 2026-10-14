@@ -99,7 +99,10 @@ class DnsHandler(
         udpPacket:   UdpPacket,
         ownerPackage: String? = null,
     ): Boolean {
-        if (!udpPacket.isDns) return false
+        // Everything an app sends to port 53 is answered here or dropped, never handed
+        // to the generic UDP forwarder: a datagram passed on there opened a UDP session,
+        // and later datagrams of that session skipped this check (V-02).
+        if (udpPacket.destinationPort != DNS_PORT) return false
         if (udpPacket.data.isEmpty()) return true
 
         val dns = DnsPacket.parse(udpPacket.data) ?: run {
@@ -107,10 +110,9 @@ class DnsHandler(
             return true
         }
 
-        // Only intercept client queries; let responses pass-through
-        if (dns.isResponse) return false
-
-        val queryName = dns.queryName ?: return false
+        // Only client queries with a question are forwarded; anything else is dropped.
+        if (dns.isResponse) { malformedDns.incrementAndGet(); return true }
+        val queryName = dns.queryName ?: run { malformedDns.incrementAndGet(); return true }
 
         // ── Layer 2: Anomaly Detection (always, before blocking) ─────────────
         val anomalies = anomalyDetector.analyze(ownerPackage, queryName)
@@ -406,7 +408,14 @@ class DnsHandler(
             rawSocket.soTimeout = upstreamTimeoutMs
 
             val sslFactory = SSLSocketFactory.getDefault() as SSLSocketFactory
-            val ssl = sslFactory.createSocket(rawSocket, host, port, true)
+            val ssl = sslFactory.createSocket(rawSocket, host, port, true) as javax.net.ssl.SSLSocket
+            // A raw SSLSocket checks the chain but not the name: without this, any
+            // valid certificate for any host was accepted for the DoH server (V-01).
+            ssl.sslParameters = ssl.sslParameters.apply {
+                endpointIdentificationAlgorithm = "HTTPS"
+                if (!isIpLiteral(host)) serverNames = listOf(javax.net.ssl.SNIHostName(host))
+            }
+            ssl.startHandshake()
             ssl.use { secureSocket ->
                 val requestHeaders = buildString {
                     append("POST $path HTTP/1.1\r\n")
