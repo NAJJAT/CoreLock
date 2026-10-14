@@ -88,6 +88,13 @@ fun AppNavHost(
     val currentDest = navBackStack?.destination
     val currentRoute = currentDest?.route?.substringBefore('/')
 
+    // FLAG_SECURE follows the screen shown (V-08): on, except for NOT_SENSITIVE routes.
+    LaunchedEffect(currentDest?.route) {
+        generateSequence(context) { (it as? android.content.ContextWrapper)?.baseContext }
+            .filterIsInstance<android.app.Activity>().firstOrNull()
+            ?.let { SecureScreens.apply(it.window, currentDest?.route) }
+    }
+
     LaunchedEffect(onboardingCompleted) {
         val target = if (onboardingCompleted) "dashboard" else "onboarding"
         if (currentRoute != target) {

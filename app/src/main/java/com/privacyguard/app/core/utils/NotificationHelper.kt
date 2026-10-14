@@ -30,6 +30,7 @@ object NotificationHelper {
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
             description = context.getString(com.privacyguard.app.R.string.notif_ch_high_desc)
+            lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
             setShowBadge(true)
             enableVibration(true)
         }
@@ -40,6 +41,7 @@ object NotificationHelper {
             NotificationManager.IMPORTANCE_DEFAULT
         ).apply {
             description = context.getString(com.privacyguard.app.R.string.notif_ch_normal_desc)
+            lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
             setShowBadge(true)
         }
 
@@ -49,6 +51,7 @@ object NotificationHelper {
             NotificationManager.IMPORTANCE_LOW
         ).apply {
             description = context.getString(com.privacyguard.app.R.string.notif_ch_updates_desc)
+            lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
             setShowBadge(false)
         }
 
@@ -73,7 +76,7 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val builder = NotificationCompat.Builder(context, channelId)
+        val builder = com.privacyguard.platform.android.PrivateNotifications.builder(context, channelId)
             .setContentTitle(notification.title)
             .setContentText(notification.message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(notification.message))

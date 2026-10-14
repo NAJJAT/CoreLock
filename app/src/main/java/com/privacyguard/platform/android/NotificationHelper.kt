@@ -65,6 +65,7 @@ class NotificationHelper(private val context: Context) {
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
                 description = context.getString(R.string.notif_ch_status_desc)
+                lockscreenVisibility = Notification.VISIBILITY_PRIVATE
                 setShowBadge(false)
             },
             NotificationChannel(
@@ -73,6 +74,7 @@ class NotificationHelper(private val context: Context) {
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
                 description = context.getString(R.string.notif_ch_alerts_desc)
+                lockscreenVisibility = Notification.VISIBILITY_PRIVATE
             },
             NotificationChannel(
                 CHANNEL_WEEKLY_REPORT,
@@ -80,6 +82,7 @@ class NotificationHelper(private val context: Context) {
                 NotificationManager.IMPORTANCE_MIN,
             ).apply {
                 description = context.getString(R.string.notif_ch_weekly_desc)
+                lockscreenVisibility = Notification.VISIBILITY_PRIVATE
                 setShowBadge(false)
             },
         )
@@ -120,7 +123,7 @@ class NotificationHelper(private val context: Context) {
             else               -> quantity(R.plurals.notif_blocked_n, blockedCount)
         }
 
-        return NotificationCompat.Builder(context, CHANNEL_VPN_STATUS)
+        return PrivateNotifications.builder(context, CHANNEL_VPN_STATUS)
             .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
             .setContentTitle(context.getString(R.string.notif_active))
             .setContentText(body)
@@ -165,7 +168,7 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
+        val notification = PrivateNotifications.builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle(context.getString(R.string.notif_suspicious_title))
             .setContentText(context.getString(R.string.notif_app_to_domain, appName, domain))
@@ -208,7 +211,7 @@ class NotificationHelper(private val context: Context) {
         else
             context.getString(R.string.notif_weekly_tap)
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_WEEKLY_REPORT)
+        val notification = PrivateNotifications.builder(context, CHANNEL_WEEKLY_REPORT)
             .setSmallIcon(android.R.drawable.ic_menu_info_details)
             .setContentTitle(context.getString(R.string.notif_weekly_title))
             .setContentText(quantity(R.plurals.notif_weekly_blocked, totalBlocked))
@@ -263,7 +266,7 @@ class NotificationHelper(private val context: Context) {
             append(appLabel)
             if (!sni.isNullOrBlank()) append(" · $sni") // direction-neutral separator, reads correctly in RTL
         }
-        val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
+        val notification = PrivateNotifications.builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle(context.getString(R.string.notif_ja3_title, malwareName))
             .setContentText(body)
@@ -305,7 +308,7 @@ class NotificationHelper(private val context: Context) {
             context.getString(com.privacyguard.app.R.string.tls_fp_alert_reasons),
             context.getString(com.privacyguard.app.R.string.tls_fp_alert_actions),
         ).joinToString("\n\n")
-        val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
+        val notification = PrivateNotifications.builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle(context.getString(com.privacyguard.app.R.string.tls_fp_alert_title, appLabel))
             .setContentText(context.getString(com.privacyguard.app.R.string.tls_fp_alert_short))
@@ -334,7 +337,7 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val appLabel = appLabel(packageName)
-        val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
+        val notification = PrivateNotifications.builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle(context.getString(R.string.notif_behavior_title, appLabel))
             .setContentText(title)
@@ -362,7 +365,7 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val appLabel = appLabel(packageName)
-        val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
+        val notification = PrivateNotifications.builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle(context.getString(R.string.notif_cleartext_title, appLabel))
             .setContentText(context.getString(R.string.notif_cleartext_text, appLabel, destination))
@@ -391,7 +394,7 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val body = context.resources.getQuantityString(R.plurals.notif_ct_body, newCertCount, newCertCount, domain)
-        val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
+        val notification = PrivateNotifications.builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(context.getString(R.string.notif_ct_title, domain))
             .setContentText(body)
@@ -421,7 +424,7 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
+        val notification = PrivateNotifications.builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
             .setContentTitle(context.getString(R.string.notif_vpn_down_title))
             // Only Android's lockdown mode blocks traffic without the tunnel; say which applies.
@@ -457,7 +460,7 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val appLabel = appLabel(packageName)
-        val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS)
+        val notification = PrivateNotifications.builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(context.getString(R.string.notif_bg_title))
             .setContentText(context.getString(R.string.notif_bg_text, appLabel, destination))

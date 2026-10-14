@@ -17,6 +17,7 @@
         <item quantity="other">حُظر %d اتصال</item>
     </plurals>
     <string name="notif_active">الحماية مفعّلة</string>
+    <string name="notif_public_text">افتح القفل لرؤية هذا الإشعار</string>
     <string name="notif_stop">إيقاف</string>
     <string name="notif_suspicious_title">حُظر اتصال مريب</string>
     <string name="notif_app_to_domain">%1$s ← %2$s</string>

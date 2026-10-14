@@ -1,10 +1,10 @@
 package com.privacyguard
 
 import android.os.Bundle
-import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import com.privacyguard.app.core.security.AppSecurityMonitor
 import com.privacyguard.app.core.security.SecurityRiskLevel
+import com.privacyguard.ui.SecureScreens
 
 /**
  * Base activity for all PrivacyGuard activities. AppCompatActivity so the per-app
@@ -14,9 +14,10 @@ open class BaseActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val posture = AppSecurityMonitor.refresh(this)
-        if (posture.riskLevel != SecurityRiskLevel.LOW && !debugScreenshotsAllowed()) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        }
+        SecureScreens.deviceForcesSecure = posture.riskLevel != SecurityRiskLevel.LOW
+        SecureScreens.debugScreenshotsAllowed = debugScreenshotsAllowed()
+        // Secure from the first frame; AppNavHost relaxes it only for NOT_SENSITIVE routes.
+        SecureScreens.apply(window, route = null)
     }
 
     // Debug builds only (BuildConfig.DEBUG is a compile-time false in release, so

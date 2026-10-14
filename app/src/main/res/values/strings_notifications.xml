@@ -13,6 +13,8 @@
         <item quantity="other">%d connections blocked</item>
     </plurals>
     <string name="notif_active">Protection on</string>
+    <!-- Shown instead of the notification on a locked phone that hides sensitive content. -->
+    <string name="notif_public_text">Unlock to see this notification</string>
     <string name="notif_stop">Stop</string>
     <string name="notif_suspicious_title">Suspicious connection blocked</string>
     <string name="notif_app_to_domain">%1$s → %2$s</string>

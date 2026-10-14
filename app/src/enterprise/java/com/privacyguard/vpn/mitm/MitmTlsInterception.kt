@@ -40,6 +40,8 @@ class MitmTlsInterception(
         /** Larger messages are logged truncated; the rest of their body is skipped. */
         private const val MAX_MESSAGE_BYTES = 2_097_152
         private const val CAPTURE_QUEUE = 4_096
+        private const val MESSAGE_QUEUE = 256
+        private const val MESSAGE_WORKERS = 2
     }
 
     private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -55,6 +57,12 @@ class MitmTlsInterception(
     // buffer and were merged, dropped or reordered.
     private val captureQueue = Channel<CaptureItem>(CAPTURE_QUEUE)
 
+    private class Message(val direction: String, val bytes: ByteArray, val session: Session)
+
+    // Parsing and PII redaction run on their own workers, not the capture worker:
+    // a message that is slow to scan must not stall reassembly for every app (V-04).
+    private val messageQueue = Channel<Message>(MESSAGE_QUEUE)
+
     init {
         coroutineScope.launch {
             for (item in captureQueue) {
@@ -63,6 +71,11 @@ class MitmTlsInterception(
                 } catch (e: Exception) {
                     Log.w(TAG, "Capture failed: ${e.message}")
                 }
+            }
+        }
+        repeat(MESSAGE_WORKERS) {
+            coroutineScope.launch {
+                for (m in messageQueue) processPayload(m.direction, m.bytes, m.session)
             }
         }
     }
@@ -190,7 +203,9 @@ class MitmTlsInterception(
             val message = buffer.data.copyOfRange(0, total)
             buffer.consume(total)
             Log.d(TAG, "📦 HTTP ${item.direction} captured ${message.size}B")
-            processPayload(item.direction, message, session)
+            if (!messageQueue.trySend(Message(item.direction, message, session)).isSuccess) {
+                droppedCaptures.incrementAndGet()
+            }
         }
     }
 
