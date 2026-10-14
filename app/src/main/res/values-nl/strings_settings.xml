@@ -19,6 +19,10 @@
     <string name="set_vpn_drop_alert_desc">Waarschuwt alleen als de bescherming stopt terwijl PrivacyGuard draait. Het start de bescherming niet opnieuw en blokkeert geen verkeer.</string>
     <string name="set_notifications">Meldingen</string>
     <string name="set_notifications_desc">Alle waarschuwingen, het weekoverzicht en meldingen over blokkeerlijst-updates. De melding bij uitval van de VPN heeft een eigen schakelaar.</string>
+    <string name="set_notification_details">Details in meldingen tonen</string>
+    <string name="set_notification_details_desc">Noem de app en de server in waarschuwingen. Uit: meldingen zeggen alleen wat voor waarschuwing het is, zodat niets over je apps op het vergrendelscherm komt of bij apps die meldingen lezen.</string>
+    <string name="set_allow_screenshots">Schermafbeeldingen toestaan</string>
+    <string name="set_allow_screenshots_desc">Laat schermafbeeldingen, schermopnames en het voorbeeld bij recente apps PrivacyGuard tonen. Uit: schermen met je geschiedenis worden daarvoor geblokkeerd.</string>
     <string name="set_weekly_report">Weekrapport</string>
     <string name="set_weekly_report_desc">Privacyoverzicht ontvangen</string>
     <string name="set_doh">DNS via HTTPS</string>

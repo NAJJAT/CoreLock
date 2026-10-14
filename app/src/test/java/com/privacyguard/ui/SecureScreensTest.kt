@@ -13,7 +13,11 @@ import java.io.File
  */
 class SecureScreensTest {
 
-    @After fun reset() { SecureScreens.deviceForcesSecure = false; SecureScreens.debugScreenshotsAllowed = false }
+    @After fun reset() {
+        SecureScreens.deviceForcesSecure = false
+        SecureScreens.debugBuild = false
+        SecureScreens.userAllowsScreenshots = false
+    }
 
     private val routes: List<String> by lazy {
         val src = File("src/main/java/com/privacyguard/ui/AppNavHost.kt").readText()
@@ -32,17 +36,33 @@ class SecureScreensTest {
         assertTrue(SecureScreens.shouldSecure("appDetail/{packageName}?appName={appName}"))
     }
 
-    @Test fun a_risky_device_secures_onboarding_too_and_only_the_debug_hook_relaxes() {
+    @Test fun a_risky_device_secures_onboarding_too() {
         SecureScreens.deviceForcesSecure = true
         assertTrue(SecureScreens.shouldSecure("onboarding"))
-        SecureScreens.debugScreenshotsAllowed = true
-        assertFalse(SecureScreens.shouldSecure("dashboard"))
     }
 
-    @Test fun the_nav_host_applies_it_on_every_destination_change() {
+    @Test fun debug_builds_never_set_it() {
+        SecureScreens.debugBuild = true
+        SecureScreens.deviceForcesSecure = true
+        assertFalse(SecureScreens.shouldSecure("dashboard"))
+        assertFalse(SecureScreens.shouldSecure(null))
+    }
+
+    @Test fun allow_screenshots_turns_it_off_everywhere_and_is_off_by_default() {
+        assertTrue(SecureScreens.shouldSecure("connections"))
+        SecureScreens.userAllowsScreenshots = true
+        assertTrue(routes.none { SecureScreens.shouldSecure(it) })
+        val prefs = File("src/main/java/com/privacyguard/app/data/local/preferences/SettingsPreferences.kt").readText()
+        assertTrue(prefs.contains("prefs.getBoolean(KEY_ALLOW_SCREENSHOTS, false)"))
+    }
+
+    @Test fun the_nav_host_applies_it_on_every_destination_change_and_switch() {
         val src = File("src/main/java/com/privacyguard/ui/AppNavHost.kt").readText()
+        assertTrue(src.contains("LaunchedEffect(currentDest?.route, allowScreenshots)"))
         assertTrue(src.contains("SecureScreens.apply(it.window, currentDest?.route)"))
-        assertTrue(File("src/main/java/com/privacyguard/BaseActivity.kt").readText().contains("SecureScreens.apply(window, route = null)"))
+        val base = File("src/main/java/com/privacyguard/BaseActivity.kt").readText()
+        assertTrue(base.contains("SecureScreens.debugBuild = com.privacyguard.app.BuildConfig.DEBUG"))
+        assertTrue(base.contains("SecureScreens.apply(window, route = null)"))
     }
 
     /** Regression for V-09: no notification is built without the private lock-screen setup. */

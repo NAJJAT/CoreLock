@@ -40,6 +40,21 @@ class NotificationHelper(private val context: Context) {
         }.getOrElse { com.privacyguard.app.ui.traffic.AppNames.label(context, packageName) }
     }
 
+    /** Settings → "Show details in notifications" (off by default). */
+    private fun showDetails(): Boolean =
+        com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(context).notificationDetails.value
+
+    /**
+     * Without "Show details in notifications", an alert says only what kind of alert it
+     * is: no app, host or malware name, on the lock screen or for apps that read
+     * notifications (V-09). Applied last, so it replaces whatever the alert set.
+     */
+    private fun NotificationCompat.Builder.detailsOnlyIfAllowed(kindTitle: Int): NotificationCompat.Builder =
+        if (showDetails()) this
+        else setContentTitle(context.getString(kindTitle))
+            .setContentText(context.getString(R.string.notif_open_for_details))
+            .setStyle(null)
+
     private fun quantity(id: Int, n: Long): String =
         context.resources.getQuantityString(id, n.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), n)
 
@@ -179,6 +194,7 @@ class NotificationHelper(private val context: Context) {
             .setContentIntent(pendingTap)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .detailsOnlyIfAllowed(R.string.notif_suspicious_title)
             .build()
 
         manager.notify(NOTIFICATION_ID_ALERT, notification)
@@ -206,7 +222,7 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
-        val detail = if (topApp != null)
+        val detail = if (topApp != null && showDetails())
             context.getString(R.string.notif_weekly_top, appLabel(topApp))
         else
             context.getString(R.string.notif_weekly_tap)
@@ -277,6 +293,7 @@ class NotificationHelper(private val context: Context) {
             .setContentIntent(pendingTap)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .detailsOnlyIfAllowed(R.string.notif_kind_malware)
             .build()
         manager.notify(NOTIFICATION_ID_JA3_THREAT, notification)
     }
@@ -316,6 +333,7 @@ class NotificationHelper(private val context: Context) {
             .setContentIntent(pendingTap)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .detailsOnlyIfAllowed(R.string.notif_kind_tls_fp)
             .build()
         manager.notify(id, notification)
     }
@@ -345,6 +363,7 @@ class NotificationHelper(private val context: Context) {
             .setContentIntent(pendingTap)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .detailsOnlyIfAllowed(R.string.notif_kind_behavior)
             .build()
         manager.notify(NOTIFICATION_ID_BEHAVIOR, notification)
     }
@@ -374,6 +393,7 @@ class NotificationHelper(private val context: Context) {
             .setContentIntent(pendingTap)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .detailsOnlyIfAllowed(R.string.notif_kind_cleartext)
             .build()
         manager.notify(NOTIFICATION_ID_CLEARTEXT, notification)
     }
@@ -403,6 +423,7 @@ class NotificationHelper(private val context: Context) {
             .setContentIntent(pendingTap)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .detailsOnlyIfAllowed(R.string.notif_kind_ct)
             .build()
         manager.notify(NOTIFICATION_ID_CT_CERT, notification)
     }
@@ -467,6 +488,7 @@ class NotificationHelper(private val context: Context) {
             .setContentIntent(pendingTap)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
+            .detailsOnlyIfAllowed(R.string.notif_bg_title)
             .build()
         manager.notify(NOTIFICATION_ID_BACKGROUND_BLOCK, notification)
     }

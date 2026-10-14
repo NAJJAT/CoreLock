@@ -88,8 +88,11 @@ fun AppNavHost(
     val currentDest = navBackStack?.destination
     val currentRoute = currentDest?.route?.substringBefore('/')
 
-    // FLAG_SECURE follows the screen shown (V-08): on, except for NOT_SENSITIVE routes.
-    LaunchedEffect(currentDest?.route) {
+    // FLAG_SECURE follows the screen shown (V-08): on, except for NOT_SENSITIVE routes,
+    // and applied at once when "Allow screenshots" changes in Settings.
+    val allowScreenshots by settingsPreferences.allowScreenshots.collectAsStateWithLifecycle()
+    LaunchedEffect(currentDest?.route, allowScreenshots) {
+        SecureScreens.userAllowsScreenshots = allowScreenshots
         generateSequence(context) { (it as? android.content.ContextWrapper)?.baseContext }
             .filterIsInstance<android.app.Activity>().firstOrNull()
             ?.let { SecureScreens.apply(it.window, currentDest?.route) }

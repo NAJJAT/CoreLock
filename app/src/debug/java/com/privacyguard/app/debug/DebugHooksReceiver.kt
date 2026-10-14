@@ -21,19 +21,11 @@ import java.util.concurrent.TimeUnit
  * Make the next VPN start fail right after the tunnel is up (tests the cleanup path):
  *   adb shell am broadcast -a com.privacyguard.debug.FAIL_NEXT_START -p com.privacyguard.app
  *
- * Allow screenshots (FLAG_SECURE is otherwise set on debuggable builds):
- *   adb shell am broadcast -a com.privacyguard.debug.ALLOW_SCREENSHOTS \
- *       --ez enabled true -p com.privacyguard.app
+ * Debug builds never set FLAG_SECURE (SecureScreens), so screens can be captured as is.
  */
 class DebugHooksReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            ACTION_ALLOW_SCREENSHOTS -> {
-                val enabled = intent.getBooleanExtra("enabled", true)
-                context.getSharedPreferences(DEBUG_PREFS, Context.MODE_PRIVATE)
-                    .edit().putBoolean(KEY_ALLOW_SCREENSHOTS, enabled).apply()
-                Log.i(TAG, "Screenshots allowed=$enabled (reopen the app)")
-            }
             ACTION_TLS_END_LEARNING -> endLearning(context, intent.getStringExtra("package") ?: return)
             ACTION_DUMP_THREADS -> {
                 // Thread dumps need root on user builds; log our own stacks instead.
@@ -257,7 +249,6 @@ class DebugHooksReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "DebugHooks"
         const val ACTION_TLS_END_LEARNING = "com.privacyguard.debug.TLS_END_LEARNING"
-        const val ACTION_ALLOW_SCREENSHOTS = "com.privacyguard.debug.ALLOW_SCREENSHOTS"
         const val ACTION_FAIL_NEXT_START = "com.privacyguard.debug.FAIL_NEXT_START"
         const val ACTION_DUMP_THREADS = "com.privacyguard.debug.DUMP_THREADS"
         const val ACTION_DUMP_PROFILES = "com.privacyguard.debug.DUMP_PROFILES"
@@ -271,7 +262,6 @@ class DebugHooksReceiver : BroadcastReceiver() {
         const val ACTION_PROBE_DNS = "com.privacyguard.debug.PROBE_DNS"
         const val ACTION_DOMAIN_RULE = "com.privacyguard.debug.DOMAIN_RULE"
         const val DEBUG_PREFS = "debug_hooks"
-        const val KEY_ALLOW_SCREENSHOTS = "allow_screenshots"
         const val KEY_FAIL_NEXT_START = "fail_next_start"
     }
 }

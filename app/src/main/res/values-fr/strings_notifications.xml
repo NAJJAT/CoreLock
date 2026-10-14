@@ -15,6 +15,12 @@
     </plurals>
     <string name="notif_active">Protection active</string>
     <string name="notif_public_text">Déverrouillez pour voir cette notification</string>
+    <string name="notif_open_for_details">Ouvrez PrivacyGuard pour voir quelle app et quel serveur.</string>
+    <string name="notif_kind_malware">Connexion à un possible logiciel malveillant</string>
+    <string name="notif_kind_tls_fp">Une app se connecte d’une nouvelle façon</string>
+    <string name="notif_kind_behavior">Comportement inhabituel d’une app</string>
+    <string name="notif_kind_cleartext">Connexion non chiffrée</string>
+    <string name="notif_kind_ct">Nouveau certificat pour un site utilisé par vos apps</string>
     <string name="notif_stop">Arrêter</string>
     <string name="notif_suspicious_title">Connexion suspecte bloquée</string>
     <string name="notif_app_to_domain">%1$s → %2$s</string>

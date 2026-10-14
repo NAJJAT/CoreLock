@@ -19,6 +19,10 @@
     <string name="set_vpn_drop_alert_desc">ينبّهك فقط عند توقف الحماية أثناء تشغيل PrivacyGuard. لا يعيد تشغيل الحماية ولا يحظر الحركة.</string>
     <string name="set_notifications">الإشعارات</string>
     <string name="set_notifications_desc">كل التنبيهات والملخص الأسبوعي وإشعارات تحديث قوائم الحظر. لتنبيه انقطاع VPN مفتاح خاص به.</string>
+    <string name="set_notification_details">عرض التفاصيل في الإشعارات</string>
+    <string name="set_notification_details_desc">ذكر التطبيق والخادم في التنبيهات. عند الإيقاف تذكر الإشعارات نوع التنبيه فقط، فلا يظهر شيء عن تطبيقاتك على شاشة القفل أو للتطبيقات التي تقرأ الإشعارات.</string>
+    <string name="set_allow_screenshots">السماح بلقطات الشاشة</string>
+    <string name="set_allow_screenshots_desc">السماح بظهور PrivacyGuard في لقطات الشاشة وتسجيل الشاشة ومعاينة التطبيقات الأخيرة. عند الإيقاف تُحجب عنها الشاشات التي تعرض سجلك.</string>
     <string name="set_weekly_report">التقرير الأسبوعي</string>
     <string name="set_weekly_report_desc">تلقّي ملخّص الخصوصية</string>
     <string name="set_doh">DNS عبر HTTPS</string>

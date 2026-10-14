@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Screenshot
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
@@ -92,6 +93,8 @@ fun SettingsScreen(
     val resources = LocalResources.current
     val settingsPreferences = remember(context) { SettingsPreferences.getInstance(context) }
     val notificationsEnabled by settingsPreferences.notificationsEnabled.collectAsStateWithLifecycle()
+    val allowScreenshots by settingsPreferences.allowScreenshots.collectAsStateWithLifecycle()
+    val notificationDetails by settingsPreferences.notificationDetails.collectAsStateWithLifecycle()
     val weeklyReport by settingsPreferences.weeklyReport.collectAsStateWithLifecycle()
     val dohEnabled by settingsPreferences.dohEnabled.collectAsStateWithLifecycle()
     val ctMonitoringEnabled by settingsPreferences.ctMonitoringEnabled.collectAsStateWithLifecycle()
@@ -184,6 +187,12 @@ fun SettingsScreen(
                     }),
                     SettingUiItem(stringResource(R.string.set_notifications), stringResource(R.string.set_notifications_desc), notificationsEnabled, Icons.Default.Notifications, onClick = {
                         settingsPreferences.setNotificationsEnabled(!notificationsEnabled)
+                    }),
+                    SettingUiItem(stringResource(R.string.set_notification_details), stringResource(R.string.set_notification_details_desc), notificationDetails, Icons.Default.Notifications, onClick = {
+                        settingsPreferences.setNotificationDetails(!notificationDetails)
+                    }),
+                    SettingUiItem(stringResource(R.string.set_allow_screenshots), stringResource(R.string.set_allow_screenshots_desc), allowScreenshots, Icons.Default.Screenshot, onClick = {
+                        settingsPreferences.setAllowScreenshots(!allowScreenshots)
                     }),
                     SettingUiItem(stringResource(R.string.set_weekly_report), stringResource(R.string.set_weekly_report_desc), weeklyReport, Icons.Default.Notifications, onClick = {
                         val enabled = !weeklyReport

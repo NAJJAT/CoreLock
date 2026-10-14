@@ -18,6 +18,12 @@
     </plurals>
     <string name="notif_active">الحماية مفعّلة</string>
     <string name="notif_public_text">افتح القفل لرؤية هذا الإشعار</string>
+    <string name="notif_open_for_details">افتح PrivacyGuard لمعرفة التطبيق والخادم.</string>
+    <string name="notif_kind_malware">اتصال محتمل ببرمجية خبيثة</string>
+    <string name="notif_kind_tls_fp">تطبيق يتصل بطريقة جديدة</string>
+    <string name="notif_kind_behavior">سلوك غير معتاد لتطبيق</string>
+    <string name="notif_kind_cleartext">اتصال غير مشفّر</string>
+    <string name="notif_kind_ct">شهادة جديدة لموقع تستخدمه تطبيقاتك</string>
     <string name="notif_stop">إيقاف</string>
     <string name="notif_suspicious_title">حُظر اتصال مريب</string>
     <string name="notif_app_to_domain">%1$s ← %2$s</string>

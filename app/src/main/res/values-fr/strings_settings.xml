@@ -19,6 +19,10 @@
     <string name="set_vpn_drop_alert_desc">Vous alerte seulement si la protection s’arrête pendant que PrivacyGuard tourne. Elle ne relance pas la protection et ne bloque pas le trafic.</string>
     <string name="set_notifications">Notifications</string>
     <string name="set_notifications_desc">Toutes les alertes, le résumé hebdomadaire et les avis de mise à jour des listes de blocage. L’alerte de coupure du VPN a son propre interrupteur.</string>
+    <string name="set_notification_details">Afficher les détails dans les notifications</string>
+    <string name="set_notification_details_desc">Nommer l’app et le serveur dans les alertes. Désactivé : les notifications indiquent seulement le type d’alerte, rien sur vos apps n’apparaît sur l’écran de verrouillage ni pour les apps qui lisent les notifications.</string>
+    <string name="set_allow_screenshots">Autoriser les captures d’écran</string>
+    <string name="set_allow_screenshots_desc">Laisser les captures d’écran, l’enregistrement de l’écran et l’aperçu des apps récentes montrer PrivacyGuard. Désactivé : les écrans avec votre historique en sont protégés.</string>
     <string name="set_weekly_report">Rapport hebdomadaire</string>
     <string name="set_weekly_report_desc">Recevoir un résumé de confidentialité</string>
     <string name="set_doh">DNS sur HTTPS</string>

@@ -17,6 +17,8 @@ class SettingsPreferences private constructor(context: Context) {
 
         private const val PREFS_NAME = "privacyguard_settings"
         private const val KEY_NOTIFICATIONS_ENABLED      = "notifications_enabled"
+        private const val KEY_ALLOW_SCREENSHOTS          = "allow_screenshots"
+        private const val KEY_NOTIFICATION_DETAILS       = "notification_details"
         private const val KEY_BLOCK_NOTIFICATIONS        = "block_notifications"
         private const val KEY_TRACKER_NOTIFICATIONS      = "tracker_notifications"
         private const val KEY_VPN_NOTIFICATIONS          = "vpn_notifications"
@@ -101,6 +103,14 @@ class SettingsPreferences private constructor(context: Context) {
 
     private val _notificationsEnabled = MutableStateFlow(prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true))
     val notificationsEnabled: StateFlow<Boolean> = _notificationsEnabled.asStateFlow()
+
+    // Off by default: screens with history are FLAG_SECURE in release builds (V-08).
+    private val _allowScreenshots = MutableStateFlow(prefs.getBoolean(KEY_ALLOW_SCREENSHOTS, false))
+    val allowScreenshots: StateFlow<Boolean> = _allowScreenshots.asStateFlow()
+
+    // Off by default: notifications name no app or host, wherever they are shown (V-09).
+    private val _notificationDetails = MutableStateFlow(prefs.getBoolean(KEY_NOTIFICATION_DETAILS, false))
+    val notificationDetails: StateFlow<Boolean> = _notificationDetails.asStateFlow()
 
     private val _blockNotifications = MutableStateFlow(prefs.getBoolean(KEY_BLOCK_NOTIFICATIONS, true))
     val blockNotifications: StateFlow<Boolean> = _blockNotifications.asStateFlow()
@@ -277,6 +287,16 @@ class SettingsPreferences private constructor(context: Context) {
     fun setNotificationsEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_NOTIFICATIONS_ENABLED, enabled).apply()
         _notificationsEnabled.value = enabled
+    }
+
+    fun setAllowScreenshots(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_ALLOW_SCREENSHOTS, enabled).apply()
+        _allowScreenshots.value = enabled
+    }
+
+    fun setNotificationDetails(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_NOTIFICATION_DETAILS, enabled).apply()
+        _notificationDetails.value = enabled
     }
 
     fun setBlockNotifications(enabled: Boolean) {

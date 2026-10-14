@@ -14,6 +14,12 @@
     </plurals>
     <string name="notif_active">Bescherming aan</string>
     <string name="notif_public_text">Ontgrendel om deze melding te zien</string>
+    <string name="notif_open_for_details">Open PrivacyGuard om te zien welke app en server.</string>
+    <string name="notif_kind_malware">Mogelijke malwareverbinding</string>
+    <string name="notif_kind_tls_fp">Een app maakt op een nieuwe manier verbinding</string>
+    <string name="notif_kind_behavior">Ongewoon gedrag van een app</string>
+    <string name="notif_kind_cleartext">Onversleutelde verbinding</string>
+    <string name="notif_kind_ct">Nieuw certificaat voor een site die je apps gebruiken</string>
     <string name="notif_stop">Stoppen</string>
     <string name="notif_suspicious_title">Verdachte verbinding geblokkeerd</string>
     <string name="notif_app_to_domain">%1$s → %2$s</string>

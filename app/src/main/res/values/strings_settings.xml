@@ -19,6 +19,10 @@
     <string name="set_vpn_drop_alert_desc">Only alerts you when protection stops while PrivacyGuard is running. It does not restart protection or block traffic.</string>
     <string name="set_notifications">Notifications</string>
     <string name="set_notifications_desc">Every alert, the weekly summary and blocklist update notices. The VPN drop alert has its own switch.</string>
+    <string name="set_notification_details">Show details in notifications</string>
+    <string name="set_notification_details_desc">Name the app and the server in alerts. Off: notifications only say what kind of alert it is, so nothing about your apps shows on the lock screen or to apps that read notifications.</string>
+    <string name="set_allow_screenshots">Allow screenshots</string>
+    <string name="set_allow_screenshots_desc">Let screenshots, screen recording and the recent-apps preview show PrivacyGuard. Off: screens with your history are blocked from them.</string>
     <string name="set_weekly_report">Weekly report</string>
     <string name="set_weekly_report_desc">Deliver privacy summary</string>
     <string name="set_doh">DNS over HTTPS</string>
