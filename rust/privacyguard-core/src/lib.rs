@@ -5,6 +5,8 @@ mod packet;
 pub mod ffi;
 #[cfg(test)]
 mod fuzz_tests;
+#[cfg(test)]
+mod build_config_tests;
 
 use bloom::BloomFilter;
 #[cfg(feature = "android")]
