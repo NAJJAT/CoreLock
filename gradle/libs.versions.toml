@@ -14,7 +14,7 @@ work = "2.11.0"
 startup = "1.2.0"
 ksp = "2.2.10-2.0.2"
 coroutines = "1.10.2"
-kotlinxSerialization = "1.8.1"
+kotlinxSerialization = "1.11.0"
 navigationCompose = "2.9.4"
 appcompat = "1.7.1"
 
