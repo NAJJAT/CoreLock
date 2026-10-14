@@ -19,12 +19,23 @@ import java.util.concurrent.atomic.AtomicLong
  * [useNativeBloom]: the native bloom filter is one global instance, so only one
  * DomainFilter (the main blocklist) may use it; a second one would overwrite it.
  */
-class DomainFilter(private val useNativeBloom: Boolean = true) {
+class DomainFilter(
+    private val useNativeBloom: Boolean = true,
+    private val nativeBloom: com.privacyguard.core.native_engine.NativeBloom =
+        com.privacyguard.core.native_engine.NativeBloom.Rust,
+) {
 
     /** [names]: entries as written; [wildcards]: entries written "*.name", stored as "name". */
     private class Lists(val names: Set<String>, val wildcards: Set<String>)
 
     @Volatile private var lists = Lists(emptySet(), emptySet())
+
+    /**
+     * The native bloom filter holds every current entry. [addDomain] does not update
+     * it, so after one the fast path is skipped until the next [rebuild]: a "no"
+     * from a stale filter would let the added name through.
+     */
+    @Volatile private var bloomComplete = false
 
     // ─────────────────────────────────────────────────────────────────────────
     // Changes
@@ -36,6 +47,7 @@ class DomainFilter(private val useNativeBloom: Boolean = true) {
         val (name, wild) = normalize(domain) ?: return
         val current = lists
         if (name in (if (wild) current.wildcards else current.names)) return
+        bloomComplete = false
         lists = if (wild) Lists(current.names, current.wildcards + name)
         else Lists(current.names + name, current.wildcards)
         insertedCount.incrementAndGet()
@@ -56,15 +68,17 @@ class DomainFilter(private val useNativeBloom: Boolean = true) {
             if (wild) wildcards += name else names += name
             nativeList?.add(if (wild) "*.$name" else name)
         }
+        // Accelerate lookups with native bloom filter when Rust is available. Off while
+        // the sets and the filter disagree, so no lookup sees a filter older than its list.
         synchronized(this) {
+            bloomComplete = false
             lists = Lists(names, wildcards)
             // Distinct entries: the lists overlap, and counting lines overstated the size.
             insertedCount.set((names.size + wildcards.size).toLong())
-        }
-
-        // Accelerate lookups with native bloom filter when Rust is available
-        if (nativeList != null && com.privacyguard.core.native_engine.RustBridge.isAvailable) {
-            com.privacyguard.core.native_engine.RustBridge.bloomRebuild(nativeList.toTypedArray())
+            if (nativeList != null && nativeBloom.isAvailable) {
+                nativeBloom.rebuild(nativeList.toTypedArray())
+                bloomComplete = true
+            }
         }
     }
 
@@ -103,8 +117,7 @@ class DomainFilter(private val useNativeBloom: Boolean = true) {
         if (d.isEmpty()) return false
 
         // Bloom filter fast-path: if native says no, skip the sets
-        if (useNativeBloom && com.privacyguard.core.native_engine.RustBridge.isAvailable &&
-            !mightBeInNativeBloom(d)) {
+        if (useNativeBloom && bloomComplete && nativeBloom.isAvailable && !mightBeInNativeBloom(d)) {
             return false
         }
 
@@ -124,14 +137,19 @@ class DomainFilter(private val useNativeBloom: Boolean = true) {
         return true
     }
 
+    /**
+     * The name and each parent, as a plain entry or as "*.parent". "*.name" covers
+     * name itself too, so it is checked at every level including the first; skipping
+     * it there let "*.example.com" miss "example.com" with the native library (R-1).
+     */
     private fun mightBeInNativeBloom(domain: String): Boolean {
-        val labels = domain.split('.')
-        for (index in labels.indices) {
-            val suffix = labels.drop(index).joinToString(".")
-            if (com.privacyguard.core.native_engine.RustBridge.bloomCheck(suffix)) return true
-            if (index > 0 && com.privacyguard.core.native_engine.RustBridge.bloomCheck("*.$suffix")) return true
+        var suffix = domain
+        while (true) {
+            if (nativeBloom.check(suffix) || nativeBloom.check("*.$suffix")) return true
+            val dot = suffix.indexOf('.')
+            if (dot < 0) return false
+            suffix = suffix.substring(dot + 1)
         }
-        return false
     }
 
     // ─────────────────────────────────────────────────────────────────────────
