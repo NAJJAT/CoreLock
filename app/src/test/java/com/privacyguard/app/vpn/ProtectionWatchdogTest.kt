@@ -74,6 +74,29 @@ class ProtectionWatchdogTest {
     }
 
     @Test
+    fun with_automatic_restart_off_a_crash_posts_protection_stopped() {
+        ShadowVpnService.setPrepareResult(null)
+        BootReceiver.markVpnActive(context)
+        com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(context).setAutoRestart(false)
+
+        ProtectionWatchdogReceiver().onReceive(context, Intent())
+
+        assertNull(nextStarted())
+        assertNotNull(stoppedNotification())
+        com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(context).setAutoRestart(true)
+    }
+
+    @Test
+    fun always_on_turned_off_says_so_without_lockdown_wording() {
+        NotificationHelper(context).postAlwaysOnTurnedOff()
+
+        val text = stoppedNotification()!!.extras.getCharSequence(android.app.Notification.EXTRA_TEXT).toString()
+        assertEquals(context.getString(com.privacyguard.app.R.string.notif_always_on_turned_off_text), text)
+        assertFalse(text.contains("blocking"))
+        assertNotNull("tapping turns protection back on", stoppedNotification()!!.contentIntent)
+    }
+
+    @Test
     fun a_start_that_keeps_crashing_stops_being_restarted() {
         ShadowVpnService.setPrepareResult(null)
         BootReceiver.markVpnActive(context)

@@ -59,6 +59,7 @@
     <string name="notif_vpn_down_blocked">يحظر Android جميع الاتصالات حتى تعود الحماية.</string>
     <string name="notif_vpn_down_open">لم تعد الحركة تُفلتَر. افتح PrivacyGuard لإعادة تشغيل الحماية.</string>
     <string name="notif_protection_stopped_text">توقف PrivacyGuard بشكل غير متوقع. اضغط لإعادة تشغيل الحماية.</string>
+    <string name="notif_always_on_turned_off_text">أُوقف «VPN الدائم» في إعدادات Android، فأوقف Android تطبيق PrivacyGuard. اضغط لتفعيل الحماية من جديد.</string>
     <string name="notif_bg_title">حُظر اتصال في الخلفية</string>
     <string name="notif_bg_text">حاول %1$s الاتصال بـ %2$s وهو في الخلفية</string>
     <string name="notif_blocklist_updated">حُدّثت قائمة الحظر</string>

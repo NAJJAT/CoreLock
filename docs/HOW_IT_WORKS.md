@@ -600,10 +600,21 @@ key, an optional certificate pin and an optional body signature (`SiemEndpoint.k
   until protection was back. Network changes (airplane mode, Wi-Fi to mobile)
   leaked nothing, because the tunnel stays up. With Always-on VPN and "Block
   connections without VPN", nothing leaked, but nothing else got through either.
-- **A crash is not always recovered.** Android restarted the service after a
-  quick second crash, but after an ordinary crash it did not, even with
-  Always-on: protection stayed off (or, with lockdown, the phone stayed offline)
-  until the app was opened again. There is no watchdog yet.
+- **A crash is not always recovered by Android.** Android restarted the service
+  after a quick second crash, but after an ordinary crash it did not, even with
+  Always-on. PrivacyGuard therefore watches itself: a small `:watchdog` process,
+  bound by the VPN service, learns from the binder driver the moment the VPN
+  process dies and sets one exact alarm that starts protection again (Settings →
+  "Automatic restart after a crash", at most 3 restarts in 30 minutes). Nothing
+  is scheduled while protection is healthy; a non-wakeup backup alarm covers the
+  case where both processes die. Exact alarms need "Alarms & reminders" access
+  (not pre-granted on Android 14+); without it, or past the restart limit, the
+  user gets "Protection stopped" instead. Not covered: Force stop, and an app that
+  Android marked as "crashed too many times", which Android itself will not
+  start in the background until the user opens it. The start fails closed: the
+  tunnel takes every route first and is read only once the filters are loaded.
+  (This design replaced a 30-second deadman alarm on 15 October 2026 and has
+  only been unit-tested so far; see docs/security-test-2026-10-14.md.)
 - **First start after install:** until the first download (about a minute after
   install) only the built-in lists apply. A download writes the start-up cache, so
   later starts take a few seconds. Only a start whose cache is missing (for example

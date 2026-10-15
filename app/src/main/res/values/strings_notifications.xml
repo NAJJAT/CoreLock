@@ -49,6 +49,7 @@
     <string name="notif_vpn_down_blocked">Android is blocking all connections until protection reconnects.</string>
     <string name="notif_vpn_down_open">Traffic is no longer filtered. Open PrivacyGuard to turn protection back on.</string>
     <string name="notif_protection_stopped_text">PrivacyGuard stopped unexpectedly. Tap to restart protection.</string>
+    <string name="notif_always_on_turned_off_text">Always-on VPN was turned off in Android settings, so Android stopped PrivacyGuard. Tap to turn protection back on.</string>
     <string name="notif_bg_title">Background connection blocked</string>
     <string name="notif_bg_text">%1$s tried to connect to %2$s while in the background</string>
     <string name="notif_blocklist_updated">Blocklist updated</string>

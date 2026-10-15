@@ -17,10 +17,24 @@ class PrivacyGuardApplication : Application() {
             kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO +
                 com.privacyguard.vpn.WorkerGuard.coroutineHandler,
         )
+
+        const val WATCHDOG_PROCESS_SUFFIX = ":watchdog"
+
+        fun isWatchdogProcess(processName: String?): Boolean =
+            processName?.endsWith(WATCHDOG_PROCESS_SUFFIX) == true
     }
+
+    private fun currentProcessName(): String? =
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) getProcessName()
+        else runCatching { java.io.File("/proc/self/cmdline").readText().trimEnd('\u0000') }.getOrNull()
 
     override fun onCreate() {
         super.onCreate()
+        // The :watchdog process (ProtectionWatcherService) only waits for the VPN
+        // process to die and then sets one alarm or posts one notification. None of
+        // the setup below belongs there: no Keystore or SQLCipher, no database, no
+        // blocklists, no GeoIP, no workers.
+        if (isWatchdogProcess(currentProcessName())) return
         com.privacyguard.app.core.utils.ByteFormat.appContext = this
         SecureSecretStore.getInstance(this).bootstrap()
         AppSecurityMonitor.refresh(this)

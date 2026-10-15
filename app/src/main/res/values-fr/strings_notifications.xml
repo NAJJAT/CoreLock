@@ -50,6 +50,7 @@
     <string name="notif_vpn_down_blocked">Android bloque toutes les connexions jusqu’au rétablissement de la protection.</string>
     <string name="notif_vpn_down_open">Le trafic n’est plus filtré. Ouvrez PrivacyGuard pour réactiver la protection.</string>
     <string name="notif_protection_stopped_text">PrivacyGuard s’est arrêté de façon inattendue. Touchez pour relancer la protection.</string>
+    <string name="notif_always_on_turned_off_text">« VPN permanent » a été désactivé dans les paramètres Android, donc Android a arrêté PrivacyGuard. Touchez pour réactiver la protection.</string>
     <string name="notif_bg_title">Connexion en arrière-plan bloquée</string>
     <string name="notif_bg_text">%1$s a tenté de se connecter à %2$s en arrière-plan</string>
     <string name="notif_blocklist_updated">Liste de blocage mise à jour</string>

@@ -23,6 +23,12 @@
     <string name="set_notification_details_desc">ذكر التطبيق والخادم في التنبيهات. عند الإيقاف تذكر الإشعارات نوع التنبيه فقط، فلا يظهر شيء عن تطبيقاتك على شاشة القفل أو للتطبيقات التي تقرأ الإشعارات.</string>
     <string name="set_allow_screenshots">السماح بلقطات الشاشة</string>
     <string name="set_allow_screenshots_desc">السماح بظهور PrivacyGuard في لقطات الشاشة وتسجيل الشاشة ومعاينة التطبيقات الأخيرة. عند الإيقاف تُحجب عنها الشاشات التي تعرض سجلك.</string>
+    <string name="set_auto_restart">إعادة التشغيل تلقائيًا بعد التعطّل</string>
+    <string name="set_auto_restart_desc">إذا تعطّل PrivacyGuard تعود الحماية خلال ثوانٍ. يتطلب إذن Android «المنبّهات والتذكيرات».</string>
+    <string name="set_auto_restart_dialog_title">السماح بـ«المنبّهات والتذكيرات»؟</string>
+    <string name="set_auto_restart_dialog_body">بعد التعطّل لا يسمح Android لتطبيق بإعادة تشغيل حمايته إلا من منبّه دقيق، والمنبّهات الدقيقة تتطلب إذن «المنبّهات والتذكيرات». لا يضبط PrivacyGuard هذا المنبّه إلا بعد التعطّل، ولا يضبطه أبدًا أثناء عمل الحماية، فلا يوقظ هاتفك في غير ذلك. ودون هذا الإذن يصلك بدلًا من ذلك إشعار «توقفت الحماية».</string>
+    <string name="set_auto_restart_dialog_allow">فتح الإعدادات</string>
+    <string name="set_auto_restart_dialog_cancel">ليس الآن</string>
     <string name="set_weekly_report">التقرير الأسبوعي</string>
     <string name="set_weekly_report_desc">تلقّي ملخّص الخصوصية</string>
     <string name="set_doh">DNS عبر HTTPS</string>
@@ -187,6 +193,6 @@
     <string name="set_dual_block_udp_desc">يحظر كل حركة UDP الأخرى ما دام VPN المزدوج مفعّلًا، فلا يخرج شيء دون السلسلة. ستتوقف المكالمات الصوتية والمرئية وكثير من الألعاب عن العمل.</string>
     <string name="diag_upstream_vpn_off">لم يُختبر: الحماية متوقفة، لذا يذهب DNS إلى محلِّل الشبكة نفسها.</string>
     <string name="diag_upstream_failed">لم يُجب %1$s عن استعلام اختباري. قد لا تُحمَّل المواقع.</string>
-    <string name="set_always_on_hint">لإبقاء الحماية مفعّلة، فعّل «VPN الدائم» لـ PrivacyGuard في Android. يشغّله Android بعد إعادة تشغيل الهاتف. ومع «حظر الاتصالات دون VPN» لا يخرج شيء دون حماية، لكن إذا تعطّل PrivacyGuard يبقى الهاتف دون إنترنت حتى تفتح PrivacyGuard من جديد.</string>
+    <string name="set_always_on_hint">لإبقاء الحماية مفعّلة، فعّل «VPN الدائم» لـ PrivacyGuard في Android. يشغّله Android بعد إعادة تشغيل الهاتف. ومع «حظر الاتصالات دون VPN» لا يخرج شيء دون حماية، لكن إذا تعطّل PrivacyGuard يبقى الهاتف دون إنترنت حتى يعود PrivacyGuard للعمل («إعادة التشغيل تلقائيًا بعد التعطّل») أو تفتحه من جديد.</string>
     <string name="set_open_vpn_settings">فتح إعدادات VPN في Android</string>
 </resources>

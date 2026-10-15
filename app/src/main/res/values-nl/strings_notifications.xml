@@ -47,6 +47,7 @@
     <string name="notif_vpn_down_blocked">Android blokkeert alle verbindingen tot de bescherming weer verbonden is.</string>
     <string name="notif_vpn_down_open">Verkeer wordt niet meer gefilterd. Open PrivacyGuard om de bescherming weer aan te zetten.</string>
     <string name="notif_protection_stopped_text">PrivacyGuard is onverwacht gestopt. Tik om de bescherming opnieuw te starten.</string>
+    <string name="notif_always_on_turned_off_text">‘Altijd-aan-VPN’ is uitgezet in de Android-instellingen, dus Android heeft PrivacyGuard gestopt. Tik om de bescherming weer aan te zetten.</string>
     <string name="notif_bg_title">Verbinding op de achtergrond geblokkeerd</string>
     <string name="notif_bg_text">%1$s probeerde op de achtergrond verbinding te maken met %2$s</string>
     <string name="notif_blocklist_updated">Blokkeerlijst bijgewerkt</string>

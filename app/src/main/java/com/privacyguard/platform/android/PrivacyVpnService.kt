@@ -176,6 +176,10 @@ class PrivacyVpnService : VpnService() {
         @Volatile var isRunning = false
             private set
 
+        /** From onCreate to onDestroy, so also while starting: the watchdog leaves it alone. */
+        @Volatile var isCreated = false
+            private set
+
         @Volatile private var running: PrivacyVpnService? = null
 
         /**
@@ -191,8 +195,33 @@ class PrivacyVpnService : VpnService() {
 
     override fun onCreate() {
         super.onCreate()
+        isCreated = true
         Log.i(TAG, "VPN service created")
     }
+
+    /**
+     * Android took the VPN away: another VPN app was started, the user disconnected
+     * it in Android's VPN settings, or (seen on Android 13) Always-on VPN was turned
+     * off there. That is a stop, not a drop: no drop alert, no restart. When Always-on
+     * was just turned off, the notification says exactly that.
+     */
+    override fun onRevoke() {
+        // Consent still ours: Always-on was not handed to another VPN app.
+        val alwaysOnTurnedOff = alwaysOnSeen && !isAlwaysOnNow() && prepare(this) == null
+        Log.w(TAG, "VPN revoked by Android (Always-on turned off: $alwaysOnTurnedOff)")
+        com.privacyguard.app.vpn.KillSwitch.stopMonitoring()
+        stopVpn()
+        val helper = NotificationHelper(this)
+        helper.cancelKillSwitchAlert()
+        if (alwaysOnTurnedOff) helper.postAlwaysOnTurnedOff()
+        super.onRevoke()
+    }
+
+    /** Last seen Always-on state (refreshed every 10 s while running), for [onRevoke]. */
+    @Volatile private var alwaysOnSeen = false
+
+    private fun isAlwaysOnNow(): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && runCatching { isAlwaysOn }.getOrDefault(false)
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.i(TAG, "onStartCommand action=${intent?.action}")
@@ -206,6 +235,7 @@ class PrivacyVpnService : VpnService() {
         com.privacyguard.app.data.repository.LocalDataEraser.unregister(dataClearListener)
         stopVpn()
         scope.cancel()
+        isCreated = false
         super.onDestroy()
     }
 
@@ -219,9 +249,10 @@ class PrivacyVpnService : VpnService() {
             NotificationHelper.NOTIFICATION_ID_VPN,
             notifHelper.buildVpnActiveNotification(0, MainActivity::class.java),
         )
-        // Starting counts as alive: the watchdog stays quiet however long the start
-        // takes (reading the lists from the database can take half a minute).
-        keepWatchdogArmed()
+        // Watched from now on: if this process dies while starting or running, the
+        // watcher process restarts protection (ProtectionWatcher / ProtectionWatchdog).
+        watcher.bind()
+        keepBackupArmed()
         notifHelper.cancelProtectionStopped()
         startJob = scope.launch {
             try {
@@ -473,6 +504,7 @@ class PrivacyVpnService : VpnService() {
         receiverRegistered = true
 
         com.privacyguard.app.vpn.KillSwitch.attach(this)
+        alwaysOnSeen = isAlwaysOnNow()
         if (com.privacyguard.app.vpn.KillSwitch.isEnabled()) {
             com.privacyguard.app.vpn.KillSwitch.startMonitoring(this)
         }
@@ -1101,7 +1133,10 @@ class PrivacyVpnService : VpnService() {
             var ticks = 0
             while (isRunning) {
                 runCatching { publishLiveStats() }
-                if (ticks++ % 10 == 0) probeNetworkOnce()
+                if (ticks++ % 10 == 0) {
+                    alwaysOnSeen = isAlwaysOnNow()
+                    probeNetworkOnce()
+                }
                 kotlinx.coroutines.delay(1_000)
             }
         }
@@ -1318,6 +1353,7 @@ class PrivacyVpnService : VpnService() {
         startJob?.cancel()
         // Stopped on purpose (or for good): nothing for the watchdog to report.
         com.privacyguard.vpn.WorkerGuard.onWorkerDied = null
+        watcher.stop()
         com.privacyguard.app.vpn.ProtectionWatchdog.disarm(this)
         val wasRunning = isRunning
         isRunning = false
@@ -1416,15 +1452,20 @@ class PrivacyVpnService : VpnService() {
         }
     }
 
-    private var watchdogJob: kotlinx.coroutines.Job? = null
+    private val watcher by lazy { com.privacyguard.app.vpn.ProtectionWatcher.Client(this) }
+    private var backupJob: kotlinx.coroutines.Job? = null
 
-    /** Pushes the deadman alarm ahead for as long as protection is meant to run. */
-    private fun keepWatchdogArmed() {
-        watchdogJob?.cancel()
-        watchdogJob = scope.launch {
+    /**
+     * Pushes the non-wakeup backup alarm ahead while protection is meant to run. This
+     * loop does not run while the phone sleeps; the alarm then comes due but waits
+     * for the next wakeup, finds the service alive and does nothing.
+     */
+    private fun keepBackupArmed() {
+        backupJob?.cancel()
+        backupJob = scope.launch {
             while (!stopRequested) {
-                com.privacyguard.app.vpn.ProtectionWatchdog.arm(this@PrivacyVpnService)
-                kotlinx.coroutines.delay(com.privacyguard.app.vpn.ProtectionWatchdog.REARM_MS)
+                com.privacyguard.app.vpn.ProtectionWatchdog.armBackup(this@PrivacyVpnService)
+                kotlinx.coroutines.delay(com.privacyguard.app.vpn.ProtectionWatchdog.BACKUP_REARM_MS)
             }
         }
     }

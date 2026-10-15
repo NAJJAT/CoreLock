@@ -474,7 +474,16 @@ class NotificationHelper(private val context: Context) {
      * Notifications switch: like the VPN drop alert it says protection is off. A tap
      * starts protection again (a notification tap may start a foreground service).
      */
-    fun postProtectionStopped() {
+    fun postProtectionStopped() = postStopped(R.string.notif_protection_stopped_text)
+
+    /**
+     * Android stopped protection because the user turned Always-on VPN off in its
+     * settings (see PrivacyVpnService.onRevoke). A stop the user caused, said plainly;
+     * nothing about lockdown or blocked connections. A tap turns protection back on.
+     */
+    fun postAlwaysOnTurnedOff() = postStopped(R.string.notif_always_on_turned_off_text)
+
+    private fun postStopped(textRes: Int) {
         createChannels()  // may be the first thing a freshly started process does
         val start = PrivacyVpnService.startIntent(context)
         val restart = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -486,7 +495,7 @@ class NotificationHelper(private val context: Context) {
         val notification = PrivateNotifications.builder(context, CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
             .setContentTitle(context.getString(R.string.notif_vpn_down_title))
-            .setContentText(context.getString(R.string.notif_protection_stopped_text))
+            .setContentText(context.getString(textRes))
             .setContentIntent(restart)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)

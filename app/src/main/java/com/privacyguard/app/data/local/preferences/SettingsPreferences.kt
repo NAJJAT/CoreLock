@@ -19,6 +19,7 @@ class SettingsPreferences private constructor(context: Context) {
         private const val KEY_NOTIFICATIONS_ENABLED      = "notifications_enabled"
         private const val KEY_ALLOW_SCREENSHOTS          = "allow_screenshots"
         private const val KEY_NOTIFICATION_DETAILS       = "notification_details"
+        private const val KEY_AUTO_RESTART               = "auto_restart"
         private const val KEY_BLOCK_NOTIFICATIONS        = "block_notifications"
         private const val KEY_TRACKER_NOTIFICATIONS      = "tracker_notifications"
         private const val KEY_VPN_NOTIFICATIONS          = "vpn_notifications"
@@ -111,6 +112,11 @@ class SettingsPreferences private constructor(context: Context) {
     // Off by default: notifications name no app or host, wherever they are shown (V-09).
     private val _notificationDetails = MutableStateFlow(prefs.getBoolean(KEY_NOTIFICATION_DETAILS, false))
     val notificationDetails: StateFlow<Boolean> = _notificationDetails.asStateFlow()
+
+    // On by default, but it only works with exact-alarm access (ProtectionWatchdog),
+    // which Android 14+ does not pre-grant: Settings shows it off until granted.
+    private val _autoRestart = MutableStateFlow(prefs.getBoolean(KEY_AUTO_RESTART, true))
+    val autoRestart: StateFlow<Boolean> = _autoRestart.asStateFlow()
 
     private val _blockNotifications = MutableStateFlow(prefs.getBoolean(KEY_BLOCK_NOTIFICATIONS, true))
     val blockNotifications: StateFlow<Boolean> = _blockNotifications.asStateFlow()
@@ -297,6 +303,11 @@ class SettingsPreferences private constructor(context: Context) {
     fun setNotificationDetails(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_NOTIFICATION_DETAILS, enabled).apply()
         _notificationDetails.value = enabled
+    }
+
+    fun setAutoRestart(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_RESTART, enabled).apply()
+        _autoRestart.value = enabled
     }
 
     fun setBlockNotifications(enabled: Boolean) {

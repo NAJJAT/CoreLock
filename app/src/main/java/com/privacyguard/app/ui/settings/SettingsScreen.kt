@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Screenshot
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
@@ -78,6 +79,27 @@ import com.privacyguard.app.workers.WeeklyReportWorker
 import com.privacyguard.core.filter.FilterEngine
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
+/**
+ * Asked only when the user turns "Automatic restart after a crash" on without
+ * exact-alarm access (Android 14+ does not pre-grant it). Says why it is needed and
+ * what happens without it, then opens the system page for this app.
+ */
+@Composable
+private fun AutoRestartAccessDialog(onAllow: () -> Unit, onDismiss: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Default.Refresh, contentDescription = null) },
+        title = { Text(stringResource(R.string.set_auto_restart_dialog_title)) },
+        text = { Text(stringResource(R.string.set_auto_restart_dialog_body)) },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onAllow) { Text(stringResource(R.string.set_auto_restart_dialog_allow)) }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) { Text(stringResource(R.string.set_auto_restart_dialog_cancel)) }
+        },
+    )
+}
+
 @Composable
 fun SettingsScreen(
     onLanguageChanged: () -> Unit,
@@ -95,6 +117,27 @@ fun SettingsScreen(
     val notificationsEnabled by settingsPreferences.notificationsEnabled.collectAsStateWithLifecycle()
     val allowScreenshots by settingsPreferences.allowScreenshots.collectAsStateWithLifecycle()
     val notificationDetails by settingsPreferences.notificationDetails.collectAsStateWithLifecycle()
+    val autoRestart by settingsPreferences.autoRestart.collectAsStateWithLifecycle()
+    // Exact-alarm access can change in system settings: read it again on every resume.
+    var exactAlarmsAllowed by remember { mutableStateOf(com.privacyguard.app.vpn.ProtectionWatchdog.canScheduleExact(context)) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        exactAlarmsAllowed = com.privacyguard.app.vpn.ProtectionWatchdog.canScheduleExact(context)
+        onPauseOrDispose { }
+    }
+    var showAutoRestartDialog by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    if (showAutoRestartDialog) AutoRestartAccessDialog(
+        onAllow = {
+            showAutoRestartDialog = false
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) runCatching {
+                context.startActivity(android.content.Intent(
+                    android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                    android.net.Uri.parse("package:${context.packageName}"),
+                ))
+            }
+        },
+        // Declined: the switch stays off rather than on-but-not-working.
+        onDismiss = { showAutoRestartDialog = false; settingsPreferences.setAutoRestart(false) },
+    )
     val weeklyReport by settingsPreferences.weeklyReport.collectAsStateWithLifecycle()
     val dohEnabled by settingsPreferences.dohEnabled.collectAsStateWithLifecycle()
     val ctMonitoringEnabled by settingsPreferences.ctMonitoringEnabled.collectAsStateWithLifecycle()
@@ -182,6 +225,15 @@ fun SettingsScreen(
                         KillSwitch.lockdownActive, Icons.Default.Lock, onClick = {
                             KillSwitch.openAlwaysOnSettings(context)
                         }),
+                    SettingUiItem(stringResource(R.string.set_auto_restart), stringResource(R.string.set_auto_restart_desc), autoRestart && exactAlarmsAllowed, Icons.Default.Refresh, onClick = {
+                        if (autoRestart && exactAlarmsAllowed) {
+                            settingsPreferences.setAutoRestart(false)
+                        } else {
+                            settingsPreferences.setAutoRestart(true)
+                            // Ask only now, when the user turns it on and access is missing.
+                            if (!exactAlarmsAllowed) showAutoRestartDialog = true
+                        }
+                    }),
                     SettingUiItem(stringResource(R.string.set_vpn_drop_alert), stringResource(R.string.set_vpn_drop_alert_desc), securityState.killSwitch, Icons.Default.Warning, onClick = {
                         settingsViewModel.toggleKillSwitch(!securityState.killSwitch)
                     }),

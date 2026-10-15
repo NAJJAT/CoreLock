@@ -17,9 +17,10 @@
 
     <!-- ── Other system permissions ──────────────────────────────────────── -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <!-- Deadman alarm (ProtectionWatchdog): only an exact alarm may start the VPN
+    <!-- Restart alarm (ProtectionWatchdog): only an exact alarm may start the VPN
          service again from the background after a crash. Not USE_EXACT_ALARM, which
-         Play reserves for alarm-clock and calendar apps. -->
+         Play reserves for alarm-clock and calendar apps. Settings → "Automatic restart
+         after a crash" asks for it on Android 14+, where it is not pre-granted. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission
         android:name="android.permission.PACKAGE_USAGE_STATS"
@@ -117,10 +118,19 @@
             </intent-filter>
         </receiver>
 
-        <!-- Deadman alarm: restarts protection (or says it stopped) when the process died with it on -->
+        <!-- Restart and backup alarms: restart protection (or say it stopped) when the
+             process died with it on. Main process. -->
         <receiver
             android:name=".vpn.ProtectionWatchdogReceiver"
             android:exported="false" />
+
+        <!-- Watches the VPN process from its own process and reacts the moment it dies
+             (linkToDeath); bound by the VPN service only. PrivacyGuardApplication skips
+             all setup in this process. -->
+        <service
+            android:name=".vpn.ProtectionWatcherService"
+            android:exported="false"
+            android:process=":watchdog" />
 
         <receiver
             android:name=".core.utils.NotificationDismissReceiver"

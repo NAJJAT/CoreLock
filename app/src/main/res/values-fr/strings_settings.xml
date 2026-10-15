@@ -23,6 +23,12 @@
     <string name="set_notification_details_desc">Nommer l’app et le serveur dans les alertes. Désactivé : les notifications indiquent seulement le type d’alerte, rien sur vos apps n’apparaît sur l’écran de verrouillage ni pour les apps qui lisent les notifications.</string>
     <string name="set_allow_screenshots">Autoriser les captures d’écran</string>
     <string name="set_allow_screenshots_desc">Laisser les captures d’écran, l’enregistrement de l’écran et l’aperçu des apps récentes montrer PrivacyGuard. Désactivé : les écrans avec votre historique en sont protégés.</string>
+    <string name="set_auto_restart">Redémarrage automatique après un plantage</string>
+    <string name="set_auto_restart_desc">Si PrivacyGuard plante, la protection redémarre en quelques secondes. Nécessite l’accès Android Alarmes et rappels.</string>
+    <string name="set_auto_restart_dialog_title">Autoriser Alarmes et rappels ?</string>
+    <string name="set_auto_restart_dialog_body">Après un plantage, Android ne laisse une app relancer sa protection qu’à partir d’une alarme exacte, et les alarmes exactes nécessitent l’accès Alarmes et rappels. PrivacyGuard ne règle cette alarme qu’après un plantage, jamais pendant que la protection fonctionne : il ne réveille pas votre téléphone autrement. Sans cet accès, vous recevez à la place la notification « Protection interrompue ».</string>
+    <string name="set_auto_restart_dialog_allow">Ouvrir les paramètres</string>
+    <string name="set_auto_restart_dialog_cancel">Plus tard</string>
     <string name="set_weekly_report">Rapport hebdomadaire</string>
     <string name="set_weekly_report_desc">Recevoir un résumé de confidentialité</string>
     <string name="set_doh">DNS sur HTTPS</string>
@@ -172,6 +178,6 @@
     <string name="set_dual_block_udp_desc">Bloque tout autre trafic UDP tant que le double VPN est actif, pour que rien ne sorte sans la chaîne. Les appels audio et vidéo et de nombreux jeux ne fonctionneront plus.</string>
     <string name="diag_upstream_vpn_off">Non testé : la protection est désactivée, le DNS passe donc par le résolveur du réseau.</string>
     <string name="diag_upstream_failed">%1$s n’a pas répondu à une requête de test. Des sites peuvent ne pas se charger.</string>
-    <string name="set_always_on_hint">Pour garder la protection active, activez le VPN permanent pour PrivacyGuard dans Android. Android le lance alors après un redémarrage. Avec « Bloquer les connexions sans VPN », rien ne sort sans protection, mais si PrivacyGuard plante, le téléphone reste hors ligne jusqu’à ce que vous rouvriez PrivacyGuard.</string>
+    <string name="set_always_on_hint">Pour garder la protection active, activez le VPN permanent pour PrivacyGuard dans Android. Android le lance alors après un redémarrage. Avec « Bloquer les connexions sans VPN », rien ne sort sans protection, mais si PrivacyGuard plante, le téléphone est hors ligne jusqu’à ce que PrivacyGuard redémarre (Redémarrage automatique après un plantage) ou que vous le rouvriez.</string>
     <string name="set_open_vpn_settings">Ouvrir les réglages VPN d’Android</string>
 </resources>
