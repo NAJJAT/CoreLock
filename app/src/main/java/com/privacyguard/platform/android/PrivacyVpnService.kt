@@ -219,8 +219,9 @@ class PrivacyVpnService : VpnService() {
             NotificationHelper.NOTIFICATION_ID_VPN,
             notifHelper.buildVpnActiveNotification(0, MainActivity::class.java),
         )
-        // Starting counts as alive: no "Protection stopped" while the tunnel comes up.
-        com.privacyguard.app.vpn.ProtectionWatchdog.arm(this)
+        // Starting counts as alive: the watchdog stays quiet however long the start
+        // takes (reading the lists from the database can take half a minute).
+        keepWatchdogArmed()
         notifHelper.cancelProtectionStopped()
         startJob = scope.launch {
             try {
@@ -242,6 +243,21 @@ class PrivacyVpnService : VpnService() {
             com.privacyguard.app.vpn.BootReceiver.markVpnStopped(this)
             releaseResources()
             return
+        }
+
+        // Fail closed (V-18): take every route now, before anything slow. Nothing
+        // reads the tunnel until the filters are loaded and the readers start in
+        // establishTunnel, so packets wait in the kernel's queue (and are dropped
+        // when it is full) instead of reaching a resolver unfiltered. After a crash
+        // the lists took 3.5 s to load, and blocked names resolved meanwhile.
+        val pendingFd = openTun() ?: run {
+            com.privacyguard.app.vpn.BootReceiver.markVpnStopped(this)
+            releaseResources()
+            return
+        }
+        synchronized(lifecycleLock) {
+            if (stopRequested) { runCatching { pendingFd.close() }; return }
+            tunFd = pendingFd
         }
 
         val db = buildDatabase()
@@ -329,14 +345,13 @@ class PrivacyVpnService : VpnService() {
 
         synchronized(lifecycleLock) {
             if (stopRequested) return
-            establishTunnel(db, settings) ?: return
+            establishTunnel(db, settings, pendingFd)
             isRunning = true
             running = this
             _isRunningFlow.value = true
         }
         com.privacyguard.app.vpn.BootReceiver.markVpnActive(this)
         com.privacyguard.vpn.WorkerGuard.onWorkerDied = ::onWorkerDied
-        keepWatchdogArmed()
         watchSettings(settings)
         com.privacyguard.app.data.repository.LocalDataEraser.register(dataClearListener)
         startLiveStats()
@@ -349,12 +364,12 @@ class PrivacyVpnService : VpnService() {
     }
 
     /**
-     * Opens the TUN interface and starts every thread that serves it. Returns null
-     * (after cleaning up) if the system refused the tunnel. Caller holds [lifecycleLock].
+     * The TUN interface with every route, or null if the system refused it (VPN
+     * permission gone). Opening a new one while one is up hands traffic over to it.
      */
-    private fun establishTunnel(db: AppDatabase, settings: SettingsPreferences): ParcelFileDescriptor? {
+    private fun openTun(): ParcelFileDescriptor? {
         Log.i(TAG, "Calling Builder().establish() — requesting TUN fd")
-        val fd = Builder()
+        return Builder()
             .setSession("PrivacyGuard")
             .addAddress("10.0.0.2", 24)
             .addAddress("fd00:1:fd00:1::2", 64)
@@ -365,14 +380,18 @@ class PrivacyVpnService : VpnService() {
             .addRoute("0.0.0.0", 0)
             .addRoute("::", 0)
             .setMtu(UdpForwarder.TUN_MTU)
-            .establish() ?: run {
-            Log.e(TAG, "establish() returned null — VPN permission not granted")
-            com.privacyguard.app.vpn.BootReceiver.markVpnStopped(this)
-            releaseResourcesLocked()
-            return null
-        }
-        Log.i(TAG, "TUN fd established")
+            .establish()
+            .also {
+                if (it == null) Log.e(TAG, "establish() returned null — VPN permission not granted")
+                else Log.i(TAG, "TUN fd established")
+            }
+    }
 
+    /**
+     * Starts every thread that serves the TUN interface [fd] (from [openTun]); packets
+     * that waited in it since it opened are read from here on. Caller holds [lifecycleLock].
+     */
+    private fun establishTunnel(db: AppDatabase, settings: SettingsPreferences, fd: ParcelFileDescriptor) {
         tunFd = fd
         tunnelStartedAt = System.currentTimeMillis()
         tunInterface = TunInterface(fd.fileDescriptor)
@@ -453,11 +472,10 @@ class PrivacyVpnService : VpnService() {
         )
         receiverRegistered = true
 
-        com.privacyguard.app.vpn.KillSwitch.updateLockdownState(this)
+        com.privacyguard.app.vpn.KillSwitch.attach(this)
         if (com.privacyguard.app.vpn.KillSwitch.isEnabled()) {
             com.privacyguard.app.vpn.KillSwitch.startMonitoring(this)
         }
-        return fd
     }
 
     /** Applies setting and rule changes to the running tunnel. */
@@ -1083,12 +1101,7 @@ class PrivacyVpnService : VpnService() {
             var ticks = 0
             while (isRunning) {
                 runCatching { publishLiveStats() }
-                // The user may switch Always-on / "Block connections without VPN" while we
-                // run; only this service can ask, so re-check every 10 s for the Home card.
-                if (ticks++ % 10 == 0) {
-                    runCatching { com.privacyguard.app.vpn.KillSwitch.updateLockdownState(this@PrivacyVpnService) }
-                    probeNetworkOnce()
-                }
+                if (ticks++ % 10 == 0) probeNetworkOnce()
                 kotlinx.coroutines.delay(1_000)
             }
         }
@@ -1348,7 +1361,7 @@ class PrivacyVpnService : VpnService() {
             receiverRegistered = false
         }
         com.privacyguard.app.vpn.KillSwitch.stopMonitoring()
-        com.privacyguard.app.vpn.KillSwitch.clearLockdownState()
+        com.privacyguard.app.vpn.KillSwitch.detach()
         if (::tunReader.isInitialized) tunReader.stop()
         if (::sensorWatcher.isInitialized) sensorWatcher.stop()
         if (::tcpForwarder.isInitialized) tcpForwarder.stop()
@@ -1385,18 +1398,30 @@ class PrivacyVpnService : VpnService() {
             Log.w(TAG, "Worker $worker died; rebuilding the tunnel")
             val rebuilt = synchronized(lifecycleLock) {
                 if (stopRequested) return@launch
+                // The new interface before the old one closes: Android hands traffic
+                // over to it, so there is no moment without a tunnel.
+                val fresh = openTun()
                 teardownTunnelLocked()
-                // Null: establishTunnel already released everything (permission gone).
-                establishTunnel(buildDatabase(), SettingsPreferences.getInstance(this@PrivacyVpnService)) != null
+                if (fresh == null) {
+                    com.privacyguard.app.vpn.BootReceiver.markVpnStopped(this@PrivacyVpnService)
+                    releaseResourcesLocked()
+                    false
+                } else {
+                    establishTunnel(buildDatabase(), SettingsPreferences.getInstance(this@PrivacyVpnService), fresh)
+                    true
+                }
             }
             if (rebuilt) Log.i(TAG, "Tunnel rebuilt after $worker died")
             else notifHelper.postProtectionStopped()
         }
     }
 
+    private var watchdogJob: kotlinx.coroutines.Job? = null
+
     /** Pushes the deadman alarm ahead for as long as protection is meant to run. */
     private fun keepWatchdogArmed() {
-        scope.launch {
+        watchdogJob?.cancel()
+        watchdogJob = scope.launch {
             while (!stopRequested) {
                 com.privacyguard.app.vpn.ProtectionWatchdog.arm(this@PrivacyVpnService)
                 kotlinx.coroutines.delay(com.privacyguard.app.vpn.ProtectionWatchdog.REARM_MS)

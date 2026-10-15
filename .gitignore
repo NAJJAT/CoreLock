@@ -15,8 +15,20 @@
 local.properties
 .claude/settings.local.json
 .claude/settings.json
-/release-signing.properties
-/release-signing.local.properties
+
+# Signing keys and their passwords, anywhere in the tree (the *.template
+# files hold placeholders only and stay tracked)
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pk8
+*.pepk
+release-signing.properties
+release-signing.local.properties
+keystore.properties
+key.properties
+signing.properties
 
 # Machine- and IDE-specific state (never commit; already untracked)
 /.idea/

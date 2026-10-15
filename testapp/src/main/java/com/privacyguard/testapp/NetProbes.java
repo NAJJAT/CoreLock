@@ -100,6 +100,31 @@ final class NetProbes {
         return sb.toString();
     }
 
+    /**
+     * V-02: a port-53 datagram the filter cannot treat as a query (a response, no
+     * question, one byte) must not open a UDP session that later queries on the
+     * same socket ride through unchecked. A blocked name must still get NXDOMAIN or
+     * no answer; an unblocked name on the same socket must still resolve.
+     */
+    static String dnsSameFlow() {
+        StringBuilder sb = new StringBuilder();
+        String blocked = "ads.snapchat.com";   // CuratedAdDomains: always blocked
+        byte[] response = dnsQuery(0x5555, "www.example.com");
+        response[2] = (byte) 0x81; response[3] = (byte) 0x80;   // QR=1: a response
+        byte[] noQuestion = dnsQuery(0x6666, "www.example.com");
+        noQuestion[5] = 0;                                       // QDCOUNT=0
+        byte[][] firsts = {response, noQuestion, {0x42}};
+        String[] kinds = {"response", "no question", "1 byte"};
+        for (String ip : new String[]{"8.8.8.8", "10.0.0.1"}) {
+            sb.append(expectBlockedAnswer("fresh socket " + ip, ip, null, blocked));
+            for (int i = 0; i < firsts.length; i++) {
+                sb.append(expectBlockedAnswer(kinds[i] + " first, " + ip, ip, firsts[i], blocked));
+            }
+        }
+        sb.append(expectUdpResolves("control, junk first, 8.8.8.8", "8.8.8.8", response, "www.example.com"));
+        return sb.toString();
+    }
+
     // ── DNS flood ────────────────────────────────────────────────────────────
 
     /** [n] raw queries for random names to the tunnel resolver, then checks DNS + HTTPS recover. */
@@ -206,6 +231,55 @@ final class NetProbes {
         }
     }
 
+    /** Sends [first] (if any), then an A query for [name] on the same socket; returns the reply or null. */
+    private static byte[] udpQueryAfter(String ip, byte[] first, String name) throws Exception {
+        try (DatagramSocket s = new DatagramSocket()) {
+            s.setSoTimeout(3000);
+            InetAddress to = InetAddress.getByName(ip);
+            if (first != null) {
+                s.send(new DatagramPacket(first, first.length, to, 53));
+                Thread.sleep(300);
+            }
+            int id = new Random().nextInt(0xFFFF);
+            byte[] q = dnsQuery(id, name);
+            s.send(new DatagramPacket(q, q.length, to, 53));
+            byte[] buf = new byte[1500];
+            long end = System.currentTimeMillis() + 3000;
+            while (System.currentTimeMillis() < end) {
+                DatagramPacket p = new DatagramPacket(buf, buf.length);
+                try { s.receive(p); } catch (java.net.SocketTimeoutException e) { return null; }
+                if (p.getLength() >= 12 && ((buf[0] & 0xFF) << 8 | (buf[1] & 0xFF)) == id) {
+                    return java.util.Arrays.copyOf(buf, p.getLength());
+                }
+            }
+            return null;
+        }
+    }
+
+    /** rcode 0 with at least one answer record. */
+    private static boolean hasAnswer(byte[] reply) {
+        return reply != null && (reply[3] & 0x0F) == 0 && ((reply[6] & 0xFF) << 8 | (reply[7] & 0xFF)) > 0;
+    }
+
+    private static String expectBlockedAnswer(String label, String ip, byte[] first, String name) {
+        try {
+            byte[] r = udpQueryAfter(ip, first, name);
+            if (r == null) return "PASS " + label + ": " + name + " no answer\n";
+            return (hasAnswer(r) ? "FAIL " : "PASS ") + label + ": " + name
+                    + " rcode=" + (r[3] & 0x0F) + " answers=" + ((r[6] & 0xFF) << 8 | (r[7] & 0xFF)) + "\n";
+        } catch (Exception e) {
+            return "PASS " + label + ": " + name + " (" + e.getClass().getSimpleName() + ")\n";
+        }
+    }
+
+    private static String expectUdpResolves(String label, String ip, byte[] first, String name) {
+        try {
+            return (hasAnswer(udpQueryAfter(ip, first, name)) ? "PASS " : "FAIL ") + label + ": " + name + "\n";
+        } catch (Exception e) {
+            return "FAIL " + label + ": " + e + "\n";
+        }
+    }
+
     /** TLS to a DoH host's own IPv6 address (not on the IP list): must be cut on the SNI. */
     private static String dohBySniOverV6(String host) {
         Inet6Address v6 = null;
@@ -293,6 +367,7 @@ final class NetProbes {
     static String run(String probe, String host, int port, int mb) throws Exception {
         switch (probe) {
             case "dns_tcp": return dnsTcp();
+            case "dns_same_flow": return dnsSameFlow();
             case "dns_v6": return dnsV6();
             case "blocked_v6": return blockedV6();
             case "ipv6": return ipv6Works();

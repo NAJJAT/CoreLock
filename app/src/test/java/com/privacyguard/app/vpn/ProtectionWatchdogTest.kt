@@ -36,25 +36,56 @@ class ProtectionWatchdogTest {
     private fun stoppedNotification() =
         shadowOf(notifications).getNotification(NotificationHelper.NOTIFICATION_ID_PROTECTION_STOPPED)
 
+    private fun nextStarted() = shadowOf(RuntimeEnvironment.getApplication()).nextStartedService
+
     @Test
-    fun notifies_only_when_protection_should_run_and_does_not() {
-        assertTrue(ProtectionWatchdog.shouldNotify(shouldBeActive = true, running = false))
-        assertFalse(ProtectionWatchdog.shouldNotify(shouldBeActive = true, running = true))
-        assertFalse(ProtectionWatchdog.shouldNotify(shouldBeActive = false, running = false))
+    fun acts_only_when_protection_should_run_and_does_not() {
+        assertTrue(ProtectionWatchdog.protectionLost(shouldBeActive = true, running = false))
+        assertFalse(ProtectionWatchdog.protectionLost(shouldBeActive = true, running = true))
+        assertFalse(ProtectionWatchdog.protectionLost(shouldBeActive = false, running = false))
     }
 
     @Test
-    fun alarm_after_a_crash_posts_protection_stopped() {
-        BootReceiver.markVpnActive(context)  // a crash leaves this set
+    fun alarm_after_a_crash_restarts_protection_silently() {
+        ShadowVpnService.setPrepareResult(null)  // consent still granted
+        BootReceiver.markVpnActive(context)       // a crash leaves this set
 
         ProtectionWatchdogReceiver().onReceive(context, Intent())
 
+        assertEquals(com.privacyguard.platform.android.PrivacyVpnService::class.java.name,
+            nextStarted()?.component?.className)
+        assertNull(stoppedNotification())
+    }
+
+    @Test
+    fun alarm_after_a_crash_without_consent_posts_protection_stopped() {
+        ShadowVpnService.setPrepareResult(Intent("android.net.vpn.SETUP_VPN"))
+        BootReceiver.markVpnActive(context)
+
+        ProtectionWatchdogReceiver().onReceive(context, Intent())
+
+        assertNull(nextStarted())
         val n = stoppedNotification()
         assertNotNull(n)
         n!!
         assertEquals(context.getString(com.privacyguard.app.R.string.notif_vpn_down_title),
             n.extras.getString(android.app.Notification.EXTRA_TITLE))
         assertNotNull("tapping must restart protection", n.contentIntent)
+    }
+
+    @Test
+    fun a_start_that_keeps_crashing_stops_being_restarted() {
+        ShadowVpnService.setPrepareResult(null)
+        BootReceiver.markVpnActive(context)
+        val t0 = 1_000_000L
+        repeat(ProtectionWatchdog.MAX_RESTARTS) { i ->
+            assertEquals(ProtectionWatchdog.Outcome.RESTARTED, ProtectionWatchdog.tryRestart(context, t0 + i * 60_000L))
+        }
+        assertEquals(ProtectionWatchdog.Outcome.TOO_MANY_RESTARTS,
+            ProtectionWatchdog.tryRestart(context, t0 + ProtectionWatchdog.MAX_RESTARTS * 60_000L))
+        // Once the window has passed, restarting is allowed again.
+        assertEquals(ProtectionWatchdog.Outcome.RESTARTED,
+            ProtectionWatchdog.tryRestart(context, t0 + ProtectionWatchdog.RESTART_WINDOW_MS + 1))
     }
 
     @Test

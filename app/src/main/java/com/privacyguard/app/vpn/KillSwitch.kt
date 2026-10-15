@@ -29,18 +29,28 @@ object KillSwitch {
 
     fun isEnabled(): Boolean = enabled
 
-    /** True only when Android itself blocks traffic if the VPN drops (API 29+). */
-    @Volatile var lockdownActive: Boolean = false
-        private set
+    @Volatile private var service: java.lang.ref.WeakReference<VpnService>? = null
+
+    /**
+     * True only when Android itself blocks traffic if the VPN drops (API 29+). Asked
+     * at each read, not cached: the user can switch Always-on and lockdown while we
+     * run, and a cached "on" made the drop alert say "Android is blocking all
+     * connections" right after both were turned off. False without a running service.
+     */
+    val lockdownActive: Boolean
+        get() {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+            val s = service?.get() ?: return false
+            return runCatching { s.isAlwaysOn && s.isLockdownEnabled }.getOrDefault(false)
+        }
 
     /** Call from the running service; isAlwaysOn/isLockdownEnabled only answer for the calling VpnService. */
-    fun updateLockdownState(service: VpnService) {
-        lockdownActive = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-            service.isAlwaysOn && service.isLockdownEnabled
+    fun attach(service: VpnService) {
+        this.service = java.lang.ref.WeakReference(service)
     }
 
-    fun clearLockdownState() {
-        lockdownActive = false
+    fun detach() {
+        service = null
     }
 
     /** System VPN settings, where the user turns on Always-on VPN and "Block connections without VPN". */

@@ -13,7 +13,13 @@ with these rules:
    back the way it was and remove all test rules.
 4. If a test can't be done safely on the phone, skip it and tell me why instead
    of finding a workaround.
-5. I commit and push myself; don't commit.
+5. Never run `git commit` or `git push`. I do all commits myself.
+
+## Working in steps
+
+After each step, stop and show me the files changed, a short summary, and a
+suggested commit message. Wait for me to say "next" before starting the
+following step.
 
 ## Files
 
