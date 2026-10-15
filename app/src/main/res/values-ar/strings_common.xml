@@ -25,6 +25,14 @@
     <string name="nav_stats">الإحصاءات</string>
     <string name="nav_payload">المحتوى</string>
     <string name="nav_settings">الإعدادات</string>
+    <plurals name="nav_badge_threats">
+        <item quantity="zero">لا تنبيهات تهديد</item>
+        <item quantity="one">تنبيه تهديد واحد</item>
+        <item quantity="two">تنبيها تهديد</item>
+        <item quantity="few">%d تنبيهات تهديد</item>
+        <item quantity="many">%d تنبيهًا للتهديد</item>
+        <item quantity="other">%d تنبيه تهديد</item>
+    </plurals>
     <string name="net_sig_intercept">رُصد اعتراض TLS</string>
     <string name="net_sig_hijack">إجابات DNS مُعاد كتابتها</string>
     <string name="net_sig_open">Wi-Fi مفتوحة (بلا تشفير)</string>

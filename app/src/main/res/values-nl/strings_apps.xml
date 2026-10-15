@@ -80,7 +80,7 @@
     <string name="rule_block_app_bg">%1$s blokkeren (achtergrond)</string>
     <string name="rule_block_app">%1$s blokkeren</string>
     <string name="apps_title">Apps</string>
-    <string name="apps_subtitle">Risico uit al het waargenomen gedrag · verkeer van de afgelopen 24 u</string>
+    <string name="apps_subtitle">Risico en verkeer van de afgelopen 24 u</string>
     <plurals name="apps_high_risk_n">
         <item quantity="one">%d hoog risico</item>
         <item quantity="other">%d hoog risico</item>

@@ -152,7 +152,8 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
         val liveBuckets = liveSessions.groupBy { canonicalPackageForObserved(it.packageName, installedPackages) }
         val connectionBuckets = recentConnections.groupBy { canonicalPackageForObserved(it.packageName, installedPackages) }
         // Traffic numbers are the last 24 h plus open sessions, exactly what App detail
-        // shows for the app; risk comes from the long-term behaviour profiles.
+        // shows for the app. Risk uses the same 24 h, or a row could say HIGH next to
+        // "0 destinations"; the stalkerware check still looks at all behaviour.
         val observed = installed
             .mapNotNull { installedApp ->
                 val pkg = installedApp.packageName
@@ -168,14 +169,17 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
                     appName           = installedNames[pkg].orEmpty().ifBlank { com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), pkg) },
                     packageName       = pkg,
                     totalDestinations = hosts.size,
-                    suspiciousCount   = rows.count { it.riskScore >= 40 },
+                    suspiciousCount   = rows.count { it.lastSeen >= since && it.riskScore >= 40 },
                     cleartextCount    = connectionRows.count { com.privacyguard.app.ui.traffic.HomeEvidence.isInternetCleartext(it) } +
                         liveRows.count {
                             it.securityInfo == "CLEARTEXT" && !com.privacyguard.app.core.network.LocalNetwork.isLocalAddress(it.destinationIp) &&
                                 !com.privacyguard.app.core.network.ConnectivityProbes.isProbe(it.packageName, it.hostName)
                         },
                     totalBytesOut     = connectionRows.sumOf { it.bytesSent + it.bytesReceived } + liveRows.sumOf { it.bytesTransferred },
-                    maxRiskScore      = rows.maxOfOrNull { it.riskScore } ?: fallbackMetrics.maxRiskScore,
+                    maxRiskScore      = windowRisk(
+                        rows, since,
+                        connectionRisk = if (connectionRows.isEmpty() && liveRows.isEmpty()) null else fallbackMetrics.maxRiskScore,
+                    ),
                     isBlocked         = pkg in blockedPackages,
                     stalkerwareScore  = stalkerware.score,
                     stalkerwareReasons = stalkerware.reasons,
@@ -202,7 +206,7 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
             suspiciousCount = 0,
             cleartextCount = 0,
             totalBytesOut = 0L,
-            maxRiskScore = 5,
+            maxRiskScore = NO_TRAFFIC_RISK,
             isBlocked = app.packageName in blockedPackages,
             stalkerwareScore = 0,
         )
@@ -307,6 +311,16 @@ class AppsViewModel(app: Application) : AndroidViewModel(app) {
     companion object {
         /** Live traffic refresh while the screen is visible; installed apps are cached. */
         private const val LIVE_REFRESH_MS = 3_000L
+
+        /** Risk of an app with no traffic in the window: LOW, sorted after apps with traffic. */
+        internal const val NO_TRAFFIC_RISK = 5
+
+        /**
+         * Highest risk among profiles seen since [since]; without one, the risk from the
+         * window's connections, or [NO_TRAFFIC_RISK] when the app had none.
+         */
+        internal fun windowRisk(profiles: List<ConnectionProfile>, since: Long, connectionRisk: Int?): Int =
+            profiles.filter { it.lastSeen >= since }.maxOfOrNull { it.riskScore } ?: connectionRisk ?: NO_TRAFFIC_RISK
 
         fun packageBlockRuleId(packageName: String) = "pkg:block:$packageName"
     }

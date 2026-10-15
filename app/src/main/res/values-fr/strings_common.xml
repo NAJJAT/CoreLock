@@ -25,6 +25,11 @@
     <string name="nav_stats">Stats</string>
     <string name="nav_payload">Contenu</string>
     <string name="nav_settings">Réglages</string>
+    <plurals name="nav_badge_threats">
+        <item quantity="one">%d alerte de menace</item>
+        <item quantity="many">%d alertes de menace</item>
+        <item quantity="other">%d alertes de menace</item>
+    </plurals>
     <string name="net_sig_intercept">Interception TLS détectée</string>
     <string name="net_sig_hijack">Réponses DNS réécrites</string>
     <string name="net_sig_open">Wi-Fi ouvert (sans chiffrement)</string>

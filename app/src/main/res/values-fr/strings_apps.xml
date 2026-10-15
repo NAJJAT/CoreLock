@@ -86,7 +86,7 @@
     <string name="rule_block_app_bg">Bloquer %1$s (arrière-plan)</string>
     <string name="rule_block_app">Bloquer %1$s</string>
     <string name="apps_title">Apps</string>
-    <string name="apps_subtitle">Risque d’après tout le comportement observé · trafic des dernières 24 h</string>
+    <string name="apps_subtitle">Risque et trafic des dernières 24 h</string>
     <plurals name="apps_high_risk_n">
         <item quantity="one">%d à risque élevé</item>
         <item quantity="many">%d à risque élevé</item>

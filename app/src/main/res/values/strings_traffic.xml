@@ -3,6 +3,8 @@
     <!-- App names -->
     <string name="trf_unattributed">Not attributable to an app</string>
     <string name="trf_removed_app">Removed app</string>
+    <!-- Traffic from adb shell (UID 2000); the same technical name in every language. -->
+    <string name="trf_adb_shell" translatable="false">ADB / shell</string>
 
     <!-- One connection / lookup -->
     <string name="trf_source_sni">TLS SNI</string>

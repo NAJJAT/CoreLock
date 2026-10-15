@@ -53,7 +53,9 @@ class AppTracker(
     /**
      * Returns the human-readable application label for [packageName].
      */
-    fun labelForPackage(packageName: String): String? = try {
+    fun labelForPackage(packageName: String): String? = if (AppFilter.isShell(packageName)) {
+        context.getString(com.privacyguard.app.R.string.trf_adb_shell)
+    } else try {
         val info = pm.getApplicationInfo(packageName, 0)
         com.privacyguard.core.utils.Hostnames.label(pm.getApplicationLabel(info).toString())
     } catch (_: PackageManager.NameNotFoundException) {

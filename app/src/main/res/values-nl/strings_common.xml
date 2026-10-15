@@ -25,6 +25,10 @@
     <string name="nav_stats">Statistiek</string>
     <string name="nav_payload">Payload</string>
     <string name="nav_settings">Instellingen</string>
+    <plurals name="nav_badge_threats">
+        <item quantity="one">%d dreigingsmelding</item>
+        <item quantity="other">%d dreigingsmeldingen</item>
+    </plurals>
     <string name="net_sig_intercept">TLS-onderschepping gedetecteerd</string>
     <string name="net_sig_hijack">DNS-antwoorden herschreven</string>
     <string name="net_sig_open">Open wifi (geen versleuteling)</string>

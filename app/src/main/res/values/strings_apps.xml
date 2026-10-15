@@ -80,7 +80,7 @@
     <string name="rule_block_app_bg">Block %1$s (background)</string>
     <string name="rule_block_app">Block %1$s</string>
     <string name="apps_title">Apps</string>
-    <string name="apps_subtitle">Risk from all observed behaviour · traffic from the last 24 h</string>
+    <string name="apps_subtitle">Risk and traffic from the last 24 h</string>
     <plurals name="apps_high_risk_n">
         <item quantity="one">%d high risk</item>
         <item quantity="other">%d high risk</item>

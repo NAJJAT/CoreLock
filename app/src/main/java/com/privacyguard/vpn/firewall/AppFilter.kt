@@ -50,6 +50,9 @@ class AppFilter(
     fun packageForUid(uid: Int): String? {
         if (uid < 0) return null
         if (isSystemUid(uid)) return SYSTEM_PACKAGE
+        // getNameForUid gives the shared-user name "android.uid.shell:2000", which no
+        // label lookup knows (it showed as "Removed app"). Name the package instead.
+        if (uid % PER_USER_RANGE == UID_SHELL) return SHELL_PACKAGE
 
         return uidToPackage.getOrPut(uid) {
             val name = resolveUid(uid) ?: return null
@@ -130,6 +133,15 @@ class AppFilter(
 
     companion object {
         const val SYSTEM_PACKAGE = "android"
+
+        /** adb shell and everything started from it (Process.SHELL_UID is not public). */
+        const val UID_SHELL = 2000
+        const val SHELL_PACKAGE = "com.android.shell"
+        private const val PER_USER_RANGE = 100_000
+
+        /** Also true for rows stored with the shared-user name before it was mapped. */
+        fun isShell(packageName: String?): Boolean =
+            packageName == SHELL_PACKAGE || packageName?.startsWith("android.uid.shell") == true
 
         // Android reserved UIDs
         const val UID_ROOT      = 0

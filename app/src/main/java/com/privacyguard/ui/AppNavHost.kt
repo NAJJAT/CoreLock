@@ -24,6 +24,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,7 +60,7 @@ import com.privacyguard.app.ui.theme.PgTextMuted
 import com.privacyguard.ui.flavor.PayloadInspectorUi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
-private data class NavTab(val route: String, @androidx.annotation.StringRes val labelRes: Int, val icon: ImageVector)
+internal data class NavTab(val route: String, @androidx.annotation.StringRes val labelRes: Int, val icon: ImageVector)
 
 @Composable
 fun AppNavHost(
@@ -123,56 +127,20 @@ fun AppNavHost(
         containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background,
         bottomBar = {
             if (currentRoute in topLevelRoutes) {
-                NavigationBar(
-                    containerColor = PgBackgroundAlt,
-                    contentColor = PgTextMuted,
-                    tonalElevation = 0.dp,
-                    modifier = Modifier
-                ) {
-                    tabs.forEach { tab ->
-                        NavigationBarItem(
-                            selected = currentDest?.hierarchy?.any { it.route == tab.route } == true,
-                            onClick = {
-                                navController.navigate(tab.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = {
-                                val tabLabel = androidx.compose.ui.res.stringResource(tab.labelRes)
-                                if (tab.route == "settings" && ja3ThreatCount > 0) {
-                                    BadgedBox(badge = {
-                                        Badge { Text(if (ja3ThreatCount > 99) "99+" else ja3ThreatCount.toString()) }
-                                    }) {
-                                        Icon(tab.icon, contentDescription = tabLabel)
-                                    }
-                                } else {
-                                    Icon(tab.icon, contentDescription = tabLabel)
-                                }
-                            },
-                            label = {
-                                Text(
-                                    text = androidx.compose.ui.res.stringResource(tab.labelRes),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Clip,
-                                    softWrap = false,
-                                    fontSize = 11.sp,
-                                )
-                            },
-                            alwaysShowLabel = true,
-                            colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
-                                selectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                                selectedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                                indicatorColor = PgBorder,
-                                unselectedIconColor = PgTextFaint,
-                                unselectedTextColor = PgTextFaint
-                            )
-                        )
-                    }
-                }
+                PgBottomBar(
+                    tabs = tabs,
+                    isSelected = { tab -> currentDest?.hierarchy?.any { it.route == tab.route } == true },
+                    settingsBadge = ja3ThreatCount,
+                    onSelect = { tab ->
+                        navController.navigate(tab.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                )
             }
         }
     ) { innerPadding ->
@@ -360,4 +328,64 @@ private fun appTrafficRoute(pkg: String, from: Long? = null, to: Long? = null, i
     val p = Uri.encode(pkg.ifBlank { com.privacyguard.app.ui.traffic.TrafficRows.UNKNOWN_PACKAGE })
     val q = listOfNotNull(from?.let { "from=$it" }, to?.let { "to=$it" }, if (idleOnly) "idle=1" else null)
     return if (q.isEmpty()) "appTraffic/$p" else "appTraffic/$p?" + q.joinToString("&")
+}
+
+/**
+ * Each tab is one TalkBack stop: NavigationBarItem merges it into a node with role Tab,
+ * its selected state, a click action and the label as its text. With a label shown it
+ * clears the icon's semantics, so the badge count would never be read; the tab itself
+ * says what the badge counts.
+ */
+@Composable
+internal fun PgBottomBar(
+    tabs: List<NavTab>,
+    isSelected: (NavTab) -> Boolean,
+    settingsBadge: Int,
+    onSelect: (NavTab) -> Unit,
+) {
+    NavigationBar(
+        containerColor = PgBackgroundAlt,
+        contentColor = PgTextMuted,
+        tonalElevation = 0.dp,
+    ) {
+        tabs.forEach { tab ->
+            val badge = if (tab.route == "settings") settingsBadge else 0
+            val spoken = if (badge > 0) {
+                pluralStringResource(com.privacyguard.app.R.plurals.nav_badge_threats, badge, badge)
+            } else null
+            NavigationBarItem(
+                selected = isSelected(tab),
+                onClick = { onSelect(tab) },
+                modifier = if (spoken != null) Modifier.semantics { contentDescription = spoken } else Modifier,
+                icon = {
+                    if (badge > 0) {
+                        BadgedBox(badge = {
+                            Badge { Text(if (badge > 99) "99+" else badge.toString()) }
+                        }) {
+                            Icon(tab.icon, contentDescription = null)
+                        }
+                    } else {
+                        Icon(tab.icon, contentDescription = null)
+                    }
+                },
+                label = {
+                    Text(
+                        text = stringResource(tab.labelRes),
+                        maxLines = 1,
+                        overflow = TextOverflow.Clip,
+                        softWrap = false,
+                        fontSize = 11.sp,
+                    )
+                },
+                alwaysShowLabel = true,
+                colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                    selectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                    selectedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                    indicatorColor = PgBorder,
+                    unselectedIconColor = PgTextFaint,
+                    unselectedTextColor = PgTextFaint
+                )
+            )
+        }
+    }
 }

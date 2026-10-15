@@ -95,7 +95,9 @@ object InstalledAppsCache {
                 .map { info ->
                     InstalledApp(
                         packageName = info.packageName,
-                        appName = info.applicationInfo?.loadLabel(pm)?.toString()?.let(com.privacyguard.core.utils.Hostnames::label)
+                        appName = if (com.privacyguard.vpn.firewall.AppFilter.isShell(info.packageName)) {
+                            context.getString(com.privacyguard.app.R.string.trf_adb_shell)
+                        } else info.applicationInfo?.loadLabel(pm)?.toString()?.let(com.privacyguard.core.utils.Hostnames::label)
                             ?: info.packageName.substringAfterLast('.'),
                         requestedPermissions = info.requestedPermissions?.toSet().orEmpty(),
                     )

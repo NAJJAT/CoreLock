@@ -1,0 +1,10 @@
+# Read by osv-scanner for rust/Cargo.lock (CI job "OSV dependency scan").
+# Every entry needs a reason and an end date; CI fails again after it.
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2022-0008"
+ignoreUntil = 2027-04-15
+reason = """windows 0.17.2 comes only through windivert in privacyguard-windows, the \
+desktop tool; the Android library (privacyguard-core) does not use it. The advisory is \
+a missing Send bound on delegates (unsoundness, not a remotely reachable bug), and the \
+tool never calls the windows crate itself. Fix: a windivert release on windows >= 0.32."""

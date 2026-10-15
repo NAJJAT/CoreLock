@@ -25,6 +25,11 @@
     <string name="nav_stats">Stats</string>
     <string name="nav_payload">Payload</string>
     <string name="nav_settings">Settings</string>
+    <!-- Spoken by TalkBack with the Settings tab badge (TLS fingerprints of known malware). -->
+    <plurals name="nav_badge_threats">
+        <item quantity="one">%d threat alert</item>
+        <item quantity="other">%d threat alerts</item>
+    </plurals>
     <string name="net_sig_intercept">TLS interception detected</string>
     <string name="net_sig_hijack">DNS answers rewritten</string>
     <string name="net_sig_open">Open Wi-Fi (no encryption)</string>

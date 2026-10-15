@@ -57,6 +57,7 @@ object AppNames {
         // app", never "Removed app". Older anomaly rows used lower-case "unknown".
         if (isUnattributed(packageName)) return context.getString(R.string.conn_unknown_app)
         if (packageName == com.privacyguard.app.core.network.NetworkSignals.NETWORK_OWNER) return context.getString(R.string.net_owner)
+        if (com.privacyguard.vpn.firewall.AppFilter.isShell(packageName)) return context.getString(R.string.trf_adb_shell)
         runCatching {
             val pm = context.packageManager
             return pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()

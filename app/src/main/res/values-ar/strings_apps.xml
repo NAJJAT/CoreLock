@@ -104,7 +104,7 @@
     <string name="rule_block_app_bg">حظر %1$s (في الخلفية)</string>
     <string name="rule_block_app">حظر %1$s</string>
     <string name="apps_title">التطبيقات</string>
-    <string name="apps_subtitle">الخطر من كل السلوك المرصود · الحركة خلال آخر 24 ساعة</string>
+    <string name="apps_subtitle">الخطر والحركة خلال آخر 24 ساعة</string>
     <plurals name="apps_high_risk_n">
         <item quantity="zero">%d عالي الخطورة</item>
         <item quantity="one">%d عالي الخطورة</item>
