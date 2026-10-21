@@ -25,11 +25,6 @@
     <string name="sec_hop_net">Internet</string>
     <string name="sec_hop_net_desc">Neither server has the full picture</string>
     <string name="sec_dual_config">Set up Dual VPN servers in Settings → Dual VPN.</string>
-    <string name="sec_native">Native processing engine</string>
-    <string name="sec_rust">Rust core engine</string>
-    <string name="sec_rust_on">Packet parsing runs in native code</string>
-    <string name="sec_rust_off">Kotlin engine active · build with NDK + Cargo to enable</string>
-    <string name="sec_active">Active</string>
     <string name="sec_sev">Sev %1$d</string>
     <string name="sec_ja3_hash">JA3 hash</string>
     <string name="sec_ja3_string">JA3 string</string>

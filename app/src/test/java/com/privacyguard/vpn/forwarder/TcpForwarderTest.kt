@@ -197,7 +197,7 @@ class TcpForwarderTest {
     fun sni_uses_the_dns_decision_and_is_reported_as_an_sni_block() {
         forwarder.stop()
         val engine = FilterEngine().apply { addRule(com.privacyguard.core.filter.FilterRule.allowDomain("allowed-ads.example.net")) }
-        val lists = com.privacyguard.vpn.firewall.DomainFilter(useNativeBloom = false).apply {
+        val lists = com.privacyguard.vpn.firewall.DomainFilter().apply {
             rebuild(listOf("ads.example.com", "allowed-ads.example.net", "graph.facebook.com"))
         }
         val policy = NameBlockPolicy(engine, domainFilter = lists,

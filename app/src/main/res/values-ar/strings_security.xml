@@ -25,11 +25,6 @@
     <string name="sec_hop_net">الإنترنت</string>
     <string name="sec_hop_net_desc">لا يملك أي خادم الصورة الكاملة</string>
     <string name="sec_dual_config">اضبط الخوادم من الإعدادات ← VPN مزدوج.</string>
-    <string name="sec_native">محرّك المعالجة الأصلي</string>
-    <string name="sec_rust">محرّك Rust الأساسي</string>
-    <string name="sec_rust_on">تحليل الحزم يعمل بشيفرة أصلية</string>
-    <string name="sec_rust_off">محرّك Kotlin مفعّل · ابنِ التطبيق باستخدام NDK وCargo لتفعيله</string>
-    <string name="sec_active">مفعّل</string>
     <string name="sec_sev">الخطورة %1$d</string>
     <string name="sec_ja3_hash">بصمة JA3</string>
     <string name="sec_ja3_string">سلسلة JA3</string>

@@ -67,7 +67,7 @@ object Ja3Fingerprinter {
         )
     }
 
-    /** Accept a pre-computed hash (e.g. from native Rust) and skip re-computing it. */
+    /** Checks a JA3 hash computed by the caller (ClientHello.ja3Hash) against the watch-list. */
     fun inspectHash(hash: String, hello: ClientHello, packageName: String?): Ja3Alert? {
         val (name, category, severity) = THREATS[hash] ?: return null
         return Ja3Alert(

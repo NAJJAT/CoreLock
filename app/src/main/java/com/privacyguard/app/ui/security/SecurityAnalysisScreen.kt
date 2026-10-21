@@ -211,37 +211,6 @@ fun SecurityAnalysisScreen(
             }
         }
 
-        // Rust engine status
-        item {
-            PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                SectionLabel(stringResource(R.string.sec_native))
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.sec_rust), style = MaterialTheme.typography.titleSmall, color = PgText)
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            if (com.privacyguard.core.native_engine.RustBridge.isAvailable)
-                                stringResource(R.string.sec_rust_on)
-                            else
-                                stringResource(R.string.sec_rust_off),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = PgTextMuted,
-                        )
-                    }
-                    StatusPill(
-                        text = if (com.privacyguard.core.native_engine.RustBridge.isAvailable) stringResource(R.string.sec_active).uppercase() else "KOTLIN",
-                        background = if (com.privacyguard.core.native_engine.RustBridge.isAvailable) PgAccentDim else PgInfoDim,
-                        content = if (com.privacyguard.core.native_engine.RustBridge.isAvailable) PgAccent else PgInfo,
-                    )
-                }
-            }
-        }
-
         item { Spacer(modifier = Modifier.height(8.dp)) }
     }
 }

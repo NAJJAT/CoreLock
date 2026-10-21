@@ -16,7 +16,7 @@ import kotlin.random.Random
 
 class NameBlockPolicyTest {
 
-    private fun lists(vararg names: String) = DomainFilter(useNativeBloom = false).apply { rebuild(names.toList()) }
+    private fun lists(vararg names: String) = DomainFilter().apply { rebuild(names.toList()) }
 
     // ── Trailing dot (regression) ────────────────────────────────────────────
 

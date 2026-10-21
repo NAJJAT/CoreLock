@@ -113,8 +113,6 @@
     <string name="set_nav_rules_desc">عرض قواعد الحظر والسماح وإضافتها وتعطيلها وحذفها</string>
     <string name="set_nav_payloads">فاحص المحتوى</string>
     <string name="set_nav_payloads_desc">سجلات حركة HTTPS المعترَضة</string>
-    <string name="set_nav_flutter">واجهة Flutter (معاينة)</string>
-    <string name="set_nav_flutter_desc">واجهة متعددة المنصات — اضغط للتشغيل</string>
     <string name="set_dual_vpn">VPN مزدوج</string>
     <string name="set_dual_enable">تفعيل VPN المزدوج</string>
     <string name="set_dual_desc">يمرّر اتصالاتك عبر خادمي SOCKS5، فلا يعرف أي منهما هويتك ووجهتك معًا. لا ينقل SOCKS5 إلا حركة TCP؛ انظر أدناه ماذا يعني ذلك.</string>

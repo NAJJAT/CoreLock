@@ -36,7 +36,6 @@ In scope:
 
 Out of scope:
 
-- `testapp/`, a debug-only harness that is never published
 - findings that need a rooted device or an already-compromised Android OS
 - apps that are passed through without decryption because they pin certificates
   (this is intended behaviour)

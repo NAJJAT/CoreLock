@@ -25,11 +25,6 @@
     <string name="sec_hop_net">Internet</string>
     <string name="sec_hop_net_desc">Geen enkele server heeft het volledige beeld</string>
     <string name="sec_dual_config">Stel de servers in via Instellingen → Dubbele VPN.</string>
-    <string name="sec_native">Native verwerkingsengine</string>
-    <string name="sec_rust">Rust-kernengine</string>
-    <string name="sec_rust_on">Pakketten worden in native code verwerkt</string>
-    <string name="sec_rust_off">Kotlin-engine actief · bouw met NDK + Cargo om in te schakelen</string>
-    <string name="sec_active">Actief</string>
     <string name="sec_sev">Ernst %1$d</string>
     <string name="sec_ja3_hash">JA3-hash</string>
     <string name="sec_ja3_string">JA3-tekenreeks</string>

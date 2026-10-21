@@ -95,27 +95,9 @@ jobs:
           name: instrumented-reports
           path: app/build/reports
 
-  rust:
-    name: Rust core
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: rust/privacyguard-core
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
-        with:
-          toolchain: stable
-          components: clippy
-      - name: Test
-        run: cargo test
-      - name: Clippy
-        run: cargo clippy --all-targets -- -W clippy::unwrap_used
-
   # Known vulnerabilities (OSV database) in what ships: the release APKs' runtime
-  # libraries and the Rust workspace. Fails on any finding not excused, with a reason
-  # and an end date, in an osv-scanner.toml next to the scanned file.
+  # libraries. Fails on any finding not excused, with a reason and an end date, in an
+  # osv-scanner.toml next to the scanned file.
   dependencies:
     name: OSV dependency scan
     runs-on: ubuntu-latest
@@ -147,8 +129,7 @@ jobs:
       - name: Scan
         run: |
           "$RUNNER_TEMP/osv-scanner" scan source \
-            -L app/build/osv/gradle.lockfile \
-            -L rust/Cargo.lock
+            -L app/build/osv/gradle.lockfile
 
   secrets:
     name: Secret scan

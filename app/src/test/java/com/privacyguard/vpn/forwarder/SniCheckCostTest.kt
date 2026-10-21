@@ -14,7 +14,7 @@ import kotlin.random.Random
  * ClientHello), never per packet.
  *
  * Sized like the default lists (~220k names) plus a malware list and 50 user rules,
- * without the native bloom filter (not loaded on the JVM), so this is the slow path.
+ * as DomainFilter looks names up on the device.
  * The bound is loose on purpose, to catch a regression (say, a linear scan) without
  * failing on a busy CI machine; the measured numbers are printed.
  */
@@ -27,8 +27,8 @@ class SniCheckCostTest {
         fun word() = buildString { repeat(rnd.nextInt(4, 11)) { append('a' + rnd.nextInt(26)) } }
         val listed = List(220_000) { "${word()}.${tlds.random(rnd)}" }
 
-        val lists = DomainFilter(useNativeBloom = false).apply { rebuild(listed) }
-        val security = DomainFilter(useNativeBloom = false).apply { rebuild(List(20_000) { "${word()}.${tlds.random(rnd)}" }) }
+        val lists = DomainFilter().apply { rebuild(listed) }
+        val security = DomainFilter().apply { rebuild(List(20_000) { "${word()}.${tlds.random(rnd)}" }) }
         val engine = FilterEngine().apply {
             setRules(List(50) {
                 val host = "${word()}.${tlds.random(rnd)}"
@@ -56,7 +56,7 @@ class SniCheckCostTest {
         }.sorted()
         val median = perCallNs[rounds / 2]
         println("SNI check: median ${median} ns per connection (min ${perCallNs.first()}, max ${perCallNs.last()}), " +
-            "${listed.size} listed names, 50 user rules, no native bloom")
+            "${listed.size} listed names, 50 user rules")
         assertTrue("SNI check took $median ns per connection", median < 50_000)
     }
 }

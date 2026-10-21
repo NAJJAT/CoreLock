@@ -105,8 +105,6 @@
     <string name="set_nav_rules_desc">Al je blokkeer- en toestaanregels bekijken, toevoegen, uitzetten en verwijderen</string>
     <string name="set_nav_payloads">Inhoudsinspectie</string>
     <string name="set_nav_payloads_desc">Logboeken van onderschept HTTPS-verkeer</string>
-    <string name="set_nav_flutter">Flutter-interface (preview)</string>
-    <string name="set_nav_flutter_desc">Platformonafhankelijke interface — tik om te starten</string>
     <string name="set_dual_vpn">Dubbele VPN</string>
     <string name="set_dual_enable">Dubbele VPN inschakelen</string>
     <string name="set_dual_desc">Stuurt je verbindingen via twee SOCKS5-servers, zodat geen van beide weet wie je bent én waar je naartoe gaat. SOCKS5 vervoert alleen TCP; zie hieronder wat dat betekent.</string>

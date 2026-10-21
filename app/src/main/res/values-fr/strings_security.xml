@@ -25,11 +25,6 @@
     <string name="sec_hop_net">Internet</string>
     <string name="sec_hop_net_desc">Aucun serveur n’a la vue complète</string>
     <string name="sec_dual_config">Configurez les serveurs dans Paramètres → Double VPN.</string>
-    <string name="sec_native">Moteur de traitement natif</string>
-    <string name="sec_rust">Moteur Rust</string>
-    <string name="sec_rust_on">L’analyse des paquets s’exécute en code natif</string>
-    <string name="sec_rust_off">Moteur Kotlin actif · compilez avec NDK + Cargo pour l’activer</string>
-    <string name="sec_active">Actif</string>
     <string name="sec_sev">Gravité %1$d</string>
     <string name="sec_ja3_hash">Empreinte JA3</string>
     <string name="sec_ja3_string">Chaîne JA3</string>

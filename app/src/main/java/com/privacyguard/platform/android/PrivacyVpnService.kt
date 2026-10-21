@@ -100,7 +100,7 @@ class PrivacyVpnService : VpnService() {
     private lateinit var filterEngine: FilterEngine
     private lateinit var domainFilter: DomainFilter
     // Malware and phishing hosts, at every level: a plain Allow rule does not open them.
-    private val securityFilter = DomainFilter(useNativeBloom = false)
+    private val securityFilter = DomainFilter()
     private lateinit var ipFilter: IpFilter
     private lateinit var appFilter: AppFilter
     private lateinit var encEnforcer: EncryptionEnforcer
@@ -960,19 +960,13 @@ class PrivacyVpnService : VpnService() {
      * reassembles it), for IPv4 and IPv6 alike.
      */
     private fun inspectTlsClientHello(data: ByteArray, uid: Int, pkg: String?) {
-        // Fast path: use Rust native JA3 computation when available
-        val ja3Hash: String? = if (com.privacyguard.core.native_engine.RustBridge.isAvailable) {
-            com.privacyguard.core.native_engine.RustBridge.computeJa3(data)
-        } else null
-
         val hello = ClientHelloParser.parse(data) ?: return
         val db = buildDatabase()
 
         tlsFingerprintMonitor.onClientHello(uid, pkg, hello)
 
-        // JA3 threat check — prefer native hash, fall back to Kotlin-computed hash
-        val effectiveHash = ja3Hash ?: hello.ja3Hash()
-        val ja3Alert = Ja3Fingerprinter.inspectHash(effectiveHash, hello, pkg)
+        // JA3 threat check
+        val ja3Alert = Ja3Fingerprinter.inspectHash(hello.ja3Hash(), hello, pkg)
         if (ja3Alert != null) {
             persistScope.launch {
                 db.tlsAlertDao().insert(TlsAlertEntity(

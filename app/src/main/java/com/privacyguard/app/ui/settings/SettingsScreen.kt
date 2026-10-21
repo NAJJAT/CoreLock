@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Screenshot
-import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
@@ -108,7 +107,6 @@ fun SettingsScreen(
     onOpenAdPrivacy: () -> Unit = {},
     onOpenRules: () -> Unit = {},
     onOpenPayloads: (() -> Unit)? = null,
-    onOpenFlutterUi: (() -> Unit)? = null,
     settingsViewModel: SettingsViewModel = viewModel(),
 ) {
     val context = LocalContext.current
@@ -543,10 +541,6 @@ fun SettingsScreen(
                 if (onOpenPayloads != null) {
                     Spacer(modifier = Modifier.height(12.dp))
                     NavRow(stringResource(R.string.set_nav_payloads), stringResource(R.string.set_nav_payloads_desc), Icons.Default.Search, PgInfo, onOpenPayloads)
-                }
-                if (onOpenFlutterUi != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    NavRow(stringResource(R.string.set_nav_flutter), stringResource(R.string.set_nav_flutter_desc), Icons.Default.PhoneAndroid, PgAccent, onOpenFlutterUi)
                 }
             }
         }

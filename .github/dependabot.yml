@@ -8,11 +8,6 @@ updates:
       androidx:
         patterns: ["androidx.*"]
 
-  - package-ecosystem: cargo
-    directory: "/rust/privacyguard-core"
-    schedule:
-      interval: weekly
-
   - package-ecosystem: github-actions
     directory: "/"
     schedule:

@@ -105,8 +105,6 @@
     <string name="set_nav_rules_desc">View, add, disable and delete all your block and allow rules</string>
     <string name="set_nav_payloads">Payload Inspector</string>
     <string name="set_nav_payloads_desc">Intercepted HTTPS traffic logs</string>
-    <string name="set_nav_flutter">Flutter UI (Preview)</string>
-    <string name="set_nav_flutter_desc">Cross-platform UI — tap to launch</string>
     <string name="set_dual_vpn">Dual VPN</string>
     <string name="set_dual_enable">Enable Dual VPN</string>
     <string name="set_dual_desc">Sends your connections through two SOCKS5 servers, so neither server knows both who you are and where you go. SOCKS5 carries TCP only; see below for what that means.</string>

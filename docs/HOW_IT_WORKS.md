@@ -650,9 +650,3 @@ key, an optional certificate pin and an optional body signature (`SiemEndpoint.k
   so they cannot be blocked at DNS without breaking login.
 - **PCAP files are not encrypted** while they exist (at most 24 hours).
 - **No retro-hunt** (5.9).
-- **The Flutter UI** (`flutter/`) is a preview that is not built into the APK
-  (it needs `flutter pub get`; until then Settings hides its entry). If it is
-  built, it is not trustworthy yet: its privacy score is fixed at 50 and its
-  cleartext count at 0, "throughput" adds up total bytes, the risk and grade
-  formulas differ from the main app, alert titles are untranslated codes, and its
-  settings switches and three menu entries do nothing.

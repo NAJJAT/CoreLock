@@ -33,8 +33,8 @@ class DnsBlockingPropertyTest {
             filterEngine = engine,
             tunWriter = TunWriter(TunInterface(FileDescriptor())),
             protectSocket = { false }, protectTcpSocket = { false },
-            domainFilter = DomainFilter(useNativeBloom = false).apply { rebuild(blocked) },
-            securityFilter = DomainFilter(useNativeBloom = false).apply { rebuild(security) },
+            domainFilter = DomainFilter().apply { rebuild(blocked) },
+            securityFilter = DomainFilter().apply { rebuild(security) },
         )
         h.queryListener = DnsHandler.QueryListener { _, d, b -> seen += d to b }
         return h to seen

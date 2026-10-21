@@ -66,8 +66,8 @@ class DnsBlockDecisionTest {
     @Test
     fun dns_handler_applies_the_precedence() {
         val engine = FilterEngine()
-        val lists = DomainFilter(useNativeBloom = false).apply { rebuild(listOf("ads.example", "bad.example")) }
-        val security = DomainFilter(useNativeBloom = false).apply { rebuild(listOf("bad.example")) }
+        val lists = DomainFilter().apply { rebuild(listOf("ads.example", "bad.example")) }
+        val security = DomainFilter().apply { rebuild(listOf("bad.example")) }
         val blocked = mutableListOf<String>()
         val handler = DnsHandler(
             filterEngine = engine,

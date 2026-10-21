@@ -16,7 +16,6 @@
 
 -keep class com.privacyguard.platform.android.PrivacyVpnService { *; }
 -keep class com.privacyguard.app.MainActivity { *; }
--keep class com.privacyguard.app.FlutterMainActivity { *; }
 -keep class com.privacyguard.app.PrivacyGuardApplication { *; }
 -keep class com.privacyguard.app.tile.PrivacyGuardTileService { *; }
 -keep class com.privacyguard.app.vpn.BootReceiver { *; }
@@ -90,16 +89,6 @@
 # ── Jetpack Compose ───────────────────────────────────────────────────────────
 # Compose ships its own consumer R8 rules; keeping all of androidx.compose.**
 # only made the APK larger.
-
-
-# ── JNI — Rust native bridge ──────────────────────────────────────────────────
-# The Rust .so looks up these methods by exact JNI name.
-# Renaming them breaks the JNI link silently.
-
--keep class com.privacyguard.core.native_engine.RustBridge {
-    native <methods>;
-    public static <methods>;
-}
 
 
 # ── VPN / packet engine core ──────────────────────────────────────────────────

@@ -49,11 +49,10 @@ nothing is filtered unless Android's Always-on VPN with lockdown is on.
 11. [Enterprise: MDM, payload inspection and SIEM](#enterprise-mdm-payload-inspection-and-siem)
 12. [Testing](#testing)
 13. [Debug tooling](#debug-tooling)
-14. [Optional components](#optional-components)
-15. [Project structure](#project-structure)
-16. [Known limitations](#known-limitations)
-17. [Security](#security)
-18. [License](#license)
+14. [Project structure](#project-structure)
+15. [Known limitations](#known-limitations)
+16. [Security](#security)
+17. [License](#license)
 
 ---
 
@@ -216,8 +215,6 @@ app that connects to the answer within a minute; blocked or unused lookups stay
 │   ├─ Sessions: SessionTable (reaper) → ConnectionLogger (batched)  │
 │   ├─ SensorUsageWatcher (mic/camera) · ForegroundAppDetector       │
 │   └─ MITM: MitmEngine (enterprise only, consent-gated)             │
-│                                                                    │
-│ Optional Rust core (JNI): JA3, bloom filter, entropy, classifier   │
 └───────────────────────────────────────────────────────────────────┘
 ```
 
@@ -232,7 +229,7 @@ app that connects to the answer within a minute; blocked or unused lookups stay
 
 **Stack:** Kotlin, Jetpack Compose (Material 3), Navigation Compose, Room +
 SQLCipher, WorkManager, AppCompat per-app locales, BouncyCastle and OkHttp
-(enterprise), optional Rust (JNI) and Flutter.
+(enterprise).
 
 ---
 
@@ -297,7 +294,6 @@ SQLCipher, WorkManager, AppCompat per-app locales, BouncyCastle and OkHttp
 
 - Android Studio (recent stable) with JDK 17
 - Android SDK: compile and target API 36, minimum API 24
-- Optional: Rust + `cargo-ndk` (native core), Flutter SDK (preview UI)
 
 ### Debug builds
 
@@ -440,7 +436,6 @@ A Device Admin receiver supports Intune, Workspace ONE, Jamf and similar.
   - instrumented tests (Room migrations) on an API 34 emulator
   - "unsigned release must fail" check
   - all actions pinned to commit SHAs
-  - Rust `cargo test` + clippy
   - gitleaks secret scan
 
   Dependabot keeps dependencies current.
@@ -477,54 +472,6 @@ Debug builds only (`src/debug`, never in release):
   `evidence/<KIND>`, `appTraffic/<package>?from=&to=&idle=1` and
   `domain/<host>`.
 
-- **`testapp/`** is a separate debug-only app (release variant disabled) for
-  testing the interception chain:
-  - TLS through OkHttp, BouncyCastle and HttpsURLConnection (several fingerprints)
-  - "Record mic 5 s"
-  - "Resolve ad/login hosts"
-
-  `-PtestappVersionCode=N` simulates an app update. It is never shipped; delete
-  it and its `include` in `settings.gradle.kts` if it isn't wanted.
-
----
-
-## Optional components
-
-### Rust native core (`rust/`)
-
-| Crate | Purpose |
-|---|---|
-| `privacyguard-core` | JA3, bloom filter, Shannon entropy, packet classifier (JNI + C FFI) |
-| `privacyguard-linux` | TUN daemon (tokio) |
-| `privacyguard-windows` | WinDivert interception service |
-| `privacyguard-ebpf` | TC and cgroup_skb programs (aya loader) |
-
-Kotlin fallbacks are used automatically when the `.so` is absent. To build for Android:
-
-```bash
-rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
-cargo install cargo-ndk
-cd rust && cargo ndk -t armeabi-v7a -t arm64-v8a -t x86_64 -o ../app/src/main/jniLibs build --release
-```
-
-The `buildRust` Gradle task does this automatically and skips silently if
-`cargo-ndk` is missing. See `rust/BUILD.md`.
-
-### Flutter preview UI (`flutter/`)
-
-```bash
-cd flutter && flutter pub get
-```
-
-This wires the `:flutter` module in. A "Flutter UI (Preview)" entry then
-appears in Settings. The Compose UI remains the default, and the APK works
-with or without Flutter.
-
-### iOS prototype (`ios/`)
-
-A SwiftUI app plus a `PacketTunnelProvider` network extension. It is a
-prototype and not part of the Android build.
-
 ---
 
 ## Project structure
@@ -534,7 +481,7 @@ app/src/
 ├── main/java/com/privacyguard/
 │   ├── core/          packet (IPv4/IPv6/TCP/UDP/DNS), session, filter, tls (ClientHello, JA3/JA4, ciphers, CT)
 │   ├── vpn/           forwarder (TcpForwarder, UdpForwarder, DnsHandler), tunnel (TUN reader/writer),
-│   │                  firewall (domain hash sets/bloom, IP/CIDR), inspector (DNS anomalies, encryption),
+│   │                  firewall (domain hash sets, IP/CIDR), inspector (DNS anomalies, encryption),
 │   │                  interception (TLS inspection seam)
 │   ├── platform/      PrivacyVpnService, AppTracker, ForegroundAppDetector, NotificationHelper
 │   ├── ui/            AppNavHost (navigation, bottom bar, routes)
@@ -556,7 +503,8 @@ app/src/
 ├── test/              JVM unit tests
 └── androidTest/       Room migration tests
 app/schemas/           exported Room schemas
-rust/  flutter/  ios/  testapp/  .github/
+tools/geoip/           generates the GeoIP asset
+docs/  .github/
 ```
 
 > Two package roots exist: `com.privacyguard.app.…` (app, UI, data) and

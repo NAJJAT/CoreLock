@@ -107,8 +107,6 @@
     <string name="set_nav_rules_desc">Afficher, ajouter, désactiver et supprimer vos règles de blocage et d’autorisation</string>
     <string name="set_nav_payloads">Inspecteur de contenu</string>
     <string name="set_nav_payloads_desc">Journaux du trafic HTTPS intercepté</string>
-    <string name="set_nav_flutter">Interface Flutter (aperçu)</string>
-    <string name="set_nav_flutter_desc">Interface multiplateforme — touchez pour lancer</string>
     <string name="set_dual_vpn">Double VPN</string>
     <string name="set_dual_enable">Activer le double VPN</string>
     <string name="set_dual_desc">Fait passer vos connexions par deux serveurs SOCKS5, pour qu’aucun ne sache à la fois qui vous êtes et où vous allez. SOCKS5 ne transporte que le TCP ; voir ci-dessous ce que cela implique.</string>
