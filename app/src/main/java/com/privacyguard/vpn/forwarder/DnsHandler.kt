@@ -155,25 +155,12 @@ class DnsHandler(
         return true
     }
 
-    /**
-     * Why [name] is blocked for [ownerPackage], or null. The one decision for DNS
-     * names, CNAME targets, TLS SNI and QUIC SNI, so they can never disagree.
-     *
-     * Ad-SDK policy is per app (DomainFilter is not): it blocks SDK hosts in other
-     * apps, and keeps login/push/deep-link hosts open even when a downloaded list
-     * contains them. Precedence: see [DnsBlockDecision].
-     */
-    fun blockReasonFor(name: String, ownerPackage: String?): DnsBlockDecision.Reason? {
-        val sdkVerdict = adSdkPolicy?.decide(ownerPackage, name)
-        val userRule = filterEngine.domainRuleFor(name, ownerPackage)
-        return DnsBlockDecision.decide(
-            userRule = userRule,
-            onSecurityList = securityFilter?.isBlocked(name) == true,
-            onLevelBlocklist = sdkVerdict !is com.privacyguard.app.adprivacy.AdSdkVerdict.KeepOpen &&
-                domainFilter?.isBlocked(name) == true,
-            adSdkBlocks = sdkVerdict is com.privacyguard.app.adprivacy.AdSdkVerdict.Block,
-        ) ?: if (userRule == null && filterEngine.isDomainBlocked(name)) DnsBlockDecision.Reason.USER_RULE else null
-    }
+    /** The decision DNS shares with CNAME targets and TLS/QUIC SNI. */
+    val nameBlockPolicy = NameBlockPolicy(filterEngine, domainFilter, securityFilter, adSdkPolicy)
+
+    /** Why [name] is blocked for [ownerPackage], or null: see [NameBlockPolicy]. */
+    fun blockReasonFor(name: String, ownerPackage: String?): DnsBlockDecision.Reason? =
+        nameBlockPolicy.reasonFor(name, ownerPackage)
 
     /** CNAME targets in [response] that are blocked for [ownerPackage] (CNAME cloaking). */
     internal fun blockedCnameTarget(response: DnsPacket, ownerPackage: String?): String? =
