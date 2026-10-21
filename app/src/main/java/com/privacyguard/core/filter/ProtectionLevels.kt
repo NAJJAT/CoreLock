@@ -30,6 +30,16 @@ object ProtectionLevels {
         )
     }
 
+    /**
+     * Ad lists that belong to another level: Standard uses HaGeZi Pro mini, Strict the
+     * full HaGeZi Pro (which contains Pro mini) and OISD small.
+     */
+    fun excludedSourcesFor(level: FilterEngine.BlockLevel): Set<String> = when (level) {
+        FilterEngine.BlockLevel.MINIMAL -> emptySet()
+        FilterEngine.BlockLevel.STANDARD -> setOf(BlocklistRepo.SOURCE_HAGEZI_PRO, BlocklistRepo.SOURCE_OISD)
+        FilterEngine.BlockLevel.STRICT -> setOf(BlocklistRepo.SOURCE_HAGEZI_PRO_MINI)
+    }
+
     /** Hand-curated ad/tracker hosts (not in the database) belong to ads and trackers. */
     fun includesCuratedAdHosts(level: FilterEngine.BlockLevel): Boolean =
         level >= FilterEngine.BlockLevel.STANDARD

@@ -171,6 +171,10 @@
     <string name="dash_payloads">Contenus</string>
     <string name="dash_status_off">Aucun déchiffrement</string>
     <string name="dash_strict_title">Passer en mode Strict sur %1$s ?</string>
+    <string name="dash_private_dns_title">Le DNS privé va empêcher le DNS de fonctionner</string>
+    <string name="dash_private_dns_body">Le DNS privé est réglé sur %1$s. PrivacyGuard filtre lui-même le DNS et bloque le DNS sur TLS ; avec un nom d\'hôte de DNS privé, Android ne se rabat pas sur le DNS classique : les noms ne se résolvent plus et les applications ne peuvent plus se connecter. Réglez le DNS privé sur Automatique ou Désactivé (Samsung : Connexions, Autres paramètres de connexion, DNS privé ; la plupart des autres téléphones : Réseau et Internet).</string>
+    <string name="dash_private_dns_open">Ouvrir les paramètres réseau</string>
+    <string name="dash_private_dns_start_anyway">Démarrer quand même</string>
     <string name="dash_strict_body">La confiance dans ce réseau est tombée à %1$d/100. Le mode Strict bloque aussi la télémétrie du système. Rien ne change sans votre accord.</string>
     <string name="dash_strict_accept">Passer en mode Strict</string>
     <string name="dash_strict_dismiss">Pas sur ce réseau</string>

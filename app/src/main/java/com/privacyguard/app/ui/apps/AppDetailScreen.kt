@@ -113,6 +113,13 @@ fun AppDetailScreen(
     val labelContext = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
     var domainSort by remember { mutableStateOf(DomainSort.COUNT) }
+    // A background-only rule needs Usage Access to know the app is in the background.
+    // Access can change in system settings: read it again on every resume.
+    var usageAccess by remember { mutableStateOf(com.privacyguard.platform.android.ForegroundAppDetector(labelContext).hasUsageAccess()) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        usageAccess = com.privacyguard.platform.android.ForegroundAppDetector(labelContext).hasUsageAccess()
+        onPauseOrDispose { }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -210,6 +217,10 @@ fun AppDetailScreen(
                     )
                     com.privacyguard.app.ui.components.ToggleChip(state.isBackgroundBlocked)
                 }
+                if (state.isBackgroundBlocked && !usageAccess) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    BackgroundRuleNeedsUsageAccess(appName.ifBlank { packageName })
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier
@@ -301,6 +312,25 @@ private fun LazyListScope.activityTab(state: AppDetailState, onOpenDomain: (Stri
                 }
             }
         }
+    }
+}
+
+/** A background-only rule never applies without Usage Access: say so, and offer to grant it. */
+@Composable
+private fun BackgroundRuleNeedsUsageAccess(appLabel: String) {
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(PgWarningDim, RoundedCornerShape(10.dp))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+    ) {
+        Text(stringResource(R.string.appd_bg_needs_usage, appLabel), style = MaterialTheme.typography.bodySmall, color = PgWarning)
+        androidx.compose.material3.TextButton(onClick = {
+            runCatching {
+                context.startActivity(Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        }) { Text(stringResource(R.string.trf_usage_grant), color = PgWarning) }
     }
 }
 

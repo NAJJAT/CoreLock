@@ -28,6 +28,7 @@
     <string name="appd_blocked_tap">App bloquée — touchez pour la débloquer</string>
     <string name="appd_active_tap">App autorisée — touchez pour la bloquer</string>
     <string name="appd_block_bg">Bloquer l’accès réseau en arrière-plan</string>
+    <string name="appd_bg_needs_usage">Cette règle ne s\'applique pas encore : sans l\'accès aux données d\'utilisation, PrivacyGuard ne peut pas savoir quand %1$s est en arrière-plan.</string>
     <string name="appd_activity_summary">Résumé de l’activité</string>
     <string name="appd_dns">DNS</string>
     <plurals name="appd_idle_count">

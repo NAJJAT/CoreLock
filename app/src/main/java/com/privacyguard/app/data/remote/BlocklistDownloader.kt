@@ -25,10 +25,18 @@ class BlocklistDownloader {
      * Streams the list line by line into [parse] (V-10): a 32 MB list used to be
      * held as one String, then split, then parsed (~240 MB of heap). [parse] runs
      * once per attempt; a failure mid-way (network, size cap) discards its result.
+     * The source's mirror (the same file on another host) is tried only after every
+     * attempt at the main URL failed.
      */
     suspend fun <T> downloadLines(source: BlocklistSource, parse: (Sequence<String>) -> T): T? = withContext(Dispatchers.IO) {
-        val url = source.downloadUrl() ?: return@withContext null
-        if (!url.startsWith("https://", ignoreCase = true)) return@withContext null
+        for (url in listOfNotNull(source.downloadUrl(), source.mirrorUrl())) {
+            downloadFrom(url, parse)?.let { return@withContext it }
+        }
+        null
+    }
+
+    private suspend fun <T> downloadFrom(url: String, parse: (Sequence<String>) -> T): T? {
+        if (!url.startsWith("https://", ignoreCase = true)) return null
 
         repeat(MAX_RETRIES) { attempt ->
             try {
@@ -43,24 +51,24 @@ class BlocklistDownloader {
                     val finalUrl = connection.url.toString()
                     if (!finalUrl.startsWith("https://", ignoreCase = true)) {
                         connection.disconnect()
-                        return@withContext null
+                        return null
                     }
                     if (connection.contentLengthLong > MAX_LIST_BYTES) {
                         connection.disconnect()
-                        return@withContext null
+                        return null
                     }
-                    return@withContext com.privacyguard.app.core.utils.CappedInputStream(connection.inputStream, MAX_LIST_BYTES)
+                    return com.privacyguard.app.core.utils.CappedInputStream(connection.inputStream, MAX_LIST_BYTES)
                         .bufferedReader(Charsets.UTF_8).useLines(parse)
                 }
                 connection.disconnect()
             } catch (_: com.privacyguard.app.core.utils.ResponseTooLargeException) {
-                return@withContext null   // retrying will not make it smaller
+                return null   // retrying will not make it smaller
             } catch (_: Exception) {
             }
             delay(2000L * (attempt + 1))
         }
 
-        null
+        return null
     }
 
     suspend fun downloadAll(): Map<BlocklistSource, String?> {

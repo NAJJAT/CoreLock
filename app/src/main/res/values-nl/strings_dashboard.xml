@@ -158,6 +158,10 @@
     <string name="dash_payloads">Payloads</string>
     <string name="dash_status_off">Ontsleutelt niet</string>
     <string name="dash_strict_title">Overschakelen naar Streng op %1$s?</string>
+    <string name="dash_private_dns_title">Privé-DNS laat DNS niet meer werken</string>
+    <string name="dash_private_dns_body">Privé-DNS staat op %1$s. PrivacyGuard filtert DNS zelf en blokkeert DNS via TLS; met een hostnaam voor privé-DNS valt Android niet terug op gewone DNS, dus namen worden niet meer opgezocht en apps kunnen geen verbinding maken. Zet privé-DNS op Automatisch of Uit (Samsung: Verbindingen, Meer verbindingsinstellingen, Privé-DNS; de meeste andere telefoons: Netwerk en internet).</string>
+    <string name="dash_private_dns_open">Netwerkinstellingen openen</string>
+    <string name="dash_private_dns_start_anyway">Toch starten</string>
     <string name="dash_strict_body">Het vertrouwen in dit netwerk is gedaald naar %1$d/100. Streng blokkeert ook systeemtelemetrie. Er verandert niets tenzij je dat kiest.</string>
     <string name="dash_strict_accept">Overschakelen naar Streng</string>
     <string name="dash_strict_dismiss">Niet op dit netwerk</string>

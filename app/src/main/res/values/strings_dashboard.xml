@@ -159,6 +159,10 @@
     <string name="dash_payloads">Payloads</string>
     <string name="dash_status_off">Not decrypting</string>
     <string name="dash_strict_title">Switch to Strict on %1$s?</string>
+    <string name="dash_private_dns_title">Private DNS will stop DNS from working</string>
+    <string name="dash_private_dns_body">Private DNS is set to %1$s. PrivacyGuard filters DNS itself and blocks DNS over TLS, and with a Private DNS hostname Android does not fall back, so names stop resolving and apps cannot connect. Set Private DNS to Automatic or Off (Samsung: Connections, More connection settings, Private DNS; most other phones: Network and internet).</string>
+    <string name="dash_private_dns_open">Open network settings</string>
+    <string name="dash_private_dns_start_anyway">Start anyway</string>
     <string name="dash_strict_body">Trust on this network fell to %1$d/100. Strict also blocks system telemetry. Nothing changes unless you choose it.</string>
     <string name="dash_strict_accept">Switch to Strict</string>
     <string name="dash_strict_dismiss">Not on this network</string>

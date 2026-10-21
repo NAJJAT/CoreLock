@@ -36,8 +36,7 @@ class RulesRepo(
 
     suspend fun upsertRule(rule: FilterRule) = withContext(Dispatchers.IO) {
         rulesDao.insert(rule.toRuleEntity())
-        filterEngine.removeRule(rule.id)
-        filterEngine.addRule(rule)
+        filterEngine.upsertRule(rule)
         RuleSyncBus.publish()
     }
 

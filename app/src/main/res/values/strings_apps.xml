@@ -25,6 +25,7 @@
     <string name="appd_blocked_tap">App blocked — tap to unblock</string>
     <string name="appd_active_tap">App allowed — tap to block</string>
     <string name="appd_block_bg">Block background network access</string>
+    <string name="appd_bg_needs_usage">This rule does nothing yet: without Usage Access, PrivacyGuard cannot tell when %1$s is in the background.</string>
     <string name="appd_activity_summary">Activity summary</string>
     <string name="appd_dns">DNS</string>
     <plurals name="appd_idle_count">

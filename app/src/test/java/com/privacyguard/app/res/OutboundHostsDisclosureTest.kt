@@ -14,7 +14,6 @@ class OutboundHostsDisclosureTest {
     /** Files that make network requests of their own (not links the user opens). */
     private val senders = listOf(
         "src/main/java/com/privacyguard/app/core/blocklist/BlocklistSource.kt",
-        "src/main/java/com/privacyguard/core/filter/BlocklistTypes.kt",
         "src/main/java/com/privacyguard/app/core/tracker/ExodusUpdater.kt",
         "src/main/java/com/privacyguard/core/tls/CtMonitor.kt",
         "src/main/java/com/privacyguard/app/ui/settings/SettingsViewModel.kt",

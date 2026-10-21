@@ -45,6 +45,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -107,7 +110,22 @@ fun DashboardScreen(
     val runProtectedAction = rememberProtectedActionRunner()
     // Lists open for the same window the numbers were computed for.
     val open: (EvidenceKind) -> Unit = { kind -> onOpenEvidence(kind, uiState.evidenceAt) }
-
+    // Private DNS with a hostname makes every lookup fail while the VPN runs. It is
+    // changed in system settings, so read it again on every resume.
+    var privateDnsHost by remember { mutableStateOf(com.privacyguard.app.core.network.PrivateDnsCheck.strictHostname(context)) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        privateDnsHost = com.privacyguard.app.core.network.PrivateDnsCheck.strictHostname(context)
+        onPauseOrDispose { }
+    }
+    var confirmStartHost by remember { mutableStateOf<String?>(null) }
+    confirmStartHost?.let { host ->
+        PrivateDnsStartDialog(
+            host = host,
+            onOpenSettings = { confirmStartHost = null; com.privacyguard.app.core.network.PrivateDnsCheck.openSettings(context) },
+            onStartAnyway = { confirmStartHost = null; onRequestVpn() },
+            onDismiss = { confirmStartHost = null },
+        )
+    }
 
     LazyColumn(
         modifier = Modifier.background(MaterialTheme.colorScheme.background),
@@ -181,8 +199,11 @@ fun DashboardScreen(
                                         if (uiState.isVpnActive) {
                                             VpnManager.stopVpn(context)
                                         } else {
+                                            // Checked now, not at the last resume: the setting may have changed.
+                                            val host = com.privacyguard.app.core.network.PrivateDnsCheck.strictHostname(context)
+                                            privateDnsHost = host
                                             // MainActivity asks for notifications, then VPN consent.
-                                            onRequestVpn()
+                                            if (host != null) confirmStartHost = host else onRequestVpn()
                                         }
                                     }
                                 )
@@ -250,6 +271,10 @@ fun DashboardScreen(
                 )
 
                 Spacer(modifier = Modifier.height(18.dp))
+                privateDnsHost?.let { host ->
+                    PrivateDnsWarningCard(host, onOpenSettings = { com.privacyguard.app.core.network.PrivateDnsCheck.openSettings(context) })
+                    Spacer(modifier = Modifier.height(18.dp))
+                }
                 uiState.strictSuggestion?.let { suggestion ->
                     StrictSuggestionCard(
                         suggestion = suggestion,
@@ -688,6 +713,38 @@ internal fun protectionLevelDescription(level: String): Int = when (level) {
     "MINIMAL" -> R.string.set_level_minimal_desc
     "STRICT" -> R.string.set_level_strict_desc
     else -> R.string.set_level_standard_desc
+}
+
+/** Private DNS in hostname mode: DNS fails while the VPN runs. */
+@Composable
+private fun PrivateDnsWarningCard(host: String, onOpenSettings: () -> Unit) {
+    PanelCard {
+        Text(stringResource(R.string.dash_private_dns_title), style = MaterialTheme.typography.titleMedium, color = PgWarning)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(stringResource(R.string.dash_private_dns_body, host), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(
+            onClick = onOpenSettings,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = PgWarningDim, contentColor = PgWarning),
+        ) { Text(stringResource(R.string.dash_private_dns_open)) }
+    }
+}
+
+/** Asked before starting protection while Private DNS has a hostname. */
+@Composable
+private fun PrivateDnsStartDialog(host: String, onOpenSettings: () -> Unit, onStartAnyway: () -> Unit, onDismiss: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.dash_private_dns_title)) },
+        text = { Text(stringResource(R.string.dash_private_dns_body, host)) },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.dash_private_dns_open)) }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onStartAnyway) { Text(stringResource(R.string.dash_private_dns_start_anyway)) }
+        },
+    )
 }
 
 @Composable

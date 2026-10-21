@@ -98,9 +98,9 @@ object PrivacyScoreCalculator {
 
     /** Domains the protection level [level] blocks: the "blocklist coverage" input. */
     suspend fun blockedDomainsForLevel(db: AppDatabase, level: String): Int {
-        val categories = com.privacyguard.core.filter.ProtectionLevels.categoriesFor(
-            com.privacyguard.core.filter.ProtectionLevels.parse(level))
-        return db.blocklistDao().enabledCountIn(categories.toList())
+        val levels = com.privacyguard.core.filter.ProtectionLevels
+        val parsed = levels.parse(level)
+        return db.blocklistDao().enabledCountForLevel(levels.categoriesFor(parsed).toList(), levels.excludedSourcesFor(parsed).toList())
     }
 
     /** Loads the inputs for the window [from]..[to] and scores it. */

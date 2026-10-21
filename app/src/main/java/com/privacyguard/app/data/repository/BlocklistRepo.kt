@@ -67,6 +67,20 @@ class BlocklistRepo(
         blocklistDao.enabledDomainsIn(categories.toList())
     }
 
+    /**
+     * The database part of the DNS filter's level list at [level]: the level's categories
+     * and its own ad lists. Malware names are left out: the security filter holds them
+     * already and the decision checks it first (a second copy of HaGeZi TIF cost about
+     * 20 MB of heap).
+     */
+    suspend fun levelListDomains(level: com.privacyguard.core.filter.FilterEngine.BlockLevel): List<String> = withContext(Dispatchers.IO) {
+        val levels = com.privacyguard.core.filter.ProtectionLevels
+        blocklistDao.enabledDomainsForLevel(
+            (levels.categoriesFor(level) - CAT_MALWARE).toList(),
+            levels.excludedSourcesFor(level).toList(),
+        )
+    }
+
     suspend fun domainsNotIn(categories: Set<String>): List<String> = withContext(Dispatchers.IO) {
         blocklistDao.enabledDomainsNotIn(categories.toList())
     }
@@ -99,6 +113,12 @@ class BlocklistRepo(
         blocklistDao.deleteBySource(src)
     }
 
+    /** Deletes every row of [sources] that is still stored. */
+    suspend fun removeSources(sources: Collection<String>) = withContext(Dispatchers.IO) {
+        val stored = blocklistDao.sources().toSet()
+        sources.filter { it in stored }.forEach { blocklistDao.deleteBySource(it) }
+    }
+
     companion object {
         /** The domain, each parent, and each as a "*." wildcard entry. */
         fun securityCandidates(domain: String): List<String> {
@@ -108,13 +128,15 @@ class BlocklistRepo(
                 .flatMap { listOf(it, "*.$it") }
         }
 
-        const val SOURCE_EASYLIST = "EasyList"
-        const val SOURCE_URLHAUS = "URLhaus"
-        const val SOURCE_EASYPRIVACY = "EasyPrivacy"
-        const val SOURCE_STEVEN_BLACK = "StevenBlack"
         const val SOURCE_OISD = "OISD"
-        const val SOURCE_HAGEZI = "Hagezi"
+        const val SOURCE_HAGEZI_PRO_MINI = "Hagezi-Pro-mini"
+        const val SOURCE_HAGEZI_PRO = "Hagezi-Pro"
+        const val SOURCE_HAGEZI_TIF_MINI = "Hagezi-TIF-mini"
         const val SOURCE_BUILTIN = "BuiltIn"
+        /** Ad and tracker lists earlier versions downloaded (now covered by HaGeZi Pro). */
+        val RETIRED_AD_SOURCES = listOf("StevenBlack", "EasyList", "EasyPrivacy", "Hagezi")
+        /** URLhaus's host file, gone since October 2026 (replaced by HaGeZi TIF). */
+        val RETIRED_SECURITY_SOURCES = listOf("URLhaus")
         const val CAT_ADS = "ads"
         const val CAT_TRACKERS = "trackers"
         const val CAT_MALWARE = "malware"

@@ -37,6 +37,7 @@
     <string name="appd_blocked_tap">التطبيق محظور — اضغط لإلغاء الحظر</string>
     <string name="appd_active_tap">التطبيق مسموح — اضغط للحظر</string>
     <string name="appd_block_bg">حظر الوصول إلى الشبكة في الخلفية</string>
+    <string name="appd_bg_needs_usage">هذه القاعدة لا تعمل بعد: بدون إذن الوصول إلى بيانات الاستخدام لا يستطيع PrivacyGuard معرفة متى يكون %1$s في الخلفية.</string>
     <string name="appd_activity_summary">ملخّص النشاط</string>
     <string name="appd_dns">DNS</string>
     <plurals name="appd_idle_count">

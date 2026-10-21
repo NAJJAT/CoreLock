@@ -88,17 +88,13 @@ class UntrustedInputFuzzTest {
         val hosts = "# c\n0.0.0.0 ads.example.com\n127.0.0.1 localhost\n0.0.0.0 tr.example.net # x\n".toByteArray()
         val easy = "||ads.example.com^\n||x.example.org^\$important\n@@||ok.example^\n".toByteArray()
         val plain = "ads.example.com\n# c\ntrack.example.net\n".toByteArray()
-        Fuzz.run("Blocklist parsers", listOf(hosts, easy, plain)) { raw ->
+        // Every list is in domain-list format now (HaGeZi, OISD); the hosts and EasyList
+        // samples stay as hostile input for it.
+        Fuzz.run("Blocklist parser", listOf(hosts, easy, plain)) { raw ->
             val text = String(raw, Charsets.UTF_8)
-            for (list in listOf(
-                invokePrivateParser("parseHostsFormat", text),
-                BlocklistManager.parseEasyListFormat(text),
-                invokePrivateParser("parseDomainListFormat", text),
-            )) {
-                for (d in list) {
-                    val s = d as String
-                    assertTrue("unsafe entry '$s'", s.contains('.') && s.length <= 253 && !s.startsWith('.'))
-                }
+            for (d in invokePrivateParser("parseDomainListFormat", text)) {
+                val s = d as String
+                assertTrue("unsafe entry '$s'", s.contains('.') && s.length <= 253 && !s.startsWith('.'))
             }
         }
     }
@@ -120,9 +116,9 @@ class UntrustedInputFuzzTest {
         val line = "0.0.0.0 " + "a".repeat(60) + ".example.com\n"
         val big = line.repeat(32 * 1024 * 1024 / line.length)   // the 32 MB download cap
         val t0 = System.nanoTime()
-        val n = invokePrivateParser("parseHostsFormat", big).size
+        val n = invokePrivateParser("parseDomainListFormat", big).size
         val ms = (System.nanoTime() - t0) / 1_000_000
-        println("parseHostsFormat 32 MB: $n entries in $ms ms, heap used ${usedMb()} MB")
+        println("parseDomainListFormat 32 MB: $n entries in $ms ms, heap used ${usedMb()} MB")
         assertTrue("32 MB list took $ms ms", ms < 60_000)
     }
 

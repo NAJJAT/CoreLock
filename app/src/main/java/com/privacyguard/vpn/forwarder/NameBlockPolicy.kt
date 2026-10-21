@@ -40,8 +40,12 @@ class NameBlockPolicy(
      * True when the rule for [name] in [ownerPackage] is an Allow: it also opens a DoH
      * endpoint that DnsBypassGuard would stop.
      */
-    fun userAllows(name: String, ownerPackage: String?): Boolean =
-        filterEngine.domainRuleFor(normalize(name), ownerPackage)?.action == com.privacyguard.core.filter.FilterRule.Action.ALLOW
+    fun userAllows(name: String, ownerPackage: String?): Boolean = allowRuleFor(name, ownerPackage) != null
+
+    /** The Allow rule for [name] in [ownerPackage], or null when its rule is not an Allow. */
+    fun allowRuleFor(name: String, ownerPackage: String?): com.privacyguard.core.filter.FilterRule? =
+        filterEngine.domainRuleFor(normalize(name), ownerPackage)
+            ?.takeIf { it.action == com.privacyguard.core.filter.FilterRule.Action.ALLOW }
 
     companion object {
         /** As DomainFilter stores names: trimmed, lower case, no trailing dot. */

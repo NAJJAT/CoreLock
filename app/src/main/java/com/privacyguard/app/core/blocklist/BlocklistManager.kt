@@ -16,12 +16,6 @@ import kotlinx.coroutines.launch
 
 @SuppressLint("StaticFieldLeak")
 object BlocklistManager {
-    // `||host^` with an optional `|` anchor and optional `$options`; no path or wildcard.
-    private val EASYLIST_DOMAIN_RULE = Regex("""^\|\|([A-Za-z0-9._-]+)\^\|?(?:\$(.+))?$""")
-    // Options that still mean "block this whole domain" at the DNS level.
-    private val WHOLE_DOMAIN_OPTIONS = setOf("important", "all", "document", "doc")
-
-
     @Volatile private var context: Context? = null
     @Volatile private var initStarted = false
     private val initScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -53,6 +47,11 @@ object BlocklistManager {
                     com.privacyguard.app.data.repository.BlocklistSyncBus.publish()
                 }
                 _size.value = repo.totalCount()
+                // After an update that changed the sources, fetch the new lists now rather
+                // than at the next weekly run (the old ones stay until they arrive).
+                if (repo.countBySourcePrefix(BlocklistRepo.SOURCE_HAGEZI_TIF_MINI) == 0) {
+                    com.privacyguard.app.workers.BlocklistUpdateWorker.updateNow(context.applicationContext)
+                }
             }
         }
     }
@@ -64,12 +63,14 @@ object BlocklistManager {
             _isUpdating.value = true
             val repo = blocklistRepo(ctx)
             var totalEntries = 0
+            val updated = mutableSetOf<BlocklistSource>()
             BlocklistSource.values().forEach { source ->
                 if (source.downloadUrl() != null) {
                     val result = updateBlocklistInternal(source, repo)
-                    if (result is UpdateResult.Success) totalEntries += result.totalEntries
+                    if (result is UpdateResult.Success) { totalEntries += result.totalEntries; updated += source }
                 }
             }
+            retireReplacedSources(repo, updated)
             _size.value = repo.totalCount()
             _lastUpdate.value = System.currentTimeMillis()
             // With protection on, the VPN reloads and refreshes the start-up cache itself.
@@ -98,13 +99,27 @@ object BlocklistManager {
     }
 
     /**
+     * Rows of lists this version no longer downloads (October 2026: StevenBlack,
+     * EasyList, EasyPrivacy and HaGeZi Light replaced by HaGeZi Pro; URLhaus, gone,
+     * by HaGeZi TIF) are deleted only once their replacement has downloaded, so an
+     * update never leaves a level with fewer names in between.
+     */
+    private suspend fun retireReplacedSources(repo: BlocklistRepo, updated: Set<BlocklistSource>) {
+        val retired = buildList {
+            if (BlocklistSource.HAGEZI_PRO_MINI in updated && BlocklistSource.HAGEZI_PRO in updated) addAll(BlocklistRepo.RETIRED_AD_SOURCES)
+            if (BlocklistSource.HAGEZI_TIF_MINI in updated) addAll(BlocklistRepo.RETIRED_SECURITY_SOURCES)
+        }
+        if (retired.isNotEmpty()) repo.removeSources(retired)
+    }
+
+    /**
      * Lists downloaded while protection was off: write the cache the next VPN start
      * reads, so it does not wait half a minute for the encrypted database.
      */
     private suspend fun writeStartupCache(ctx: Context, repo: BlocklistRepo) {
         val levels = com.privacyguard.core.filter.ProtectionLevels
         val level = levels.parse(com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(ctx).protectionLevel.value)
-        val blocked = repo.domainsIn(levels.categoriesFor(level)) +
+        val blocked = repo.levelListDomains(level) +
             (if (levels.includesCuratedAdHosts(level)) CuratedAdDomains.all else emptyList())
         BlocklistCache.write(ctx, level.name, blocked, repo.domainsIn(setOf(BlocklistRepo.CAT_MALWARE)))
     }
@@ -132,10 +147,9 @@ object BlocklistManager {
         max: Int = ListEntryValidator.MAX_ENTRIES_PER_SOURCE,
     ): Set<String>? {
         val parseLine: (String) -> String? = when (source) {
-            BlocklistSource.STEVENBLACK, BlocklistSource.URLHAUS    -> ::hostsLine
-            BlocklistSource.EASYLIST, BlocklistSource.EASYPRIVACY  -> ::easyListLine
             BlocklistSource.OISD_BASIC, BlocklistSource.OISD_FULL,
-            BlocklistSource.HAGEZI_LIGHT, BlocklistSource.HAGEZI_DOH -> ::domainListLine
+            BlocklistSource.HAGEZI_PRO_MINI, BlocklistSource.HAGEZI_PRO,
+            BlocklistSource.HAGEZI_TIF_MINI, BlocklistSource.HAGEZI_DOH -> ::domainListLine
             BlocklistSource.HAGEZI_DOH_IPS                         -> ::ipListLine
             BlocklistSource.CUSTOM                                 -> return emptySet()
         }
@@ -146,30 +160,6 @@ object BlocklistManager {
             if (out.size > max) return null
         }
         return out
-    }
-
-    private fun hostsLine(line: String): String? {
-        val trimmed = line.trim()
-        if (trimmed.isEmpty() || trimmed.startsWith('#')) return null
-        val parts = trimmed.substringBefore('#').trim().split(WHITESPACE)
-        if (parts.size < 2) return null
-        val domain = parts[1].lowercase()
-        if (domain == "localhost" || domain == "broadcasthost" || domain == "local") return null
-        return ListEntryValidator.normalize(domain)
-    }
-
-    /**
-     * Keeps only EasyList rules that block a whole domain: `||domain^`, optionally
-     * with `$important` / `$all`. A DNS blocker can only block whole names, so rules
-     * scoped to a path (`||google.com/pagead/`), a wildcard, or a context option
-     * (`||github.com^$third-party`) must be skipped. Truncating them to the host
-     * blocked google.com, youtube.com, wikipedia.org, github.com and other sites.
-     */
-    private fun easyListLine(line: String): String? {
-        val match = EASYLIST_DOMAIN_RULE.matchEntire(line.trim()) ?: return null
-        val options = match.groupValues[2].takeIf { it.isNotEmpty() }?.split(',').orEmpty()
-        if (options.any { it !in WHOLE_DOMAIN_OPTIONS }) return null
-        return ListEntryValidator.normalize(match.groupValues[1])
     }
 
     private fun domainListLine(line: String): String? {
@@ -184,21 +174,15 @@ object BlocklistManager {
         return ListEntryValidator.normalizeIp(trimmed.substringBefore('#').trim())
     }
 
-    // Whole-text forms of the line parsers (tests).
-    internal fun parseEasyListFormat(raw: String): List<String> = raw.lineSequence().mapNotNull(::easyListLine).toList()
-    private fun parseHostsFormat(raw: String): List<String> = raw.lineSequence().mapNotNull(::hostsLine).toList()
+    // Whole-text form of the line parser (tests).
     private fun parseDomainListFormat(raw: String): List<String> = raw.lineSequence().mapNotNull(::domainListLine).toList()
 
-    private val WHITESPACE = Regex("\\s+")
-
     private fun sourceMetadata(source: BlocklistSource): Pair<String, String> = when (source) {
-        BlocklistSource.STEVENBLACK  -> Pair(BlocklistRepo.SOURCE_STEVEN_BLACK, BlocklistRepo.CAT_ADS)
-        BlocklistSource.EASYLIST     -> Pair(BlocklistRepo.SOURCE_EASYLIST, BlocklistRepo.CAT_ADS)
-        BlocklistSource.EASYPRIVACY  -> Pair(BlocklistRepo.SOURCE_EASYPRIVACY, BlocklistRepo.CAT_TRACKERS)
         BlocklistSource.OISD_BASIC   -> Pair(BlocklistRepo.SOURCE_OISD, BlocklistRepo.CAT_ADS)
         BlocklistSource.OISD_FULL    -> Pair(BlocklistRepo.SOURCE_OISD, BlocklistRepo.CAT_ADS)
-        BlocklistSource.HAGEZI_LIGHT -> Pair(BlocklistRepo.SOURCE_HAGEZI, BlocklistRepo.CAT_ADS)
-        BlocklistSource.URLHAUS      -> Pair(BlocklistRepo.SOURCE_URLHAUS, BlocklistRepo.CAT_MALWARE)
+        BlocklistSource.HAGEZI_PRO_MINI -> Pair(BlocklistRepo.SOURCE_HAGEZI_PRO_MINI, BlocklistRepo.CAT_ADS)
+        BlocklistSource.HAGEZI_PRO   -> Pair(BlocklistRepo.SOURCE_HAGEZI_PRO, BlocklistRepo.CAT_ADS)
+        BlocklistSource.HAGEZI_TIF_MINI -> Pair(BlocklistRepo.SOURCE_HAGEZI_TIF_MINI, BlocklistRepo.CAT_MALWARE)
         BlocklistSource.HAGEZI_DOH   -> Pair(BlocklistRepo.SOURCE_HAGEZI_DOH, BlocklistRepo.CAT_DOH)
         BlocklistSource.HAGEZI_DOH_IPS -> Pair(BlocklistRepo.SOURCE_HAGEZI_DOH_IPS, BlocklistRepo.CAT_DOH_IP)
         BlocklistSource.CUSTOM       -> Pair("Custom", BlocklistRepo.CAT_ADS)

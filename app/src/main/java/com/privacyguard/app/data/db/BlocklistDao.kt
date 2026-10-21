@@ -114,6 +114,13 @@ interface BlocklistDao {
     @Query("SELECT domain FROM blocklist WHERE isEnabled = 1 AND category IN (:categories)")
     suspend fun enabledDomainsIn(categories: List<String>): List<String>
 
+    /** Enabled domains in [categories], without the lists of [excludedSources] (another level's). */
+    @Query("SELECT domain FROM blocklist WHERE isEnabled = 1 AND category IN (:categories) AND source NOT IN (:excludedSources)")
+    suspend fun enabledDomainsForLevel(categories: List<String>, excludedSources: List<String>): List<String>
+
+    @Query("SELECT COUNT(DISTINCT domain) FROM blocklist WHERE isEnabled = 1 AND category IN (:categories) AND source NOT IN (:excludedSources)")
+    suspend fun enabledCountForLevel(categories: List<String>, excludedSources: List<String>): Int
+
     /** Enabled domains outside [categories] (the tracker lists, without the DNS-bypass ones). */
     @Query("SELECT domain FROM blocklist WHERE isEnabled = 1 AND category NOT IN (:categories)")
     suspend fun enabledDomainsNotIn(categories: List<String>): List<String>

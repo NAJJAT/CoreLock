@@ -33,8 +33,8 @@ class ListEntryValidatorTest {
     }
 
     @Test fun lines_are_parsed_and_deduplicated_without_holding_the_file() {
-        val lines = sequenceOf("# hosts", "0.0.0.0 ads.example.com", "0.0.0.0 ADS.example.com", "0.0.0.0 co.uk", "127.0.0.1 localhost")
-        assertEquals(setOf("ads.example.com"), BlocklistManager.parseLines(BlocklistSource.STEVENBLACK, lines))
+        val lines = sequenceOf("# HaGeZi Pro", "ads.example.com", "ADS.example.com. # comment", "co.uk", "", "localhost")
+        assertEquals(setOf("ads.example.com"), BlocklistManager.parseLines(BlocklistSource.HAGEZI_PRO, lines))
     }
 
     @Test fun an_implausibly_large_list_is_refused() {
@@ -46,9 +46,9 @@ class ListEntryValidatorTest {
         val rt = Runtime.getRuntime()
         System.gc()
         val before = rt.totalMemory() - rt.freeMemory()
-        val names = generateSequence(0) { it + 1 }.map { "0.0.0.0 host$it.tracker-example.com" }.take(400_000)
+        val names = generateSequence(0) { it + 1 }.map { "host$it.tracker-example.com" }.take(400_000)
         val t0 = System.nanoTime()
-        val set = BlocklistManager.parseLines(BlocklistSource.STEVENBLACK, names)!!
+        val set = BlocklistManager.parseLines(BlocklistSource.HAGEZI_PRO, names)!!
         val ms = (System.nanoTime() - t0) / 1_000_000
         val usedMb = (rt.totalMemory() - rt.freeMemory() - before) / (1024 * 1024)
         println("400k names: $ms ms, ~$usedMb MB retained")

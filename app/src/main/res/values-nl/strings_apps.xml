@@ -25,6 +25,7 @@
     <string name="appd_blocked_tap">App geblokkeerd — tik om te deblokkeren</string>
     <string name="appd_active_tap">App toegestaan — tik om te blokkeren</string>
     <string name="appd_block_bg">Netwerktoegang op de achtergrond blokkeren</string>
+    <string name="appd_bg_needs_usage">Deze regel werkt nog niet: zonder Gebruikstoegang kan PrivacyGuard niet zien wanneer %1$s op de achtergrond draait.</string>
     <string name="appd_activity_summary">Overzicht van activiteit</string>
     <string name="appd_dns">DNS</string>
     <plurals name="appd_idle_count">

@@ -80,7 +80,7 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
             val level = com.privacyguard.core.filter.ProtectionLevels.parse(
                 com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(getApplication()).protectionLevel.value)
             val domainsAtLevel = runCatching {
-                blocklistDao.enabledCountIn(com.privacyguard.core.filter.ProtectionLevels.categoriesFor(level).toList()) +
+                blocklistDao.enabledCountForLevel(com.privacyguard.core.filter.ProtectionLevels.categoriesFor(level).toList(), com.privacyguard.core.filter.ProtectionLevels.excludedSourcesFor(level).toList()) +
                     (if (com.privacyguard.core.filter.ProtectionLevels.includesCuratedAdHosts(level)) com.privacyguard.app.core.blocklist.CuratedAdDomains.all.size else 0)
             }.getOrDefault(0)
             val categoryStats = runCatching { blocklistDao.getCategoryToggleStats() }.getOrDefault(emptyList())

@@ -162,9 +162,19 @@ class DnsHandler(
     fun blockReasonFor(name: String, ownerPackage: String?): DnsBlockDecision.Reason? =
         nameBlockPolicy.reasonFor(name, ownerPackage)
 
-    /** CNAME targets in [response] that are blocked for [ownerPackage] (CNAME cloaking). */
-    internal fun blockedCnameTarget(response: DnsPacket, ownerPackage: String?): String? =
-        response.cnameRecords.firstOrNull { blockReasonFor(it, ownerPackage) != null }
+    /**
+     * The first CNAME target in [response] that is blocked for [ownerPackage] (CNAME
+     * cloaking), or null. A user Allow for [askedName] wins over its aliases' ad and
+     * tracker lists; a malware or phishing alias still blocks unless that Allow was
+     * confirmed after the warning, the same order the name itself gets.
+     */
+    internal fun blockedCnameTarget(response: DnsPacket, ownerPackage: String?, askedName: String? = null): String? {
+        val allow = askedName?.let { nameBlockPolicy.allowRuleFor(it, ownerPackage) }
+        return response.cnameRecords.firstOrNull { target ->
+            val reason = blockReasonFor(target, ownerPackage) ?: return@firstOrNull false
+            allow == null || (reason == DnsBlockDecision.Reason.SECURITY_LIST && !allow.overridesSecurity)
+        }
+    }
 
     private val forwardExecutor = java.util.concurrent.ThreadPoolExecutor(
         // core == max: with a bounded queue, extra threads would start only once it is full.
@@ -315,8 +325,9 @@ class DnsHandler(
             return false
         }
         // CNAME cloaking: an allowed first-party name that is an alias of a blocked
-        // tracker resolves to the tracker. Answer NXDOMAIN as for the tracker itself.
-        blockedCnameTarget(dnsResponse, ownerPackage)?.let { target ->
+        // tracker resolves to the tracker. Answer NXDOMAIN as for the tracker itself,
+        // unless the user allowed the name the app asked for.
+        blockedCnameTarget(dnsResponse, ownerPackage, dnsQuery.queryName)?.let { target ->
             queryListener?.onQuery(ownerPackage, target, true)
             cnameBlocked.incrementAndGet()
             tunWriter.enqueueWithChecksums(buildUdpResponse(

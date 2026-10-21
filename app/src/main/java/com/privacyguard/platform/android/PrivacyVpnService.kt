@@ -51,7 +51,6 @@ import com.privacyguard.core.tls.Ja3Fingerprinter
 import com.privacyguard.vpn.firewall.AppFilter
 import com.privacyguard.vpn.firewall.DnsBypassGuard
 import com.privacyguard.vpn.firewall.DomainFilter
-import com.privacyguard.vpn.firewall.IpFilter
 import com.privacyguard.vpn.firewall.QuicGate
 import com.privacyguard.vpn.forwarder.DnsHandler
 import com.privacyguard.vpn.forwarder.TcpForwarder
@@ -101,7 +100,6 @@ class PrivacyVpnService : VpnService() {
     private lateinit var domainFilter: DomainFilter
     // Malware and phishing hosts, at every level: a plain Allow rule does not open them.
     private val securityFilter = DomainFilter()
-    private lateinit var ipFilter: IpFilter
     private lateinit var appFilter: AppFilter
     private lateinit var encEnforcer: EncryptionEnforcer
     private lateinit var sessionTable: SessionTable
@@ -296,7 +294,6 @@ class PrivacyVpnService : VpnService() {
 
         filterEngine = FilterEngine()
         domainFilter = DomainFilter()
-        ipFilter = IpFilter()
         appFilter = AppFilter { uid -> packageManager.getNameForUid(uid) }
         appTracker = AppTracker(this, appFilter)
 
@@ -554,7 +551,7 @@ class PrivacyVpnService : VpnService() {
 
     private suspend fun reloadBlocklists() = blocklistReloadLock.withLock {
         val level = filterEngine.blockLevel
-        val blocked = blocklistRepo.domainsIn(com.privacyguard.core.filter.ProtectionLevels.categoriesFor(level)) +
+        val blocked = blocklistRepo.levelListDomains(level) +
             (if (com.privacyguard.core.filter.ProtectionLevels.includesCuratedAdHosts(level)) CuratedAdDomains.all else emptyList())
         val security = blocklistRepo.domainsIn(setOf(com.privacyguard.app.data.repository.BlocklistRepo.CAT_MALWARE))
         domainFilter.rebuild(blocked)
@@ -606,11 +603,6 @@ class PrivacyVpnService : VpnService() {
 
     private fun onPacket(ip: IpPacket) {
         StatsManager.recordPacket(ip.totalLength.toLong())
-
-        if (ipFilter.isBlocked(ip.destinationIp)) {
-            recordBlock()
-            return
-        }
 
         when (ip.protocol) {
             IpPacket.PROTO_UDP -> {

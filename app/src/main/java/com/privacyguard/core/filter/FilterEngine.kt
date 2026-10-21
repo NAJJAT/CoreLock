@@ -1,7 +1,6 @@
 package com.privacyguard.core.filter
 
 import com.privacyguard.core.metadata.EncryptionStatus
-import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -25,36 +24,43 @@ class FilterEngine(
     // Rule Storage
     // ─────────────────────────────────────────────────────────────────────────
 
-    private val rules = CopyOnWriteArrayList<FilterRule>()
+    /**
+     * The rules in priority order, never changed in place: every change builds a new
+     * list and swaps it in, so a lookup sees the old rules or the new ones, never none.
+     * (Clearing and refilling a shared list let packets through unfiltered for a moment
+     * on every reload.) Writers are serialized by [lock].
+     */
+    @Volatile private var rules: List<FilterRule> = emptyList()
+    private val lock = Any()
 
-    val allRules: List<FilterRule> get() = rules.toList()
+    val allRules: List<FilterRule> get() = rules
     val ruleCount: Int             get() = rules.size
 
     /** True when a name no rule matches is blocked (whitelist mode). */
     val blocksByDefault: Boolean get() = defaultAction == FilterRule.Action.DENY
 
-    fun addRule(rule: FilterRule) { rules.add(rule); sortRules() }
+    // sortedBy is stable: rules of equal priority keep their order.
+    fun addRule(rule: FilterRule) = synchronized(lock) { rules = (rules + rule).sortedBy { it.priority } }
 
-    fun setRules(newRules: List<FilterRule>) {
-        rules.clear()
-        rules.addAll(newRules.sortedBy { it.priority })
+    fun setRules(newRules: List<FilterRule>) = synchronized(lock) { rules = newRules.sortedBy { it.priority } }
+
+    /** Replaces the rule with [rule]'s id (or adds it) in one step. */
+    fun upsertRule(rule: FilterRule) = synchronized(lock) {
+        rules = (rules.filterNot { it.id == rule.id } + rule).sortedBy { it.priority }
     }
 
-    fun removeRule(id: String): Boolean = rules.removeIf { it.id == id }
-
-    fun setEnabled(id: String, enabled: Boolean): Boolean {
-        val idx = rules.indexOfFirst { it.id == id }.takeIf { it >= 0 } ?: return false
-        rules[idx] = rules[idx].copy(isEnabled = enabled)
-        return true
+    fun removeRule(id: String): Boolean = synchronized(lock) {
+        val kept = rules.filterNot { it.id == id }
+        (kept.size != rules.size).also { rules = kept }
     }
 
-    fun clearRules() = rules.clear()
-
-    private fun sortRules() {
-        val sorted = rules.sortedBy { it.priority }
-        rules.clear()
-        rules.addAll(sorted)
+    fun setEnabled(id: String, enabled: Boolean): Boolean = synchronized(lock) {
+        if (rules.none { it.id == id }) return false
+        rules = rules.map { if (it.id == id) it.copy(isEnabled = enabled) else it }
+        true
     }
+
+    fun clearRules() = synchronized(lock) { rules = emptyList() }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Decision

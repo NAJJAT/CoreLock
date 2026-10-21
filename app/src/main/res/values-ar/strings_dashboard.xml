@@ -210,6 +210,10 @@
     <string name="dash_payloads">المحتوى</string>
     <string name="dash_status_off">لا يفكّ التشفير</string>
     <string name="dash_strict_title">التبديل إلى المستوى «صارم» على %1$s؟</string>
+    <string name="dash_private_dns_title">سيمنع DNS الخاص عمل DNS</string>
+    <string name="dash_private_dns_body">تم ضبط DNS الخاص على %1$s. يرشّح PrivacyGuard طلبات DNS بنفسه ويحظر DNS عبر TLS، ومع اسم مضيف لـ DNS الخاص لا يعود Android إلى DNS العادي، فتتوقف ترجمة الأسماء ولا تستطيع التطبيقات الاتصال. اضبط DNS الخاص على «تلقائي» أو «إيقاف» (في Samsung: الاتصالات، إعدادات اتصال إضافية، DNS الخاص؛ وفي معظم الهواتف الأخرى: الشبكة والإنترنت).</string>
+    <string name="dash_private_dns_open">فتح إعدادات الشبكة</string>
+    <string name="dash_private_dns_start_anyway">التشغيل على أي حال</string>
     <string name="dash_strict_body">انخفضت الثقة في هذه الشبكة إلى %1$d/100. يحظر المستوى «صارم» أيضًا قياسات النظام عن بُعد. لن يتغير شيء إلا إذا اخترت ذلك.</string>
     <string name="dash_strict_accept">التبديل إلى «صارم»</string>
     <string name="dash_strict_dismiss">ليس على هذه الشبكة</string>
