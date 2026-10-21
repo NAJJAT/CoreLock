@@ -12,6 +12,8 @@
     <string name="set_block_cleartext_desc">رفض الاتصالات غير المشفّرة</string>
     <string name="set_block_weak_tls">حظر TLS الضعيف</string>
     <string name="set_block_weak_tls_desc">رفض الإصدارين القديمين TLS 1.0 و1.1</string>
+    <string name="set_block_quic">حظر QUIC لتصفية أفضل</string>
+    <string name="set_block_quic_desc">تستخدم التطبيقات TCP بدلًا منه، حيث يُفحص اسم كل خادم. مفعّل افتراضيًا في المستوى «صارم».</string>
     <string name="set_kill_switch">مفتاح الإيقاف</string>
     <string name="set_kill_switch_on">يحظر Android حركة البيانات إذا انقطعت الشبكة الافتراضية</string>
     <string name="set_kill_switch_off">متوقف: افتح إعدادات VPN وفعّل «تشغيل دائم» و«حظر الاتصالات دون VPN»</string>

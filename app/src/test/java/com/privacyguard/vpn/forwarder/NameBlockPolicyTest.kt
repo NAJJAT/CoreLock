@@ -94,8 +94,12 @@ class NameBlockPolicyTest {
                 )
             }
             val sdkOn = rnd.nextBoolean()
+            // Allow by default (blacklist mode) or Deny by default (whitelist mode).
+            val denyByDefault = rnd.nextBoolean()
 
-            val engine = FilterEngine().apply { setRules(rules) }
+            val engine = FilterEngine(
+                defaultAction = if (denyByDefault) FilterRule.Action.DENY else FilterRule.Action.ALLOW,
+            ).apply { setRules(rules) }
             val levelList = lists(*listNames.toTypedArray())
             val securityList = lists(*securityNames.toTypedArray())
             val sdk = AdSdkPolicy(enabled = { sdkOn })
@@ -109,8 +113,8 @@ class NameBlockPolicyTest {
                 repeat(25) {
                     val name = randomName()
                     val pkg = packages.random(rnd)
-                    val expected = model(name, pkg, rules, listNames, securityNames, sdkOn)
-                    val context = "round $round: $name pkg=$pkg rules=$rules lists=$listNames security=$securityNames sdk=$sdkOn"
+                    val expected = model(name, pkg, rules, listNames, securityNames, sdkOn, denyByDefault)
+                    val context = "round $round: $name pkg=$pkg rules=$rules lists=$listNames security=$securityNames sdk=$sdkOn denyByDefault=$denyByDefault"
                     assertEquals("dns $context", expected, handler.blockReasonFor(name, pkg))
                     val sni = spell(name)
                     assertEquals("sni '$sni' $context", expected, policy.reasonFor(sni, pkg))
@@ -124,7 +128,7 @@ class NameBlockPolicyTest {
     /** The precedence of [DnsBlockDecision], written out without the production code. */
     private fun model(
         host: String, pkg: String?, rules: List<FilterRule>,
-        listNames: List<String>, securityNames: List<String>, sdkOn: Boolean,
+        listNames: List<String>, securityNames: List<String>, sdkOn: Boolean, denyByDefault: Boolean,
     ): Reason? {
         fun covers(entry: String, h: String): Boolean {
             val e = entry.removePrefix("*.")
@@ -147,6 +151,7 @@ class NameBlockPolicyTest {
             val sdk = AdSdkCatalog.sdks.firstOrNull { s -> s.domains.any { covers(it, host) } }
             if (sdk != null && (pkg == null || sdk.ownerPackagePrefixes.none { pkg.startsWith(it) })) return Reason.AD_SDK
         }
-        return null
+        // Whitelist mode: a name no rule matched (for this app) is blocked as by a user rule.
+        return if (rule == null && denyByDefault) Reason.USER_RULE else null
     }
 }

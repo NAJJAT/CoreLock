@@ -12,6 +12,8 @@
     <string name="set_block_cleartext_desc">Onversleutelde verbindingen weigeren</string>
     <string name="set_block_weak_tls">Zwakke TLS blokkeren</string>
     <string name="set_block_weak_tls_desc">Verouderde TLS 1.0 en 1.1 weigeren</string>
+    <string name="set_block_quic">QUIC blokkeren voor betere filtering</string>
+    <string name="set_block_quic_desc">Apps gebruiken dan TCP, waar elke servernaam wordt gecontroleerd. Standaard aan bij Streng.</string>
     <string name="set_kill_switch">Kill switch</string>
     <string name="set_kill_switch_on">Android blokkeert verkeer als de VPN wegvalt</string>
     <string name="set_kill_switch_off">Uit: open de VPN-instellingen en zet ‘Altijd aan’ en ‘Verbindingen zonder VPN blokkeren’ aan</string>

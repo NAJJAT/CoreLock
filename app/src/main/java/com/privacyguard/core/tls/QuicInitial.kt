@@ -43,6 +43,14 @@ object QuicInitial {
     }
 
     /**
+     * True when [datagram] starts with a QUIC long header (form and fixed bit set), as
+     * every Initial does, whatever its version. STUN, TURN, DTLS, WireGuard and OpenVPN
+     * on UDP/443 do not; short-header (1-RTT) QUIC cannot be told from TURN ChannelData.
+     */
+    fun isLongHeader(datagram: ByteArray): Boolean =
+        datagram.size >= 7 && (datagram[0].toInt() and 0xC0) == 0xC0
+
+    /**
      * The CRYPTO frames of every client Initial packet in one UDP datagram (they can
      * be coalesced with later packets), or null if the datagram has none we can read.
      */
@@ -182,58 +190,125 @@ object QuicInitial {
  * Browsers split a large (post-quantum) ClientHello over two or more Initial
  * packets and send its CRYPTO frames out of order, so one datagram is not enough.
  * Bounded: [MAX_FLOWS] flows, [MAX_DATAGRAMS] datagrams and [MAX_BYTES] per flow.
+ *
+ * With `hold`, the datagrams of a flow are kept until its ClientHello is complete
+ * and handed back with it, so none reaches the server before the SNI is checked.
  */
-class QuicSniTracker<K : Any> {
+class QuicSniTracker<K : Any>(private val now: () -> Long = System::currentTimeMillis) {
 
     companion object {
         const val MAX_FLOWS = 512
         const val MAX_DATAGRAMS = 6
         const val MAX_BYTES = 16_384
+        /** Flows holding datagrams at once, across all apps. */
+        const val MAX_HOLDING_FLOWS = 128
+        /** Datagram bytes held at once, across all flows. */
+        const val MAX_HELD_BYTES = 512 * 1024
+        /** A held flow older than this was abandoned by the app; its slot is freed. */
+        const val HOLD_TIMEOUT_MS = 10_000L
     }
 
     sealed interface Result {
-        /** Not (yet) known: forward the datagram. */
+        /** Not (yet) known: forward the datagram (or, with `hold`, it was kept). */
         data object Pending : Result
         /** Not a readable client Initial, or gave up: stop looking at this flow. */
         data object Unreadable : Result
-        /** The ClientHello is complete. [sni] is null when it had none or an invalid one. */
-        data class Hello(val hello: ClientHello) : Result
+        /**
+         * `hold` was asked but the global limits are reached: nothing was kept, and the
+         * flow's earlier held datagrams (if any) were discarded.
+         */
+        data object Full : Result
+        /**
+         * The ClientHello is complete. [ClientHello.sni] is null when it had none or an
+         * invalid one. [held]: the flow's earlier datagrams kept by `hold`, in order
+         * (the current datagram is not among them).
+         */
+        data class Hello(val hello: ClientHello, val held: List<ByteArray> = emptyList()) : Result
     }
 
-    private class Flow {
+    private class Flow(val startedAt: Long) {
         val chunks = HashMap<Long, ByteArray>()
         var datagrams = 0
         var bytes = 0
+        val held = ArrayList<ByteArray>(2)
+        var heldBytes = 0
+        /** Caller's value for the flow (the owner UID), kept as long as the flow. */
+        var tag: Any? = null
     }
 
     private val flows = java.util.LinkedHashMap<K, Flow>(16, 0.75f, true)
+    private var holdingFlows = 0
+    private var heldBytes = 0
 
     @Synchronized
-    fun offer(key: K, datagram: ByteArray): Result {
+    fun offer(key: K, datagram: ByteArray, hold: Boolean = false): Result {
         val frames = QuicInitial.cryptoFrames(datagram)
         if (frames == null) {
-            // A flow that already started is allowed non-Initial packets (e.g. 0-RTT).
-            return if (flows.containsKey(key)) Result.Pending else Result.Unreadable
+            // A flow that already started is allowed non-Initial packets (e.g. 0-RTT),
+            // but they count: a ClientHello that never completes is given up on, rather
+            // than leaving the flow pending (and unchecked) for good.
+            val flow = flows[key] ?: return Result.Unreadable
+            return pendingOrGiveUp(key, flow, datagram, hold)
         }
         val flow = flows.getOrPut(key) {
-            if (flows.size >= MAX_FLOWS) flows.remove(flows.keys.first())
-            Flow()
+            if (flows.size >= MAX_FLOWS) remove(flows.keys.first())
+            Flow(now())
         }
-        flow.datagrams++
         for (c in frames) {
-            if (c.offset > MAX_BYTES || flow.bytes + c.data.size > MAX_BYTES) { flows.remove(key); return Result.Unreadable }
+            if (c.offset > MAX_BYTES || flow.bytes + c.data.size > MAX_BYTES) { remove(key); return Result.Unreadable }
             if (flow.chunks.putIfAbsent(c.offset, c.data) == null) flow.bytes += c.data.size
         }
         val hello = assemble(flow)
-        return when {
-            hello != null -> { flows.remove(key); Result.Hello(hello) }
-            flow.datagrams >= MAX_DATAGRAMS -> { flows.remove(key); Result.Unreadable }
-            else -> Result.Pending
+        if (hello != null) {
+            remove(key)
+            return Result.Hello(hello, flow.held.toList())
+        }
+        return pendingOrGiveUp(key, flow, datagram, hold)
+    }
+
+    private fun pendingOrGiveUp(key: K, flow: Flow, datagram: ByteArray, hold: Boolean): Result {
+        if (++flow.datagrams >= MAX_DATAGRAMS) { remove(key); return Result.Unreadable }
+        if (hold) {
+            if (!roomFor(flow, datagram.size)) { remove(key); return Result.Full }
+            if (flow.held.isEmpty()) holdingFlows++
+            flow.held += datagram
+            flow.heldBytes += datagram.size
+            heldBytes += datagram.size
+        }
+        return Result.Pending
+    }
+
+    /** Whether [size] more bytes may be held for [flow]; frees abandoned held flows first. */
+    private fun roomFor(flow: Flow, size: Int): Boolean {
+        fun fits() = heldBytes + size <= MAX_HELD_BYTES && (flow.held.isNotEmpty() || holdingFlows < MAX_HOLDING_FLOWS)
+        if (fits()) return true
+        val cutoff = now() - HOLD_TIMEOUT_MS
+        flows.entries.filter { it.value.held.isNotEmpty() && it.value.startedAt < cutoff }.forEach { remove(it.key) }
+        return fits()
+    }
+
+    /** Removes a flow and what it held from the global counts. */
+    private fun remove(key: K) {
+        val flow = flows.remove(key) ?: return
+        if (flow.held.isNotEmpty()) {
+            holdingFlows--
+            heldBytes -= flow.heldBytes
         }
     }
 
+    /** True while [key] has a ClientHello being reassembled. */
     @Synchronized
-    fun forget(key: K) { flows.remove(key) }
+    fun isTracking(key: K): Boolean = flows.containsKey(key)
+
+    /** Stores [tag] with an open flow; lost when the flow ends. */
+    @Synchronized
+    fun setTag(key: K, tag: Any?) { flows[key]?.tag = tag }
+
+    @Synchronized
+    fun tagOf(key: K): Any? = flows[key]?.tag
+
+    @Synchronized
+    fun forget(key: K) { remove(key) }
 
     /** The ClientHello once the stream from offset 0 holds the whole message. */
     private fun assemble(flow: Flow): ClientHello? {

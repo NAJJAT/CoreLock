@@ -12,6 +12,8 @@
     <string name="set_block_cleartext_desc">Refuser les connexions non chiffrées</string>
     <string name="set_block_weak_tls">Bloquer le TLS faible</string>
     <string name="set_block_weak_tls_desc">Refuser TLS 1.0 et 1.1, obsolètes</string>
+    <string name="set_block_quic">Bloquer QUIC pour mieux filtrer</string>
+    <string name="set_block_quic_desc">Les applications passent par TCP, où chaque nom de serveur est vérifié. Activé par défaut en mode Strict.</string>
     <string name="set_kill_switch">Kill switch</string>
     <string name="set_kill_switch_on">Android bloque le trafic si le VPN se coupe</string>
     <string name="set_kill_switch_off">Désactivé : ouvrez les paramètres VPN et activez « VPN permanent » et « Bloquer les connexions sans VPN »</string>

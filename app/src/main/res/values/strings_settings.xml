@@ -12,6 +12,8 @@
     <string name="set_block_cleartext_desc">Deny unencrypted connections</string>
     <string name="set_block_weak_tls">Block Weak TLS</string>
     <string name="set_block_weak_tls_desc">Deny deprecated TLS 1.0 and 1.1</string>
+    <string name="set_block_quic">Block QUIC for better filtering</string>
+    <string name="set_block_quic_desc">Apps use TCP instead, where every server name is checked. On by default at Strict.</string>
     <string name="set_kill_switch">Kill switch</string>
     <string name="set_kill_switch_on">Android blocks traffic if the VPN drops</string>
     <string name="set_kill_switch_off">Off: open VPN settings, turn on Always-on and Block connections without VPN</string>

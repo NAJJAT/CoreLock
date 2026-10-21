@@ -30,6 +30,7 @@ class SettingsPreferences private constructor(context: Context) {
         // Features that send data to a third party are opt-in (README: no external servers).
         private const val KEY_CT_MONITORING_ENABLED      = "ct_monitoring_enabled"
         private const val KEY_AD_SDK_BLOCKING_ENABLED    = "ad_sdk_blocking_enabled"
+        private const val KEY_BLOCK_QUIC                 = "block_quic"
         private const val KEY_AD_CHECKLIST_DONE          = "ad_checklist_done"
         private const val KEY_STRICT_DISMISSED           = "strict_suggestion_dismissed"
         private const val KEY_RULE_SUGGESTIONS_DISMISSED = "rule_suggestions_dismissed"
@@ -146,6 +147,13 @@ class SettingsPreferences private constructor(context: Context) {
     /** Blocks third-party ad/attribution SDK hosts inside other apps (see AdSdkPolicy). */
     private val _adSdkBlockingEnabled = MutableStateFlow(prefs.getBoolean(KEY_AD_SDK_BLOCKING_ENABLED, true))
     val adSdkBlockingEnabled: StateFlow<Boolean> = _adSdkBlockingEnabled.asStateFlow()
+
+    /**
+     * "Block QUIC for better filtering": the user's explicit choice, or null to follow the
+     * protection level (on at Strict). Dropped QUIC makes apps use TCP, where SNI is checked.
+     */
+    private val _blockQuicChoice = MutableStateFlow(if (prefs.contains(KEY_BLOCK_QUIC)) prefs.getBoolean(KEY_BLOCK_QUIC, false) else null)
+    val blockQuicChoice: StateFlow<Boolean?> = _blockQuicChoice.asStateFlow()
 
     /** IDs of "Reduce ad tracking" checklist steps the user marked done. */
     private val _adChecklistDone = MutableStateFlow(prefs.getStringSet(KEY_AD_CHECKLIST_DONE, emptySet()).orEmpty().toSet())
@@ -343,6 +351,12 @@ class SettingsPreferences private constructor(context: Context) {
     fun setCtMonitoringEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_CT_MONITORING_ENABLED, enabled).apply()
         _ctMonitoringEnabled.value = enabled
+    }
+
+    /** [enabled] null goes back to the level default. */
+    fun setBlockQuic(enabled: Boolean?) {
+        prefs.edit().apply { if (enabled == null) remove(KEY_BLOCK_QUIC) else putBoolean(KEY_BLOCK_QUIC, enabled) }.apply()
+        _blockQuicChoice.value = enabled
     }
 
     fun setAdSdkBlockingEnabled(enabled: Boolean) {

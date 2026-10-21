@@ -46,13 +46,13 @@ import com.privacyguard.core.tls.CipherRisk
 import com.privacyguard.core.tls.CipherSuiteAnalyzer
 import com.privacyguard.core.tls.ClientHelloParser
 import com.privacyguard.core.tls.CtMonitor
-import com.privacyguard.core.tls.QuicSniTracker
 import com.privacyguard.app.core.blocklist.BlocklistCache
 import com.privacyguard.core.tls.Ja3Fingerprinter
 import com.privacyguard.vpn.firewall.AppFilter
 import com.privacyguard.vpn.firewall.DnsBypassGuard
 import com.privacyguard.vpn.firewall.DomainFilter
 import com.privacyguard.vpn.firewall.IpFilter
+import com.privacyguard.vpn.firewall.QuicGate
 import com.privacyguard.vpn.forwarder.DnsHandler
 import com.privacyguard.vpn.forwarder.TcpForwarder
 import com.privacyguard.vpn.forwarder.UdpForwarder
@@ -715,7 +715,9 @@ class PrivacyVpnService : VpnService() {
         val key = SessionKey.of(srcIp, srcPort, dstIp, dstPort, IpPacket.PROTO_UDP)
         // A QUIC flow whose SNI was blocked: drop the rest of it (later packets have
         // short headers and no SNI, so they would otherwise start a new session).
-        if (dstPort == 443 && isBlockedQuicFlow(key)) return
+        // Likewise when QUIC is off or the flow was dropped as unreadable, before the
+        // owner lookup and rules run for every datagram.
+        if (dstPort == 443 && (isBlockedQuicFlow(key) || quicGate.dropsWithoutLooking(key))) return
         val existing = sessionTable.get(key)
         if (existing != null) {
             if (blockedOnRecheck(existing)) {
@@ -724,17 +726,40 @@ class PrivacyVpnService : VpnService() {
                 return
             }
             if (dualVpnSettings().dropsUdp(dstPort)) return
-            if (dstPort == 443 && interception.blockQuic) return
-            if (dstPort == 443 && !existing.quicSniChecked && quicSniBlocks(key, data, existing.ownerPackage, existing)) {
-                existing.blocked = true
-                sessionTable.remove(key)
-                return
+            if (dstPort == 443) {
+                when (val v = quicGate.onOpenFlow(key, data, existing.quicSniChecked)) {
+                    QuicGate.Verdict.Drop -> {
+                        // Unreadable at Standard/Strict: end the session so the app retries.
+                        if (!quicGate.dropsAllQuic()) sessionTable.remove(key)
+                        return
+                    }
+                    QuicGate.Verdict.Hold -> return   // never for an open flow
+                    is QuicGate.Verdict.Forward -> {
+                        val hello = v.hello
+                        if (hello != null) {
+                            val source = quicHelloBlockSource(key, hello, existing.ownerPackage)
+                            if (source != null) {
+                                existing.blockSource = source
+                                hello.sni?.let { existing.tlsSni = it }
+                                existing.blocked = true
+                                sessionTable.remove(key)
+                                return
+                            }
+                            applyQuicHello(existing, hello)
+                        } else if (v.inspected) {
+                            existing.quicSniChecked = true
+                        }
+                    }
+                }
             }
             udpForwarder.handle(key, data, existing.ownerUid, existing.ownerPackage)
             return
         }
 
-        val uid = resolveOwnerUid(OsConstants.IPPROTO_UDP, key)
+        // A held QUIC flow has no session yet: its owner was looked up on its first
+        // datagram and kept with it, so the binder call is not repeated per datagram.
+        val uid = (if (dstPort == 443) quicGate.pendingOwnerUid(key) else null)
+            ?: resolveOwnerUid(OsConstants.IPPROTO_UDP, key)
         val pkg = appTracker.packageForUid(uid)
         // Dual-hop carries TCP only. QUIC is always dropped so apps retry over TCP
         // through the chain; other UDP only when the user asked for it.
@@ -746,34 +771,46 @@ class PrivacyVpnService : VpnService() {
             logBlockedAttempt(key, uid, pkg)
             return
         }
-        // Drop QUIC (UDP/443) when inspection asks for it: QUIC-capable apps then
-        // retry on TCP/TLS, where interception is possible.
-        if (dstPort == 443 && interception.blockQuic) return
-        val quic = if (dstPort == 443) quicSni.offer(key, data) else null
-        if (quic is QuicSniTracker.Result.Hello) {
-            quicHelloBlockSource(key, quic.hello, pkg)?.let { source ->
-                logBlockedAttempt(key, uid, pkg, sni = quic.hello.sni, blockSource = source)
-                return
+        // QUIC (UDP/443): dropped when off, held until the ClientHello is complete at
+        // Standard/Strict, and its SNI gets the same decision as DNS (QuicGate).
+        var held = emptyList<ByteArray>()
+        var hello: com.privacyguard.core.tls.ClientHello? = null
+        var inspected = false
+        if (dstPort == 443) {
+            when (val v = quicGate.onNewFlow(key, data, ownerUid = uid)) {
+                QuicGate.Verdict.Drop, QuicGate.Verdict.Hold -> return
+                is QuicGate.Verdict.Forward -> {
+                    v.hello?.let { h ->
+                        quicHelloBlockSource(key, h, pkg)?.let { source ->
+                            logBlockedAttempt(key, uid, pkg, sni = h.sni, blockSource = source)
+                            return
+                        }
+                    }
+                    held = v.held; hello = v.hello; inspected = v.inspected
+                }
             }
         }
+        // Held datagrams first, in the order the app sent them.
+        for (d in held) udpForwarder.handle(key, d, uid, pkg)
         udpForwarder.handle(key, data, uid, pkg)
         sessionTable.get(key)?.let { session ->
             if (!session.encryptionClassified) {
-                session.encryptionStatus = encEnforcer.inspectUdp(data)
+                session.encryptionStatus = encEnforcer.inspectUdp(held.firstOrNull() ?: data)
                 session.encryptionClassified = true
             }
-            when (quic) {
-                is QuicSniTracker.Result.Hello -> applyQuicHello(session, quic.hello)
-                QuicSniTracker.Result.Unreadable -> session.quicSniChecked = true
-                else -> {}
-            }
+            if (hello != null) applyQuicHello(session, hello) else if (inspected) session.quicSniChecked = true
             onSessionOpened(session, pkg)
         }
     }
 
     // ── QUIC: the ClientHello in the client's Initial packets (V-07) ─────────
 
-    private val quicSni = QuicSniTracker<SessionKey>()
+    private val quicGate = QuicGate<SessionKey>(
+        userChoice = { SettingsPreferences.getInstance(this).blockQuicChoice.value },
+        level = { filterEngine.blockLevel },
+        interceptionBlocksQuic = { interception.blockQuic },
+        onUnreadableFlow = { StatsManager.incrementQuicUnreadableDropped() },
+    )
 
     /** QUIC flows dropped for their SNI, with the time they were blocked. */
     private val blockedQuicFlows = ConcurrentHashMap<SessionKey, Long>()
@@ -784,17 +821,6 @@ class PrivacyVpnService : VpnService() {
         blockedQuicFlows.remove(key)
         return false
     }
-
-    /** Feeds a datagram of an open flow to the tracker; true if its SNI is blocked. */
-    private fun quicSniBlocks(key: SessionKey, data: ByteArray, pkg: String?, session: Session): Boolean =
-        when (val r = quicSni.offer(key, data)) {
-            is QuicSniTracker.Result.Hello -> when (val source = quicHelloBlockSource(key, r.hello, pkg)) {
-                null -> { applyQuicHello(session, r.hello); false }
-                else -> { session.blockSource = source; r.hello.sni?.let { session.tlsSni = it }; true }
-            }
-            QuicSniTracker.Result.Unreadable -> { session.quicSniChecked = true; false }
-            QuicSniTracker.Result.Pending -> false
-        }
 
     /** Why the flow's SNI stops it (a DoH endpoint, or the shared name decision), or null. */
     private fun quicHelloBlockSource(

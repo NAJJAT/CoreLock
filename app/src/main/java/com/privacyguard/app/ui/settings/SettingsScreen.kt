@@ -146,6 +146,9 @@ fun SettingsScreen(
     val retentionDays by settingsPreferences.retentionDays.collectAsStateWithLifecycle()
     val upstreamDns by settingsPreferences.upstreamDns.collectAsStateWithLifecycle()
     val protectionLevel by settingsPreferences.protectionLevel.collectAsStateWithLifecycle()
+    val blockQuicChoice by settingsPreferences.blockQuicChoice.collectAsStateWithLifecycle()
+    // The user's choice, else the level default (on at Strict), as QuicGate applies it.
+    val blockQuicOn = blockQuicChoice ?: (protectionLevel == FilterEngine.BlockLevel.STRICT.name)
     val blocklistSize by BlocklistManager.size.collectAsStateWithLifecycle()
     val blocklistSources by produceState(emptyList<com.privacyguard.app.data.db.SourceStats>(), blocklistSize) {
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -217,6 +220,9 @@ fun SettingsScreen(
                     }),
                     SettingUiItem(stringResource(R.string.set_block_weak_tls), stringResource(R.string.set_block_weak_tls_desc), securityState.blockWeakTls, Icons.Default.Lock, onClick = {
                         settingsViewModel.toggleBlockWeakTls(!securityState.blockWeakTls)
+                    }),
+                    SettingUiItem(stringResource(R.string.set_block_quic), stringResource(R.string.set_block_quic_desc), blockQuicOn, Icons.Default.Lock, onClick = {
+                        settingsPreferences.setBlockQuic(!blockQuicOn)
                     }),
                     SettingUiItem(
                         stringResource(R.string.set_kill_switch),

@@ -62,6 +62,8 @@ data class StatsSnapshot(
     val totalTrackersBlocked: Int                   = 0,
     /** Connections stopped by their TLS/QUIC server name (SNI), not by DNS; part of [blockedToday]. */
     val sniBlocked:          Long                    = 0L,
+    /** QUIC flows dropped because their Initial could not be read; the app retries over TCP. */
+    val quicUnreadableDropped: Long                  = 0L,
     val activeConnections:   List<ActiveConnectionInfo> = emptyList(),
     val recentActivity:      List<ActivityInfo>     = emptyList(),
     val topTrackers:         List<TrackerInfo>       = emptyList(),
@@ -89,6 +91,7 @@ object StatsManager {
     private val ipv6PacketsBlocked = AtomicLong()
     private val ipv6BytesBlocked = AtomicLong()
     private val sniBlocked = AtomicLong()
+    private val quicUnreadableDropped = AtomicLong()
 
     /** Lists (connections, activity, per-app stats); counter fields here are unused. */
     private val lists = MutableStateFlow(StatsSnapshot())
@@ -117,6 +120,12 @@ object StatsManager {
         schedulePublish()
     }
 
+    /** A QUIC flow dropped as unreadable: not a block (the app falls back to TCP). */
+    fun incrementQuicUnreadableDropped() {
+        quicUnreadableDropped.incrementAndGet()
+        schedulePublish()
+    }
+
     fun recordPacket(bytes: Long) {
         totalPackets.incrementAndGet()
         dataSavedBytes.addAndGet(bytes)
@@ -131,7 +140,7 @@ object StatsManager {
     }
 
     fun reset() {
-        listOf(blockedToday, trackersBlocked, totalPackets, dataSavedBytes, ipv6PacketsBlocked, ipv6BytesBlocked, sniBlocked)
+        listOf(blockedToday, trackersBlocked, totalPackets, dataSavedBytes, ipv6PacketsBlocked, ipv6BytesBlocked, sniBlocked, quicUnreadableDropped)
             .forEach { it.set(0) }
         lists.value = StatsSnapshot()
         publishNow()
@@ -147,6 +156,7 @@ object StatsManager {
             ipv6BytesBlocked = ipv6BytesBlocked.get(),
             totalTrackersBlocked = trackersBlocked.get().toInt(),
             sniBlocked = sniBlocked.get(),
+            quicUnreadableDropped = quicUnreadableDropped.get(),
         )
     }
 
