@@ -210,4 +210,28 @@ class FilterEngineTest {
         engine.addRule(FilterRule.blockDomain("tracker.net"))
         assertFalse(engine.isDomainBlocked("safe.com"))
     }
+
+    // ── User Allow for an address (opens a DoH address) ──────────────────────
+
+    private fun ipRule(ip: String, action: FilterRule.Action, source: FilterRule.Source = FilterRule.Source.USER, pkg: String? = null) =
+        FilterRule(id = "ip-$ip-$action-$pkg", label = "ip", action = action, source = source, matchIp = ip, matchPackage = pkg)
+
+    @Test
+    fun user_allow_for_an_address_is_found() {
+        engine.addRule(ipRule("1.1.1.1", FilterRule.Action.ALLOW))
+        engine.addRule(ipRule("9.9.9.0/24", FilterRule.Action.ALLOW))
+        assertTrue(engine.userAllowsAddress("1.1.1.1", 443, 6))
+        assertTrue(engine.userAllowsAddress("9.9.9.9", 443, 17))
+        assertFalse(engine.userAllowsAddress("8.8.8.8", 443, 6))
+    }
+
+    @Test
+    fun only_an_app_wide_user_allow_opens_an_address() {
+        engine.addRule(ipRule("1.1.1.1", FilterRule.Action.ALLOW, pkg = "com.example.browser"))
+        engine.addRule(ipRule("8.8.8.8", FilterRule.Action.ALLOW, source = FilterRule.Source.SYSTEM))
+        engine.addRule(ipRule("9.9.9.9", FilterRule.Action.DENY))
+        assertFalse("app-specific", engine.userAllowsAddress("1.1.1.1", 443, 6))
+        assertFalse("not the user's", engine.userAllowsAddress("8.8.8.8", 443, 6))
+        assertFalse("a block", engine.userAllowsAddress("9.9.9.9", 443, 6))
+    }
 }

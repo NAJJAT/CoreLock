@@ -68,6 +68,12 @@ class TcpForwarder(
     // Every SNI seen (null if none or invalid; rejected = one was sent but was not a
     // hostname), before it becomes the session host. Runs on the packet thread.
     private val onSni: ((Session, String?, Boolean) -> Unit)? = null,
+    // Whether the first client bytes (SNI, or none) are a DNS bypass: true = reset.
+    // Default: the SNI is a DoH endpoint (DnsBypassGuard.blocksClientHello adds user
+    // Allow rules and listed addresses). Runs on the packet thread.
+    private val dohBlocked: (Session, String?) -> Boolean = { _, sni -> com.privacyguard.vpn.firewall.DnsBypassGuard.isDohHost(sni) },
+    // A session was reset as a DNS bypass.
+    private val onDohBlocked: ((Session) -> Unit)? = null,
 ) : Runnable {
 
     companion object {
@@ -386,10 +392,12 @@ class TcpForwarder(
 
         // DoH endpoints carry DNS past the blocklist; reset so the app falls back
         // to plain DNS through the tunnel.
-        if (com.privacyguard.vpn.firewall.DnsBypassGuard.isDohHost(sni)) {
+        if (dohBlocked(session, sni)) {
             encryptionBlocked.incrementAndGet()
             session.blockSource = com.privacyguard.core.session.BlockSource.DOH
             session.blocked = true
+            runCatching { onDohBlocked?.invoke(session) }
+                .onFailure { Log.w(TAG, "DoH block listener failed: ${it.javaClass.simpleName}") }
             resetSession(session)
             return true
         }

@@ -9,7 +9,9 @@ import com.privacyguard.vpn.forwarder.DnsBlockDecision.Reason
 import com.privacyguard.vpn.tunnel.TunInterface
 import com.privacyguard.vpn.tunnel.TunWriter
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.FileDescriptor
 import kotlin.random.Random
@@ -42,6 +44,21 @@ class NameBlockPolicyTest {
     fun ad_sdk_policy_sees_the_normalized_name() {
         val policy = NameBlockPolicy(FilterEngine(), adSdkPolicy = AdSdkPolicy(enabled = { true }))
         assertEquals(Reason.AD_SDK, policy.reasonFor("SDK.AppsFlyer.com.", "com.example.game"))
+    }
+
+    @Test
+    fun user_allows_finds_the_allow_rule_for_a_doh_name() {
+        val engine = FilterEngine().apply {
+            addRule(FilterRule.allowDomain("*.dns.google"))
+            addRule(FilterRule.allowDomain("doh.example.net").copy(matchPackage = "com.example.browser"))
+            addRule(FilterRule.blockDomain("dns.quad9.net", source = FilterRule.Source.USER))
+        }
+        val policy = NameBlockPolicy(engine)
+        assertTrue(policy.userAllows("DNS.Google.", null))
+        assertTrue(policy.userAllows("doh.example.net", "com.example.browser"))
+        assertFalse("other app", policy.userAllows("doh.example.net", "com.other"))
+        assertFalse("a block rule", policy.userAllows("dns.quad9.net", null))
+        assertFalse("no rule", policy.userAllows("cloudflare-dns.com", null))
     }
 
     @Test

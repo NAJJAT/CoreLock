@@ -67,6 +67,10 @@ class BlocklistRepo(
         blocklistDao.enabledDomainsIn(categories.toList())
     }
 
+    suspend fun domainsNotIn(categories: Set<String>): List<String> = withContext(Dispatchers.IO) {
+        blocklistDao.enabledDomainsNotIn(categories.toList())
+    }
+
     /**
      * True when a malware or phishing list has this domain or a parent of it (also as
      * "*.parent"). Allowing such a domain needs the user to confirm a warning.
@@ -115,5 +119,13 @@ class BlocklistRepo(
         const val CAT_TRACKERS = "trackers"
         const val CAT_MALWARE = "malware"
         const val CAT_TELEMETRY = "telemetry"
+        const val SOURCE_HAGEZI_DOH = "Hagezi-DoH"
+        const val SOURCE_HAGEZI_DOH_IPS = "Hagezi-DoH-IPs"
+        /** Encrypted DNS endpoints: read by DnsBypassGuard, never part of DNS blocking. */
+        const val CAT_DOH = "doh"
+        /** Addresses of encrypted DNS endpoints, stored in the domain column. */
+        const val CAT_DOH_IP = "doh_ip"
+        /** Not tracker lists: kept out of risk scoring's known trackers. */
+        val BYPASS_CATEGORIES = setOf(CAT_DOH, CAT_DOH_IP)
     }
 }

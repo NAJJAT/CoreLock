@@ -23,6 +23,7 @@
     <string name="conn_blocked_by">Gestopt door</string>
     <string name="conn_blocked_by_sni">Servernaam (SNI): een geblokkeerde naam, bereikt zonder DNS</string>
     <string name="conn_blocked_by_doh">Versleutelde DNS-server: zou de blokkeerlijst omzeilen</string>
+    <string name="conn_blocked_by_dot">DNS via TLS (poort 853): zou de blokkeerlijst omzeilen</string>
     <string name="conn_up_down">%1$s verzonden · %2$s ontvangen</string>
     <string name="conn_route">Route</string>
     <string name="conn_route_country">Dit toestel → %1$s (%2$s)</string>

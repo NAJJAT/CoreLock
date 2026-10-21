@@ -23,6 +23,7 @@
     <string name="conn_blocked_by">Stopped by</string>
     <string name="conn_blocked_by_sni">Server name (SNI): a blocked name, reached without DNS</string>
     <string name="conn_blocked_by_doh">Encrypted DNS server: would skip the blocklist</string>
+    <string name="conn_blocked_by_dot">DNS over TLS (port 853): would skip the blocklist</string>
     <string name="conn_up_down">%1$s sent · %2$s received</string>
     <string name="conn_route">Route</string>
     <string name="conn_route_country">This device → %1$s (%2$s)</string>

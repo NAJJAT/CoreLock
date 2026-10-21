@@ -8,8 +8,13 @@ package com.privacyguard.core.session
 enum class BlockSource {
     /** The TLS or QUIC server name (SNI) is blocked: the name was reached without our DNS. */
     SNI,
-    /** The server name is an encrypted DNS (DoH) endpoint that would skip the blocklist. */
+    /**
+     * An encrypted DNS (DoH) endpoint that would skip the blocklist: by server name, by a
+     * listed address without one, or a built-in resolver address.
+     */
     DOH,
+    /** DNS over TLS / QUIC (port 853), which would skip the blocklist. */
+    DOT,
     ;
 
     companion object {

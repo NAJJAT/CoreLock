@@ -13,6 +13,10 @@ enum class BlocklistSource(private val url: String?) {
     // Malware distribution hosts (abuse.ch). Before this, the malware category held
     // only a handful of built-in names.
     URLHAUS("https://urlhaus.abuse.ch/downloads/hostfile/"),
+    // Encrypted DNS endpoints (DnsBypassGuard), not blocked by DNS: a listed name or
+    // address is stopped at the connection, so apps fall back to DNS the VPN sees.
+    HAGEZI_DOH("https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/doh-onlydomains.txt"),
+    HAGEZI_DOH_IPS("https://raw.githubusercontent.com/hagezi/dns-blocklists/main/ips/doh.txt"),
     CUSTOM(null),
     ;
 

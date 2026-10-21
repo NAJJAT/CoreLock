@@ -135,7 +135,8 @@ object BlocklistManager {
             BlocklistSource.STEVENBLACK, BlocklistSource.URLHAUS    -> ::hostsLine
             BlocklistSource.EASYLIST, BlocklistSource.EASYPRIVACY  -> ::easyListLine
             BlocklistSource.OISD_BASIC, BlocklistSource.OISD_FULL,
-            BlocklistSource.HAGEZI_LIGHT                           -> ::domainListLine
+            BlocklistSource.HAGEZI_LIGHT, BlocklistSource.HAGEZI_DOH -> ::domainListLine
+            BlocklistSource.HAGEZI_DOH_IPS                         -> ::ipListLine
             BlocklistSource.CUSTOM                                 -> return emptySet()
         }
         val out = LinkedHashSet<String>()
@@ -177,6 +178,12 @@ object BlocklistManager {
         return ListEntryValidator.normalize(trimmed.substringBefore('#').trim())
     }
 
+    private fun ipListLine(line: String): String? {
+        val trimmed = line.trim()
+        if (trimmed.isEmpty() || trimmed.startsWith('#')) return null
+        return ListEntryValidator.normalizeIp(trimmed.substringBefore('#').trim())
+    }
+
     // Whole-text forms of the line parsers (tests).
     internal fun parseEasyListFormat(raw: String): List<String> = raw.lineSequence().mapNotNull(::easyListLine).toList()
     private fun parseHostsFormat(raw: String): List<String> = raw.lineSequence().mapNotNull(::hostsLine).toList()
@@ -192,6 +199,8 @@ object BlocklistManager {
         BlocklistSource.OISD_FULL    -> Pair(BlocklistRepo.SOURCE_OISD, BlocklistRepo.CAT_ADS)
         BlocklistSource.HAGEZI_LIGHT -> Pair(BlocklistRepo.SOURCE_HAGEZI, BlocklistRepo.CAT_ADS)
         BlocklistSource.URLHAUS      -> Pair(BlocklistRepo.SOURCE_URLHAUS, BlocklistRepo.CAT_MALWARE)
+        BlocklistSource.HAGEZI_DOH   -> Pair(BlocklistRepo.SOURCE_HAGEZI_DOH, BlocklistRepo.CAT_DOH)
+        BlocklistSource.HAGEZI_DOH_IPS -> Pair(BlocklistRepo.SOURCE_HAGEZI_DOH_IPS, BlocklistRepo.CAT_DOH_IP)
         BlocklistSource.CUSTOM       -> Pair("Custom", BlocklistRepo.CAT_ADS)
     }
 

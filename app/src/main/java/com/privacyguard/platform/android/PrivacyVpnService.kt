@@ -484,6 +484,8 @@ class PrivacyVpnService : VpnService() {
             },
             nameBlocked = { pkg, host -> dnsHandler.blockReasonFor(host, pkg) },
             onSniBlocked = { _, _ -> recordSniBlock() },
+            dohBlocked = { session, sni -> dohClientHelloBlocked(sni, session.key, session.ownerPackage) },
+            onDohBlocked = { recordBlock() },
             onSni = { session, sni, rejected -> onSniSeen(session, sni, rejected) },
         ).also { it.start() }
         udpForwarder = UdpForwarder(sessionTable, tunWriter, ::protect).also { it.start() }
@@ -557,12 +559,17 @@ class PrivacyVpnService : VpnService() {
         val security = blocklistRepo.domainsIn(setOf(com.privacyguard.app.data.repository.BlocklistRepo.CAT_MALWARE))
         domainFilter.rebuild(blocked)
         securityFilter.rebuild(security)
+        // Encrypted DNS endpoints for the bypass guard, not DNS blocking (its built-in lists always apply).
+        DnsBypassGuard.update(
+            blocklistRepo.domainsIn(setOf(com.privacyguard.app.data.repository.BlocklistRepo.CAT_DOH)),
+            blocklistRepo.domainsIn(setOf(com.privacyguard.app.data.repository.BlocklistRepo.CAT_DOH_IP)),
+        )
         runCatching { BlocklistCache.write(this, level.name, blocked, security) }
         Log.i(TAG, "Blocklists loaded: ${domainFilter.size} names at $level")
         // Risk scoring only, not blocking: load it after the tunnel is up. At startup
         // this read of every list held the tunnel back for minutes.
         scope.launch(Dispatchers.IO) {
-            runCatching { metadataEngine.knownTrackers = (blocklistRepo.allDomains() + CuratedAdDomains.all).toSet() }
+            runCatching { metadataEngine.knownTrackers = (blocklistRepo.domainsNotIn(com.privacyguard.app.data.repository.BlocklistRepo.BYPASS_CATEGORIES) + CuratedAdDomains.all).toSet() }
         }
     }
 
@@ -651,12 +658,11 @@ class PrivacyVpnService : VpnService() {
 
     private fun onTcp(srcIp: String, dstIp: String, tcp: TcpPacket) {
         val dstPort = tcp.destinationPort
-        if (DnsBypassGuard.isEncryptedDnsPort(dstPort) ||
-            DnsBypassGuard.isUnfilteredPlainDns(dstPort) ||
-            DnsBypassGuard.isDohAddress(dstIp, dstPort)) {
+        val bypass = dnsBypassAt(dstIp, dstPort, IpPacket.PROTO_TCP)
+        if (bypass != null || DnsBypassGuard.isUnfilteredPlainDns(dstPort)) {
             // Dropping the SYN makes the app fall back to plain DNS through the tunnel.
             recordBlock()
-            if (tcp.isSyn) logBlockedAttempt(SessionKey.of(srcIp, tcp.sourcePort, dstIp, dstPort, IpPacket.PROTO_TCP))
+            if (tcp.isSyn) logBlockedAttempt(SessionKey.of(srcIp, tcp.sourcePort, dstIp, dstPort, IpPacket.PROTO_TCP), blockSource = bypass)
             return
         }
         val key = SessionKey.of(srcIp, tcp.sourcePort, dstIp, dstPort, IpPacket.PROTO_TCP)
@@ -689,6 +695,18 @@ class PrivacyVpnService : VpnService() {
         sessionTable.get(key)?.let { onSessionOpened(it, pkg) }
     }
 
+    /** Encrypted DNS stopped before any data (DnsBypassGuard.blockedBeforeData). */
+    private fun dnsBypassAt(dstIp: String, dstPort: Int, protocol: Int): com.privacyguard.core.session.BlockSource? =
+        DnsBypassGuard.blockedBeforeData(dstIp, dstPort) { filterEngine.userAllowsAddress(it, dstPort, protocol) }
+
+    /** The DNS-bypass check on a TLS or QUIC ClientHello, with the user's Allow rules. */
+    private fun dohClientHelloBlocked(sni: String?, key: SessionKey, pkg: String?): Boolean =
+        DnsBypassGuard.blocksClientHello(
+            sni, key.destinationIp, key.destinationPort,
+            userAllowsName = { dnsHandler.nameBlockPolicy.userAllows(it, pkg) },
+            userAllowsAddress = { filterEngine.userAllowsAddress(it, key.destinationPort, key.protocol) },
+        )
+
     /** [v4] is the IPv4 packet and its parsed UDP header, needed by DnsHandler; null for IPv6. */
     private fun onUdp(
         srcIp: String, dstIp: String, srcPort: Int, dstPort: Int,
@@ -697,11 +715,10 @@ class PrivacyVpnService : VpnService() {
         // DNS over TLS/QUIC and DoH by IP would skip the blocklist. IPv6 never reaches
         // DnsHandler (the tunnel only offers an IPv4 resolver), so plain DNS over
         // IPv6 is dropped as well and the app falls back to it.
-        if (DnsBypassGuard.isEncryptedDnsPort(dstPort) ||
-            DnsBypassGuard.isDohAddress(dstIp, dstPort) ||
-            (v4 == null && DnsBypassGuard.isUnfilteredPlainDns(dstPort))) {
+        val bypass = dnsBypassAt(dstIp, dstPort, IpPacket.PROTO_UDP)
+        if (bypass != null || (v4 == null && DnsBypassGuard.isUnfilteredPlainDns(dstPort))) {
             recordBlock()
-            logBlockedAttempt(SessionKey.of(srcIp, srcPort, dstIp, dstPort, IpPacket.PROTO_UDP))
+            logBlockedAttempt(SessionKey.of(srcIp, srcPort, dstIp, dstPort, IpPacket.PROTO_UDP), blockSource = bypass)
             return
         }
         // Plain DNS goes to DnsHandler on every packet, before any session lookup, so
@@ -826,10 +843,11 @@ class PrivacyVpnService : VpnService() {
     private fun quicHelloBlockSource(
         key: SessionKey, hello: com.privacyguard.core.tls.ClientHello, pkg: String?,
     ): com.privacyguard.core.session.BlockSource? {
-        val sni = hello.sni ?: return null
+        val sni = hello.sni
         val source = when {
-            DnsBypassGuard.isDohHost(sni) -> com.privacyguard.core.session.BlockSource.DOH
-            dnsHandler.blockReasonFor(sni, pkg) != null -> com.privacyguard.core.session.BlockSource.SNI
+            // A DoH name, or no name to a listed DoH address (see DnsBypassGuard).
+            dohClientHelloBlocked(sni, key, pkg) -> com.privacyguard.core.session.BlockSource.DOH
+            sni != null && dnsHandler.blockReasonFor(sni, pkg) != null -> com.privacyguard.core.session.BlockSource.SNI
             else -> return null
         }
         if (blockedQuicFlows.size > 4_096) blockedQuicFlows.clear()

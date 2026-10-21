@@ -76,9 +76,14 @@ Say a news app opens `https://ads.example.net/pixel`.
    to port 53 goes to `DnsHandler`, whatever else is open on that flow.
 4. **Connection.** The app sends a TCP SYN to the returned address. `TunReader`
    reads the packet and `PrivacyVpnService.onTcp` takes over:
-   - DNS-over-TLS (port 853), DNS over QUIC, and DoH to the IP addresses of
-     well-known DoH servers are dropped, so apps fall back to DNS that PrivacyGuard
-     can see (`vpn/firewall/DnsBypassGuard.kt`).
+   - DNS-over-TLS and DNS over QUIC (port 853, TCP and UDP) and DoH to the IP
+     addresses of a built-in set of public resolvers (Google, Cloudflare, Quad9,
+     OpenDNS, AdGuard) are dropped, so apps fall back to DNS that PrivacyGuard can
+     see (`vpn/firewall/DnsBypassGuard.kt`). Plain DNS on UDP 53 to any address is
+     answered by `DnsHandler` from your chosen resolver; DNS over TCP 53, and DNS
+     over IPv6, are dropped so the app retries on UDP. A user Allow rule for one of
+     the DoH addresses lets it through; port 853 stays closed. These drops are
+     recorded as *DoT* or *DoH* in connection details.
    - The owning app is found: Android 10+ asks
      `ConnectivityManager.getConnectionOwnerUid`; older versions read
      `/proc/net/tcp` (`app/vpn/UidMapper.kt`).
@@ -88,9 +93,18 @@ Say a news app opens `https://ads.example.net/pixel`.
    then copies bytes both ways, respecting the app's TCP window.
 6. **First bytes.** For HTTPS the first bytes are a TLS *ClientHello*. It carries
    the server name (SNI) in clear text, so the hostname is known even if DNS was
-   cached. The SNI gets the same block decision as a DNS lookup (section 4.2); a
-   blocked one resets the connection, so a blocked name reached without our DNS
-   (hard-coded address, own resolver) is still stopped. An SNI that is not a valid
+   cached. The SNI gets the same block decision as a DNS lookup (section 4.2,
+   `vpn/forwarder/NameBlockPolicy.kt`: the one function both use, so they cannot
+   disagree); a blocked one resets the connection, so a blocked name reached
+   without our DNS (hard-coded address, own resolver) is still stopped. It is
+   recorded as stopped by *Server name (SNI)* and counted apart from DNS blocks.
+   This runs before HTTPS inspection (enterprise) could take the connection.
+   Encrypted DNS is checked here too: an SNI on the DoH lists (built in, plus
+   HaGeZi's `doh-onlydomains`, refreshed with the other lists) resets the
+   connection, and so does a ClientHello without an SNI to an address on HaGeZi's
+   DoH IP list. A normal SNI to such an address passes, because many of those
+   addresses also host ordinary sites. A user Allow rule for the name opens it. An
+   SNI that is not a valid
    hostname is not used and raises *Invalid server name*; an SNI naming another
    site than the one DNS gave this address out for raises *Server name does not
    match DNS*, and the connection is recorded under the DNS name. The ClientHello
@@ -107,9 +121,22 @@ Say a news app opens `https://ads.example.net/pixel`.
 UDP takes the same path through `UdpForwarder`, without a handshake. QUIC
 (HTTP/3 over UDP port 443) is forwarded, but its SNI is read first: the
 ClientHello sits in the client's Initial packets, whose keys come from public
-values (RFC 9001/9369), so no interception is needed. A blocked SNI drops the
-flow for two minutes. QUIC is dropped outright when HTTPS inspection asks for it
-(enterprise) or while dual-hop is on, so apps retry over TCP.
+values (RFC 9001/9369), so no interception is needed. It gets the same SNI and
+DoH checks as TLS; a blocked flow is dropped for two minutes. What happens to
+QUIC depends on the protection level (`vpn/firewall/QuicGate.kt`):
+
+- **Block QUIC for better filtering** (Settings; on by default at Strict): all
+  UDP 443 is dropped, and apps retry over TCP, where the SNI is always visible.
+  QUIC is also dropped when HTTPS inspection asks for it (enterprise) or while
+  dual-hop is on.
+- **Standard and Strict:** a new QUIC flow's packets are held until its
+  ClientHello is complete, so nothing reaches the server before the check. A
+  QUIC Initial that cannot be read (unknown version or frame, or no complete
+  ClientHello after 6 packets) is dropped, and the app falls back to TCP. Other
+  traffic on UDP 443 (calls over STUN/TURN, VPNs) is not touched. Holding is
+  limited to 128 flows and 512 KB at once; past that, new QUIC flows are dropped.
+- **Minimal:** packets are forwarded while the ClientHello is read, and QUIC that
+  cannot be read passes.
 
 ---
 
@@ -178,7 +205,14 @@ half a minute with the full lists.
 | OISD small | ads | small.oisd.nl |
 | HaGeZi Light | ads | raw.githubusercontent.com |
 | URLhaus host file | malware | urlhaus.abuse.ch |
+| HaGeZi DoH domains (`wildcard/doh-onlydomains.txt`) | doh: DNS-bypass guard only, never DNS blocking | raw.githubusercontent.com |
+| HaGeZi DoH IPs (`ips/doh.txt`; private and special addresses refused) | doh_ip: DNS-bypass guard only | raw.githubusercontent.com |
 | Built-in seed (about 70 hand-picked names) | ads, trackers, malware, telemetry | in the app |
+
+The two DoH lists (about 3,300 names and 1,400 addresses in October 2026) are not
+part of any protection level and are not counted as trackers; they only feed the
+DNS-bypass guard (section 2, steps 4 and 6). The guard's built-in names and
+addresses always apply as well.
 
 On a test phone in October 2026 this gave about 179,000 ad names, 43,000 tracker
 names, 428 malware names and the built-in telemetry names; about 216,000 distinct names at Strict
@@ -593,8 +627,13 @@ key, an optional certificate pin and an optional body signature (`SiemEndpoint.k
   or connect to hard-coded addresses, skip DNS blocking. Their TLS and QUIC
   connections are still blocked by server name (section 2, step 6), but a
   connection without a server name (plain TCP or UDP to an address, encrypted
-  ClientHello) is not. Only known DoH addresses and the standard encrypted-DNS
-  ports are blocked as DNS.
+  ClientHello) is not. Only the standard encrypted-DNS port, built-in DoH
+  addresses, and names and (without an SNI) addresses on the DoH lists are blocked
+  as DNS bypass. Until the DoH lists are first downloaded (and after a failed
+  download), only the built-in ones apply. The downloaded lists include a few
+  whole domains that also serve other things (for example `cloudflare-gateway.com`
+  used by Cloudflare WARP, and HTTPDNS services some apps use for their own lookups);
+  a user Allow rule for the name opens them.
 - **When the tunnel is down, nothing is filtered.** A test on 14 October 2026
   (Samsung, Android 13): after the app crashed, blocked names resolved directly
   until protection was back. Network changes (airplane mode, Wi-Fi to mobile)

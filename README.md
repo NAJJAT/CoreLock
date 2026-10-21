@@ -21,10 +21,15 @@ explains what it finds in plain language in **English, Dutch, French and Arabic*
 describes what the code actually does: the path of one connection, how every
 number on every screen is calculated, each detector and its thresholds, what is
 stored and for how long, what leaves the phone, and the known limits. In short:
-all traffic runs through a local VPN on the phone; DNS names are checked against
-your rules, the lists for your protection level and an ad-SDK policy, and the
-TLS/QUIC server name of every connection gets the same check, so a blocked name
-reached without our DNS is stopped too; every
+all traffic runs through a local VPN on the phone, and blocking works in three
+layers: (1) DNS names are checked against your rules, the lists for your
+protection level and an ad-SDK policy; (2) apps cannot skip that DNS: DNS over
+TLS (port 853) and encrypted DNS (DoH) servers, from a built-in list plus
+HaGeZi's regularly updated DoH lists, are stopped so apps fall back to the
+tunnel's DNS; (3) the TLS/QUIC server name (SNI) of every connection gets the
+same decision as DNS, so a blocked name reached without our DNS is stopped too.
+At Standard and Strict, QUIC that cannot be read is dropped so apps use TCP, and
+at Strict QUIC is off by default ("Block QUIC for better filtering"); every
 connection is relayed and recorded with its app, server, size, timing and
 encryption; detectors look for odd DNS names, TLS changes, timer-like contacts,
 behaviour changes and stalkerware traits; history stays encrypted on the phone,

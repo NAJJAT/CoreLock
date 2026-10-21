@@ -56,6 +56,28 @@ class ListEntryValidatorTest {
         assertTrue("took $ms ms", ms < 30_000)
     }
 
+    // ── DoH lists (HaGeZi doh-onlydomains / ips/doh) ─────────────────────────
+
+    @Test fun doh_ip_list_keeps_public_addresses_in_tunnel_form() {
+        val v = ListEntryValidator
+        assertEquals("1.1.1.1", v.normalizeIp(" 1.1.1.1 "))
+        assertEquals("2606:4700:4700::1111", v.normalizeIp("2606:4700:4700:0:0:0:0:1111"))
+        assertEquals("2001:db8::1", v.normalizeIp("2001:0DB8:0000:0000:0000:0000:0000:0001"))
+        assertEquals("2620:fe::fe", v.normalizeIp("2620:fe::fe"))
+        for (bad in listOf("010.1.1.1", "1.1.1", "1.1.1.1.1", "256.1.1.1", "1.1.1.1/24", "dns.google", "",
+                "10.0.0.1", "192.168.1.1", "172.16.0.1", "127.0.0.1", "0.0.0.0", "169.254.1.1", "100.64.0.1", "224.0.0.1",
+                "::", "::1", "fe80::1", "fd00::1", "ff02::1", "1:2:3:4:5:6:7:8:9", "1::2::3", "12345::1", "::ffff:1.2.3.4")) {
+            assertNull("'$bad' must be refused", v.normalizeIp(bad))
+        }
+    }
+
+    @Test fun doh_lists_parse_with_their_own_line_formats() {
+        val ips = sequenceOf("# Title: HaGeZi's DoH IPs", "", "1.1.1.1", "8.8.8.8 # Google", "8.8.8.8", "10.0.0.1", "dns.google")
+        assertEquals(setOf("1.1.1.1", "8.8.8.8"), BlocklistManager.parseLines(BlocklistSource.HAGEZI_DOH_IPS, ips))
+        val hosts = sequenceOf("# Title: HaGeZi's Encrypted DNS Bypass", "dns.google", "DNS.Quad9.net.", "com", "1.1.1.1")
+        assertEquals(setOf("dns.google", "dns.quad9.net"), BlocklistManager.parseLines(BlocklistSource.HAGEZI_DOH, hosts))
+    }
+
     @Test fun capped_stream_fails_past_the_limit() {
         val ok = CappedInputStream(ByteArray(100).inputStream(), 100).readBytes()
         assertEquals(100, ok.size)

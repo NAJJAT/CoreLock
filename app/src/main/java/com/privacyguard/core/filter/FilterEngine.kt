@@ -146,6 +146,22 @@ class FilterEngine(
     }
 
     /**
+     * True when the first rule naming [ip] that applies to every app is a user Allow: it
+     * opens a DoH address that DnsBypassGuard would stop. App-specific rules do not count
+     * here (the guard runs before the owning app is known).
+     */
+    fun userAllowsAddress(ip: String, port: Int, protocol: Int): Boolean {
+        for (rule in rules) {
+            if (!rule.isEnabled || !isActiveForLevel(rule)) continue
+            if (rule.matchIp == null || rule.matchUid != null || rule.matchPackage != null || rule.matchBackground != null) continue
+            if (rule.matches(-1, null, null, ip, port, protocol)) {
+                return rule.action == FilterRule.Action.ALLOW && rule.source == FilterRule.Source.USER
+            }
+        }
+        return false
+    }
+
+    /**
      * Returns true if cleartext enforcement is active (any enabled DENY rule
      * with [matchEncryption] = CLEARTEXT).
      */

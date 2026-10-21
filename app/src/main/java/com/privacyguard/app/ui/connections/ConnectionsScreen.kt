@@ -319,6 +319,7 @@ private fun ConnectionDetailDialog(
                     DetailRow(stringResource(R.string.conn_blocked_by), stringResource(when (source) {
                         com.privacyguard.core.session.BlockSource.SNI -> R.string.conn_blocked_by_sni
                         com.privacyguard.core.session.BlockSource.DOH -> R.string.conn_blocked_by_doh
+                        com.privacyguard.core.session.BlockSource.DOT -> R.string.conn_blocked_by_dot
                     }))
                 }
 

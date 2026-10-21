@@ -37,6 +37,53 @@ object ListEntryValidator {
         return ascii
     }
 
+    /**
+     * One address from a downloaded IP list, in the form the tunnel compares against:
+     * dotted IPv4, or IPv6 as Ipv6Packet.parseAddress writes it (RFC 5952). Null for
+     * anything else, ranges, and addresses that are never a public resolver (private,
+     * loopback, link-local, multicast...): a bad list must not cut the user's own network.
+     */
+    fun normalizeIp(raw: String): String? {
+        val s = raw.trim()
+        if (s.isEmpty() || s.length > 45) return null
+        return if (':' in s) ipv6(s) else ipv4(s)
+    }
+
+    private fun ipv4(s: String): String? {
+        val parts = s.split('.')
+        if (parts.size != 4) return null
+        val b = IntArray(4)
+        for ((i, p) in parts.withIndex()) {
+            // No leading zeros: "010" reads as octal in some parsers.
+            if (p.isEmpty() || p.length > 3 || !p.all { it in '0'..'9' } || (p.length > 1 && p[0] == '0')) return null
+            b[i] = p.toInt().takeIf { it <= 255 } ?: return null
+        }
+        val special = b[0] == 0 || b[0] == 10 || b[0] == 127 || b[0] >= 224 ||
+            (b[0] == 100 && b[1] in 64..127) || (b[0] == 169 && b[1] == 254) ||
+            (b[0] == 172 && b[1] in 16..31) || (b[0] == 192 && b[1] == 168)
+        return if (special) null else b.joinToString(".")
+    }
+
+    private fun ipv6(s: String): String? {
+        if (s.any { !(it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' || it == ':') }) return null
+        val halves = s.split("::")
+        if (halves.size > 2) return null
+        fun groups(part: String): List<Int>? =
+            if (part.isEmpty()) emptyList()
+            else part.split(':').map { g -> if (g.isEmpty() || g.length > 4) return null else g.toInt(16) }
+        val head = groups(halves[0]) ?: return null
+        val tail = if (halves.size == 2) groups(halves[1]) ?: return null else emptyList()
+        val missing = 8 - head.size - tail.size
+        if ((halves.size == 1 && missing != 0) || (halves.size == 2 && missing < 1)) return null
+        val all = head + List(if (halves.size == 2) missing else 0) { 0 } + tail
+        val bytes = ByteArray(16)
+        all.forEachIndexed { i, g -> bytes[i * 2] = (g ushr 8).toByte(); bytes[i * 2 + 1] = g.toByte() }
+        val first = all[0]
+        val special = all.all { it == 0 } || (all.take(7).all { it == 0 } && all[7] == 1) ||
+            (first and 0xFFC0) == 0xFE80 || (first and 0xFE00) == 0xFC00 || (first and 0xFF00) == 0xFF00
+        return if (special) null else com.privacyguard.core.packet.Ipv6Packet.parseAddress(bytes, 0)
+    }
+
     /** Letters, digits, hyphens (not at the ends), and underscores, which some lists use. */
     private fun isLdhLabel(l: String) = l.isNotEmpty() && l.length <= 63 && !l.startsWith('-') && !l.endsWith('-') &&
         l.all { it in 'a'..'z' || it in '0'..'9' || it == '-' || it == '_' }
