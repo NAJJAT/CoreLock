@@ -60,6 +60,8 @@ data class StatsSnapshot(
     val ipv6PacketsBlocked:  Long                    = 0L,
     val ipv6BytesBlocked:    Long                    = 0L,
     val totalTrackersBlocked: Int                   = 0,
+    /** Connections stopped by their TLS/QUIC server name (SNI), not by DNS; part of [blockedToday]. */
+    val sniBlocked:          Long                    = 0L,
     val activeConnections:   List<ActiveConnectionInfo> = emptyList(),
     val recentActivity:      List<ActivityInfo>     = emptyList(),
     val topTrackers:         List<TrackerInfo>       = emptyList(),
@@ -86,6 +88,7 @@ object StatsManager {
     private val dataSavedBytes = AtomicLong()
     private val ipv6PacketsBlocked = AtomicLong()
     private val ipv6BytesBlocked = AtomicLong()
+    private val sniBlocked = AtomicLong()
 
     /** Lists (connections, activity, per-app stats); counter fields here are unused. */
     private val lists = MutableStateFlow(StatsSnapshot())
@@ -108,6 +111,12 @@ object StatsManager {
         schedulePublish()
     }
 
+    /** A connection stopped by its server name; count it with [incrementBlocked] as well. */
+    fun incrementSniBlocked() {
+        sniBlocked.incrementAndGet()
+        schedulePublish()
+    }
+
     fun recordPacket(bytes: Long) {
         totalPackets.incrementAndGet()
         dataSavedBytes.addAndGet(bytes)
@@ -122,7 +131,7 @@ object StatsManager {
     }
 
     fun reset() {
-        listOf(blockedToday, trackersBlocked, totalPackets, dataSavedBytes, ipv6PacketsBlocked, ipv6BytesBlocked)
+        listOf(blockedToday, trackersBlocked, totalPackets, dataSavedBytes, ipv6PacketsBlocked, ipv6BytesBlocked, sniBlocked)
             .forEach { it.set(0) }
         lists.value = StatsSnapshot()
         publishNow()
@@ -137,6 +146,7 @@ object StatsManager {
             ipv6PacketsBlocked = ipv6PacketsBlocked.get(),
             ipv6BytesBlocked = ipv6BytesBlocked.get(),
             totalTrackersBlocked = trackersBlocked.get().toInt(),
+            sniBlocked = sniBlocked.get(),
         )
     }
 

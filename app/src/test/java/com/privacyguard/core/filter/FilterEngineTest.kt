@@ -88,6 +88,15 @@ class FilterEngineTest {
                 encStatus = EncryptionStatus.CLEARTEXT).action)
     }
 
+    /** Regression: TcpForwarder's cleartext check passes the host as the app wrote it. */
+    @Test
+    fun cleartext_check_matches_a_domain_rule_despite_case_and_trailing_dot() {
+        engine.addRule(FilterRule.blockDomain("tracker.example", source = FilterRule.Source.USER))
+        assertEquals(FilterRule.Action.DENY,
+            engine.evaluate(-1, null, "Tracker.Example.", "1.2.3.4", 80, 6,
+                encStatus = EncryptionStatus.CLEARTEXT).action)
+    }
+
     @Test
     fun cleartext_rule_allows_encrypted_connections() {
         engine.addRule(FilterRule.blockCleartext())

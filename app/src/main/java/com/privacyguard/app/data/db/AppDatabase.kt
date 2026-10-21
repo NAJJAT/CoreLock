@@ -29,7 +29,7 @@ import com.privacyguard.app.core.security.DatabaseEncryption
         TlsFingerprintEntity::class,
         SensorEventEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -188,6 +188,14 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Where a blocked connection was stopped when it was not DNS (BlockSource).
+        // Nullable: existing rows keep null, which reads as "not recorded".
+        internal val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `connections` ADD COLUMN `blockSource` TEXT")
+            }
+        }
+
         /**
          * Debug builds wipe on any schema mismatch so local iteration never gets stuck.
          * Release builds only wipe where no migration can exist (version 1, which
@@ -211,7 +219,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     DATABASE_NAME
-                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
+                ).addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
                     .openHelperFactory(DatabaseEncryption.lazyOpenHelperFactory(context, DATABASE_NAME))
                     .applyFallback()
                     .build().also {

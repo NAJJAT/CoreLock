@@ -482,7 +482,8 @@ class PrivacyVpnService : VpnService() {
             onClientHello = { session, bytes ->
                 inspectTlsClientHello(bytes, session.ownerUid, session.ownerPackage ?: appTracker.packageForUid(session.ownerUid))
             },
-            nameBlocked = { pkg, host -> dnsHandler.blockReasonFor(host, pkg) != null },
+            nameBlocked = { pkg, host -> dnsHandler.blockReasonFor(host, pkg) },
+            onSniBlocked = { _, _ -> recordSniBlock() },
             onSni = { session, sni, rejected -> onSniSeen(session, sni, rejected) },
         ).also { it.start() }
         udpForwarder = UdpForwarder(sessionTable, tunWriter, ::protect).also { it.start() }
@@ -749,9 +750,11 @@ class PrivacyVpnService : VpnService() {
         // retry on TCP/TLS, where interception is possible.
         if (dstPort == 443 && interception.blockQuic) return
         val quic = if (dstPort == 443) quicSni.offer(key, data) else null
-        if (quic is QuicSniTracker.Result.Hello && quicHelloBlocked(key, quic.hello, pkg)) {
-            logBlockedAttempt(key, uid, pkg)
-            return
+        if (quic is QuicSniTracker.Result.Hello) {
+            quicHelloBlockSource(key, quic.hello, pkg)?.let { source ->
+                logBlockedAttempt(key, uid, pkg, sni = quic.hello.sni, blockSource = source)
+                return
+            }
         }
         udpForwarder.handle(key, data, uid, pkg)
         sessionTable.get(key)?.let { session ->
@@ -785,20 +788,28 @@ class PrivacyVpnService : VpnService() {
     /** Feeds a datagram of an open flow to the tracker; true if its SNI is blocked. */
     private fun quicSniBlocks(key: SessionKey, data: ByteArray, pkg: String?, session: Session): Boolean =
         when (val r = quicSni.offer(key, data)) {
-            is QuicSniTracker.Result.Hello -> quicHelloBlocked(key, r.hello, pkg).also { if (!it) applyQuicHello(session, r.hello) }
+            is QuicSniTracker.Result.Hello -> when (val source = quicHelloBlockSource(key, r.hello, pkg)) {
+                null -> { applyQuicHello(session, r.hello); false }
+                else -> { session.blockSource = source; r.hello.sni?.let { session.tlsSni = it }; true }
+            }
             QuicSniTracker.Result.Unreadable -> { session.quicSniChecked = true; false }
             QuicSniTracker.Result.Pending -> false
         }
 
-    private fun quicHelloBlocked(key: SessionKey, hello: com.privacyguard.core.tls.ClientHello, pkg: String?): Boolean {
-        val sni = hello.sni ?: return false
-        if (DnsBypassGuard.isDohHost(sni) || dnsHandler.blockReasonFor(sni, pkg) != null) {
-            if (blockedQuicFlows.size > 4_096) blockedQuicFlows.clear()
-            blockedQuicFlows[key] = System.currentTimeMillis()
-            recordBlock()
-            return true
+    /** Why the flow's SNI stops it (a DoH endpoint, or the shared name decision), or null. */
+    private fun quicHelloBlockSource(
+        key: SessionKey, hello: com.privacyguard.core.tls.ClientHello, pkg: String?,
+    ): com.privacyguard.core.session.BlockSource? {
+        val sni = hello.sni ?: return null
+        val source = when {
+            DnsBypassGuard.isDohHost(sni) -> com.privacyguard.core.session.BlockSource.DOH
+            dnsHandler.blockReasonFor(sni, pkg) != null -> com.privacyguard.core.session.BlockSource.SNI
+            else -> return null
         }
-        return false
+        if (blockedQuicFlows.size > 4_096) blockedQuicFlows.clear()
+        blockedQuicFlows[key] = System.currentTimeMillis()
+        if (source == com.privacyguard.core.session.BlockSource.SNI) recordSniBlock() else recordBlock()
+        return source
     }
 
     private fun applyQuicHello(session: Session, hello: com.privacyguard.core.tls.ClientHello) {
@@ -874,7 +885,10 @@ class PrivacyVpnService : VpnService() {
      * (a rule, or a DNS-bypass guard), so blocked numbers count connections too, not
      * only DNS lookups. Retries of the same attempt within [BLOCK_DEDUP_MS] are one row.
      */
-    private fun logBlockedAttempt(key: SessionKey, knownUid: Int? = null, knownPkg: String? = null) {
+    private fun logBlockedAttempt(
+        key: SessionKey, knownUid: Int? = null, knownPkg: String? = null,
+        sni: String? = null, blockSource: com.privacyguard.core.session.BlockSource? = null,
+    ) {
         val now = System.currentTimeMillis()
         val last = loggedBlocks.put(key, now)
         if (last != null && now - last < BLOCK_DEDUP_MS) return
@@ -894,9 +908,11 @@ class PrivacyVpnService : VpnService() {
             destinationPort = key.destinationPort,
             destinationIpv6 = if (isIpv6) dstIp else null,
             isIPv6 = isIpv6,
+            sniHostname = sni,
             protocol = key.protocolName,
             timestamp = now,
             wasBlocked = true,
+            blockSource = blockSource?.name,
             foreground = pkg.takeIf { it.isNotBlank() }?.let { foregroundDetector.stateOf(it) },
             wasBackground = pkg.isNotBlank() && foregroundDetector.stateOf(pkg) == false,
             screenOn = !isPhoneIdle(),
@@ -981,6 +997,12 @@ class PrivacyVpnService : VpnService() {
         val n = totalBlocked.incrementAndGet()
         StatsManager.incrementBlocked()
         if (n % 25 == 0L) notifHelper.updateVpnNotification(n, MainActivity::class.java)
+    }
+
+    /** A TLS or QUIC connection stopped by its server name: a block, counted apart from DNS. */
+    private fun recordSniBlock() {
+        recordBlock()
+        StatsManager.incrementSniBlocked()
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -1069,6 +1091,7 @@ class PrivacyVpnService : VpnService() {
                 bytesSent = snapshot.bytesFromDevice,
                 bytesReceived = snapshot.bytesToDevice,
                 wasBlocked = snapshot.blocked,
+                blockSource = snapshot.blockSource?.name,
                 timestamp = snapshot.createdAt,
                 durationMs = snapshot.ageMs,
                 encryptionStatus = snapshot.encryptionStatus.name,

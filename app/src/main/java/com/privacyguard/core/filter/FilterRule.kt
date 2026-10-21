@@ -87,7 +87,7 @@ data class FilterRule(
         if (!isEnabled) return false
         if (matchUid      != null && matchUid != uid)                          return false
         if (matchPackage  != null && matchPackage != pkg)                      return false
-        if (matchDomain   != null && !domainMatches(domain ?: "", matchDomain)) return false
+        if (domainPattern != null && !domainMatches(domain ?: "", domainPattern)) return false
         if (matchIp       != null && !ipMatches(ip, matchIp))                  return false
         if (matchPort     != null && matchPort != port)                        return false
         if (matchProtocol != null && matchProtocol != Protocol.ANY) {
@@ -102,16 +102,21 @@ data class FilterRule(
     // Helpers
     // ─────────────────────────────────────────────────────────────────────────
 
-    private fun domainMatches(candidate: String, pattern: String): Boolean {
-        if (pattern == "*") return true
-        val c = candidate.lowercase()
-        val p = pattern.lowercase()
-        return if (p.startsWith("*.")) {
-            val suffix = p.substring(1)
-            c == suffix.substring(1) || c.endsWith(suffix)
-        } else {
-            c == p
-        }
+    /** [matchDomain] normalized once: rules are matched against every lookup and connection. */
+    private val domainPattern: String? = matchDomain?.let { normalizeName(it) }
+
+    private fun domainMatches(candidate: String, p: String): Boolean {
+        // Names as the lists store them: "Tracker.Example." from SNI or a Host header
+        // skipped a rule for "tracker.example" while the blocklists still matched it.
+        if (p == "*") return true
+        val c = normalizeName(candidate)
+        if (!p.startsWith("*.")) return c == p
+        // "*.example.com" covers example.com and its subdomains; compared in place,
+        // without building the suffix strings.
+        val baseLen = p.length - 2
+        return if (c.length == baseLen) c.regionMatches(0, p, 2, baseLen)
+        else c.length > baseLen && c[c.length - baseLen - 1] == '.' &&
+            c.regionMatches(c.length - baseLen, p, 2, baseLen)
     }
 
     private fun ipMatches(ip: String, cidr: String): Boolean {
@@ -156,6 +161,9 @@ data class FilterRule(
     // ─────────────────────────────────────────────────────────────────────────
 
     companion object {
+        /** Trimmed, lower case, no trailing dot: as DomainFilter stores names. */
+        internal fun normalizeName(name: String): String = name.trim().lowercase().trimEnd('.')
+
         const val DEFAULT_PRIORITY = 100
         const val HIGH_PRIORITY    = 10
         const val LOW_PRIORITY     = 1_000

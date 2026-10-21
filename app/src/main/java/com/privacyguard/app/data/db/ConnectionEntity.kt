@@ -52,6 +52,11 @@ data class ConnectionEntity(
 
     // ── Decision ──────────────────────────────────────────────────────────────
     val wasBlocked:       Boolean = false,
+    /**
+     * BlockSource name when the server name stopped the connection (SNI, DOH), not
+     * DNS; null otherwise and for rows written before database version 13.
+     */
+    val blockSource:      String? = null,
 
     // ── Encryption (BRD §8.1 — zero payload decryption) ──────────────────────
     /** EncryptionStatus name: CLEARTEXT (HTTP seen), TLS / TLS_1_2 / TLS_1_3 / WEAK_TLS, QUIC, or UNKNOWN. */

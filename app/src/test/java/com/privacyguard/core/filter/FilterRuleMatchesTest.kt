@@ -40,6 +40,16 @@ class FilterRuleMatchesTest {
     }
 
     @Test
+    fun trailing_dot_and_spaces_are_ignored_on_both_sides() {
+        assertTrue(rule(matchDomain = "example.com").matches(-1, null, "Example.COM.", "1.2.3.4", 443, 6))
+        assertTrue(rule(matchDomain = " example.com. ").matches(-1, null, "example.com", "1.2.3.4", 443, 6))
+        assertTrue(rule(matchDomain = "*.example.com.").matches(-1, null, "a.example.com.", "1.2.3.4", 443, 6))
+        assertTrue(rule(matchDomain = "*.example.com").matches(-1, null, "example.com.", "1.2.3.4", 443, 6))
+        assertFalse(rule(matchDomain = "example.com").matches(-1, null, "example.com.evil", "1.2.3.4", 443, 6))
+        assertFalse(rule(matchDomain = "*.example.com").matches(-1, null, "badexample.com.", "1.2.3.4", 443, 6))
+    }
+
+    @Test
     fun exact_domain_mismatch_returns_false() {
         assertFalse(rule(matchDomain = "example.com")
             .matches(-1, null, "other.com", "1.2.3.4", 80, 6))

@@ -61,8 +61,10 @@ class TcpForwarder(
     private val dualVpnConfig: () -> DualVpnConfig = { DualVpnConfig() },
     // Gets the whole first TLS record, reassembled across segments, once per session.
     private val onClientHello: ((Session, ByteArray) -> Unit)? = null,
-    // The block decision DNS uses (DnsHandler.blockReasonFor): true = reset.
-    private val nameBlocked: ((ownerPackage: String?, host: String) -> Boolean)? = null,
+    // The block decision DNS uses (NameBlockPolicy): non-null = reset.
+    private val nameBlocked: ((ownerPackage: String?, host: String) -> DnsBlockDecision.Reason?)? = null,
+    // A session was reset for its SNI (after nameBlocked said so). Runs on the packet thread.
+    private val onSniBlocked: ((Session, DnsBlockDecision.Reason) -> Unit)? = null,
     // Every SNI seen (null if none or invalid; rejected = one was sent but was not a
     // hostname), before it becomes the session host. Runs on the packet thread.
     private val onSni: ((Session, String?, Boolean) -> Unit)? = null,
@@ -386,6 +388,7 @@ class TcpForwarder(
         // to plain DNS through the tunnel.
         if (com.privacyguard.vpn.firewall.DnsBypassGuard.isDohHost(sni)) {
             encryptionBlocked.incrementAndGet()
+            session.blockSource = com.privacyguard.core.session.BlockSource.DOH
             session.blocked = true
             resetSession(session)
             return true
@@ -393,9 +396,14 @@ class TcpForwarder(
 
         // A blocked name reached without our DNS (hard-coded address, own resolver,
         // cached answer): the SNI gets the same decision as a DNS lookup (V-07).
-        if (sni != null && nameBlocked?.invoke(session.ownerPackage, sni) == true) {
+        // Before the MITM redirect, so an intercepted session is never a way around it.
+        val sniReason = if (sni != null) nameBlocked?.invoke(session.ownerPackage, sni) else null
+        if (sniReason != null) {
             sniBlocked.incrementAndGet()
+            session.blockSource = com.privacyguard.core.session.BlockSource.SNI
             session.blocked = true
+            runCatching { onSniBlocked?.invoke(session, sniReason) }
+                .onFailure { Log.w(TAG, "SNI block listener failed: ${it.javaClass.simpleName}") }
             resetSession(session)
             return true
         }

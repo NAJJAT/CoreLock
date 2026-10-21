@@ -315,6 +315,12 @@ private fun ConnectionDetailDialog(
                 DetailRow(stringResource(R.string.conn_dns_name), connection.hostName ?: detail.reverseDns ?: if (detail.isResolvingReverseDns) stringResource(R.string.conn_resolving) else stringResource(R.string.conn_unknown))
                 DetailRow(stringResource(R.string.conn_security), if (connection.isLocal) stringResource(R.string.trf_local_network) else listOf(connection.securityInfo, connection.encryptionInfo).filter { it.isNotBlank() }.distinct().joinToString(" / "))
                 DetailRow(stringResource(R.string.conn_transferred), stringResource(R.string.conn_up_down, formatBytes(connection.bytesSent), formatBytes(connection.bytesReceived)))
+                connection.blockSource?.let { source ->
+                    DetailRow(stringResource(R.string.conn_blocked_by), stringResource(when (source) {
+                        com.privacyguard.core.session.BlockSource.SNI -> R.string.conn_blocked_by_sni
+                        com.privacyguard.core.session.BlockSource.DOH -> R.string.conn_blocked_by_doh
+                    }))
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
                 PanelCard {

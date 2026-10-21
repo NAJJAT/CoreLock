@@ -44,6 +44,19 @@ class NameBlockPolicyTest {
         assertEquals(Reason.AD_SDK, policy.reasonFor("SDK.AppsFlyer.com.", "com.example.game"))
     }
 
+    @Test
+    fun whitelist_mode_blocks_names_without_an_allow_rule() {
+        val engine = FilterEngine(defaultAction = FilterRule.Action.DENY).apply {
+            addRule(FilterRule.allowDomain("*.example.com"))
+            addRule(FilterRule.allowDomain("app-only.example.org").copy(matchPackage = "com.example.app"))
+        }
+        val policy = NameBlockPolicy(engine)
+        assertNull(policy.reasonFor("cdn.example.com.", null))
+        assertNull(policy.reasonFor("app-only.example.org", "com.example.app"))
+        assertEquals(Reason.USER_RULE, policy.reasonFor("app-only.example.org", "com.other"))
+        assertEquals(Reason.USER_RULE, policy.reasonFor("news.example.net", null))
+    }
+
     // ── DNS and the shared policy agree (property test) ──────────────────────
 
     /**

@@ -49,6 +49,8 @@ data class Connection(
     val orgHint: String? = null,
     /** A block rule for this destination exists now (the session itself may have gone through). */
     val hasBlockRule: Boolean = false,
+    /** Where a blocked connection was stopped, when it was its server name rather than DNS. */
+    val blockSource: com.privacyguard.core.session.BlockSource? = null,
 ) {
     /** A device on your own network (router, Chromecast, printer, mDNS). */
     val isLocal: Boolean get() =
@@ -170,6 +172,7 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
                         destinationPort = it.destinationPort,
                         protocol = it.protocol,
                         isBlocked = it.wasBlocked,
+                        blockSource = if (it.wasBlocked) com.privacyguard.core.session.BlockSource.fromStored(it.blockSource) else null,
                         // A total for a finished connection: never shown "per second".
                         dataRate = formatBytes(it.bytesSent + it.bytesReceived),
                         bytesSent = it.bytesSent,

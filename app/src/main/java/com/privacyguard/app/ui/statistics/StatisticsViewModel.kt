@@ -280,10 +280,8 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
             val exportDir = java.io.File(getApplication<android.app.Application>().filesDir, "exports/csv").apply { mkdirs() }
             val file = java.io.File(exportDir, "connections_$stamp.csv")
             file.bufferedWriter().use { w ->
-                w.write("timestamp,appName,packageName,domain,destinationIp,destinationPort,protocol,bytesSent,bytesReceived,encryptionStatus,tlsVersion,wasBlocked,wasBackground\n")
-                connections.forEach { c ->
-                    w.write("${c.timestamp},${c.appName.csvEscape()},${c.packageName.csvEscape()},${(c.host ?: "").csvEscape()},${c.destinationIp.csvEscape()},${c.destinationPort},${c.protocol.csvEscape()},${c.bytesSent},${c.bytesReceived},${c.encryptionStatus.csvEscape()},${(c.tlsVersion ?: "").csvEscape()},${c.wasBlocked},${c.wasBackground}\n")
-                }
+                w.write(ConnectionsCsv.HEADER)
+                connections.forEach { c -> w.write(ConnectionsCsv.row(c)) }
             }
             _csvExportPath.value = file.absolutePath
         }
@@ -309,8 +307,6 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
             _lastItReportPaths.value = files.jsonFile.absolutePath to files.pdfFile.absolutePath
         }
     }
-
-    private fun String.csvEscape(): String = com.privacyguard.core.utils.CsvCell.escape(this)
 
     private fun formatBytes(bytes: Long): String = com.privacyguard.app.core.utils.ByteFormat.format(bytes)
 }

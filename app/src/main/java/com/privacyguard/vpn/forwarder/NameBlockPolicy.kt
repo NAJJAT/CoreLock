@@ -31,7 +31,9 @@ class NameBlockPolicy(
             onSecurityList = securityFilter?.isBlocked(host) == true,
             onLevelBlocklist = sdkVerdict !is AdSdkVerdict.KeepOpen && domainFilter?.isBlocked(host) == true,
             adSdkBlocks = sdkVerdict is AdSdkVerdict.Block,
-        ) ?: if (userRule == null && filterEngine.isDomainBlocked(host)) DnsBlockDecision.Reason.USER_RULE else null
+        // No rule matched for this app, so none matches without one either (what
+        // isDomainBlocked would scan for again): only the engine's default is left.
+        ) ?: if (userRule == null && filterEngine.blocksByDefault) DnsBlockDecision.Reason.USER_RULE else null
     }
 
     companion object {

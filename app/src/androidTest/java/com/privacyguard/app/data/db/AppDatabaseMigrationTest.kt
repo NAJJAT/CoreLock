@@ -164,4 +164,19 @@ class AppDatabaseMigrationTest {
         db.query("SELECT COUNT(*) FROM network_trust").use { c -> c.moveToFirst(); assertEquals(0, c.getInt(0)) }
         db.close()
     }
+
+    @Test
+    fun migrate12To13_addsNullableBlockSource() {
+        helper.createDatabase(dbName, 12).apply {
+            execSQL("INSERT INTO connections (id, appUid, appName, packageName, destinationIp, destinationPort, isIPv6, protocol, bytesSent, bytesReceived, timestamp, durationMs, wasBlocked, encryptionStatus, wasBackground) VALUES (1, 10123, 'Example', 'com.example', '93.184.216.34', 443, 0, 'TCP', 0, 0, 1000, 0, 1, 'TLS_1_3', 0)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(dbName, 13, true, AppDatabase.MIGRATION_12_13)
+        db.query("SELECT wasBlocked, blockSource FROM connections WHERE id = 1").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(1, c.getInt(0))
+            assertTrue(c.isNull(1))
+        }
+        db.close()
+    }
 }

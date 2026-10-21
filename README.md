@@ -592,6 +592,9 @@ rust/  flutter/  ios/  testapp/  .github/
 - **Large DNS answers** need DNS over TCP, which the tunnel does not offer, so
   answers that do not fit in a 4 KB UDP reply fail.
 - **The JA3 watch-list is small and unverified;** treat matches as hints.
+- **TODO: user rule precedence.** A user Allow rule (priority 10) always beats a
+  user Block rule (priority 100), even when the Block names a more specific
+  host. Planned: the most specific rule wins, and a tie goes to Block.
 - **Translations need native review.**
 - **The debug build's integrity check** expects a specific debug certificate;
   on another machine it reports "Signature mismatch" and blocks protected

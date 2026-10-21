@@ -30,6 +30,9 @@ class FilterEngine(
     val allRules: List<FilterRule> get() = rules.toList()
     val ruleCount: Int             get() = rules.size
 
+    /** True when a name no rule matches is blocked (whitelist mode). */
+    val blocksByDefault: Boolean get() = defaultAction == FilterRule.Action.DENY
+
     fun addRule(rule: FilterRule) { rules.add(rule); sortRules() }
 
     fun setRules(newRules: List<FilterRule>) {

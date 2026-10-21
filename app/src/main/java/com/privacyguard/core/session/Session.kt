@@ -192,6 +192,9 @@ class Session(
      */
     @Volatile var blocked: Boolean = false
 
+    /** Set with [blocked] when the server name stopped the session; null otherwise. */
+    @Volatile var blockSource: BlockSource? = null
+
     // ─────────────────────────────────────────────────────────────────────────
     // ★ MITM (Man-in-the-Middle) Fields (Enterprise Feature)
     // ─────────────────────────────────────────────────────────────────────────
@@ -281,6 +284,7 @@ class Session(
         screenOnAtStart = screenOnAtStart,
         isClosed = isClosed,
         blocked = blocked,
+        blockSource = blockSource,
         isMitmIntercepted = isMitmIntercepted,
         payloadCount = payloadCount.get()
     )
@@ -327,6 +331,7 @@ data class SessionSnapshot(
     val screenOnAtStart: Boolean? = null,
     val isClosed: Boolean,
     val blocked: Boolean = false,
+    val blockSource: BlockSource? = null,
     // MITM fields in snapshot
     val isMitmIntercepted: Boolean,
     val payloadCount: Int,

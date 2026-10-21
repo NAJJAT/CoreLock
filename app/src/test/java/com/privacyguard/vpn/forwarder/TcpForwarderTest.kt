@@ -163,7 +163,7 @@ class TcpForwarderTest {
         forwarder = TcpForwarder(
             sessionTable, tunWriter, EncryptionEnforcer(), FilterEngine(),
             protectSocket = { true }, interception = TlsInterception.None,
-            nameBlocked = { _, host -> host == "ads.example.com" || host.endsWith(".ads.example.com") },
+            nameBlocked = { _, host -> DnsBlockDecision.Reason.BLOCKLIST.takeIf { host == "ads.example.com" || host.endsWith(".ads.example.com") } },
             onSni = { _, sni, _ -> seenSni += sni },
         ).also { it.start() }
 
@@ -189,10 +189,76 @@ class TcpForwarderTest {
         assertEquals(1L, forwarder.sniBlocked.get())
     }
 
-    private fun tlsClientHello(sni: String): ByteArray {
+    /**
+     * Layer 3 with the real shared decision (NameBlockPolicy), as the service wires it:
+     * every case gets exactly the answer DNS would give, and a block is reported as SNI.
+     */
+    @Test
+    fun sni_uses_the_dns_decision_and_is_reported_as_an_sni_block() {
+        forwarder.stop()
+        val engine = FilterEngine().apply { addRule(com.privacyguard.core.filter.FilterRule.allowDomain("allowed-ads.example.net")) }
+        val lists = com.privacyguard.vpn.firewall.DomainFilter(useNativeBloom = false).apply {
+            rebuild(listOf("ads.example.com", "allowed-ads.example.net", "graph.facebook.com"))
+        }
+        val policy = NameBlockPolicy(engine, domainFilter = lists,
+            adSdkPolicy = com.privacyguard.app.adprivacy.AdSdkPolicy(enabled = { true }))
+        // Recorded, not asserted, in the callback: the forwarder contains listener failures.
+        val reported = mutableListOf<Pair<com.privacyguard.core.session.BlockSource?, DnsBlockDecision.Reason>>()
+        forwarder = TcpForwarder(
+            sessionTable, tunWriter, EncryptionEnforcer(), engine,
+            protectSocket = { true }, interception = TlsInterception.None,
+            nameBlocked = { pkg, host -> policy.reasonFor(host, pkg) },
+            onSniBlocked = { session, reason -> reported += session.blockSource to reason },
+        ).also { it.start() }
+
+        val cases = listOf(
+            "ads.example.com" to true,            // on the level list
+            "cdn.ads.example.com" to true,        // subdomain of a listed parent
+            "ADS.Example.COM." to true,           // case and trailing dot normalized
+            "allowed-ads.example.net" to false,   // user Allow beats the list
+            "graph.facebook.com" to false,        // AdSdkPolicy.neverBlock beats the list
+            "news.example.org" to false,          // not listed
+            null to false,                        // no SNI (IP-only TLS, ECH): unchanged
+        )
+        for ((i, case) in cases.withIndex()) {
+            val (sni, blocked) = case
+            val hello = tlsClientHello(sni)
+            val (sawRst, bytesAtServer) = sendClientHello(40_100 + i, hello)
+            assertEquals("RST for $sni", blocked, sawRst)
+            assertEquals("bytes at server for $sni", if (blocked) 0 else hello.size, bytesAtServer)
+        }
+        assertEquals(3L, forwarder.sniBlocked.get())
+        assertEquals(List(3) { com.privacyguard.core.session.BlockSource.SNI to DnsBlockDecision.Reason.BLOCKLIST }, reported)
+    }
+
+    /** One TLS connection to a loopback server: whether the device got a RST, and what reached the server. */
+    private fun sendClientHello(clientPort: Int, hello: ByteArray): Pair<Boolean, Int> {
+        val serverSocket = ServerSocket(0, 1, InetAddress.getLoopbackAddress())
+        val got = ByteArrayOutputStream()
+        val t = thread(isDaemon = true) {
+            runCatching { serverSocket.accept().use { s -> s.soTimeout = 2_000; runCatching { val b = ByteArray(4096); val n = s.getInputStream().read(b); if (n > 0) got.write(b, 0, n) } } }
+        }
+        try {
+            val key = SessionKey.of("10.0.0.2", clientPort, "127.0.0.1", serverSocket.localPort, IpPacket.PROTO_TCP)
+            forwarder.handle(key, segment(seq = 1_000, ack = 0, syn = true, window = 65_535))
+            val synAck = nextSegment()!!
+            forwarder.handle(key, segment(seq = 1_001, ack = (synAck.sequenceNumber + 1) and 0xFFFFFFFFL, ack_ = true, window = 65_535, data = hello))
+            // The server read ends with the ClientHello, or with EOF once the session is reset.
+            t.join(3_000)
+            var sawRst = false
+            while (true) { val s = nextSegment(300) ?: break; if (s.flagRst) sawRst = true }
+            return sawRst to got.size()
+        } finally {
+            serverSocket.close()
+        }
+    }
+
+    /** A minimal TLS 1.3 ClientHello; [sni] null sends none (as IP-only TLS or ECH's outer name might). */
+    private fun tlsClientHello(sni: String?): ByteArray {
         fun u16(v: Int) = byteArrayOf((v ushr 8).toByte(), v.toByte())
-        val name = sni.toByteArray()
-        val ext = u16(0) + u16(name.size + 5) + u16(name.size + 3) + byteArrayOf(0) + u16(name.size) + name
+        val name = sni?.toByteArray()
+        val ext = if (name == null) ByteArray(0)
+            else u16(0) + u16(name.size + 5) + u16(name.size + 3) + byteArrayOf(0) + u16(name.size) + name
         val body = u16(0x0303) + ByteArray(32) + byteArrayOf(0) + u16(2) + u16(0x1301) + byteArrayOf(1, 0) + u16(ext.size) + ext
         val hs = byteArrayOf(1, 0) + u16(body.size) + body
         return byteArrayOf(0x16, 3, 1) + u16(hs.size) + hs
