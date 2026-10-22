@@ -699,6 +699,33 @@ fun SettingsScreen(
             }
         }
 
+        // About: the version, and a link to check for a newer one. PrivacyGuard does not
+        // look for updates itself (no extra server contacted), so the user opens the page.
+        item {
+            PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
+                Text(stringResource(R.string.set_about).uppercase(), style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    stringResource(R.string.set_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE),
+                    style = MaterialTheme.typography.titleMedium, color = PgText,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(stringResource(R.string.set_updates_hint), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+                Spacer(modifier = Modifier.height(8.dp))
+                androidx.compose.material3.OutlinedButton(
+                    onClick = {
+                        runCatching {
+                            context.startActivity(
+                                android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(BuildConfig.RELEASES_URL))
+                                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.set_check_updates)) }
+            }
+        }
+
         item { Spacer(modifier = Modifier.height(8.dp)) }
     }
 }

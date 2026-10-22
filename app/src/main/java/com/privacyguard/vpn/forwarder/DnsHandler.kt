@@ -23,7 +23,7 @@ import android.util.Log
 /**
  * DNS Shield — intercepts all DNS traffic and applies two layers of protection:
  *
- *  Layer 1 — **Blocklist**:     domain in EasyList/OISD? → NXDOMAIN immediately.
+ *  Layer 1 — **Blocklist**:     blocked for this app (NameBlockPolicy)? → NXDOMAIN immediately.
  *  Layer 2 — **Anomaly detection**: behavioral analysis via [DnsAnomalyDetector]
  *             detects DNS tunneling, DGA beacons, and high-frequency tracking.
  *

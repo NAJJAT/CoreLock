@@ -7,8 +7,10 @@ import com.privacyguard.app.data.repository.BlocklistRepo
  * category each (see BlocklistManager.sourceMetadata and its built-in seed):
  *
  *  - MINIMAL:  malware and phishing hosts only. Ads and trackers load normally.
- *  - STANDARD: MINIMAL + ads (StevenBlack, EasyList, OISD, Hagezi, built-in ad hosts)
- *              + trackers (EasyPrivacy, built-in analytics/attribution hosts).
+ *  - STANDARD: MINIMAL + ads (HaGeZi Pro mini, built-in ad hosts)
+ *              + trackers (built-in analytics/attribution hosts).
+ *              Strict swaps Pro mini for the full HaGeZi Pro plus OISD small
+ *              ([excludedSourcesFor]).
  *  - STRICT:   STANDARD + telemetry: OS and vendor diagnostics (Microsoft, Apple,
  *              Amazon, Mozilla, Dropbox, Google Safe Browsing). This can break
  *              features that depend on them, which is why it is not the default.

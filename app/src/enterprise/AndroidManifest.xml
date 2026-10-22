@@ -2,6 +2,12 @@
 <!-- Enterprise-only components, merged into the main manifest for the enterprise flavor. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- CaInstallHelper writes the CA to public Download/PrivacyGuard/ on API ≤ 28 (MediaStore,
+         which needs no permission, from 29). Asked for at runtime in MitmScreen first. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
     <application>
 
         <!--

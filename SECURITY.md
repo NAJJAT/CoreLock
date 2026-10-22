@@ -29,7 +29,7 @@ Only the latest release receives security fixes.
 
 In scope:
 
-- the Android app in `app/` (both flavors) and the Rust core in `rust/`
+- the Android app in `app/` (both flavors)
 - anything that lets traffic bypass the tunnel, filter or kill switch
 - exposure of captured data, the database, keys or the MITM CA
 - the enterprise MITM engine, SIEM shipping and MDM configuration

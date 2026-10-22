@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.Locale
+import com.privacyguard.app.ui.launchWhileObserved
 
 data class StatisticsData(
     val totalConnections: Int = 0,
@@ -107,7 +108,7 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
     @Volatile private var cachedBehaviorSummaries: List<com.privacyguard.app.core.behavior.AppBehaviorSummary> = emptyList()
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launchWhileObserved(_stats) {
             while (true) {
                 try { refreshSlow() }
                 catch (e: kotlinx.coroutines.CancellationException) { throw e }
@@ -115,7 +116,7 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
                 delay(60_000)
             }
         }
-        viewModelScope.launch {
+        viewModelScope.launchWhileObserved(_stats) {
             while (true) {
                 try { refresh() }
                 catch (e: kotlinx.coroutines.CancellationException) { throw e }

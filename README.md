@@ -329,7 +329,7 @@ unsigned release fails.
      | grep "SHA256:" | awk '{print $2}' | tr -d ':'
    ```
 
-3. Copy `release-signing.template.properties` to
+3. Copy `release-signing.properties.template` to
    `release-signing.local.properties` (git-ignored). Fill in
    `PRIVACYGUARD_RELEASE_STORE_FILE`, `…_STORE_PASSWORD`, `…_KEY_ALIAS`,
    `…_KEY_PASSWORD` and `…_SIGNATURE_SHA256`. Gradle properties or environment

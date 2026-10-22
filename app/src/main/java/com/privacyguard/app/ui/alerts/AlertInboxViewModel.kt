@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.privacyguard.app.ui.launchWhileObserved
 
 enum class AlertType { DNS_ANOMALY, JA3_THREAT, TLS_FP_CHANGE, WEAK_CIPHER, CT_EVENT, CLEARTEXT }
 
@@ -38,7 +39,7 @@ class AlertInboxViewModel(app: Application) : AndroidViewModel(app) {
     val state: StateFlow<AlertInboxState> = _state.asStateFlow()
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launchWhileObserved(_state) {
             while (true) {
                 try { refresh() }
                 catch (e: kotlinx.coroutines.CancellationException) { throw e }

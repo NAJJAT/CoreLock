@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.privacyguard.app.ui.launchWhileObserved
 
 data class DashboardUiState(
     val isVpnActive: Boolean = false,
@@ -127,7 +128,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         // Fast path: live values only (VPN state, throughput, active sessions) — every 1 s.
-        viewModelScope.launch {
+        viewModelScope.launchWhileObserved(_uiState) {
             while (true) {
                 try {
                     if (slowCacheReady) {
@@ -142,7 +143,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         }
         // Slow path: every number that opens a list is computed here from complete
         // queries (no LIMIT), anchored at one timestamp.
-        viewModelScope.launch {
+        viewModelScope.launchWhileObserved(_uiState) {
             while (true) {
                 try {
                     refreshSlow()

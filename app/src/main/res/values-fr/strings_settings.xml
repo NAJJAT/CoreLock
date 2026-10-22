@@ -189,4 +189,8 @@
     <string name="diag_battery_optimized">L’optimisation de la batterie est activée (réglage par défaut d’Android). Certains téléphones arrêtent quand même la protection en arrière-plan ; si elle se coupe souvent, réglez l’utilisation de la batterie de PrivacyGuard sur Non restreinte.</string>
     <string name="diag_battery_unrestricted">Non restreinte : Android n’arrêtera pas PrivacyGuard pour économiser la batterie.</string>
     <string name="set_open_battery_settings">Ouvrir les réglages de batterie</string>
+    <string name="set_about">À propos</string>
+    <string name="set_version">Version %1$s (%2$d)</string>
+    <string name="set_updates_hint">PrivacyGuard ne recherche pas les mises à jour lui-même : aucun serveur supplémentaire n’est contacté. Ouvrez la page des versions pour voir s’il en existe une plus récente.</string>
+    <string name="set_check_updates">Rechercher des mises à jour</string>
 </resources>

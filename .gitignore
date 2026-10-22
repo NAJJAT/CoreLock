@@ -34,4 +34,6 @@ signing.properties
 /.idea/
 /.kotlin/
 /.claude/
+# Scratch folder a local tool keeps at the repo root; nothing in the build uses it.
+/state/
 compile-log.txt

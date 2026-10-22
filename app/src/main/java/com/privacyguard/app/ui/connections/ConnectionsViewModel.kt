@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.privacyguard.app.ui.launchWhileObserved
 
 data class Connection(
     val id: String,
@@ -150,7 +151,7 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
             RuleSyncBus.version.collect { refreshBlockedRuleKeys() }
         }
 
-        viewModelScope.launch {
+        viewModelScope.launchWhileObserved(_recentConnections) {
             while (true) {
                 try {
                 val since = System.currentTimeMillis() - 24L * 60L * 60L * 1000L

@@ -83,6 +83,9 @@ android {
         buildConfigField("boolean", "IS_RELEASE_SIGNING_CONFIGURED", "false")
         buildConfigField("String", "APP_SIGNING_MODE", "\"Unknown\"")
         buildConfigField("boolean", "MITM_AVAILABLE", "false")
+        // Opened in the browser from Settings › About; the app never fetches it itself.
+        // A store build can point it at its listing instead.
+        buildConfigField("String", "RELEASES_URL", "\"https://github.com/NAJJAT/CoreLock/releases\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

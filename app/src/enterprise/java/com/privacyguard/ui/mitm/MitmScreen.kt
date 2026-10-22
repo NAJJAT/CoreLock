@@ -187,12 +187,24 @@ fun MitmScreen() {
     var settingsInstallSaved by remember { mutableStateOf<Boolean?>(null) }
 
     // Exports the cert to Downloads and shows the "install it from Settings" steps.
-    val saveCaForSettings: () -> Unit = {
+    val exportCa: () -> Unit = {
         installScope.launch {
             if (!caManager.initialize()) { settingsInstallSaved = false; return@launch }
             val saved = withContext(Dispatchers.IO) { caHelper.exportCaToDownloads() } != null
             settingsInstallSaved = saved
         }
+    }
+    // Android 9 and below write public Downloads directly, which needs the storage
+    // permission granted at runtime; declaring it alone never let the write succeed.
+    val storagePermission = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { granted -> if (granted) exportCa() else settingsInstallSaved = false }
+    val saveCaForSettings: () -> Unit = {
+        val needsPermission = android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.P &&
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context, android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (needsPermission) storagePermission.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) else exportCa()
     }
 
     // Android 10 and below: open the system installer directly.

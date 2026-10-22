@@ -185,4 +185,8 @@
     <string name="diag_battery_optimized">Battery optimization is on (the Android default). Some phones stop protection in the background anyway; if protection keeps turning off, set PrivacyGuard\'s battery use to Unrestricted.</string>
     <string name="diag_battery_unrestricted">Unrestricted: Android will not stop PrivacyGuard to save battery.</string>
     <string name="set_open_battery_settings">Open battery settings</string>
+    <string name="set_about">About</string>
+    <string name="set_version">Version %1$s (%2$d)</string>
+    <string name="set_updates_hint">PrivacyGuard does not check for updates itself, so no extra server is contacted. Open the releases page to see whether a newer version exists.</string>
+    <string name="set_check_updates">Check for updates</string>
 </resources>

@@ -9,8 +9,8 @@
     <string name="notif_ch_weekly_desc">Wekelijks privacyoverzicht</string>
     <string name="notif_monitoring">Je verbindingen worden gevolgd…</string>
     <plurals name="notif_blocked_n">
-        <item quantity="one">%d verbinding geblokkeerd</item>
-        <item quantity="other">%d verbindingen geblokkeerd</item>
+        <item quantity="one">%d geblokkeerd in de laatste 24 u</item>
+        <item quantity="other">%d geblokkeerd in de laatste 24 u</item>
     </plurals>
     <string name="notif_active">Bescherming aan</string>
     <string name="notif_public_text">Ontgrendel om deze melding te zien</string>

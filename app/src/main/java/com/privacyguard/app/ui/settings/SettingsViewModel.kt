@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.privacyguard.app.ui.launchWhileObserved
 
 data class SecuritySettingsState(
     val blockCleartext: Boolean = false,
@@ -73,7 +74,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             RuleSyncBus.version.collect { refreshRules() }
         }
         // Posture check is a system call; refresh every 30s rather than every 1s
-        viewModelScope.launch {
+        viewModelScope.launchWhileObserved(_securityState) {
             while (true) {
                 try { refreshPosture() }
                 catch (e: kotlinx.coroutines.CancellationException) { throw e }

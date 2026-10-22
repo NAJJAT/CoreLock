@@ -112,7 +112,7 @@ class NotificationHelper(private val context: Context) {
     /**
      * Builds the required foreground service notification shown while the VPN is active.
      *
-     * @param blockedCount  number of trackers blocked in this session.
+     * @param blockedCount  blocks in the last 24 h (BlockStats), the dashboard's number.
      * @param mainActivityClass class of the main activity (for tap-to-open).
      * @return a [Notification] ready to pass to [android.app.Service.startForeground].
      */
@@ -133,7 +133,7 @@ class NotificationHelper(private val context: Context) {
         )
 
         val body = when {
-            // Counts every block (trackers, ads, rules), so it says "connections".
+            // Lookups and connections alike, so it says "blocked", not "trackers".
             blockedCount == 0L -> context.getString(R.string.notif_monitoring)
             else               -> quantity(R.plurals.notif_blocked_n, blockedCount)
         }

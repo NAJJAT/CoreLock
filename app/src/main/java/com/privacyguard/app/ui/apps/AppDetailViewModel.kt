@@ -31,6 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.util.Locale
+import com.privacyguard.app.ui.launchWhileObserved
 
 data class DomainRow(
     val domain: String,
@@ -171,7 +172,7 @@ class AppDetailViewModel(
     }
 
     private fun observeTraffic() {
-        viewModelScope.launch {
+        viewModelScope.launchWhileObserved(_state) {
             // Polled: the live stats change every second, the history this reads does not.
             while (true) {
                 val snapshot = StatsManager.snapshot.value

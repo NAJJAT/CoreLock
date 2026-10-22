@@ -9,12 +9,12 @@
     <string name="notif_ch_weekly_desc">ملخّص الخصوصية الأسبوعي</string>
     <string name="notif_monitoring">جارٍ مراقبة اتصالاتك…</string>
     <plurals name="notif_blocked_n">
-        <item quantity="zero">لم يُحظر أي اتصال</item>
-        <item quantity="one">حُظر اتصال واحد</item>
-        <item quantity="two">حُظر اتصالان</item>
-        <item quantity="few">حُظرت %d اتصالات</item>
-        <item quantity="many">حُظر %d اتصالًا</item>
-        <item quantity="other">حُظر %d اتصال</item>
+        <item quantity="zero">لم يُحظر شيء خلال آخر 24 س</item>
+        <item quantity="one">حُظر عنصر واحد خلال آخر 24 س</item>
+        <item quantity="two">حُظر عنصران خلال آخر 24 س</item>
+        <item quantity="few">حُظرت %d عناصر خلال آخر 24 س</item>
+        <item quantity="many">حُظر %d عنصرًا خلال آخر 24 س</item>
+        <item quantity="other">حُظر %d عنصر خلال آخر 24 س</item>
     </plurals>
     <string name="notif_active">الحماية مفعّلة</string>
     <string name="notif_public_text">افتح القفل لرؤية هذا الإشعار</string>

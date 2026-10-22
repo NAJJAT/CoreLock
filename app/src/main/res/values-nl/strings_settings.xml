@@ -184,4 +184,8 @@
     <string name="diag_battery_optimized">Batterijoptimalisatie staat aan (de standaard van Android). Sommige telefoons stoppen de bescherming op de achtergrond toch; valt de bescherming steeds uit, zet het batterijgebruik van PrivacyGuard dan op Onbeperkt.</string>
     <string name="diag_battery_unrestricted">Onbeperkt: Android stopt PrivacyGuard niet om batterij te sparen.</string>
     <string name="set_open_battery_settings">Batterij-instellingen openen</string>
+    <string name="set_about">Over</string>
+    <string name="set_version">Versie %1$s (%2$d)</string>
+    <string name="set_updates_hint">PrivacyGuard zoekt zelf niet naar updates, dus er wordt geen extra server gecontacteerd. Open de releasepagina om te zien of er een nieuwere versie is.</string>
+    <string name="set_check_updates">Zoeken naar updates</string>
 </resources>

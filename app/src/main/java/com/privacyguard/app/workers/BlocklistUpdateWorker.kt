@@ -6,7 +6,7 @@
  * What it does:
  * =============
  * - Runs weekly (or on-demand) to fetch latest blocklists
- * - Downloads from trusted sources (StevenBlack, EasyList, EasyPrivacy)
+ * - Downloads the lists in BlocklistSource (HaGeZi, OISD small)
  * - Parses and stores in local database
  * - Updates in-memory blocklist for filtering
  * 
@@ -15,14 +15,10 @@
  * - Guaranteed execution (even after app restart)
  * - Respects device battery (only runs when conditions met)
  * - Supports periodic work (weekly)
- * - Handles network constraints (WiFi only)
- * 
- * Sources:
- * =========
- * - StevenBlack Unified Hosts: 100k+ domains
- * - EasyList: 70k+ ad domains
- * - EasyPrivacy: 15k+ tracker domains
- * 
+ * - Handles network constraints (unmetered network, battery not low)
+ *
+ * Sources: see BlocklistSource and docs/HOW_IT_WORKS.md §3.5.
+ *
  * @author PrivacyGuard Engineering Team
  * @since 1.0.0
  */

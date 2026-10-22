@@ -53,7 +53,7 @@ data class FilterRule(
 
     enum class Source {
         USER,        // manually created by the user
-        BLOCKLIST,   // from EasyList / OISD etc.
+        BLOCKLIST,   // from a downloaded list (HaGeZi, OISD)
         COMMUNITY,   // from community threat-intelligence feed
         SYSTEM,      // hard-coded system rules (DNS interceptor etc.)
     }

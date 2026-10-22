@@ -124,7 +124,6 @@ class PrivacyVpnService : VpnService() {
     private lateinit var sensorWatcher: com.privacyguard.app.adprivacy.SensorUsageWatcher
 
     private var tunFd: ParcelFileDescriptor? = null
-    private val totalBlocked = AtomicLong(0)
     private val totalCleartext = AtomicLong(0)
 
     // Touched from the TUN reader, forwarder, reaper and IO threads alike.
@@ -156,6 +155,9 @@ class PrivacyVpnService : VpnService() {
         private const val TUNNEL_DNS_V4 = "10.0.0.1"
         // After a QUIC flow is blocked for its SNI, its later packets are dropped this long.
         private const val QUIC_BLOCK_MEMORY_MS = 120_000L
+        // The ongoing notification's block count: refreshed at most this often, over this window.
+        private const val BLOCK_COUNT_REFRESH_MS = 10_000L
+        private const val BLOCK_COUNT_WINDOW_MS = 24 * 60 * 60_000L
         // No SNI mismatch findings right after start: apps still use DNS answers cached before.
         private const val SNI_MISMATCH_GRACE_MS = 5 * 60_000L
         const val ACTION_STOP = "com.privacyguard.action.STOP_VPN"
@@ -378,6 +380,8 @@ class PrivacyVpnService : VpnService() {
             running = this
             _isRunningFlow.value = true
         }
+        // Blocks from before a restart still fall in the last 24 h.
+        scheduleBlockCountRefresh()
         com.privacyguard.app.vpn.BootReceiver.markVpnActive(this)
         com.privacyguard.vpn.WorkerGuard.onWorkerDied = ::onWorkerDied
         watchSettings(settings)
@@ -1025,9 +1029,30 @@ class PrivacyVpnService : VpnService() {
     }
 
     private fun recordBlock() {
-        val n = totalBlocked.incrementAndGet()
         StatsManager.incrementBlocked()
-        if (n % 25 == 0L) notifHelper.updateVpnNotification(n, MainActivity::class.java)
+        scheduleBlockCountRefresh()
+    }
+
+    private val blockCountRefreshPending = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /**
+     * Shows the dashboard's "Blocked (24 h)" number in the ongoing notification: the
+     * stored rows of BlockStats, not this service's raw counter, which also counted
+     * retried lookups and SYNs and so never matched. At most one query per
+     * [BLOCK_COUNT_REFRESH_MS]; the wait also lets ConnectionLogger write its batch.
+     */
+    private fun scheduleBlockCountRefresh() {
+        if (!blockCountRefreshPending.compareAndSet(false, true)) return
+        scope.launch {
+            kotlinx.coroutines.delay(BLOCK_COUNT_REFRESH_MS)
+            blockCountRefreshPending.set(false)
+            val now = System.currentTimeMillis()
+            val count = runCatching {
+                com.privacyguard.app.data.repository.BlockStats(buildDatabase()).totalBetween(now - BLOCK_COUNT_WINDOW_MS, now)
+            }.getOrNull() ?: return@launch
+            // Not after stop: notify() would post the notification again once it was removed.
+            if (isRunning) notifHelper.updateVpnNotification(count.toLong(), MainActivity::class.java)
+        }
     }
 
     /** A TLS or QUIC connection stopped by its server name: a block, counted apart from DNS. */

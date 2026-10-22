@@ -28,6 +28,10 @@ class BlockStats(private val db: AppDatabase) {
             if (allLookups == 0) 0f else (blockedLookups.toFloat() / allLookups).coerceIn(0f, 1f)
     }
 
+    /** [Counts.total] alone (two counts, no name list): for the ongoing notification. */
+    suspend fun totalBetween(from: Long, to: Long): Int =
+        db.dnsQueryDao().countBlockedBetween(from, to) + db.connectionDao().countBlockedBetween(from, to)
+
     suspend fun between(from: Long, to: Long): Counts = Counts(
         blockedLookups = db.dnsQueryDao().countBlockedBetween(from, to),
         blockedConnections = db.connectionDao().countBlockedBetween(from, to),

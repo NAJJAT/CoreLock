@@ -9,8 +9,8 @@
     <string name="notif_ch_weekly_desc">Weekly privacy summary</string>
     <string name="notif_monitoring">Monitoring your connections…</string>
     <plurals name="notif_blocked_n">
-        <item quantity="one">%d connection blocked</item>
-        <item quantity="other">%d connections blocked</item>
+        <item quantity="one">%d blocked in the last 24 h</item>
+        <item quantity="other">%d blocked in the last 24 h</item>
     </plurals>
     <string name="notif_active">Protection on</string>
     <!-- Shown instead of the notification on a locked phone that hides sensitive content. -->
