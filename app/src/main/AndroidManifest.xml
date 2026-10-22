@@ -119,10 +119,6 @@
             android:exported="false"
             android:process=":watchdog" />
 
-        <receiver
-            android:name=".core.utils.NotificationDismissReceiver"
-            android:exported="false" />
-
         <!-- Below Android 13, AppCompat stores the in-app language choice itself. -->
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"

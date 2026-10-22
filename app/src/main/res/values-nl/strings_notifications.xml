@@ -52,12 +52,4 @@
     <string name="notif_bg_text">%1$s probeerde op de achtergrond verbinding te maken met %2$s</string>
     <string name="notif_blocklist_updated">Blokkeerlijst bijgewerkt</string>
     <string name="notif_blocklist_entries">%1$s: %2$s items geladen</string>
-    <string name="notif_ch_high">Kritieke privacywaarschuwingen</string>
-    <string name="notif_ch_high_desc">Kritieke waarschuwingen over je privacybescherming</string>
-    <string name="notif_ch_normal">Meldingen</string>
-    <string name="notif_ch_normal_desc">Gewone meldingen over geblokkeerde verbindingen</string>
-    <string name="notif_ch_updates">Updates</string>
-    <string name="notif_ch_updates_desc">Rapporten en updates</string>
-    <string name="notif_block_app">App blokkeren</string>
-    <string name="notif_dismiss">Sluiten</string>
 </resources>

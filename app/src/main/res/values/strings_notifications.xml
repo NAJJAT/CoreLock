@@ -54,12 +54,4 @@
     <string name="notif_bg_text">%1$s tried to connect to %2$s while in the background</string>
     <string name="notif_blocklist_updated">Blocklist updated</string>
     <string name="notif_blocklist_entries">%1$s: %2$s entries loaded</string>
-    <string name="notif_ch_high">Critical privacy alerts</string>
-    <string name="notif_ch_high_desc">Critical alerts about your privacy protection</string>
-    <string name="notif_ch_normal">Notifications</string>
-    <string name="notif_ch_normal_desc">Regular notifications about blocked connections</string>
-    <string name="notif_ch_updates">Updates</string>
-    <string name="notif_ch_updates_desc">Reports and updates</string>
-    <string name="notif_block_app">Block app</string>
-    <string name="notif_dismiss">Dismiss</string>
 </resources>

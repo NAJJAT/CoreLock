@@ -64,12 +64,4 @@
     <string name="notif_bg_text">حاول %1$s الاتصال بـ %2$s وهو في الخلفية</string>
     <string name="notif_blocklist_updated">حُدّثت قائمة الحظر</string>
     <string name="notif_blocklist_entries">%1$s: حُمّل %2$s إدخال</string>
-    <string name="notif_ch_high">تنبيهات الخصوصية الحرجة</string>
-    <string name="notif_ch_high_desc">تنبيهات حرجة حول حماية خصوصيتك</string>
-    <string name="notif_ch_normal">الإشعارات</string>
-    <string name="notif_ch_normal_desc">إشعارات عادية حول الاتصالات المحظورة</string>
-    <string name="notif_ch_updates">التحديثات</string>
-    <string name="notif_ch_updates_desc">التقارير والتحديثات</string>
-    <string name="notif_block_app">حظر التطبيق</string>
-    <string name="notif_dismiss">تجاهل</string>
 </resources>

@@ -126,9 +126,10 @@ android {
             )
             buildConfigField("boolean", "IS_RELEASE_SIGNING_CONFIGURED", releaseSigningConfigured.toString())
             buildConfigField("String", "APP_SIGNING_MODE", "\"Configured release keystore\"")
-            // 64-bit ARM only: drops the x86, x86_64 and 32-bit ARM copies of the
-            // native libraries (SQLCipher). Debug builds keep every ABI for emulators.
-            ndk { abiFilters += listOf("arm64-v8a") }
+            // ARM only: drops the x86 and x86_64 copies of the native libraries
+            // (SQLCipher). 32-bit ARM stays so older and low-end phones can install it.
+            // Debug builds keep every ABI for emulators.
+            ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
