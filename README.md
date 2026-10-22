@@ -175,7 +175,7 @@ or Instagram.
 | Request | When | What the other side learns |
 |---|---|---|
 | Upstream DNS (default 1.1.1.1; configurable, IP address only) or DoH (Cloudflare / Google / Quad9) | Every DNS lookup by any app; only to the chosen provider | The names looked up, from your IP |
-| Blocklists (raw.githubusercontent.com, easylist.to, small.oisd.nl, urlhaus.abuse.ch) and the Exodus tracker list | Periodic refresh / "Refresh now" | That the app is installed, from your IP |
+| Blocklists (raw.githubusercontent.com, cdn.jsdelivr.net as fallback mirror, easylist.to, small.oisd.nl, urlhaus.abuse.ch) and the Exodus tracker list | Periodic refresh / "Refresh now" | That the app is installed, from your IP |
 | crt.sh (Certificate Transparency) | Only if turned on in Settings | Registrable domains of TLS servers you contact |
 | api.ipify.org | Only if "External IP check" is on, when diagnostics run | Your public IP |
 | SIEM endpoint (enterprise only, set by MDM) | Only when the administrator enables shipping | Payload metadata; HTTPS with optional pinning and signing |

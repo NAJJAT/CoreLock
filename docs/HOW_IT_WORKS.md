@@ -559,7 +559,7 @@ Nothing is ever sent to the makers of PrivacyGuard. The app contacts:
 | Destination | When | What it learns |
 |---|---|---|
 | Your DNS resolver (Cloudflare 1.1.1.1 by default) | Every lookup | The names apps look up. Encrypted only with DoH. |
-| raw.githubusercontent.com, easylist.to, small.oisd.nl, urlhaus.abuse.ch | Blocklist download, about weekly | That a PrivacyGuard install exists, your IP address. |
+| raw.githubusercontent.com, cdn.jsdelivr.net (mirror, only when GitHub fails), easylist.to, small.oisd.nl, urlhaus.abuse.ch | Blocklist download, about weekly | That a PrivacyGuard install exists, your IP address. |
 | reports.exodus-privacy.eu.org | Tracker list, at most weekly | Same. |
 | crt.sh | Only if Certificate Transparency is on | The base domains of servers your apps contact. |
 | api.ipify.org | Only if the external-IP check is on, when you run Diagnostics | Your IP address. |
