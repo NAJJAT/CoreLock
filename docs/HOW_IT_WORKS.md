@@ -199,15 +199,18 @@ half a minute with the full lists.
 
 | Source | Category | URL host |
 |---|---|---|
-| StevenBlack hosts | ads | raw.githubusercontent.com |
-| EasyList (whole-domain rules only) | ads | easylist.to |
-| EasyPrivacy (whole-domain rules only) | trackers | easylist.to |
-| OISD small | ads | small.oisd.nl |
-| HaGeZi Light | ads | raw.githubusercontent.com |
-| URLhaus host file | malware | urlhaus.abuse.ch |
+| HaGeZi TIF mini (`wildcard/tif.mini-onlydomains.txt`) | malware: every level | raw.githubusercontent.com |
+| HaGeZi Pro mini (`wildcard/pro.mini-onlydomains.txt`, ~80k names) | ads: Standard | raw.githubusercontent.com |
+| HaGeZi Pro (`wildcard/pro-onlydomains.txt`, ~207k names) | ads: Strict | raw.githubusercontent.com |
+| OISD small (`domainswild2`) | ads: Strict | small.oisd.nl |
 | HaGeZi DoH domains (`wildcard/doh-onlydomains.txt`) | doh: DNS-bypass guard only, never DNS blocking | raw.githubusercontent.com |
 | HaGeZi DoH IPs (`ips/doh.txt`; private and special addresses refused) | doh_ip: DNS-bypass guard only | raw.githubusercontent.com |
 | Built-in seed (about 70 hand-picked names) | ads, trackers, malware, telemetry | in the app |
+
+Every HaGeZi file is fetched again from cdn.jsdelivr.net (jsDelivr's GitHub mirror)
+when raw.githubusercontent.com fails. StevenBlack, EasyList, EasyPrivacy, HaGeZi
+Light and URLhaus are no longer downloaded; their stored rows are deleted once the
+HaGeZi lists that replace them have downloaded.
 
 The two DoH lists (about 3,300 names and 1,400 addresses in October 2026) are not
 part of any protection level and are not counted as trackers; they only feed the
@@ -559,7 +562,7 @@ Nothing is ever sent to the makers of PrivacyGuard. The app contacts:
 | Destination | When | What it learns |
 |---|---|---|
 | Your DNS resolver (Cloudflare 1.1.1.1 by default) | Every lookup | The names apps look up. Encrypted only with DoH. |
-| raw.githubusercontent.com, cdn.jsdelivr.net (mirror, only when GitHub fails), easylist.to, small.oisd.nl, urlhaus.abuse.ch | Blocklist download, about weekly | That a PrivacyGuard install exists, your IP address. |
+| raw.githubusercontent.com, cdn.jsdelivr.net (mirror, only when GitHub fails), small.oisd.nl | Blocklist download, about weekly | That a PrivacyGuard install exists, your IP address. |
 | reports.exodus-privacy.eu.org | Tracker list, at most weekly | Same. |
 | crt.sh | Only if Certificate Transparency is on | The base domains of servers your apps contact. |
 | api.ipify.org | Only if the external-IP check is on, when you run Diagnostics | Your IP address. |

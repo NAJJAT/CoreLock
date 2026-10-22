@@ -192,9 +192,9 @@ class DnsAnomalyDetector {
         private const val OWN_PACKAGE_PREFIX = "com.privacyguard.app"
         /** Hosts PrivacyGuard itself contacts; see CtMonitor, BlocklistSource, DnsHandler, ExodusUpdater. */
         private val OWN_HOSTS = listOf(
-            "crt.sh", "easylist.to", "oisd.nl", "raw.githubusercontent.com",
+            "crt.sh", "oisd.nl", "raw.githubusercontent.com", "cdn.jsdelivr.net",
             "cloudflare-dns.com", "dns.google", "dns.quad9.net",
-            "reports.exodus-privacy.eu.org", "api.ipify.org", "urlhaus.abuse.ch",
+            "reports.exodus-privacy.eu.org", "api.ipify.org",
         )
 
         fun isOwnHost(domain: String): Boolean {

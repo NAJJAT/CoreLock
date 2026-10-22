@@ -25,12 +25,23 @@ class OutboundHostsDisclosureTest {
         .map { File(it, "strings_onboarding.xml") }
         .filter { it.isFile }
 
+    private fun contactedHosts(): Set<String> = senders.flatMap { f ->
+        assertTrue("missing ${f.path}", f.isFile)
+        Regex("https://([A-Za-z0-9.-]+)").findAll(f.readText()).map { it.groupValues[1] }.toList()
+    }.toSet()
+
+    /** The app's own lookups must not raise DNS anomaly alerts against it. */
+    @Test
+    fun every_contacted_host_is_an_own_host_for_anomaly_detection() {
+        val hosts = contactedHosts()
+        assertTrue(hosts.isNotEmpty())
+        val missing = hosts.filterNot { com.privacyguard.vpn.inspector.DnsAnomalyDetector.isOwnHost(it) }
+        assertTrue("Not in DnsAnomalyDetector.OWN_HOSTS: $missing", missing.isEmpty())
+    }
+
     @Test
     fun every_contacted_host_is_named_in_onboarding() {
-        val hosts = senders.flatMap { f ->
-            assertTrue("missing ${f.path}", f.isFile)
-            Regex("https://([A-Za-z0-9.-]+)").findAll(f.readText()).map { it.groupValues[1] }.toList()
-        }.toSet()
+        val hosts = contactedHosts()
         assertTrue(hosts.isNotEmpty())
         assertTrue(onboardingFiles.size >= 8)
 
