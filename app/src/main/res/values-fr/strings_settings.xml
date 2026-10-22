@@ -145,6 +145,10 @@
         <item quantity="many">TCP et UDP sur IPv6 passent par le tunnel comme l’IPv4. %d paquets IPv6 d’autres protocoles ont été rejetés.</item>
         <item quantity="other">TCP et UDP sur IPv6 passent par le tunnel comme l’IPv4. %d paquets IPv6 d’autres protocoles ont été rejetés.</item>
     </plurals>
+    <string name="diag_sni">Blocage par nom de serveur (SNI)</string>
+    <string name="diag_sni_detail">Connexions arrêtées par leur nom de serveur TLS ou QUIC depuis l’activation de la protection : %d</string>
+    <string name="diag_quic">Contrôles QUIC</string>
+    <string name="diag_quic_detail">Connexions QUIC rejetées depuis l’activation de la protection (l’app réessaie ou passe par TCP). Illisibles : %1$d. Trop en attente : %2$d.</string>
     <string name="diag_inventory">Inventaire des apps</string>
     <plurals name="diag_inventory_detail">
         <item quantity="one">%d app avec accès réseau visible</item>
@@ -180,4 +184,9 @@
     <string name="diag_upstream_failed">%1$s n’a pas répondu à une requête de test. Des sites peuvent ne pas se charger.</string>
     <string name="set_always_on_hint">Pour garder la protection active, activez le VPN permanent pour PrivacyGuard dans Android. Android le lance alors après un redémarrage. Avec « Bloquer les connexions sans VPN », rien ne sort sans protection, mais si PrivacyGuard plante, le téléphone est hors ligne jusqu’à ce que PrivacyGuard redémarre (Redémarrage automatique après un plantage) ou que vous le rouvriez.</string>
     <string name="set_open_vpn_settings">Ouvrir les réglages VPN d’Android</string>
+    <string name="diag_battery">Utilisation de la batterie</string>
+    <string name="diag_battery_restricted">L’utilisation en arrière-plan est réglée sur Restreinte : Android peut arrêter la protection quand PrivacyGuard n’est pas à l’écran. Ouvrez les réglages de batterie et choisissez Non restreinte.</string>
+    <string name="diag_battery_optimized">L’optimisation de la batterie est activée (réglage par défaut d’Android). Certains téléphones arrêtent quand même la protection en arrière-plan ; si elle se coupe souvent, réglez l’utilisation de la batterie de PrivacyGuard sur Non restreinte.</string>
+    <string name="diag_battery_unrestricted">Non restreinte : Android n’arrêtera pas PrivacyGuard pour économiser la batterie.</string>
+    <string name="set_open_battery_settings">Ouvrir les réglages de batterie</string>
 </resources>

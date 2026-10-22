@@ -105,6 +105,34 @@ data class FilterRule(
     /** [matchDomain] normalized once: rules are matched against every lookup and connection. */
     private val domainPattern: String? = matchDomain?.let { normalizeName(it) }
 
+    // ── Specificity: among rules of equal priority the more specific one is checked
+    // first (FilterEngine), so "Block ads.example.com" beats "Allow *.example.com" and
+    // "Block app A" beats an every-app "Allow google.com". Fixed per rule.
+
+    /** 3 = app and destination, 2 = app only, 1 = destination only, 0 = neither. */
+    internal val scopeRank: Int = run {
+        val app = matchUid != null || matchPackage != null
+        val destination = domainPattern != null || matchIp != null
+        when {
+            app && destination -> 3
+            app -> 2
+            destination -> 1
+            else -> 0
+        }
+    }
+
+    /**
+     * Exact names and addresses before wildcards and ranges; a longer wildcard
+     * ("*.ads.example.com") before a shorter one, a longer prefix (/24) before a shorter.
+     */
+    internal val targetRank: Int = domainRank(domainPattern) + ipRank(matchIp)
+
+    /** Extra conditions (port, protocol, encryption, background) narrow a rule further. */
+    internal val conditionCount: Int = listOf(
+        matchPort != null, matchProtocol != null && matchProtocol != Protocol.ANY,
+        matchEncryption != null, matchBackground != null,
+    ).count { it }
+
     private fun domainMatches(candidate: String, p: String): Boolean {
         // Names as the lists store them: "Tracker.Example." from SNI or a Host header
         // skipped a rule for "tracker.example" while the blocklists still matched it.
@@ -163,6 +191,21 @@ data class FilterRule(
     companion object {
         /** Trimmed, lower case, no trailing dot: as DomainFilter stores names. */
         internal fun normalizeName(name: String): String = name.trim().lowercase().trimEnd('.')
+
+        private const val EXACT = 1_000_000
+
+        private fun domainRank(p: String?): Int = when {
+            p == null || p == "*" -> 0
+            p.startsWith("*.") -> p.length - 1
+            else -> EXACT + p.length
+        }
+
+        private fun ipRank(ip: String?): Int {
+            if (ip == null) return 0
+            // Above any prefix length, /128 included.
+            val prefix = ip.substringAfter('/', "").toIntOrNull() ?: return 129
+            return prefix + 1
+        }
 
         const val DEFAULT_PRIORITY = 100
         const val HIGH_PRIORITY    = 10

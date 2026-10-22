@@ -225,6 +225,91 @@ class FilterEngineTest {
         assertFalse(engine.userAllowsAddress("8.8.8.8", 443, 6))
     }
 
+    // ── Conflicting user rules (all made in the app at HIGH_PRIORITY) ───────────
+
+    private fun userRule(
+        action: FilterRule.Action, domain: String? = null, ip: String? = null,
+        pkg: String? = null, background: Boolean? = null,
+    ) = FilterRule(
+        id = "u-$action-$domain-$ip-$pkg-$background", label = "user", action = action,
+        source = FilterRule.Source.USER, priority = FilterRule.HIGH_PRIORITY,
+        matchDomain = domain, matchIp = ip, matchPackage = pkg, matchBackground = background,
+    )
+
+    /** The winner must not depend on which rule was added (or loaded) first. */
+    private fun assertWinsInEitherOrder(winner: FilterRule, loser: FilterRule, check: (FilterEngine) -> FilterRule?) {
+        for (order in listOf(listOf(winner, loser), listOf(loser, winner))) {
+            assertEquals("setRules ${order.map { it.id }}", winner, check(FilterEngine().apply { setRules(order) }))
+            assertEquals("addRule ${order.map { it.id }}", winner, check(FilterEngine().apply { order.forEach(::addRule) }))
+        }
+    }
+
+    @Test
+    fun exact_block_beats_wildcard_allow() {
+        assertWinsInEitherOrder(
+            userRule(FilterRule.Action.DENY, domain = "ads.example.com"),
+            userRule(FilterRule.Action.ALLOW, domain = "*.example.com"),
+        ) { it.domainRuleFor("ads.example.com", null) }
+    }
+
+    @Test
+    fun longer_wildcard_beats_shorter() {
+        assertWinsInEitherOrder(
+            userRule(FilterRule.Action.ALLOW, domain = "*.cdn.example.com"),
+            userRule(FilterRule.Action.DENY, domain = "*.example.com"),
+        ) { it.domainRuleFor("img.cdn.example.com", null) }
+    }
+
+    @Test
+    fun app_specific_rule_beats_every_app_rule() {
+        assertWinsInEitherOrder(
+            userRule(FilterRule.Action.DENY, domain = "x.com", pkg = "com.example.a"),
+            userRule(FilterRule.Action.ALLOW, domain = "x.com"),
+        ) { it.domainRuleFor("x.com", "com.example.a") }
+    }
+
+    @Test
+    fun allow_wins_between_equally_specific_rules() {
+        val allow = userRule(FilterRule.Action.ALLOW, domain = "x.com")
+        assertWinsInEitherOrder(allow, userRule(FilterRule.Action.DENY, domain = "x.com")) {
+            it.domainRuleFor("x.com", null)
+        }
+        assertWinsInEitherOrder(allow, userRule(FilterRule.Action.DENY, domain = "X.com.")) {
+            it.domainRuleFor("x.com", null)
+        }
+    }
+
+    @Test
+    fun exact_address_beats_a_range_and_a_longer_prefix_beats_a_shorter() {
+        assertWinsInEitherOrder(
+            userRule(FilterRule.Action.ALLOW, ip = "10.1.2.3"),
+            userRule(FilterRule.Action.DENY, ip = "10.0.0.0/8"),
+        ) { it.evaluate(-1, null, null, "10.1.2.3", 443, 6).matchedRule }
+        assertWinsInEitherOrder(
+            userRule(FilterRule.Action.DENY, ip = "10.1.0.0/16"),
+            userRule(FilterRule.Action.ALLOW, ip = "10.0.0.0/8"),
+        ) { it.evaluate(-1, null, null, "10.1.2.3", 443, 6).matchedRule }
+    }
+
+    @Test
+    fun background_block_beats_allowing_the_app_only_in_the_background() {
+        val bgBlock = userRule(FilterRule.Action.DENY, pkg = "com.example.a", background = true)
+        val allowApp = userRule(FilterRule.Action.ALLOW, pkg = "com.example.a")
+        assertWinsInEitherOrder(bgBlock, allowApp) {
+            it.evaluate(10_123, "com.example.a", null, "1.2.3.4", 443, 6, isBackground = true).matchedRule
+        }
+        assertWinsInEitherOrder(allowApp, bgBlock) {
+            it.evaluate(10_123, "com.example.a", null, "1.2.3.4", 443, 6, isBackground = false).matchedRule
+        }
+    }
+
+    @Test
+    fun priority_still_comes_before_specificity() {
+        val userAllow = userRule(FilterRule.Action.ALLOW, domain = "*.example.com")
+        val listBlock = FilterRule.blockDomain("ads.example.com")   // DEFAULT_PRIORITY
+        assertWinsInEitherOrder(userAllow, listBlock) { it.domainRuleFor("ads.example.com", null) }
+    }
+
     @Test
     fun only_an_app_wide_user_allow_opens_an_address() {
         engine.addRule(ipRule("1.1.1.1", FilterRule.Action.ALLOW, pkg = "com.example.browser"))

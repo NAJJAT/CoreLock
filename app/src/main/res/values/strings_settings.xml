@@ -142,6 +142,10 @@
         <item quantity="one">TCP and UDP over IPv6 go through the tunnel like IPv4. %d IPv6 packet of another protocol was dropped.</item>
         <item quantity="other">TCP and UDP over IPv6 go through the tunnel like IPv4. %d IPv6 packets of other protocols were dropped.</item>
     </plurals>
+    <string name="diag_sni">Server-name blocking (SNI)</string>
+    <string name="diag_sni_detail">Connections stopped by their TLS or QUIC server name since protection was turned on: %d</string>
+    <string name="diag_quic">QUIC checks</string>
+    <string name="diag_quic_detail">QUIC connections dropped since protection was turned on (the app then retries or uses TCP). Unreadable: %1$d. Too many waiting: %2$d.</string>
     <string name="diag_inventory">App inventory</string>
     <plurals name="diag_inventory_detail">
         <item quantity="one">%d network-capable app visible</item>
@@ -176,4 +180,9 @@
     <string name="diag_upstream_failed">%1$s did not answer a test lookup. Websites may fail to load.</string>
     <string name="set_always_on_hint">To keep protection on, turn on Always-on VPN for PrivacyGuard in Android. Android then starts it after a reboot. With “Block connections without VPN” nothing goes out unprotected, but if PrivacyGuard crashes the phone is offline until PrivacyGuard restarts (Automatic restart after a crash) or you open it again.</string>
     <string name="set_open_vpn_settings">Open Android VPN settings</string>
+    <string name="diag_battery">Battery use</string>
+    <string name="diag_battery_restricted">Background use is set to Restricted, so Android can stop protection when PrivacyGuard is not on screen. Open battery settings and choose Unrestricted.</string>
+    <string name="diag_battery_optimized">Battery optimization is on (the Android default). Some phones stop protection in the background anyway; if protection keeps turning off, set PrivacyGuard\'s battery use to Unrestricted.</string>
+    <string name="diag_battery_unrestricted">Unrestricted: Android will not stop PrivacyGuard to save battery.</string>
+    <string name="set_open_battery_settings">Open battery settings</string>
 </resources>

@@ -84,7 +84,22 @@ interface BlocklistDao {
      */
     @Query("DELETE FROM blocklist WHERE source = :source")
     suspend fun deleteBySource(source: String)
-    
+
+    /**
+     * Swaps a source's rows for [entries] and re-applies the switches, in one
+     * transaction: a crash or failed insert part-way leaves the old rows, never an
+     * empty list until the next weekly update.
+     */
+    @Transaction
+    suspend fun replaceSource(
+        source: String, entries: List<BlocklistEntity>,
+        disabledSources: List<String>, disabledCategories: List<String>,
+    ) {
+        deleteBySource(source)
+        insertAll(entries)
+        applyToggles(disabledSources, disabledCategories)
+    }
+
 /**
      * Deletes old entries (older than specified days)
      */

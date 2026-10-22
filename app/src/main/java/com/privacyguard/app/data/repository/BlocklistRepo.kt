@@ -20,17 +20,17 @@ class BlocklistRepo(
 ) {
 
     suspend fun replaceSource(source: String, category: String, domains: List<String>) = withContext(Dispatchers.IO) {
-        blocklistDao.deleteBySource(source)
         val now = System.currentTimeMillis()
-        blocklistDao.insertAll(domains.map { domain ->
+        val entries = domains.map { domain ->
             BlocklistEntity(
                 domain = domain.lowercase().trim(),
                 source = source,
                 category = category,
                 lastUpdated = now,
             )
-        })
-        applyToggles()
+        }
+        // The switches live in config.db, so they are read before the history transaction.
+        blocklistDao.replaceSource(source, entries, toggleDao.disabled(SCOPE_SOURCE), toggleDao.disabled(SCOPE_CATEGORY))
     }
 
     suspend fun setSourceEnabled(source: String, enabled: Boolean) = withContext(Dispatchers.IO) {

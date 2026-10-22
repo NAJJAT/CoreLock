@@ -21,7 +21,8 @@ import java.util.concurrent.atomic.AtomicLong
  *    unreadable QUIC is let through, as before.
  *
  * Holding is bounded per flow and in total (QuicSniTracker.MAX_HOLDING_FLOWS and
- * MAX_HELD_BYTES); past those, new flows are dropped at Standard/Strict. Minimal never
+ * MAX_HELD_BYTES); past those, new flows are dropped at Standard/Strict and counted in
+ * [holdLimitFlows]. Minimal never
  * holds, so it never hits them. Runs on the packet thread.
  */
 class QuicGate<K : Any>(
@@ -32,6 +33,8 @@ class QuicGate<K : Any>(
     private val interceptionBlocksQuic: () -> Boolean = { false },
     /** Called once per flow dropped because its Initial could not be read. */
     private val onUnreadableFlow: () -> Unit = {},
+    /** Called once per flow dropped because the global hold limits were reached. */
+    private val onHoldLimitFlow: () -> Unit = {},
     private val now: () -> Long = System::currentTimeMillis,
 ) {
 
@@ -51,10 +54,19 @@ class QuicGate<K : Any>(
     /** Flows dropped because their Initial could not be read. */
     val unreadableFlows = AtomicLong(0)
 
+    /** Flows dropped because too many others were already being held. */
+    val holdLimitFlows = AtomicLong(0)
+
     private val tracker = QuicSniTracker<K>(now)
 
     /** Unreadable flows already dropped, with the time: later datagrams are dropped without a new count. */
     private val dropped = LinkedHashMap<K, Long>()
+
+    /**
+     * Flows already counted in [holdLimitFlows], with the time. Count only: the tracker
+     * forgets a flow it had no room for, so its retries are tried again (and may fit).
+     */
+    private val limitCounted = LinkedHashMap<K, Long>()
 
     fun dropsAllQuic(): Boolean =
         interceptionBlocksQuic() || (userChoice() ?: (level() == FilterEngine.BlockLevel.STRICT))
@@ -104,7 +116,7 @@ class QuicGate<K : Any>(
             QuicSniTracker.Result.Pending -> if (hold) Verdict.Hold else FORWARD_PENDING
             // Global hold limits reached (only asked for when closed): drop rather than
             // send unchecked; the app retries, or falls back to TCP.
-            QuicSniTracker.Result.Full -> Verdict.Drop
+            QuicSniTracker.Result.Full -> { countHoldLimit(key); Verdict.Drop }
             // Given up (6 datagrams, no ClientHello) or not readable: at Standard/Strict
             // nothing of a QUIC flow is sent, held datagrams included (the tracker
             // discarded them).
@@ -128,6 +140,18 @@ class QuicGate<K : Any>(
         }
         unreadableFlows.incrementAndGet()
         runCatching { onUnreadableFlow() }
+    }
+
+    private fun countHoldLimit(key: K) {
+        synchronized(limitCounted) {
+            val at = limitCounted[key]
+            if (at != null && now() - at < DROPPED_MEMORY_MS) return
+            limitCounted.remove(key)
+            if (limitCounted.size >= MAX_DROPPED) limitCounted.remove(limitCounted.keys.first())
+            limitCounted[key] = now()
+        }
+        holdLimitFlows.incrementAndGet()
+        runCatching { onHoldLimitFlow() }
     }
 
     companion object {

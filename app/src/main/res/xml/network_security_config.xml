@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The app's own requests (blocklists, Exodus, crt.sh, DoH, SIEM) are all HTTPS. Without
+  this file Android 7.0 to 8.1 (minSdk 24 to 27) would still allow cleartext. Only the
+  system CAs are trusted: never user-installed ones, the enterprise MITM CA included.
+  This covers PrivacyGuard's own connections, not the traffic of apps it inspects.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

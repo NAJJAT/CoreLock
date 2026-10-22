@@ -154,6 +154,10 @@
         <item quantity="many">يمر TCP وUDP عبر IPv6 في النفق مثل IPv4. رُفضت %d حزمةً IPv6 من بروتوكولات أخرى.</item>
         <item quantity="other">يمر TCP وUDP عبر IPv6 في النفق مثل IPv4. رُفضت %d حزمة IPv6 من بروتوكولات أخرى.</item>
     </plurals>
+    <string name="diag_sni">الحظر حسب اسم الخادم (SNI)</string>
+    <string name="diag_sni_detail">الاتصالات التي أُوقفت بسبب اسم خادم TLS أو QUIC منذ تشغيل الحماية: %d</string>
+    <string name="diag_quic">فحوص QUIC</string>
+    <string name="diag_quic_detail">اتصالات QUIC المرفوضة منذ تشغيل الحماية (يعيد التطبيق المحاولة أو يستخدم TCP). غير مقروءة: %1$d. أكثر من اللازم في الانتظار: %2$d.</string>
     <string name="diag_inventory">جرد التطبيقات</string>
     <plurals name="diag_inventory_detail">
         <item quantity="zero">لا يوجد تطبيق يستخدم الشبكة</item>
@@ -195,4 +199,9 @@
     <string name="diag_upstream_failed">لم يُجب %1$s عن استعلام اختباري. قد لا تُحمَّل المواقع.</string>
     <string name="set_always_on_hint">لإبقاء الحماية مفعّلة، فعّل «VPN الدائم» لـ PrivacyGuard في Android. يشغّله Android بعد إعادة تشغيل الهاتف. ومع «حظر الاتصالات دون VPN» لا يخرج شيء دون حماية، لكن إذا تعطّل PrivacyGuard يبقى الهاتف دون إنترنت حتى يعود PrivacyGuard للعمل («إعادة التشغيل تلقائيًا بعد التعطّل») أو تفتحه من جديد.</string>
     <string name="set_open_vpn_settings">فتح إعدادات VPN في Android</string>
+    <string name="diag_battery">استخدام البطارية</string>
+    <string name="diag_battery_restricted">الاستخدام في الخلفية مضبوط على «مقيّد»، لذا قد يوقف Android الحماية عندما لا يكون PrivacyGuard على الشاشة. افتح إعدادات البطارية واختر «غير مقيّد».</string>
+    <string name="diag_battery_optimized">تحسين البطارية مفعّل (الإعداد الافتراضي في Android). بعض الهواتف توقف الحماية في الخلفية رغم ذلك؛ إذا كانت الحماية تتوقف باستمرار، فاضبط استخدام البطارية لـ PrivacyGuard على «غير مقيّد».</string>
+    <string name="diag_battery_unrestricted">غير مقيّد: لن يوقف Android تطبيق PrivacyGuard لتوفير البطارية.</string>
+    <string name="set_open_battery_settings">فتح إعدادات البطارية</string>
 </resources>

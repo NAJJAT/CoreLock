@@ -19,10 +19,11 @@ class QuicGateTest {
 
     private var clock = 1_000_000L
     private var unreadableCallbacks = 0
+    private var holdLimitCallbacks = 0
 
     private fun gate(level: BlockLevel, choice: Boolean? = null, interception: Boolean = false) = QuicGate<String>(
         userChoice = { choice }, level = { level }, interceptionBlocksQuic = { interception },
-        onUnreadableFlow = { unreadableCallbacks++ }, now = { clock },
+        onUnreadableFlow = { unreadableCallbacks++ }, onHoldLimitFlow = { holdLimitCallbacks++ }, now = { clock },
     )
 
     private val hello = initial(crypto(0, clientHello("news.example.org")), pn = 0)
@@ -96,6 +97,44 @@ class QuicGateTest {
         val v2 = g.onNewFlow("f", second) as Verdict.Forward
         assertEquals("tracker.example.net", v2.hello?.sni)
         assertTrue(v2.held.isEmpty())
+    }
+
+    // ── Hold limits ─────────────────────────────────────────────────────────
+
+    /** Holds the first half of a ClientHello for every slot there is. */
+    private fun QuicGate<String>.fillHoldSlots(first: ByteArray) =
+        repeat(QuicSniTracker.MAX_HOLDING_FLOWS) { assertSame("slot $it", Verdict.Hold, onNewFlow("h$it", first)) }
+
+    @Test
+    fun flow_past_the_hold_limit_is_dropped_and_counted_once() {
+        val (first, _) = splitHello("tracker.example.net")
+        val g = gate(BlockLevel.STANDARD)
+        g.fillHoldSlots(first)
+        assertSame(Verdict.Drop, g.onNewFlow("x", first))
+        assertSame("its retry is dropped too", Verdict.Drop, g.onNewFlow("x", first))
+        assertEquals("one flow, however many datagrams", 1L, g.holdLimitFlows.get())
+        assertEquals(1, holdLimitCallbacks)
+        assertSame(Verdict.Drop, g.onNewFlow("y", first))
+        assertEquals(2L, g.holdLimitFlows.get())
+        assertEquals("not counted as unreadable", 0L, g.unreadableFlows.get())
+    }
+
+    @Test
+    fun abandoned_holds_free_their_slots_after_the_timeout() {
+        val (first, _) = splitHello("tracker.example.net")
+        val g = gate(BlockLevel.STRICT, choice = false)
+        g.fillHoldSlots(first)
+        clock += QuicSniTracker.HOLD_TIMEOUT_MS + 1
+        assertSame(Verdict.Hold, g.onNewFlow("x", first))
+        assertEquals(0L, g.holdLimitFlows.get())
+    }
+
+    @Test
+    fun minimal_never_reaches_the_hold_limit() {
+        val (first, _) = splitHello("tracker.example.net")
+        val g = gate(BlockLevel.MINIMAL)
+        repeat(QuicSniTracker.MAX_HOLDING_FLOWS + 1) { assertTrue(g.onNewFlow("h$it", first) is Verdict.Forward) }
+        assertEquals(0L, g.holdLimitFlows.get())
     }
 
     // ── Unreadable QUIC: dropped at Standard and Strict, counted per flow ─────

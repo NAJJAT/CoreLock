@@ -11,7 +11,9 @@ import java.util.concurrent.atomic.AtomicLong
  * without any payload inspection — the port number and optional TLS ClientHello
  * byte inspection is sufficient to classify the session.
  *
- * Rule evaluation order: ascending [FilterRule.priority] → first match wins.
+ * Rule evaluation order: ascending [FilterRule.priority], then the more specific rule
+ * ([FilterRule.scopeRank], [FilterRule.targetRank], [FilterRule.conditionCount]), then
+ * Allow before Block → first match wins.
  * Default action when no rule matches: [defaultAction] (ALLOW = blacklist mode).
  */
 class FilterEngine(
@@ -39,14 +41,13 @@ class FilterEngine(
     /** True when a name no rule matches is blocked (whitelist mode). */
     val blocksByDefault: Boolean get() = defaultAction == FilterRule.Action.DENY
 
-    // sortedBy is stable: rules of equal priority keep their order.
-    fun addRule(rule: FilterRule) = synchronized(lock) { rules = (rules + rule).sortedBy { it.priority } }
+    fun addRule(rule: FilterRule) = synchronized(lock) { rules = (rules + rule).sortedWith(ORDER) }
 
-    fun setRules(newRules: List<FilterRule>) = synchronized(lock) { rules = newRules.sortedBy { it.priority } }
+    fun setRules(newRules: List<FilterRule>) = synchronized(lock) { rules = newRules.sortedWith(ORDER) }
 
     /** Replaces the rule with [rule]'s id (or adds it) in one step. */
     fun upsertRule(rule: FilterRule) = synchronized(lock) {
-        rules = (rules.filterNot { it.id == rule.id } + rule).sortedBy { it.priority }
+        rules = (rules.filterNot { it.id == rule.id } + rule).sortedWith(ORDER)
     }
 
     fun removeRule(id: String): Boolean = synchronized(lock) {
@@ -231,4 +232,16 @@ class FilterEngine(
         val protocol:  Int,
         val encStatus: EncryptionStatus = EncryptionStatus.UNKNOWN,
     )
+
+    companion object {
+        /**
+         * Rules made in the app all share one priority, so without the later keys which of
+         * two conflicting rules won depended on database row order. Stable for full ties.
+         */
+        private val ORDER: Comparator<FilterRule> = compareBy<FilterRule> { it.priority }
+            .thenByDescending { it.scopeRank }
+            .thenByDescending { it.targetRank }
+            .thenByDescending { it.conditionCount }
+            .thenBy { if (it.action == FilterRule.Action.ALLOW) 0 else 1 }
+    }
 }

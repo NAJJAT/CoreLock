@@ -156,8 +156,15 @@ class NameBlockPolicyTest {
             val p = r.matchDomain!!
             return if (p.startsWith("*.")) covers(p, host) else host == p
         }
-        // FilterEngine keeps rules in priority order, lowest first (stable for ties).
-        val rule = rules.sortedBy { it.priority }.firstOrNull(::ruleMatches)
+        // FilterEngine's order, written out: priority, then app-specific before every app,
+        // exact before wildcard and longer wildcard before shorter, then Allow before Block.
+        val rule = rules.filter(::ruleMatches).minWithOrNull(
+            compareBy<FilterRule> { it.priority }
+                .thenBy { if (it.matchPackage != null) 0 else 1 }
+                .thenBy { if (it.matchDomain!!.startsWith("*.")) 1 else 0 }
+                .thenByDescending { it.matchDomain!!.length }
+                .thenBy { if (it.action == FilterRule.Action.ALLOW) 0 else 1 },
+        )
         if (rule?.action == FilterRule.Action.DENY) return Reason.USER_RULE
         val allow = rule?.action == FilterRule.Action.ALLOW
         if (securityNames.any { covers(it, host) } && !(allow && rule!!.overridesSecurity)) return Reason.SECURITY_LIST

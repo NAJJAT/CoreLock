@@ -819,6 +819,7 @@ class PrivacyVpnService : VpnService() {
         level = { filterEngine.blockLevel },
         interceptionBlocksQuic = { interception.blockQuic },
         onUnreadableFlow = { StatsManager.incrementQuicUnreadableDropped() },
+        onHoldLimitFlow = { StatsManager.incrementQuicHoldLimitDropped() },
     )
 
     /** QUIC flows dropped for their SNI, with the time they were blocked. */

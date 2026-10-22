@@ -64,6 +64,8 @@ data class StatsSnapshot(
     val sniBlocked:          Long                    = 0L,
     /** QUIC flows dropped because their Initial could not be read; the app retries over TCP. */
     val quicUnreadableDropped: Long                  = 0L,
+    /** QUIC flows dropped because the hold limits were reached; the app retries or uses TCP. */
+    val quicHoldLimitDropped: Long                   = 0L,
     val activeConnections:   List<ActiveConnectionInfo> = emptyList(),
     val recentActivity:      List<ActivityInfo>     = emptyList(),
     val topTrackers:         List<TrackerInfo>       = emptyList(),
@@ -92,6 +94,7 @@ object StatsManager {
     private val ipv6BytesBlocked = AtomicLong()
     private val sniBlocked = AtomicLong()
     private val quicUnreadableDropped = AtomicLong()
+    private val quicHoldLimitDropped = AtomicLong()
 
     /** Lists (connections, activity, per-app stats); counter fields here are unused. */
     private val lists = MutableStateFlow(StatsSnapshot())
@@ -126,6 +129,12 @@ object StatsManager {
         schedulePublish()
     }
 
+    /** A QUIC flow dropped at the hold limits: not a block either. */
+    fun incrementQuicHoldLimitDropped() {
+        quicHoldLimitDropped.incrementAndGet()
+        schedulePublish()
+    }
+
     fun recordPacket(bytes: Long) {
         totalPackets.incrementAndGet()
         dataSavedBytes.addAndGet(bytes)
@@ -140,7 +149,7 @@ object StatsManager {
     }
 
     fun reset() {
-        listOf(blockedToday, trackersBlocked, totalPackets, dataSavedBytes, ipv6PacketsBlocked, ipv6BytesBlocked, sniBlocked, quicUnreadableDropped)
+        listOf(blockedToday, trackersBlocked, totalPackets, dataSavedBytes, ipv6PacketsBlocked, ipv6BytesBlocked, sniBlocked, quicUnreadableDropped, quicHoldLimitDropped)
             .forEach { it.set(0) }
         lists.value = StatsSnapshot()
         publishNow()
@@ -157,6 +166,7 @@ object StatsManager {
             totalTrackersBlocked = trackersBlocked.get().toInt(),
             sniBlocked = sniBlocked.get(),
             quicUnreadableDropped = quicUnreadableDropped.get(),
+            quicHoldLimitDropped = quicHoldLimitDropped.get(),
         )
     }
 

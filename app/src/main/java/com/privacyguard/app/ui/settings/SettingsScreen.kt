@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.privacyguard.app.BuildConfig
 import com.privacyguard.app.core.blocklist.BlocklistManager
+import com.privacyguard.app.core.power.BatteryCheck
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
 import com.privacyguard.app.ui.components.PanelCard
 import com.privacyguard.app.ui.components.ScreenScaffold
@@ -112,6 +113,12 @@ fun SettingsScreen(
     val context = LocalContext.current
     val resources = LocalResources.current
     val settingsPreferences = remember(context) { SettingsPreferences.getInstance(context) }
+    // Changed in system settings, so read again on every resume.
+    var batteryState by remember { mutableStateOf(BatteryCheck.state(context)) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        batteryState = BatteryCheck.state(context)
+        onPauseOrDispose { }
+    }
     val notificationsEnabled by settingsPreferences.notificationsEnabled.collectAsStateWithLifecycle()
     val allowScreenshots by settingsPreferences.allowScreenshots.collectAsStateWithLifecycle()
     val notificationDetails by settingsPreferences.notificationDetails.collectAsStateWithLifecycle()
@@ -279,6 +286,22 @@ fun SettingsScreen(
                         onClick = { KillSwitch.openAlwaysOnSettings(context) },
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text(stringResource(R.string.set_open_vpn_settings)) }
+                    if (batteryState != BatteryCheck.State.UNRESTRICTED) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            stringResource(
+                                if (batteryState == BatteryCheck.State.RESTRICTED) R.string.diag_battery_restricted
+                                else R.string.diag_battery_optimized,
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (batteryState == BatteryCheck.State.RESTRICTED) PgDanger else PgTextMuted,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = { BatteryCheck.openSettings(context) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text(stringResource(R.string.set_open_battery_settings)) }
+                    }
                 },
             )
         }

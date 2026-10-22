@@ -6,6 +6,7 @@ import com.privacyguard.app.R
 import android.content.pm.PackageManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.privacyguard.app.core.power.BatteryCheck
 import com.privacyguard.app.core.security.AppSecurityMonitor
 import com.privacyguard.app.core.security.SecurityPosture
 import com.privacyguard.app.core.stats.StatsManager
@@ -126,6 +127,15 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
      * Android Private DNS in strict mode sends DNS over TLS (port 853), which the
      * tunnel drops to keep the blocklist in force; DNS then fails for every app.
      */
+    private fun batteryCheck(): DiagnosticCheck {
+        val label = str(R.string.diag_battery)
+        return when (BatteryCheck.state(getApplication())) {
+            BatteryCheck.State.RESTRICTED -> DiagnosticCheck(label, DiagnosticStatus.FAIL, str(R.string.diag_battery_restricted))
+            BatteryCheck.State.OPTIMIZED -> DiagnosticCheck(label, DiagnosticStatus.WARN, str(R.string.diag_battery_optimized))
+            BatteryCheck.State.UNRESTRICTED -> DiagnosticCheck(label, DiagnosticStatus.PASS, str(R.string.diag_battery_unrestricted))
+        }
+    }
+
     private fun privateDnsCheck(): DiagnosticCheck {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
             return DiagnosticCheck(str(R.string.diag_private_dns), DiagnosticStatus.PASS, str(R.string.diag_private_dns_pre9))
@@ -235,6 +245,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                     else -> str(R.string.diag_lockdown_off)
                 },
             ),
+            batteryCheck(),
             privateDnsCheck(),
             resolveHostCheck(str(R.string.diag_dns_resolution), "google.com"),
             upstreamDnsCheck(),
@@ -244,6 +255,17 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 label = str(R.string.diag_ipv6),
                 status = DiagnosticStatus.PASS,
                 detail = getApplication<Application>().resources.getQuantityString(R.plurals.diag_ipv6_detail, snapshot.ipv6PacketsBlocked.toInt().coerceAtLeast(0), snapshot.ipv6PacketsBlocked.toInt()),
+            ),
+            DiagnosticCheck(
+                label = str(R.string.diag_sni),
+                status = DiagnosticStatus.PASS,
+                detail = str(R.string.diag_sni_detail, snapshot.sniBlocked),
+            ),
+            // Dropped QUIC is not a failure: the app falls back to TCP, where the SNI is checked.
+            DiagnosticCheck(
+                label = str(R.string.diag_quic),
+                status = DiagnosticStatus.PASS,
+                detail = str(R.string.diag_quic_detail, snapshot.quicUnreadableDropped, snapshot.quicHoldLimitDropped),
             ),
             DiagnosticCheck(
                 label = str(R.string.diag_inventory),
