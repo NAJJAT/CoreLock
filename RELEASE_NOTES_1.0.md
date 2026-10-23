@@ -1,0 +1,121 @@
+# PrivacyGuard 1.0
+
+First public release. One APK for Android 7.0 and newer (ARM phones, 64- and
+32-bit), published only on GitHub Releases. No root, no account, no backend:
+analysis runs on the phone.
+
+## What it does
+
+PrivacyGuard runs a **local VPN** on your phone. All traffic passes through it, so
+the app can show, per app, which servers and companies it talks to, how much, and
+when (screen on or off, app open or in the background), and block what you don't
+want. Nothing is sent to the makers of PrivacyGuard. It comes in English, Dutch,
+French and Arabic.
+
+Blocking works in four layers:
+
+1. **Name blocking.** Every DNS lookup is checked against your own rules, the
+   blocklists for your protection level and an ad-SDK policy. Blocked names get
+   "not found", so no connection is made. A name that is an alias (CNAME) of a
+   blocked name is blocked too. One shared decision is used for DNS, CNAME
+   targets and server names (layer 3), so they never disagree.
+2. **No way around the filter's DNS.** DNS over TLS (port 853) is dropped, plain
+   DNS to any server goes through the filter, and encrypted DNS (DoH) servers, from
+   a built-in list plus HaGeZi's regularly updated DoH lists, are stopped. Apps
+   then fall back to the DNS the filter sees.
+3. **Server-name blocking.** The TLS and QUIC server name (SNI) of each connection
+   gets the same decision as DNS, so a blocked name is stopped even when an app
+   reaches it without DNS. At Standard and Strict, a QUIC connection is held until
+   its server name is known; QUIC that can't be read is dropped (apps then use
+   TCP), and at Strict QUIC is off by default.
+4. **Per-app rules.** Block an app completely, or only while it is in the
+   background (needs Usage Access; the app tells you when it's missing).
+
+Protection levels: **Minimal** (malware and phishing only), **Standard** (default:
+plus ads and trackers, HaGeZi Pro mini) and **Strict** (plus telemetry, the full
+HaGeZi Pro and OISD small). Your own rules apply at every level; when two of your
+rules conflict, the more specific one wins, and Allow wins a tie.
+
+### What leaves the phone
+
+- Your DNS lookups, to the resolver you choose (Cloudflare 1.1.1.1 by default;
+  encrypted to cloudflare-dns.com, dns.google or dns.quad9.net if you turn on DoH).
+- Blocklist downloads, about weekly: raw.githubusercontent.com (cdn.jsdelivr.net if
+  GitHub can't be reached) and small.oisd.nl.
+- The Exodus tracker list, at most weekly: reports.exodus-privacy.eu.org.
+- Only if you turn them on: Certificate Transparency checks (crt.sh) and the
+  public-IP check in Diagnostics (api.ipify.org).
+
+The app does not check for updates itself. Settings › About shows your version and
+opens this releases page.
+
+## Install
+
+1. On the phone, download `PrivacyGuard-1.0.apk` from this release.
+2. Before installing, check the signing certificate (below).
+3. Open the APK. Android asks to allow installs from the app you used (browser or
+   file manager): allow it for this install, then you can turn it off again.
+4. Open PrivacyGuard and follow the setup. Android asks once to allow the VPN.
+5. Recommended: in Android's VPN settings turn on **Always-on VPN** for
+   PrivacyGuard (and optionally "Block connections without VPN"), and in
+   Settings › Diagnostics check **Battery use** and **Private DNS**.
+
+Updating later: install the newer APK over this one. Your data stays; Android
+refuses an APK signed with a different key.
+
+## Verify the download
+
+Only install the APK if its signing certificate matches this fingerprint:
+
+```
+Signing certificate SHA-256: <CERT_SHA256_PLACEHOLDER>
+APK file SHA-256:            <APK_SHA256_PLACEHOLDER>
+```
+
+On a computer with the Android SDK build-tools:
+
+```bash
+apksigner verify --print-certs PrivacyGuard-1.0.apk
+# "Signer #1 certificate SHA-256 digest:" must equal the fingerprint above
+```
+
+The file itself:
+
+```bash
+sha256sum PrivacyGuard-1.0.apk                      # Linux / macOS
+certutil -hashfile PrivacyGuard-1.0.apk SHA256      # Windows
+```
+
+(`keytool -printcert -jarfile` does not work here: the APK uses APK Signature
+Scheme v2/v3 only.) After installing, Settings › Runtime integrity also shows
+whether the running app's signature is the expected one.
+
+## Permissions
+
+Network access and VPN; a foreground service for the VPN; notifications; starting
+after a reboot; exact alarms (to restart protection after a crash); the list of
+installed apps (to name the app behind each connection); optional Usage Access
+(foreground/background, for background-only rules). No storage, location,
+contacts, camera or microphone access.
+
+## Known limitations
+
+- **Per-app rules may miss at DNS level.** Android sends most lookups through its
+  own resolver, so the app behind a lookup is often not known; per-app Allow
+  rules and ad-SDK exceptions then fall back to the every-app decision.
+- **Private DNS in hostname mode must be turned off.** With a hostname set
+  ("strict"), lookups bypass the filter and fail while the VPN runs. Use "Off" or
+  "Automatic". The app warns you on the Home screen and in Diagnostics.
+- **QUIC at Strict.** QUIC is blocked by default at Strict, and unreadable QUIC
+  is dropped at Standard and Strict. Apps fall back to TCP, which can make some
+  connections a little slower to start.
+- **No Wi-Fi-only or mobile-only rules.** Rules apply on every network.
+- **Blocklists are held in memory** while protection runs (Strict uses the
+  most), which counts toward the app's memory use.
+- **Always-on VPN is recommended.** PrivacyGuard restarts itself after a reboot or
+  a crash, but without Always-on Android or the phone maker's battery saver may
+  still stop it in the background, and until it is back traffic goes out
+  unfiltered. With "Block connections without VPN" nothing leaves unprotected.
+- **In-app ads in YouTube, Instagram, TikTok and Facebook can't be blocked
+  without root.** They come from the same servers as the content, so blocking
+  them by name would break the app.

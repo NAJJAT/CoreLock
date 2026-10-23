@@ -30,6 +30,10 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
 
+      # A commit from Windows once stored gradlew as 100644, and every job exited 126.
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
       - name: Unit tests (consumer + enterprise)
         run: ./gradlew --no-daemon :app:testConsumerDebugUnitTest :app:testEnterpriseDebugUnitTest
 
@@ -71,6 +75,9 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
 
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
       # Hardware acceleration for the x86_64 emulator on GitHub's Linux runners.
       - name: Enable KVM
         run: |
@@ -111,6 +118,9 @@ jobs:
           java-version: "17"
 
       - uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
 
       - name: List the release APKs' libraries
         run: ./gradlew --no-daemon :app:osvLockfile

@@ -9,7 +9,8 @@ explains what it finds in plain language in **English, Dutch, French and Arabic*
 - **No root, no account, no backend.** Analysis runs on the device. The only
   outbound requests are listed in [Network requests the app makes](#network-requests-the-app-makes).
 - **Two flavors:** *consumer* (monitoring and blocking) and *enterprise* (adds
-  consent-gated HTTPS payload inspection, MDM and SIEM shipping).
+  consent-gated HTTPS payload inspection, MDM and SIEM shipping). Only consumer is
+  released (an APK on GitHub Releases); enterprise is built and tested, not published.
 - **Honest by design:** the app shows destinations, sizes and timing, not the
   content of encrypted traffic, and every number on the Home screen opens the
   exact list it was counted from.
@@ -338,10 +339,11 @@ unsigned release fails.
 4. Build:
 
    ```bash
-   ./gradlew :app:assembleConsumerRelease     # APK
-   ./gradlew :app:bundleConsumerRelease       # AAB for Play
-   ./gradlew :app:assembleEnterpriseRelease   # enterprise APK
+   ./gradlew :app:assembleConsumerRelease     # the APK published on GitHub Releases
    ```
+
+   Only the consumer flavor is released, as an APK on GitHub Releases (not Google
+   Play). The enterprise flavor is built and tested in CI but not published.
 
 R8 shrinking and obfuscation run on release builds (`app/proguard-rules.pro`).
 
