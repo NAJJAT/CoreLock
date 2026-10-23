@@ -1,4 +1,4 @@
-# PrivacyGuard 1.0
+# PrivacyGuard 1.0.0
 
 First public release. One APK for Android 7.0 and newer (ARM phones, 64- and
 32-bit), published only on GitHub Releases. No root, no account, no backend:
@@ -51,7 +51,7 @@ opens this releases page.
 
 ## Install
 
-1. On the phone, download `PrivacyGuard-1.0.apk` from this release.
+1. On the phone, download `PrivacyGuard-1.0.0.apk` from this release.
 2. Before installing, check the signing certificate (below).
 3. Open the APK. Android asks to allow installs from the app you used (browser or
    file manager): allow it for this install, then you can turn it off again.
@@ -75,15 +75,15 @@ APK file SHA-256:            <APK_SHA256_PLACEHOLDER>
 On a computer with the Android SDK build-tools:
 
 ```bash
-apksigner verify --print-certs PrivacyGuard-1.0.apk
+apksigner verify --print-certs PrivacyGuard-1.0.0.apk
 # "Signer #1 certificate SHA-256 digest:" must equal the fingerprint above
 ```
 
 The file itself:
 
 ```bash
-sha256sum PrivacyGuard-1.0.apk                      # Linux / macOS
-certutil -hashfile PrivacyGuard-1.0.apk SHA256      # Windows
+sha256sum PrivacyGuard-1.0.0.apk                      # Linux / macOS
+certutil -hashfile PrivacyGuard-1.0.0.apk SHA256      # Windows
 ```
 
 (`keytool -printcert -jarfile` does not work here: the APK uses APK Signature

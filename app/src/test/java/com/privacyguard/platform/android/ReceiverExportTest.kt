@@ -12,7 +12,7 @@ import java.io.File
  */
 class ReceiverExportTest {
 
-    private val roots = listOf("src/main/java", "src/enterprise/java", "src/consumer/java", "src/debug/java")
+    private val roots = listOf("src/main/java", "src/enterprise/java", "src/debug/java")
 
     @Test
     fun every_dynamic_receiver_has_an_explicit_export_flag() {

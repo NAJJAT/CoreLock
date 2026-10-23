@@ -17,7 +17,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 class StringFormatArgumentsTest {
 
     /** Source sets whose res/ folders ship strings. Unit tests run in the app module dir. */
-    private val resDirs = listOf("src/main/res", "src/enterprise/res", "src/consumer/res")
+    private val resDirs = listOf("src/main/res", "src/enterprise/res")
         .map { File(it) }.filter { it.isDirectory }
 
     private data class Entry(val locale: String, val file: String, val key: String, val text: String, val pluralItem: String?)

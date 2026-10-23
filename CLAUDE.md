@@ -455,7 +455,7 @@ Rules:
 Only the **consumer** flavor is released, as a signed APK on GitHub Releases.
 
 1. `main` green on all four checks.
-2. Version: `versionCode` always increases by at least 1 (Android refuses updates otherwise); `versionName` follows semantic versioning (`1.0.0`, `1.0.1`, `1.1.0`). Today it is `"1.0"` (`app/build.gradle.kts`); the owner decides whether 1.0 ships as `1.0` or `1.0.0`. Git tag `vX.Y.Z` is created by the owner.
+2. Version: `versionCode` always increases by at least 1 (Android refuses updates otherwise); `versionName` follows semantic versioning (`1.0.0`, `1.0.1`, `1.1.0`). The first release is `versionName = "1.0.0"`, `versionCode = 1` (`app/build.gradle.kts`), tag `v1.0.0`. Git tag `vX.Y.Z` is created by the owner.
 3. Translations reviewed (`docs/TRANSLATION_REVIEW_*.md`).
 4. Owner builds and signs with the real key (never the agent).
 5. Release page contains: the APK, its **SHA-256 checksum**, the **signing certificate SHA-256 fingerprint** (same as in the README), release notes, and known limitations (§16).

@@ -112,7 +112,7 @@ android {
             buildConfigField("boolean", "IS_RELEASE_SIGNING_CONFIGURED", releaseSigningConfigured.toString())
             buildConfigField("String", "APP_SIGNING_MODE", "\"Debug certificate\"")
             // MITM_AVAILABLE comes from the flavor only: a build-type field would
-            // override it and turn MITM on in consumerDebug.
+            // override it.
         }
         release {
             isMinifyEnabled = true
@@ -141,10 +141,9 @@ android {
     }
 
     productFlavors {
-        create("consumer") {
-            dimension = "distribution"
-            buildConfigField("boolean", "MITM_AVAILABLE", "false")
-        }
+        // The only flavor: the consumer flavor was removed (owner's decision, 2026-10-23).
+        // Kept as a flavor so the application ID (.enterprise), task names and the
+        // src/enterprise source set stay as they are on installed phones and in CI.
         create("enterprise") {
             dimension = "distribution"
             applicationIdSuffix = ".enterprise"
@@ -251,7 +250,7 @@ room {
 // osv-scanner reads. gradle/verification-metadata.xml also lists the build tools (AGP,
 // lint, their Netty and Bouncy Castle), whose advisories never reach a phone.
 tasks.register("osvLockfile") {
-    val classpaths = listOf("consumerReleaseRuntimeClasspath", "enterpriseReleaseRuntimeClasspath")
+    val classpaths = listOf("enterpriseReleaseRuntimeClasspath")
     val out = layout.buildDirectory.file("osv/gradle.lockfile")
     outputs.file(out)
     outputs.upToDateWhen { false }

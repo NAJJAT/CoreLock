@@ -67,7 +67,7 @@ class SecureScreensTest {
 
     /** Regression for V-09: no notification is built without the private lock-screen setup. */
     @Test fun every_notification_goes_through_private_notifications() {
-        val offenders = listOf("src/main/java", "src/enterprise/java", "src/consumer/java").map(::File).filter { it.isDirectory }
+        val offenders = listOf("src/main/java", "src/enterprise/java").map(::File).filter { it.isDirectory }
             .flatMap { it.walkTopDown().filter { f -> f.extension == "kt" && f.name != "PrivateNotifications.kt" }.toList() }
             .filter { it.readText().contains("NotificationCompat.Builder(") || it.readText().contains("Notification.Builder(") }
         assertEquals(emptyList<File>(), offenders)

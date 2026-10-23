@@ -34,23 +34,23 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Unit tests (consumer + enterprise)
-        run: ./gradlew --no-daemon :app:testConsumerDebugUnitTest :app:testEnterpriseDebugUnitTest
+      - name: Unit tests
+        run: ./gradlew --no-daemon :app:testEnterpriseDebugUnitTest
 
       - name: Lint
-        run: ./gradlew --no-daemon :app:lintConsumerDebug :app:lintEnterpriseDebug
+        run: ./gradlew --no-daemon :app:lintEnterpriseDebug
 
-      # Shrinks both release variants, so a keep rule that R8 needs but the debug
+      # Shrinks the release variant, so a keep rule that R8 needs but the debug
       # build never exercises fails here rather than in a user's hands. (R8 runs
       # without a signing key; only the signed artifact tasks need one.)
       - name: R8 (release shrinking)
-        run: ./gradlew --no-daemon :app:minifyConsumerReleaseWithR8 :app:minifyEnterpriseReleaseWithR8
+        run: ./gradlew --no-daemon :app:minifyEnterpriseReleaseWithR8
 
       # Proves release builds refuse to fall back to the debug key (finding H-3).
       - name: Unsigned release must fail
         run: |
-          if ./gradlew --no-daemon :app:assembleConsumerRelease --dry-run; then
-            echo "::error::assembleConsumerRelease succeeded without release signing"
+          if ./gradlew --no-daemon :app:assembleEnterpriseRelease --dry-run; then
+            echo "::error::assembleEnterpriseRelease succeeded without release signing"
             exit 1
           fi
 
