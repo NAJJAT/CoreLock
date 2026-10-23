@@ -7,8 +7,9 @@ import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
- * Exports are app-private files shared through FileProvider, so the consumer app asks
- * for no storage access. Only the enterprise CA export on API ≤ 28 writes Downloads.
+ * Exports are app-private files shared through FileProvider, so the shared manifest asks
+ * for no storage access. Only the HTTPS-inspection CA export on API ≤ 28 writes Downloads
+ * (its permission is in the enterprise manifest).
  */
 class StoragePermissionTest {
 
@@ -38,13 +39,14 @@ class StoragePermissionTest {
     }
 
     @Test
-    fun consumer_file_provider_shares_only_exports() {
-        // The CA folders are enterprise-only; the flavor's own file_paths.xml adds them.
-        assertEquals(listOf("files-path:exports/"), sharedPaths("src/main/res/xml/file_paths.xml"))
+    fun file_provider_shares_only_the_export_and_ca_folders() {
+        // Nothing else of files/ or cache/ (database, prefs, payload logs) may get a URI.
         assertEquals(
             listOf("files-path:exports/", "cache-path:certs/", "external-path:Download/PrivacyGuard/"),
-            sharedPaths("src/enterprise/res/xml/file_paths.xml"),
+            sharedPaths("src/main/res/xml/file_paths.xml"),
         )
+        // One file only: a flavor copy would silently replace this one.
+        assertEquals(false, File("src/enterprise/res/xml/file_paths.xml").exists())
     }
 
     @Test

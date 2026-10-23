@@ -47,23 +47,26 @@ nothing is filtered unless Android's Always-on VPN with lockdown is on.
 ## Contents
 
 1. [What it does](#what-it-does)
-2. [Screens](#screens)
-3. [Network requests the app makes](#network-requests-the-app-makes)
-4. [What the app can and cannot see](#what-the-app-can-and-cannot-see)
-5. [Architecture](#architecture)
-6. [Data storage and privacy](#data-storage-and-privacy)
-7. [Languages and RTL](#languages-and-rtl)
-8. [Build](#build)
-9. [Build variants](#build-variants)
-10. [Permissions](#permissions)
-11. [HTTPS inspection: what it can and cannot do](#https-inspection-what-it-can-and-cannot-do)
-12. [MDM, payload inspection and SIEM (details)](#mdm-payload-inspection-and-siem-details)
-13. [Testing](#testing)
-14. [Debug tooling](#debug-tooling)
-15. [Project structure](#project-structure)
-16. [Known limitations](#known-limitations)
-17. [Security](#security)
-18. [License](#license)
+2. [Install](#install)
+3. [First setup](#first-setup)
+4. [Protection levels](#protection-levels)
+5. [Screens](#screens)
+6. [Network requests the app makes](#network-requests-the-app-makes)
+7. [What the app can and cannot see](#what-the-app-can-and-cannot-see)
+8. [Architecture](#architecture)
+9. [Data storage and privacy](#data-storage-and-privacy)
+10. [Languages and RTL](#languages-and-rtl)
+11. [Build](#build)
+12. [Build variants](#build-variants)
+13. [Permissions](#permissions)
+14. [HTTPS inspection: what it can and cannot do](#https-inspection-what-it-can-and-cannot-do)
+15. [MDM, payload inspection and SIEM (details)](#mdm-payload-inspection-and-siem-details)
+16. [Testing](#testing)
+17. [Debug tooling](#debug-tooling)
+18. [Project structure](#project-structure)
+19. [Known limitations](#known-limitations)
+20. [Security](#security)
+21. [License](#license)
 
 ---
 
@@ -151,6 +154,59 @@ or Instagram.
 - **Weekly report:** WorkManager summary notification.
 
 ---
+
+## Install
+
+PrivacyGuard is published only on
+[GitHub Releases](https://github.com/NAJJAT/CoreLock/releases), not on Google Play.
+It runs on Android 7.0 and newer (ARM phones, 64- and 32-bit).
+
+1. On the phone, download the APK (`PrivacyGuard-<version>.apk`) from the release page.
+2. **Check it before installing.** The release page lists the APK's SHA-256 and the
+   signing certificate's SHA-256 fingerprint (also under [Security](#security)).
+   On a computer with the Android SDK build-tools:
+
+   ```bash
+   apksigner verify --print-certs PrivacyGuard-<version>.apk   # certificate fingerprint
+   sha256sum PrivacyGuard-<version>.apk                        # Linux / macOS
+   certutil -hashfile PrivacyGuard-<version>.apk SHA256        # Windows
+   ```
+
+   Install only if both match. (`keytool -printcert -jarfile` does not work: the
+   APK is signed with APK Signature Scheme v2 only.)
+3. Open the APK. Android asks to allow installs from the app you used (browser or
+   file manager): allow it for this install, then turn it off again.
+4. **Updating:** install the newer APK over the old one; your data stays. Android
+   refuses an APK signed with a different key.
+
+## First setup
+
+1. **VPN permission.** Open PrivacyGuard and follow the setup; Android asks once to
+   allow the VPN. Everything stays on the phone.
+2. **Protection level.** Standard is the default; see
+   [Protection levels](#protection-levels).
+3. **Private DNS.** If Android's Private DNS is set to a hostname, lookups bypass the
+   filter and fail while protection runs. The app warns you on Home and before
+   starting; set Private DNS to Off or Automatic.
+4. **Battery.** Settings › Diagnostics › Battery use shows whether Android may stop
+   protection in the background, and opens the battery settings.
+5. **Kill switch.** In Android's VPN settings turn on **Always-on VPN** for
+   PrivacyGuard, and optionally **Block connections without VPN**. Only Android can
+   block traffic once the tunnel is gone.
+6. **Language.** Settings › Language: System default, English, العربية, Français
+   or Nederlands.
+
+## Protection levels
+
+| Level | Blocks | Lists |
+|---|---|---|
+| **Minimal** | Malware and phishing only | HaGeZi Threat Intelligence Feeds mini |
+| **Standard** (default) | + ads and trackers | + HaGeZi Pro mini and built-in ad and analytics hosts |
+| **Strict** | + telemetry (OS and vendor diagnostics; can break features that depend on them) | Full HaGeZi Pro instead of Pro mini, + OISD small; QUIC blocked by default |
+
+At every level: your own rules (the more specific rule wins; Block wins a tie), the
+ad-SDK policy when it is on, and the HaGeZi DoH lists that stop apps from skipping
+the filter with encrypted DNS.
 
 ## Screens
 
@@ -501,11 +557,14 @@ Debug builds only (`src/debug`, never in release):
   ```bash
   # end the 7-day TLS learning period for one app (to test alerts)
   adb shell am broadcast -a com.privacyguard.debug.TLS_END_LEARNING \
-      --es package <pkg> -p com.privacyguard.app[.enterprise]
-  # allow screenshots (FLAG_SECURE off) for documentation; send after the app started
-  adb shell am broadcast -a com.privacyguard.debug.ALLOW_SCREENSHOTS \
-      --ez enabled true -p com.privacyguard.app[.enterprise]
+      --es package <pkg> -p com.privacyguard.app.enterprise
+  # list (and with --ez apply true, delete) alerts that tests created for <pkg>
+  adb shell am broadcast -a com.privacyguard.debug.DELETE_TEST_ALERTS \
+      --es package <pkg> -p com.privacyguard.app.enterprise
   ```
+
+  Debug builds never set FLAG_SECURE, so screens can be captured for documentation
+  without a hook.
 
 - **Open a screen directly:**
 
@@ -599,6 +658,30 @@ docs/  .github/
 See [SECURITY.md](SECURITY.md). Report vulnerabilities privately via GitHub's
 private vulnerability reporting, not in public issues.
 
+**Release signing certificate (SHA-256):**
+
+```
+<CERT_SHA256_PLACEHOLDER>
+```
+
+Every release is signed with this key; the same fingerprint is on each release
+page. Settings › Runtime integrity shows whether the running app's signature
+matches it.
+
 ## License
 
 Private / proprietary. All rights reserved.
+
+### Credits
+
+PrivacyGuard downloads these lists at runtime; they are not shipped inside the APK.
+
+| Data | Author | License |
+|---|---|---|
+| DNS blocklists (Pro, Pro mini, Threat Intelligence Feeds mini, DoH, DoH IPs) | [HaGeZi](https://github.com/hagezi/dns-blocklists) | GPL-3.0 |
+| OISD small | [OISD](https://oisd.nl) ([repository](https://github.com/sjhgvr/oisd)) | GPL-3.0 |
+| Tracker signatures | [Exodus Privacy](https://reports.exodus-privacy.eu.org) | Their software is AGPL-3.0; see their site for the data's terms |
+
+The country of an IP address comes from the five regional internet registries'
+public "delegated-extended" files (ARIN, RIPE NCC, APNIC, LACNIC, AFRINIC), built
+into `geoip_v4.bin` by `tools/geoip/GenerateGeoIp.java`.

@@ -56,7 +56,6 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.privacyguard.app.R
-import com.privacyguard.app.BuildConfig
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.db.PayloadLogEntity
 import kotlinx.coroutines.Dispatchers
@@ -238,9 +237,7 @@ fun AppDetailScreen(
                     DetailTab(stringResource(R.string.appd_tab_connections), selectedTab == 1) { selectedTab = 1 }
                     DetailTab(stringResource(R.string.appd_tab_sdks), selectedTab == 2) { selectedTab = 2 }
                     DetailTab(stringResource(R.string.appd_tab_activity), selectedTab == 3) { selectedTab = 3 }
-                    if (BuildConfig.MITM_AVAILABLE) {
-                        DetailTab(stringResource(R.string.appd_tab_payload), selectedTab == 4) { selectedTab = 4 }
-                    }
+                    DetailTab(stringResource(R.string.appd_tab_payload), selectedTab == 4) { selectedTab = 4 }
                 }
             }
         }
@@ -250,7 +247,7 @@ fun AppDetailScreen(
             1 -> connectionsTab(state, domainSort, onOpenDomain) { domainSort = it }
             2 -> sdkTab(state)
             3 -> activityTab(state, onOpenDomain)
-            4 -> if (BuildConfig.MITM_AVAILABLE) item { PayloadTabContent(state.packageName) }
+            4 -> item { PayloadTabContent(state.packageName) }
         }
 
         item { Spacer(modifier = Modifier.height(8.dp)) }

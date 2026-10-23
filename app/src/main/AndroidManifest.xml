@@ -81,7 +81,7 @@
         <service
             android:name=".tile.PrivacyGuardTileService"
             android:exported="true"
-            android:label="PrivacyGuard VPN"
+            android:label="@string/tile_label"
             android:icon="@drawable/ic_tile_vpn"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>

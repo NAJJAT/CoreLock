@@ -226,18 +226,16 @@ private fun ConsentPageContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // HTTPS inspection exists only in enterprise builds; consumer users never see it.
-        if (com.privacyguard.app.BuildConfig.MITM_AVAILABLE) {
-            ConsentItem(
-                checked   = tlsAccepted,
-                onChecked = onTlsAccepted,
-                required  = false,
-                title     = stringResource(R.string.onb_c_https),
-                body      = stringResource(R.string.onb_c_https_body),
-            )
+        // Optional: consent only; inspection stays off until switched on in Payload.
+        ConsentItem(
+            checked   = tlsAccepted,
+            onChecked = onTlsAccepted,
+            required  = false,
+            title     = stringResource(R.string.onb_c_https),
+            body      = stringResource(R.string.onb_c_https_body),
+        )
 
-            Spacer(modifier = Modifier.height(12.dp))
-        }
+        Spacer(modifier = Modifier.height(12.dp))
 
         ConsentItem(
             checked   = localStorageAck,

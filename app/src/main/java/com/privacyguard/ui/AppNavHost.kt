@@ -38,7 +38,6 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.privacyguard.app.BuildConfig  // FIXED: Correct import path
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
 import com.privacyguard.app.ui.alerts.AlertInboxScreen
@@ -75,9 +74,7 @@ fun AppNavHost(
             add(NavTab("apps",      com.privacyguard.app.R.string.nav_apps,    Icons.Default.Apps))
             add(NavTab("connections",com.privacyguard.app.R.string.nav_traffic, Icons.Default.Wifi))
             add(NavTab("statistics",com.privacyguard.app.R.string.nav_stats,   Icons.Default.BarChart))
-            if (BuildConfig.MITM_AVAILABLE) {
-                add(NavTab("payloads",  com.privacyguard.app.R.string.nav_payload, Icons.AutoMirrored.Filled.ManageSearch))
-            }
+            add(NavTab("payloads",  com.privacyguard.app.R.string.nav_payload, Icons.AutoMirrored.Filled.ManageSearch))
             add(NavTab("settings",  com.privacyguard.app.R.string.nav_settings,Icons.Default.Settings))
         }
     }
@@ -182,9 +179,7 @@ fun AppNavHost(
                     onOpenSleepReport = { at -> navController.navigate("sleepReport?at=$at") },
                     onOpenEvidence = { kind, at -> navController.navigate("evidence/${kind.name}?at=$at") },
                     onOpenStatistics = { navController.navigate("statistics") },
-                    onOpenPayloads = if (BuildConfig.MITM_AVAILABLE) {
-                        { navController.navigate("payloads") }
-                    } else null,
+                    onOpenPayloads = { navController.navigate("payloads") },
                 )
             }
 
@@ -277,11 +272,8 @@ fun AppNavHost(
                 SecurityAnalysisScreen(onOpenAlerts = { navController.navigate("alerts") })
             }
 
-            // MITM Screen - only in enterprise build
-            if (BuildConfig.MITM_AVAILABLE) {
-                composable("payloads") {
-                    PayloadInspectorUi.Screen()
-                }
+            composable("payloads") {
+                PayloadInspectorUi.Screen()
             }
 
             composable("settings") {
@@ -291,9 +283,7 @@ fun AppNavHost(
                     onOpenAds = { navController.navigate("ads") },
                     onOpenAdPrivacy = { navController.navigate("adPrivacy") },
                     onOpenRules = { navController.navigate("rules") },
-                    onOpenPayloads = if (BuildConfig.MITM_AVAILABLE) {
-                        { navController.navigate("payloads") }
-                    } else null,
+                    onOpenPayloads = { navController.navigate("payloads") },
                 )
             }
 

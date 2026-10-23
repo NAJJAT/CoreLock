@@ -82,7 +82,6 @@ android {
         buildConfigField("String", "APP_SIGNATURE_SHA256", "\"\"")
         buildConfigField("boolean", "IS_RELEASE_SIGNING_CONFIGURED", "false")
         buildConfigField("String", "APP_SIGNING_MODE", "\"Unknown\"")
-        buildConfigField("boolean", "MITM_AVAILABLE", "false")
         // Opened in the browser from Settings › About; the app never fetches it itself.
         // A store build can point it at its listing instead.
         buildConfigField("String", "RELEASES_URL", "\"https://github.com/NAJJAT/CoreLock/releases\"")
@@ -111,8 +110,6 @@ android {
             )
             buildConfigField("boolean", "IS_RELEASE_SIGNING_CONFIGURED", releaseSigningConfigured.toString())
             buildConfigField("String", "APP_SIGNING_MODE", "\"Debug certificate\"")
-            // MITM_AVAILABLE comes from the flavor only: a build-type field would
-            // override it.
         }
         release {
             isMinifyEnabled = true
@@ -148,7 +145,6 @@ android {
             dimension = "distribution"
             applicationIdSuffix = ".enterprise"
             // No version suffix: as the only app, users see plain "1.0.0".
-            buildConfigField("boolean", "MITM_AVAILABLE", "true")
         }
     }
 

@@ -418,7 +418,7 @@ A broken migration deletes the user's rules and history. Treat schema changes as
 | Malformed-input tests | Every parser: truncated, oversized, looping, random bytes. No crash, no hang. |
 | Security tests (`sectest/`) | Formula injection, disclosure of outbound hosts, exported components. |
 | Instrumented | Room migrations, service start/stop, Keystore. |
-| Manual device checks | Real apps at each level (Chrome, YouTube, messaging, video calls), Wi-Fi ↔ mobile switch, captive portal, Private DNS modes, battery and memory (`adb shell dumpsys meminfo com.privacyguard.app`). |
+| Manual device checks | Real apps at each level (Chrome, YouTube, messaging, video calls), Wi-Fi ↔ mobile switch, captive portal, Private DNS modes, battery and memory (`adb shell dumpsys meminfo com.privacyguard.app.enterprise`). |
 
 Tests never touch the real network. Use fixtures.
 
@@ -475,7 +475,7 @@ Documentation is part of the product. Outdated docs in a security app are a secu
 
 ### 13.1 README.md must contain, in this order
 
-> **Status (2026-10-23):** the README does not follow this structure yet. **To create:** 3 Install (with checksum and fingerprint verification), 4 First setup, 5 a Protection levels section, the signing fingerprint in 10 Security, and blocklist credits and licenses in 11 (today it only says "Private / proprietary"). Most of the Install and verification text already exists in `RELEASE_NOTES_1.0.md`.
+> **Status (2026-10-23):** all eleven parts exist (Install, First setup, Protection levels and the Credits table were added). The order differs slightly (technical sections sit between them). **Still open:** the signing fingerprint under Security is `<CERT_SHA256_PLACEHOLDER>` until the owner signs the first release; fill it in together with `RELEASE_NOTES_1.0.md`.
 
 1. **What CoreLock is** — one paragraph, no hype.
 2. **What it blocks and what it can't** — the four layers in plain words, and the honest limits (§16).
@@ -569,7 +569,6 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 5. Per-packet allocations on the hot path (`copyOfRange` per UDP packet, IP addresses parsed into Strings per packet in `PrivacyVpnService`); measure first (§6.2). After 1.0.
 6. Wi-Fi-only / mobile-data-only rules.
 7. Reassemble split ClientHellos on ports other than 443; add DoH lists to the start-up cache (~30 s gap while the encrypted DB loads).
-8. `DebugHooksReceiver` still targets the deleted `com.privacyguard.testapp`.
 
 When you finish a backlog item, propose removing it here in the same change.
 

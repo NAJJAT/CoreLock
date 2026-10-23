@@ -16,10 +16,10 @@ import java.util.concurrent.TimeUnit
  *
  * End the 7-day TLS learning period for one app:
  *   adb shell am broadcast -a com.privacyguard.debug.TLS_END_LEARNING \
- *       --es package com.privacyguard.testapp -p com.privacyguard.app
+ *       --es package <pkg> -p com.privacyguard.app.enterprise
  *
  * Make the next VPN start fail right after the tunnel is up (tests the cleanup path):
- *   adb shell am broadcast -a com.privacyguard.debug.FAIL_NEXT_START -p com.privacyguard.app
+ *   adb shell am broadcast -a com.privacyguard.debug.FAIL_NEXT_START -p com.privacyguard.app.enterprise
  *
  * Debug builds never set FLAG_SECURE (SecureScreens), so screens can be captured as is.
  */
@@ -48,7 +48,11 @@ class DebugHooksReceiver : BroadcastReceiver() {
             ACTION_DUMP_ALERTS -> dumpAlerts(context, intent)
             ACTION_PROBE_DNS -> probeDns()
             ACTION_DOMAIN_RULE -> domainRule(context, intent)
-            ACTION_DELETE_TEST_ALERTS -> deleteTestAlerts(context, intent.getBooleanExtra("apply", false))
+            ACTION_DELETE_TEST_ALERTS -> deleteTestAlerts(
+                context,
+                intent.getStringExtra("package") ?: LEGACY_TEST_APP,
+                intent.getBooleanExtra("apply", false),
+            )
             // Recovery tests (V-18). FAIL_WORKER: reports the TUN reader as dead, as its
             // uncaught-exception handler would, so the tunnel is rebuilt in place.
             // CRASH_PROCESS: an uncaught exception on the main thread, like a UI crash.
@@ -244,26 +248,29 @@ class DebugHooksReceiver : BroadcastReceiver() {
     }
 
     /**
-     * Removes alerts that tests created, nothing else: TLS alerts of the test app and
-     * DNS anomalies for nip.io names (the leak-test canaries). Lists them only,
-     * unless apply is true:
-     *   adb shell am broadcast -a com.privacyguard.debug.DELETE_TEST_ALERTS [--ez apply true] -p PKG
+     * Removes alerts that tests created, nothing else: TLS alerts of [testApp] (by
+     * default the removed com.privacyguard.testapp, whose rows may remain on development
+     * phones) and DNS anomalies for nip.io names (the leak-test canaries). Lists them
+     * only, unless apply is true:
+     *   adb shell am broadcast -a com.privacyguard.debug.DELETE_TEST_ALERTS \
+     *       [--es package <pkg>] [--ez apply true] -p com.privacyguard.app.enterprise
      */
-    private fun deleteTestAlerts(context: Context, apply: Boolean) {
+    private fun deleteTestAlerts(context: Context, testApp: String, apply: Boolean) {
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val sql = AppDatabase.getInstance(context).openHelper.writableDatabase
-                val tls = "FROM tls_alerts WHERE packageName = '$TEST_APP'"
+                // The package comes from the broadcast: bound, never pasted into the SQL.
+                val tls = "FROM tls_alerts WHERE packageName = ?"
                 val dns = "FROM dns_anomalies WHERE domain = 'nip.io' OR domain LIKE '%.nip.io'"
-                sql.query("SELECT id, alertType, packageName, timestamp $tls").use { c ->
+                sql.query("SELECT id, alertType, packageName, timestamp $tls", arrayOf<Any>(testApp)).use { c ->
                     while (c.moveToNext()) Log.i(TAG, "TEST_ALERT tls id=${c.getLong(0)} ${c.getString(1)} ${c.getString(2)} at=${c.getLong(3)}")
                 }
                 sql.query("SELECT id, anomalyType, packageName, domain, timestamp $dns").use { c ->
                     while (c.moveToNext()) Log.i(TAG, "TEST_ALERT dns id=${c.getLong(0)} ${c.getString(1)} ${c.getString(2)} ${c.getString(3)} at=${c.getLong(4)}")
                 }
                 if (apply) {
-                    val nTls = sql.delete("tls_alerts", "packageName = ?", arrayOf(TEST_APP))
+                    val nTls = sql.delete("tls_alerts", "packageName = ?", arrayOf(testApp))
                     val nDns = sql.delete("dns_anomalies", "domain = 'nip.io' OR domain LIKE '%.nip.io'", null)
                     Log.i(TAG, "TEST_ALERT deleted tls=$nTls dns=$nDns")
                 } else {
@@ -308,7 +315,8 @@ class DebugHooksReceiver : BroadcastReceiver() {
         const val ACTION_DELETE_TEST_ALERTS = "com.privacyguard.debug.DELETE_TEST_ALERTS"
         const val ACTION_FAIL_WORKER = "com.privacyguard.debug.FAIL_WORKER"
         const val ACTION_CRASH_PROCESS = "com.privacyguard.debug.CRASH_PROCESS"
-        private const val TEST_APP = "com.privacyguard.testapp"
+        // Removed test app (branch archive/before-cleanup); old alerts of it may remain.
+        private const val LEGACY_TEST_APP = "com.privacyguard.testapp"
         const val DEBUG_PREFS = "debug_hooks"
         const val KEY_FAIL_NEXT_START = "fail_next_start"
     }

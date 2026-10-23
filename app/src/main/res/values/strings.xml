@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">PrivacyGuard</string>
+    <!-- Quick Settings tile label: a brand name, kept in English like app_name. -->
+    <string name="tile_label" translatable="false">PrivacyGuard VPN</string>
     <string name="cancel">Cancel</string>
     <string name="restriction_mitm_enabled_title" translatable="false">Enable HTTPS Payload Inspection</string>
     <string name="restriction_mitm_consent_title" translatable="false">Enterprise Legal Consent Pre-confirmed</string>
