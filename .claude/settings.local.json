@@ -45,5 +45,8 @@
       "Bash(awk -F'package ' '{print $2}')",
       "Bash(./gradlew :app:assembleConsumerRelease --no-daemon)"
     ]
+  },
+  "skillOverrides": {
+    "anthropic-skills:senior-android-engineer": "off"
   }
 }

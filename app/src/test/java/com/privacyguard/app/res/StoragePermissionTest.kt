@@ -29,6 +29,24 @@ class StoragePermissionTest {
         assertEquals(emptyMap<String, String>(), storagePermissions("src/main/AndroidManifest.xml"))
     }
 
+    /** The `path` of every entry in a FileProvider paths file. */
+    private fun sharedPaths(file: String): List<String> {
+        val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(File(file))
+        val children = doc.documentElement.childNodes
+        return (0 until children.length).map { children.item(it) }
+            .filterIsInstance<Element>().map { "${it.tagName}:${it.getAttribute("path")}" }
+    }
+
+    @Test
+    fun consumer_file_provider_shares_only_exports() {
+        // The CA folders are enterprise-only; the flavor's own file_paths.xml adds them.
+        assertEquals(listOf("files-path:exports/"), sharedPaths("src/main/res/xml/file_paths.xml"))
+        assertEquals(
+            listOf("files-path:exports/", "cache-path:certs/", "external-path:Download/PrivacyGuard/"),
+            sharedPaths("src/enterprise/res/xml/file_paths.xml"),
+        )
+    }
+
     @Test
     fun enterprise_writes_downloads_only_up_to_android_9() {
         assertEquals(

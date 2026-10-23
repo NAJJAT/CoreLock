@@ -6,7 +6,6 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import android.content.Context
-import com.privacyguard.app.BuildConfig
 import com.privacyguard.app.core.security.DatabaseEncryption
 
 /**
@@ -197,18 +196,12 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         /**
-         * Debug builds wipe on any schema mismatch so local iteration never gets stuck.
-         * Release builds only wipe where no migration can exist (version 1, which
-         * predates migrations, and downgrades); a missing migration for any other
-         * version fails loudly instead of silently deleting the user's history.
+         * Wipes only on a downgrade, where no migration can exist. In every build, debug
+         * included, a missing upgrade migration crashes instead of silently deleting the
+         * user's history and rules: a crash gets noticed and fixed, a wipe does not.
          */
         private fun RoomDatabase.Builder<AppDatabase>.applyFallback() =
-            if (BuildConfig.DEBUG) {
-                fallbackToDestructiveMigration(dropAllTables = true)
-            } else {
-                fallbackToDestructiveMigrationFrom(dropAllTables = true, 1)
-                    .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
-            }
+            fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
 
         @Volatile
         private var INSTANCE: AppDatabase? = null

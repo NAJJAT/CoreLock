@@ -72,7 +72,7 @@ nothing is filtered unless Android's Always-on VPN with lockdown is on.
 | **DNS filtering** | Every lookup goes through `DnsHandler`: blocklists (HaGeZi and OISD domain lists, hash-set lookup), your own rules, and the per-app ad-SDK policy. A user Allow beats ad, tracker and telemetry lists and the ad-SDK policy; malware and phishing hosts stay blocked unless the user accepts a warning. Blocked names get *NXDOMAIN*, so no connection is made; so do answers whose CNAME points at a blocked name. The TLS SNI and QUIC SNI of each connection get the same decision, which also stops apps with their own resolver or hard-coded addresses when they send a server name. Lookups go only to the resolver you chose (and that provider's second address); if it cannot be reached the app gets *SERVFAIL*. |
 | **DNS over HTTPS** | Optional RFC 8484 DoH to Cloudflare, Google or Quad9. Connects to the provider's literal bootstrap address so the DoH host lookup cannot loop through the tunnel. If DoH fails the lookup is answered with *SERVFAIL*; it is never resent as plain DNS. |
 | **Encrypted-DNS bypass guard** | Drops DNS-over-TLS/QUIC and DoH to known resolver IPs from other apps, so they fall back to DNS that the filter can see. |
-| **Filter rules** | Block by domain, IP/CIDR, app or globally, optionally "only in the background". Three protection levels (Minimal, Standard, Strict). Rules apply instantly without restarting the VPN. Hit counters and suggested rules. |
+| **Filter rules** | Block by domain, IP/CIDR, app or globally, optionally "only in the background". Three protection levels (Minimal, Standard, Strict). When two of your rules conflict, the more specific one wins (one app before every app, an exact name before a wildcard); between equally specific rules, Block wins. Rules apply instantly without restarting the VPN. Hit counters and suggested rules. |
 | **Kill switch** | Uses Android's *Always-on VPN* with *Block connections without VPN* (only Android can block once the tunnel is gone). The card shows "blocking" only when Android reports lockdown; otherwise the VPN drop alert can only notify you (it cannot restart or block). |
 | **Cleartext / weak TLS** | Detects plain-HTTP connections and weak TLS versions and cipher suites (NULL, EXPORT, RC4, DES/3DES, anonymous). Optional rules block them. |
 | **Network trust** | Scores each network from network-side signs only: open Wi-Fi, captive portal, tampered DNS answers, DNS hijacking, TLS interception. On a low-trust Wi-Fi it suggests Strict mode. |
@@ -547,9 +547,6 @@ docs/  .github/
 - **Large DNS answers** need DNS over TCP, which the tunnel does not offer, so
   answers that do not fit in a 4 KB UDP reply fail.
 - **The JA3 watch-list is small and unverified;** treat matches as hints.
-- **TODO: user rule precedence.** A user Allow rule (priority 10) always beats a
-  user Block rule (priority 100), even when the Block names a more specific
-  host. Planned: the most specific rule wins, and a tie goes to Block.
 - **Translations need native review.**
 - **The debug build's integrity check** expects a specific debug certificate;
   on another machine it reports "Signature mismatch" and blocks protected

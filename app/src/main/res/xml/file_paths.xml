@@ -2,20 +2,12 @@
 <!--
     Share only dedicated folders. The database, shared prefs, payload logs and the
     rest of files/ and cache/ must never be reachable through a content:// URI.
+    The enterprise flavor replaces this file (src/enterprise/res/xml/file_paths.xml)
+    to add its CA certificate folders; they never belong in the consumer app.
 -->
 <paths>
     <!-- PCAP captures, IT reports and CSV exports (files/exports/{pcap,reports,csv}) -->
     <files-path
         name="exports"
         path="exports/" />
-
-    <!-- MITM: CA certificate handed to the system installer -->
-    <cache-path
-        name="ca_cert"
-        path="certs/" />
-
-    <!-- MITM: CA certificate export on API <= 28 (public Download/PrivacyGuard/) -->
-    <external-path
-        name="ca_downloads"
-        path="Download/PrivacyGuard/" />
 </paths>

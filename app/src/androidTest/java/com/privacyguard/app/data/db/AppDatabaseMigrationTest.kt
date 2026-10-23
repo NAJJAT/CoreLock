@@ -10,9 +10,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * The database is opened with fallbackToDestructiveMigration(), so a migration
- * that does not match the exported schema silently wipes the connection log.
- * This runs each migration against the committed schema JSON in app/schemas.
+ * A missing or wrong migration crashes the app on upgrade (only a downgrade may wipe),
+ * so every step must match the exported schema. This runs each migration against the
+ * committed schema JSON in app/schemas.
  */
 @RunWith(AndroidJUnit4::class)
 class AppDatabaseMigrationTest {
@@ -55,6 +55,34 @@ class AppDatabaseMigrationTest {
             while (c.moveToNext()) indexes += c.getString(c.getColumnIndexOrThrow("name"))
         }
         assertTrue(indexes.containsAll(setOf("index_connections_timestamp", "index_connections_appUid_timestamp")))
+        db.close()
+    }
+
+    @Test
+    fun migrate5To6_keepsOldRulesTableForTheConfigImport() {
+        helper.createDatabase(dbName, 5).use { db ->
+            db.execSQL(
+                """
+                INSERT INTO rules (id, type, value, matchDomain, action, enabled, priority,
+                    description, createdAt, lastModified, hitCount)
+                VALUES ('rule_1', 'USER', 'ads.example.com', 'ads.example.com', 'DENY', 1, 10,
+                    'Block ads.example.com', 1, 1, 0)
+                """.trimIndent()
+            )
+            db.execSQL("INSERT INTO connections (id, appUid, appName, packageName, destinationIp, destinationPort, isIPv6, protocol, bytesSent, bytesReceived, timestamp, durationMs, wasBlocked, encryptionStatus, wasBackground) VALUES (1, 10123, 'Example', 'com.example', '93.184.216.34', 443, 0, 'TCP', 0, 0, 1000, 0, 0, 'TLS_1_3', 0)")
+        }
+
+        // Validates the version-6 entities; `rules` is no longer one of them.
+        val db = helper.runMigrationsAndValidate(dbName, 6, true, AppDatabase.MIGRATION_5_6)
+
+        // The user's rules must still be here: LegacyConfigImporter copies them to
+        // config.db on its first open and only then drops this table.
+        db.query("SELECT id, action FROM rules").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals("rule_1", c.getString(0))
+            assertEquals("DENY", c.getString(1))
+        }
+        db.query("SELECT COUNT(*) FROM connections").use { c -> c.moveToFirst(); assertEquals(1, c.getInt(0)) }
         db.close()
     }
 

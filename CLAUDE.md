@@ -47,7 +47,7 @@ These exist because breaking any of them causes damage that is expensive or impo
 
 ### 1.2 Secrets and signing
 
-- Never create, read, print, copy, move or commit a keystore, `release-signing.properties`, a password, an API token or a private key. The only signing file in git is `release-signing.template.properties`.
+- Never create, read, print, copy, move or commit a keystore, `release-signing.properties`, a password, an API token or a private key. The only signing file in git is `release-signing.properties.template`.
 - The release build **must fail** when no real signing key is configured. Never add a fallback to the debug key.
 - If a release build must be tested, use a throwaway key created **outside** the repo, then delete the key and the APK, and say in the report that you did.
 
@@ -93,7 +93,7 @@ Facts that shape every decision:
 
 | Fact | Consequence |
 |---|---|
-| **Not distributed on Google Play.** APKs are published on GitHub Releases. | Full ad blocking is allowed; no Play policy workarounds. But the app needs its own update check, and users must trust our signing key (§12). |
+| **Not distributed on Google Play.** APKs are published on GitHub Releases. | Full ad blocking is allowed; no Play policy workarounds. No automatic update check, by design: Settings › About opens the GitHub releases page, so no extra server is contacted. Users must trust our signing key (§12). |
 | **Two flavors.** `consumer` is released. `enterprise` (consented HTTPS inspection/MITM, MDM, SIEM export) is not shipped in 1.0. | Both flavors must always build and pass tests. Enterprise-only code stays in `app/src/enterprise/` and must never leak into consumer. |
 | **Kotlin 2.2, Compose, Room + SQLCipher, WorkManager, AGP 9.2.0, minSdk 24, targetSdk 36.** | Code must work from Android 7.0 to the newest release. Check API levels for every platform call. |
 | **Languages:** English (default), Arabic (RTL), French, Dutch. | Every user-visible string exists in all four. |
@@ -124,7 +124,7 @@ Use this when designing or reviewing any change. If a change creates a new asset
 
 1. **Ad and tracker networks** — try to evade blocking (DoH, hardcoded resolvers, QUIC, CNAME cloaking, same-host serving).
 2. **Malicious apps on the same phone** — try to disable protection, abuse exported components, read our data, or talk to local listeners.
-3. **Network attackers** (public Wi-Fi, hostile ISP) — tamper with downloads (blocklists, update check), inject DNS.
+3. **Network attackers** (public Wi-Fi, hostile ISP) — tamper with downloads (blocklists, tracker list), inject DNS.
 4. **Compromised list sources or mirrors** — supply chain.
 5. **Someone with physical access** to an unlocked phone — opens the app and reads history.
 6. **Malformed or hostile packets** — crash or hang the engine, which takes down the user's entire connectivity.
@@ -136,7 +136,7 @@ Out of scope (state it honestly in docs): a rooted or fully compromised device, 
 
 - TUN interface ↔ our engine: **every byte is untrusted.**
 - Our app ↔ other apps: intents, exported components, local sockets, clipboard.
-- Our app ↔ the internet: list downloads, DoH upstream, update check.
+- Our app ↔ the internet: list downloads, DoH upstream (there is no update check).
 - Our app ↔ storage and backups.
 - Our code ↔ third-party libraries.
 - Build machine ↔ CI ↔ released APK.
@@ -260,11 +260,13 @@ Owner attribution: the app that owns a connection is looked up by UID (cached pe
 All name decisions — DNS, CNAME, TCP SNI, QUIC SNI — go through **`NameBlockPolicy`**. The order is fixed:
 
 1. **User Block** rule → blocked
-2. **Malware/phishing lists** → blocked
+2. **Malware/phishing lists** → blocked, unless the user Allow rule has `overridesSecurity` (set only when the user confirmed the warning shown while creating it)
 3. **User Allow** rule → allowed
 4. **Ad/tracker lists + `AdSdkPolicy`** → blocked or allowed
 
-**Why this order:** the user's explicit Block always wins. Malware sits above user Allow so a mistaken Allow can't expose the user to a known phishing site without a warning. Ads sit below user Allow so the user can always fix a broken site.
+**Why this order:** the user's explicit Block always wins. Malware sits above user Allow so a mistaken Allow can't expose the user to a known phishing site without a warning; only an informed, confirmed choice (`overridesSecurity`) lets it through. Ads sit below user Allow so the user can always fix a broken site.
+
+**Which user rule applies** (`FilterEngine`, `ORDER`): all user rules share `HIGH_PRIORITY`; then the more specific rule wins (app + destination before app only before destination only; exact name/IP before wildcard/range, longer before shorter; more conditions before fewer); between equally specific rules, **Block wins** (owner's decision, 2026-10-23). Every screen that creates a user rule must use `HIGH_PRIORITY`, or that rule silently loses to every matching Allow.
 
 Invariants:
 - **Never add a second matching path.** If DNS and SNI disagree, a name blocked in one layer leaks through the other. The property test (fixed seed `20261021`) checks DNS and SNI against a model of this order; keep it, and keep its seed.
@@ -311,7 +313,7 @@ Rules:
 - `onRevoke()` (user stops it, or another VPN starts): stop cleanly, update the UI, don't fight the user.
 - Network changes (Wi-Fi ↔ mobile, airplane mode) must not leave dead sockets.
 - **Kill switch** depends on Android's *Always-on VPN* with *Block connections without VPN*. Only Android can block traffic once our tunnel is gone; the app shows "blocking" only when Android reports lockdown is on.
-- OEM battery optimization can kill the service. The app must guide the user to exempt it (open item, §16).
+- OEM battery optimization can kill the service. Settings › Diagnostics shows the battery state and opens Android's battery settings (`BatteryCheck`); it does not request the exemption directly.
 - Test captive portals (hotels, airports): users must be able to log in.
 
 ---
@@ -354,8 +356,8 @@ Every parser handles hostile input:
 
 A broken migration deletes the user's rules and history. Treat schema changes as high risk.
 
-- Every schema change: bump the version, write an explicit `Migration`, commit the exported schema JSON under `schemas/`, and add a test in `AppDatabaseMigrationTest`.
-- **Never** use `fallbackToDestructiveMigration` in any form.
+- Every schema change: bump the version, write an explicit `Migration`, commit the exported schema JSON under `app/schemas/`, and add a test in `AppDatabaseMigrationTest`.
+- `fallbackToDestructiveMigration` is forbidden; the only exception is `fallbackToDestructiveMigrationOnDowngrade`. A missing migration must crash, not wipe — in debug builds too.
 - New columns on existing tables are nullable or have a default, so old rows stay valid (example: `connections.blockSource`, migration 12→13).
 - In the report, state which migration paths only **compiled** and which actually **ran** on a device or emulator.
 - Settings changes must keep existing users' explicit choices (a new default must not overwrite a value the user set).
@@ -453,7 +455,7 @@ Rules:
 Only the **consumer** flavor is released, as a signed APK on GitHub Releases.
 
 1. `main` green on all four checks.
-2. Version: `versionCode` always increases by at least 1 (Android refuses updates otherwise); `versionName` follows semantic versioning (`1.0.0`, `1.0.1`, `1.1.0`). Git tag `vX.Y.Z` is created by the owner.
+2. Version: `versionCode` always increases by at least 1 (Android refuses updates otherwise); `versionName` follows semantic versioning (`1.0.0`, `1.0.1`, `1.1.0`). Today it is `"1.0"` (`app/build.gradle.kts`); the owner decides whether 1.0 ships as `1.0` or `1.0.0`. Git tag `vX.Y.Z` is created by the owner.
 3. Translations reviewed (`docs/TRANSLATION_REVIEW_*.md`).
 4. Owner builds and signs with the real key (never the agent).
 5. Release page contains: the APK, its **SHA-256 checksum**, the **signing certificate SHA-256 fingerprint** (same as in the README), release notes, and known limitations (§16).
@@ -468,6 +470,8 @@ The agent can prepare everything except signing and publishing: version bump pro
 Documentation is part of the product. Outdated docs in a security app are a security bug: users make decisions based on them.
 
 ### 13.1 README.md must contain, in this order
+
+> **Status (2026-10-23):** the README does not follow this structure yet. **To create:** 3 Install (with checksum and fingerprint verification), 4 First setup, 5 a Protection levels section, the signing fingerprint in 10 Security, and blocklist credits and licenses in 11 (today it only says "Private / proprietary"). Most of the Install and verification text already exists in `RELEASE_NOTES_1.0.md`.
 
 1. **What CoreLock is** — one paragraph, no hype.
 2. **What it blocks and what it can't** — the four layers in plain words, and the honest limits (§16).
@@ -484,7 +488,7 @@ Documentation is part of the product. Outdated docs in a security app are a secu
 ### 13.2 Other documents
 
 - `docs/HOW_IT_WORKS.md` — deeper technical explanation of §5 for curious users and contributors.
-- `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Examples worth recording: no Google Play, four-layer design, list choice, QUIC gate limits, removal of Flutter/Rust.
+- `docs/adr/NNNN-title.md` — **to create** (the folder does not exist yet). One Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Examples worth recording: no Google Play, four-layer design, list choice, QUIC gate limits, removal of Flutter/Rust.
 - `RELEASE_NOTES_X.Y.md`, `docs/TRANSLATION_REVIEW_X.Y.md`.
 - `SECURITY.md` — vulnerability reporting.
 
@@ -548,19 +552,19 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 - Encrypted Client Hello (ECH) hides the real server name; only the outer name is visible.
 - Apps using hardcoded IPs with no SNI can only be blocked per app.
 - The kill switch requires Android's Always-on VPN + lockdown.
+- No automatic update check, by design: the app contacts no update server. Settings › About shows the version and opens the GitHub releases page.
 - A rooted or compromised device is out of scope.
 
 ### 16.2 Open backlog (most important first)
 
-1. **Battery-optimization exemption** guidance/request, and an **update check** against GitHub Releases. Required for distribution outside Play.
-2. Per-app rules at the DNS layer (correlate DNS answers with later connections).
-3. Rule priority: today user Allow always beats user Block. Target: **most specific rule wins; on a tie, Block wins.**
-4. Block counters disagree: the notification counter excludes DNS and counts packets; screens use `BlockStats`. SNI/QUIC counters aren't shown; QUIC, limit-full and dual-hop UDP drops aren't recorded. Unify into one source of truth.
-5. Compact blocklist storage (64-bit fingerprints in a sorted `LongArray`) to cut STRICT memory from ~44 MB to a few MB.
-6. Six ViewModels use `while(true)` polling with empty catches; move to Room `Flow`.
-7. Wi-Fi-only / mobile-data-only rules.
-8. Reassemble split ClientHellos on ports other than 443; add DoH lists to the start-up cache (~30 s gap while the encrypted DB loads).
-9. `DebugHooksReceiver` still targets the deleted `com.privacyguard.testapp`; the untracked `state/` folder needs inspecting and ignoring.
+1. Per-app rules at the DNS layer (correlate DNS answers with later connections).
+2. Block counters disagree: the notification counter excludes DNS and counts packets; screens use `BlockStats`. SNI/QUIC counters aren't shown; QUIC, limit-full and dual-hop UDP drops aren't recorded. Unify into one source of truth.
+3. Compact blocklist storage (64-bit fingerprints in a sorted `LongArray`) to cut STRICT memory from ~44 MB to a few MB.
+4. Six ViewModels poll with `while(true)` — 8 loops: AlertInbox, AppDetail, Connections, Dashboard (2), Settings, Statistics (2). Empty `catch (_: Exception) { }` blocks in AlertInbox, Apps, Connections, Rules, Settings, Statistics. Move to Room `Flow` and surface errors. After 1.0.
+5. Per-packet allocations on the hot path (`copyOfRange` per UDP packet, IP addresses parsed into Strings per packet in `PrivacyVpnService`); measure first (§6.2). After 1.0.
+6. Wi-Fi-only / mobile-data-only rules.
+7. Reassemble split ClientHellos on ports other than 443; add DoH lists to the start-up cache (~30 s gap while the encrypted DB loads).
+8. `DebugHooksReceiver` still targets the deleted `com.privacyguard.testapp`.
 
 When you finish a backlog item, propose removing it here in the same change.
 

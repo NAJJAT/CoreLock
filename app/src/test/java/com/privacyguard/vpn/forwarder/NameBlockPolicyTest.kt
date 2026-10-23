@@ -101,15 +101,23 @@ class NameBlockPolicyTest {
         repeat(400) { round ->
             val listNames = List(rnd.nextInt(0, 6)) { (if (rnd.nextInt(4) == 0) "*." else "") + randomName() }
             val securityNames = List(rnd.nextInt(0, 3)) { randomName() }
-            val rules = List(rnd.nextInt(0, 5)) {
+            val randomRules = List(rnd.nextInt(0, 5)) {
                 val pattern = (if (rnd.nextInt(3) == 0) "*." else "") + randomName()
                 val base = if (rnd.nextBoolean()) FilterRule.allowDomain(pattern)
-                else FilterRule.blockDomain(pattern, source = FilterRule.Source.USER)
+                // Same priority as an Allow, as every screen creates user rules, so ties happen.
+                else FilterRule.blockDomain(pattern, source = FilterRule.Source.USER, priority = FilterRule.HIGH_PRIORITY)
                 base.copy(
                     matchPackage = if (rnd.nextInt(4) == 0) packages.filterNotNull().random(rnd) else null,
                     overridesSecurity = base.action == FilterRule.Action.ALLOW && rnd.nextBoolean(),
                 )
             }
+            // Random patterns almost never collide, so add an opposite twin of one rule
+            // (same name, same app) often enough that equally specific rules really meet.
+            val rules = if (randomRules.isNotEmpty() && rnd.nextInt(3) == 0) {
+                val r = randomRules.random(rnd)
+                val opposite = if (r.action == FilterRule.Action.ALLOW) FilterRule.Action.DENY else FilterRule.Action.ALLOW
+                randomRules + r.copy(id = r.id + "-twin", action = opposite, overridesSecurity = opposite == FilterRule.Action.ALLOW && rnd.nextBoolean())
+            } else randomRules
             val sdkOn = rnd.nextBoolean()
             // Allow by default (blacklist mode) or Deny by default (whitelist mode).
             val denyByDefault = rnd.nextBoolean()
@@ -157,13 +165,13 @@ class NameBlockPolicyTest {
             return if (p.startsWith("*.")) covers(p, host) else host == p
         }
         // FilterEngine's order, written out: priority, then app-specific before every app,
-        // exact before wildcard and longer wildcard before shorter, then Allow before Block.
+        // exact before wildcard and longer wildcard before shorter, then Block before Allow.
         val rule = rules.filter(::ruleMatches).minWithOrNull(
             compareBy<FilterRule> { it.priority }
                 .thenBy { if (it.matchPackage != null) 0 else 1 }
                 .thenBy { if (it.matchDomain!!.startsWith("*.")) 1 else 0 }
                 .thenByDescending { it.matchDomain!!.length }
-                .thenBy { if (it.action == FilterRule.Action.ALLOW) 0 else 1 },
+                .thenBy { if (it.action == FilterRule.Action.DENY) 0 else 1 },
         )
         if (rule?.action == FilterRule.Action.DENY) return Reason.USER_RULE
         val allow = rule?.action == FilterRule.Action.ALLOW

@@ -176,7 +176,10 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
                     if (confirmedRisk) com.privacyguard.app.R.string.rule_allow_domain_risky else com.privacyguard.app.R.string.rule_allow_domain, normalized))
                     .copy(overridesSecurity = confirmedRisk)
             } else {
-                FilterRule.blockDomain(normalized, label = getApplication<android.app.Application>().getString(com.privacyguard.app.R.string.rule_block_domain, normalized), source = FilterRule.Source.USER)
+                // HIGH_PRIORITY like every user rule: blockDomain's default (meant for list
+                // rules) made this Block lose to any matching user Allow, even a broader one.
+                FilterRule.blockDomain(normalized, label = getApplication<android.app.Application>().getString(com.privacyguard.app.R.string.rule_block_domain, normalized),
+                    source = FilterRule.Source.USER, priority = FilterRule.HIGH_PRIORITY)
             }
             rulesRepo.addRule(rule)
             refresh()

@@ -34,7 +34,7 @@ Blocking works in four layers:
 Protection levels: **Minimal** (malware and phishing only), **Standard** (default:
 plus ads and trackers, HaGeZi Pro mini) and **Strict** (plus telemetry, the full
 HaGeZi Pro and OISD small). Your own rules apply at every level; when two of your
-rules conflict, the more specific one wins, and Allow wins a tie.
+rules conflict, the more specific one wins, and Block wins a tie.
 
 ### What leaves the phone
 

@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * Rule evaluation order: ascending [FilterRule.priority], then the more specific rule
  * ([FilterRule.scopeRank], [FilterRule.targetRank], [FilterRule.conditionCount]), then
- * Allow before Block → first match wins.
+ * Block before Allow → first match wins.
  * Default action when no rule matches: [defaultAction] (ALLOW = blacklist mode).
  */
 class FilterEngine(
@@ -237,11 +237,13 @@ class FilterEngine(
         /**
          * Rules made in the app all share one priority, so without the later keys which of
          * two conflicting rules won depended on database row order. Stable for full ties.
+         * Between equally specific rules Block wins: when the user asked for both, the
+         * safe reading is to block.
          */
         private val ORDER: Comparator<FilterRule> = compareBy<FilterRule> { it.priority }
             .thenByDescending { it.scopeRank }
             .thenByDescending { it.targetRank }
             .thenByDescending { it.conditionCount }
-            .thenBy { if (it.action == FilterRule.Action.ALLOW) 0 else 1 }
+            .thenBy { if (it.action == FilterRule.Action.DENY) 0 else 1 }
     }
 }

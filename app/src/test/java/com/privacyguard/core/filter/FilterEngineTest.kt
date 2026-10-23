@@ -269,14 +269,19 @@ class FilterEngineTest {
     }
 
     @Test
-    fun allow_wins_between_equally_specific_rules() {
-        val allow = userRule(FilterRule.Action.ALLOW, domain = "x.com")
-        assertWinsInEitherOrder(allow, userRule(FilterRule.Action.DENY, domain = "x.com")) {
+    fun block_wins_between_equally_specific_rules() {
+        // Owner's decision: when the user said both, blocking is the safe reading.
+        val block = userRule(FilterRule.Action.DENY, domain = "x.com")
+        assertWinsInEitherOrder(block, userRule(FilterRule.Action.ALLOW, domain = "x.com")) {
             it.domainRuleFor("x.com", null)
         }
-        assertWinsInEitherOrder(allow, userRule(FilterRule.Action.DENY, domain = "X.com.")) {
+        assertWinsInEitherOrder(block, userRule(FilterRule.Action.ALLOW, domain = "X.com.")) {
             it.domainRuleFor("x.com", null)
         }
+        assertWinsInEitherOrder(
+            userRule(FilterRule.Action.DENY, ip = "10.1.2.3"),
+            userRule(FilterRule.Action.ALLOW, ip = "10.1.2.3"),
+        ) { it.evaluate(-1, null, null, "10.1.2.3", 443, 6).matchedRule }
     }
 
     @Test
