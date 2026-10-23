@@ -1,6 +1,5 @@
 package com.privacyguard.app.ui.settings
 
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,18 +12,16 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.os.LocaleListCompat
 import com.privacyguard.app.R
+import com.privacyguard.app.core.locale.AppLanguage
 import java.util.Locale
 
-/** Languages shipped in res/values-*; keep in sync with res/xml/locales_config.xml. */
-private val SUPPORTED = listOf("en", "nl", "fr", "ar")
-
 /** Empty tag = follow the system language. */
-fun currentAppLanguageTag(): String =
-    AppCompatDelegate.getApplicationLocales().takeIf { !it.isEmpty }?.get(0)?.language.orEmpty()
+@Composable
+fun currentAppLanguageTag(): String = AppLanguage.current(LocalContext.current)
 
 /** A language named in itself ("Français", "العربية"), so it is findable whatever the current UI language. */
 @Composable
@@ -34,23 +31,22 @@ fun languageDisplayName(tag: String): String =
 
 @Composable
 fun LanguagePickerDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
     val current = currentAppLanguageTag()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.settings_language)) },
         text = {
             Column {
-                (listOf("") + SUPPORTED).forEach { tag ->
+                (listOf("") + AppLanguage.SUPPORTED).forEach { tag ->
                     Row(
                         Modifier.fillMaxWidth()
                             .clickable {
                                 onDismiss()
-                                // Recreates the activity in the new language; stored by the
-                                // platform (13+) or AppCompat's metadata service (older).
-                                AppCompatDelegate.setApplicationLocales(
-                                    if (tag.isEmpty()) LocaleListCompat.getEmptyLocaleList()
-                                    else LocaleListCompat.forLanguageTags(tag)
-                                )
+                                // Recreates the activity in the new language (RTL for Arabic);
+                                // stored by the platform (13+) or AppCompat (older), and by
+                                // AppLanguage for the VPN notification. The VPN keeps running.
+                                AppLanguage.apply(context, tag)
                             }
                             .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,

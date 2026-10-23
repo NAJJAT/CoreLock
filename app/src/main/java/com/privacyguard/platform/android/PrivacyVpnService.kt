@@ -152,6 +152,7 @@ class PrivacyVpnService : VpnService() {
     @Volatile private var lastBlockCount = 0L
     // Held strongly: SharedPreferences keeps its change listeners only weakly.
     private var inspectionStatusWatch: AutoCloseable? = null
+    private var languageWatch: AutoCloseable? = null
 
     companion object {
         private const val TAG = "PrivacyVpnService"
@@ -234,6 +235,16 @@ class PrivacyVpnService : VpnService() {
         return START_STICKY
     }
 
+    /**
+     * A language change made in Android 13+'s "App language" screen (or the system
+     * language) reaches the service as a configuration change: redraw the notification
+     * in the new language. The tunnel is untouched.
+     */
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (isRunning) notifHelper.updateVpnNotification(lastBlockCount, MainActivity::class.java)
+    }
+
     override fun onDestroy() {
         Log.i(TAG, "VPN service destroyed")
         com.privacyguard.app.data.repository.LocalDataEraser.unregister(dataClearListener)
@@ -257,6 +268,11 @@ class PrivacyVpnService : VpnService() {
         // switch in the app or an MDM policy changes that, not at the next block.
         inspectionStatusWatch?.close()
         inspectionStatusWatch = TlsInterceptionFactory.observeStatus(this) {
+            if (isRunning) notifHelper.updateVpnNotification(lastBlockCount, MainActivity::class.java)
+        }
+        // Settings › Language: the notification follows at once; protection keeps running.
+        languageWatch?.close()
+        languageWatch = com.privacyguard.app.core.locale.AppLanguage.observe(this) {
             if (isRunning) notifHelper.updateVpnNotification(lastBlockCount, MainActivity::class.java)
         }
         // Watched from now on: if this process dies while starting or running, the
@@ -1443,6 +1459,8 @@ class PrivacyVpnService : VpnService() {
         startJob?.cancel()
         inspectionStatusWatch?.close()
         inspectionStatusWatch = null
+        languageWatch?.close()
+        languageWatch = null
         // Stopped on purpose (or for good): nothing for the watchdog to report.
         com.privacyguard.vpn.WorkerGuard.onWorkerDied = null
         watcher.stop()

@@ -282,9 +282,17 @@ SQLCipher, WorkManager, AppCompat per-app locales, BouncyCastle and OkHttp
 
 - English, **Nederlands**, **Français** and **العربية**, with proper plurals
   (French `one/many/other`, Arabic all six forms).
-- **Language picker** in Settings. It uses per-app locales
-  (`AppCompatDelegate.setApplicationLocales`, `res/xml/locales_config.xml`) and
+- **Language picker** in Settings › Language: System default, English, العربية,
+  Français, Nederlands, each named in its own language. It uses per-app locales
+  (`AppCompatDelegate.setApplicationLocales`, `res/xml/locales_config.xml`, so
+  Android 13+ also lists the app under the phone's "App language") and
   `AppLocalesMetadataHolderService` with `autoStoreLocales` for Android < 13.
+  The choice survives restarts and reboots, and switching to Arabic flips the
+  layout to RTL at once.
+- **Notifications follow the choice** while protection keeps running, also below
+  Android 13 where AppCompat applies it to activities only: `AppLanguage` keeps
+  its own copy of the choice and gives notification code a context in that
+  language.
 - **RTL:**
   - `supportsRtl`; start/end instead of left/right.
   - Auto-mirrored directional icons; direction-neutral separators.

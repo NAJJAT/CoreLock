@@ -216,6 +216,19 @@ fun SettingsScreen(
             }
         }
 
+        // Its own section near the top: inside the Upstream DNS card nobody found it.
+        item {
+            SettingBlock(
+                title = stringResource(R.string.settings_language),
+                items = listOf(
+                    SettingUiItem(
+                        stringResource(R.string.settings_language), languageDisplayName(currentAppLanguageTag()),
+                        true, Icons.Default.Language, onClick = { showLanguagePicker = true }, showsToggle = false,
+                    )
+                ),
+            )
+        }
+
         item {
             SettingBlock(
                 title = stringResource(R.string.set_security_rules),
@@ -439,9 +452,7 @@ fun SettingsScreen(
                         Text(stringResource(R.string.set_doh_provider, providerLabel(dohProvider)), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
                     }
                 },
-                items = listOf(
-                    SettingUiItem(stringResource(R.string.settings_language), languageDisplayName(currentAppLanguageTag()), true, Icons.Default.Language, onClick = { showLanguagePicker = true })
-                )
+                items = emptyList(),
             )
         }
 
@@ -799,7 +810,10 @@ private data class SettingUiItem(
     val enabled: Boolean,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
     val onClick: () -> Unit,
-    val danger: Boolean = false
+    val danger: Boolean = false,
+    // False for rows that open a choice (Language): an On/Off chip there read as a
+    // switch, also to TalkBack.
+    val showsToggle: Boolean = true,
 )
 
 @Composable
@@ -826,7 +840,7 @@ private fun SettingBlock(
                 }
                 if (item.danger) {
                     StatusPill(stringResource(R.string.set_danger), PgDangerDim, PgDanger)
-                } else {
+                } else if (item.showsToggle) {
                     ToggleChip(item.enabled)
                 }
             }

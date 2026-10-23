@@ -10,6 +10,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.privacyguard.app.R
+import com.privacyguard.app.core.locale.AppLanguage
 import com.privacyguard.vpn.interception.InspectionStatus
 import com.privacyguard.vpn.interception.TlsInterceptionFactory
 
@@ -23,7 +24,11 @@ import com.privacyguard.vpn.interception.TlsInterceptionFactory
  *
  * All channel creation is idempotent; safe to call multiple times.
  */
-class NotificationHelper(private val context: Context) {
+class NotificationHelper(private val baseContext: Context) {
+
+    // In the in-app language: below Android 13 a service context otherwise stays in the
+    // phone's language. Read on each use so a change applies to the next notification.
+    private val context: Context get() = AppLanguage.localized(baseContext)
 
     /**
      * The Settings "Notifications" switch silences every alert and summary. The VPN
