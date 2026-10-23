@@ -8,15 +8,19 @@ explains what it finds in plain language in **English, Dutch, French and Arabic*
 
 - **No root, no account, no backend.** Analysis runs on the device. The only
   outbound requests are listed in [Network requests the app makes](#network-requests-the-app-makes).
-- **Two flavors:** *consumer* (monitoring and blocking) and *enterprise* (adds
-  consent-gated HTTPS payload inspection, MDM and SIEM shipping). Only consumer is
-  released (an APK on GitHub Releases); enterprise is built and tested, not published.
+- **One app:** monitoring and blocking, plus optional HTTPS inspection, MDM and
+  SIEM shipping for company-managed phones. Released as an APK on GitHub Releases
+  (not Google Play).
+- **HTTPS inspection is off by default** and needs your explicit consent. Even when
+  on, most apps on Android 7 and newer ignore user-installed certificates, so their
+  traffic stays encrypted and only its metadata is shown. See
+  [HTTPS inspection: what it can and cannot do](#https-inspection-what-it-can-and-cannot-do).
 - **Honest by design:** the app shows destinations, sizes and timing, not the
   content of encrypted traffic, and every number on the Home screen opens the
   exact list it was counted from.
 
-> App name in code and on the device: **PrivacyGuard** (`com.privacyguard.app`).
-> Repository name: **CoreLock**.
+> App name on the device: **PrivacyGuard**. Application ID:
+> `com.privacyguard.app.enterprise`. Repository name: **CoreLock**.
 
 **How it works, in plain English:** [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md)
 describes what the code actually does: the path of one connection, how every
@@ -52,19 +56,20 @@ nothing is filtered unless Android's Always-on VPN with lockdown is on.
 8. [Build](#build)
 9. [Build variants](#build-variants)
 10. [Permissions](#permissions)
-11. [Enterprise: MDM, payload inspection and SIEM](#enterprise-mdm-payload-inspection-and-siem)
-12. [Testing](#testing)
-13. [Debug tooling](#debug-tooling)
-14. [Project structure](#project-structure)
-15. [Known limitations](#known-limitations)
-16. [Security](#security)
-17. [License](#license)
+11. [HTTPS inspection: what it can and cannot do](#https-inspection-what-it-can-and-cannot-do)
+12. [MDM, payload inspection and SIEM (details)](#mdm-payload-inspection-and-siem-details)
+13. [Testing](#testing)
+14. [Debug tooling](#debug-tooling)
+15. [Project structure](#project-structure)
+16. [Known limitations](#known-limitations)
+17. [Security](#security)
+18. [License](#license)
 
 ---
 
 ## What it does
 
-### Network protection (both flavors)
+### Network protection
 
 | Feature | Details |
 |---|---|
@@ -179,7 +184,7 @@ or Instagram.
 | Blocklists (raw.githubusercontent.com, cdn.jsdelivr.net as fallback mirror, small.oisd.nl) and the Exodus tracker list | Periodic refresh / "Refresh now" | That the app is installed, from your IP |
 | crt.sh (Certificate Transparency) | Only if turned on in Settings | Registrable domains of TLS servers you contact |
 | api.ipify.org | Only if "External IP check" is on, when diagnostics run | Your public IP |
-| SIEM endpoint (enterprise only, set by MDM) | Only when the administrator enables shipping | Payload metadata; HTTPS with optional pinning and signing |
+| SIEM endpoint (set by MDM) | Only on a company-managed phone, when the administrator enables shipping | Payload metadata; HTTPS with optional pinning and signing |
 
 Everything else (history, fingerprints, baselines, sensor events, reports)
 stays on the device.
@@ -190,7 +195,7 @@ stays on the device.
 
 | Sees | Does not see |
 |---|---|
-| Which app opened a connection, to which IP and hostname (DNS or TLS SNI) | The content of encrypted (HTTPS) traffic, unless enterprise MITM is enabled and the app trusts the user CA |
+| Which app opened a connection, to which IP and hostname (DNS or TLS SNI) | The content of encrypted (HTTPS) traffic, unless HTTPS inspection is on and that app trusts the user CA (most apps on Android 7+ do not) |
 | Bytes sent and received, start time and duration | Which ad you were shown, or what an app sent inside TLS |
 | Whether the screen was on, and (with Usage Access) whether the app was on screen | Foreground/background without Usage Access (shown as "unknown", never guessed) |
 | DNS lookups, blocked or allowed | The app behind a lookup that goes through Android's shared resolver (see below) |
@@ -304,8 +309,7 @@ SQLCipher, WorkManager, AppCompat per-app locales, BouncyCastle and OkHttp
 ### Debug builds
 
 ```bash
-./gradlew :app:assembleConsumerDebug      # consumer (no MITM)
-./gradlew :app:assembleEnterpriseDebug    # enterprise (MITM, MDM, SIEM)
+./gradlew :app:assembleEnterpriseDebug
 ```
 
 On Windows use `gradlew.bat`.
@@ -339,11 +343,12 @@ unsigned release fails.
 4. Build:
 
    ```bash
-   ./gradlew :app:assembleConsumerRelease     # the APK published on GitHub Releases
+   ./gradlew :app:assembleEnterpriseRelease   # the APK published on GitHub Releases
    ```
 
-   Only the consumer flavor is released, as an APK on GitHub Releases (not Google
-   Play). The enterprise flavor is built and tested in CI but not published.
+   This is the only app, released as an APK on GitHub Releases (not Google Play).
+   The Gradle flavor is still called `enterprise` so the application ID and task
+   names stay stable for installed phones.
 
 R8 shrinking and obfuscation run on release builds (`app/proguard-rules.pro`).
 
@@ -351,16 +356,14 @@ R8 shrinking and obfuscation run on release builds (`app/proguard-rules.pro`).
 
 ## Build variants
 
-| Variant | Application ID | Version suffix | MITM | Notes |
-|---|---|---|---|---|
-| `consumerDebug` | `com.privacyguard.app` | — | ✗ | Debuggable, debug hooks |
-| `consumerRelease` | `com.privacyguard.app` | — | ✗ | R8, release keystore required |
-| `enterpriseDebug` | `com.privacyguard.app.enterprise` | `-enterprise` | ✓ | Payload screen, MDM receiver, debug hooks |
-| `enterpriseRelease` | `com.privacyguard.app.enterprise` | `-enterprise` | ✓ | R8, release keystore required |
+| Variant | Application ID | Notes |
+|---|---|---|
+| `enterpriseDebug` | `com.privacyguard.app.enterprise` | Debuggable, debug hooks |
+| `enterpriseRelease` | `com.privacyguard.app.enterprise` | R8, release keystore required; the published APK |
 
-`BuildConfig.MITM_AVAILABLE` comes from the flavor only. Enterprise code (MITM
-engine, CA manager, payload UI, MDM, SIEM, and their libraries) lives in
-`src/enterprise` and is not present in consumer builds.
+There is one flavor. The consumer flavor was removed on 2026-10-23; its history
+is in git (`0fd01e5` added it). HTTPS inspection, CA manager, payload UI, MDM and
+SIEM code live in `src/enterprise`, the shared engine in `src/main`.
 
 ---
 
@@ -376,13 +379,37 @@ engine, CA manager, payload UI, MDM, SIEM, and their libraries) lives in
 | `POST_NOTIFICATIONS` | Alerts (TLS fingerprint change, cleartext, background block, VPN down, weekly report) |
 | `RECEIVE_BOOT_COMPLETED` | Restart the VPN after reboot |
 | `WAKE_LOCK` | Used by WorkManager for background jobs (blocklist refresh, pruning, weekly report) |
-| `WRITE_EXTERNAL_STORAGE` / `READ_EXTERNAL_STORAGE` (old Android only) | PCAP/CSV export and CA file on API ≤ 28 |
-| Enterprise: `BIND_DEVICE_ADMIN` (receiver) | MDM device admin |
+| `SCHEDULE_EXACT_ALARM` | Restart protection after a crash (Android only allows it from an exact alarm); set only after a crash |
+| `WRITE_EXTERNAL_STORAGE` (Android 9 and older only, `maxSdkVersion="28"`) | Save the HTTPS-inspection CA certificate to Downloads so you can install it; asked at runtime, only when you export the CA. Exports (PCAP, CSV) are app-private and need no permission. |
+| Device admin (`BIND_DEVICE_ADMIN` receiver) | For company MDM (Intune, Workspace ONE, Jamf). Does nothing until a user or MDM activates it. |
 | Debug only: `DUMP` (receiver guard) | Debug hooks callable only from adb |
 
 ---
 
-## Enterprise: MDM, payload inspection and SIEM
+## HTTPS inspection: what it can and cannot do
+
+- **Off by default.** Nothing is decrypted unless you turn it on in the app and
+  confirm the consent screen. Turning it off deletes the signing key.
+- **On a company-managed phone** your organisation's MDM can turn it on and give
+  consent on your behalf (`mitm_enabled`, `mitm_consent_given`). Nothing else can:
+  only your own switch and consent in the app, or the MDM of a phone your
+  organisation manages. When that policy is removed, what it turned on ends.
+- **Never silent.** While it decrypts, the VPN notification and the Home screen
+  say so, and say when your organisation turned it on. You also get a
+  notification the moment your organisation turns it on.
+- **It needs a certificate you install.** The app makes a certificate authority
+  (CA) on the phone; you install it in Android's settings yourself.
+- **Most apps ignore it.** Since Android 7, apps trust user-installed
+  certificates only if their developer allows it, and most do not. Their traffic
+  stays encrypted; PrivacyGuard shows only its metadata (app, server, size, time)
+  and says why. Apps that pin certificates are passed through the same way. In
+  practice inspection mostly reaches some browsers and apps built to allow it.
+- **Who can see the content:** it stays on the phone, in the encrypted database,
+  unless an administrator turns on SIEM shipping (always PII-redacted).
+
+---
+
+## MDM, payload inspection and SIEM (details)
 
 - **HTTPS payload inspection (MITM).** Off by default and gated by explicit
   consent:
@@ -401,7 +428,12 @@ engine, CA manager, payload UI, MDM, SIEM, and their libraries) lives in
 - **SIEM shipping** happens automatically once 100 events are queued or a
   minute after the first one, and "Ship now" sends the same queue.
 - **Consent from MDM** (`mitm_consent_given`) is valid for as long as the
-  policy asserts it; setting it to false withdraws consent and stops inspection.
+  policy asserts it (a user's own consent is asked again after 90 days); setting
+  it to false, or removing the managed configuration, withdraws it and stops
+  inspection. Removing the configuration also switches off inspection the MDM
+  turned on; the user's own choices stay.
+- **Automatic CA install** (`ca_install_automatic`, device or profile owner only)
+  happens only while inspection is on and consented to.
 - **MDM / managed configuration** (`application_restrictions.xml`): see the
   table below.
 
@@ -419,12 +451,12 @@ A Device Admin receiver supports Intune, Workspace ONE, Jamf and similar.
 ## Testing
 
 ```bash
-./gradlew :app:testConsumerDebugUnitTest :app:testEnterpriseDebugUnitTest   # JVM, no device
-./gradlew :app:lintConsumerDebug :app:lintEnterpriseDebug
-./gradlew :app:connectedEnterpriseDebugAndroidTest                         # instrumented (device)
+./gradlew :app:testEnterpriseDebugUnitTest            # JVM, no device
+./gradlew :app:lintEnterpriseDebug
+./gradlew :app:connectedEnterpriseDebugAndroidTest     # instrumented (emulator; uninstalls the app)
 ```
 
-- **JVM unit tests:** ~310 shared (consumer) and ~370 including enterprise. They cover:
+- **JVM unit tests:** 674 (October 2026). They cover:
   - the TCP forwarder end to end against a loopback server (lost segment,
     small window, RSTs), UDP reply fragmentation, resolver address validation
   - packet parsing, IPv6 address formatting, checksums
@@ -437,9 +469,9 @@ A Device Admin receiver supports Intune, Workspace ONE, Jamf and similar.
 - **Instrumented tests:** every Room migration (`AppDatabaseMigrationTest`,
   `ConfigSplitMigrationTest`) against the exported schemas.
 - **CI** (`.github/workflows/ci.yml`, on push and PR to `main`):
-  - unit tests for both flavors
-  - lint for both flavors
-  - R8 shrinking of both release variants
+  - unit tests
+  - lint
+  - R8 shrinking of the release variant
   - instrumented tests (Room migrations) on an API 34 emulator
   - "unsigned release must fail" check
   - all actions pinned to commit SHAs
@@ -504,8 +536,7 @@ app/src/
 │                      connections, statistics, sleep, alerts, security, rules, ads,
 │                      settings (+ LanguagePicker), onboarding, text (FindingText), theme
 ├── main/res/          values/strings_*.xml + values-nl / values-fr / values-ar, xml/locales_config.xml
-├── enterprise/        MITM engine, CA manager, payload UI, MDM receivers, SIEM, strings_mitm
-├── consumer/          no-op interception factory
+├── enterprise/        HTTPS inspection engine, CA manager, payload UI, MDM receivers, SIEM, strings_mitm
 ├── debug/             DebugHooksReceiver
 ├── test/              JVM unit tests
 └── androidTest/       Room migration tests

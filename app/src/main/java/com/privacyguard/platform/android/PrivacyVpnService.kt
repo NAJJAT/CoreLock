@@ -148,6 +148,10 @@ class PrivacyVpnService : VpnService() {
     @Volatile private var startJob: Job? = null
     @Volatile private var stopRequested = false
     @Volatile private var receiverRegistered = false
+    // The last 24 h block count shown, so an inspection change can redraw the notification.
+    @Volatile private var lastBlockCount = 0L
+    // Held strongly: SharedPreferences keeps its change listeners only weakly.
+    private var inspectionStatusWatch: AutoCloseable? = null
 
     companion object {
         private const val TAG = "PrivacyVpnService"
@@ -247,8 +251,14 @@ class PrivacyVpnService : VpnService() {
         notifHelper = NotificationHelper(this).also { it.createChannels() }
         startForeground(
             NotificationHelper.NOTIFICATION_ID_VPN,
-            notifHelper.buildVpnActiveNotification(0, MainActivity::class.java),
+            notifHelper.buildVpnActiveNotification(lastBlockCount, MainActivity::class.java),
         )
+        // The notification says when HTTPS inspection is on; redraw it the moment a
+        // switch in the app or an MDM policy changes that, not at the next block.
+        inspectionStatusWatch?.close()
+        inspectionStatusWatch = TlsInterceptionFactory.observeStatus(this) {
+            if (isRunning) notifHelper.updateVpnNotification(lastBlockCount, MainActivity::class.java)
+        }
         // Watched from now on: if this process dies while starting or running, the
         // watcher process restarts protection (ProtectionWatcher / ProtectionWatchdog).
         watcher.bind()
@@ -1050,8 +1060,9 @@ class PrivacyVpnService : VpnService() {
             val count = runCatching {
                 com.privacyguard.app.data.repository.BlockStats(buildDatabase()).totalBetween(now - BLOCK_COUNT_WINDOW_MS, now)
             }.getOrNull() ?: return@launch
+            lastBlockCount = count.toLong()
             // Not after stop: notify() would post the notification again once it was removed.
-            if (isRunning) notifHelper.updateVpnNotification(count.toLong(), MainActivity::class.java)
+            if (isRunning) notifHelper.updateVpnNotification(lastBlockCount, MainActivity::class.java)
         }
     }
 
@@ -1430,6 +1441,8 @@ class PrivacyVpnService : VpnService() {
     private fun stopVpn() {
         stopRequested = true
         startJob?.cancel()
+        inspectionStatusWatch?.close()
+        inspectionStatusWatch = null
         // Stopped on purpose (or for good): nothing for the watchdog to report.
         com.privacyguard.vpn.WorkerGuard.onWorkerDied = null
         watcher.stop()

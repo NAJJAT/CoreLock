@@ -245,8 +245,11 @@ fun MitmScreen() {
         }
 
         if (showConsentDialog) {
+            // No consent, no inspection: leaving the switch on without consent decrypted
+            // nothing but showed "on", which misled the user.
+            val declineConsent = { vm.disableMitm(); showConsentDialog = false }
             AlertDialog(
-                onDismissRequest = { showConsentDialog = false },
+                onDismissRequest = declineConsent,
                 containerColor = Bg2,
                 title = { Text(stringResource(R.string.mitm_consent_title), color = Ac, fontWeight = FontWeight.Bold) },
                 text = {
@@ -262,7 +265,7 @@ fun MitmScreen() {
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showConsentDialog = false }) {
+                    TextButton(onClick = declineConsent) {
                         Text(stringResource(R.string.mitm_cancel), color = TxS)
                     }
                 }

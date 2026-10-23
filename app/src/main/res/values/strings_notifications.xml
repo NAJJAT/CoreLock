@@ -54,4 +54,9 @@
     <string name="notif_bg_text">%1$s tried to connect to %2$s while in the background</string>
     <string name="notif_blocklist_updated">Blocklist updated</string>
     <string name="notif_blocklist_entries">%1$s: %2$s entries loaded</string>
+    <!-- HTTPS inspection indicator (VPN notification) and the one-time notice when an organisation turns it on -->
+    <string name="notif_inspection_on">HTTPS inspection on</string>
+    <string name="notif_inspection_on_org">HTTPS inspection on, set by your organisation</string>
+    <string name="notif_inspection_org_title">Your organisation turned on HTTPS inspection</string>
+    <string name="notif_inspection_org_text">PrivacyGuard can now read the HTTPS traffic of apps that trust its certificate. Most apps do not. Open PrivacyGuard to see what is captured.</string>
 </resources>

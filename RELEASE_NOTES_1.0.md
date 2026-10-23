@@ -36,6 +36,26 @@ plus ads and trackers, HaGeZi Pro mini) and **Strict** (plus telemetry, the full
 HaGeZi Pro and OISD small). Your own rules apply at every level; when two of your
 rules conflict, the more specific one wins, and Block wins a tie.
 
+### HTTPS inspection (optional, off by default)
+
+PrivacyGuard can also show the content of HTTPS traffic, for apps that allow it.
+
+- **Off by default.** It only starts after you turn it on and confirm a consent
+  screen, and after you install the app's certificate in Android's settings
+  yourself. Turning it off deletes the app's signing key.
+- **On a company-managed phone**, your organisation's MDM can turn it on and give
+  consent for you. Nothing else can: only your own choice in the app, or the MDM
+  of a phone your organisation manages.
+- **Never silent.** While it decrypts, the VPN notification and the Home screen
+  say so, including when your organisation turned it on, and you get a
+  notification the moment it does.
+- **Most apps ignore it.** Since Android 7, apps only trust certificates you
+  install if their developer allows it, and most do not. Their traffic stays
+  encrypted, and PrivacyGuard shows only the app, server, size and time, and says
+  why. In practice it mostly reaches some browsers and apps built to allow it.
+- What it captures stays on the phone in the encrypted database, unless an
+  administrator turns on SIEM shipping (always with personal data redacted).
+
 ### What leaves the phone
 
 - Your DNS lookups, to the resolver you choose (Cloudflare 1.1.1.1 by default;
@@ -45,6 +65,8 @@ rules conflict, the more specific one wins, and Block wins a tie.
 - The Exodus tracker list, at most weekly: reports.exodus-privacy.eu.org.
 - Only if you turn them on: Certificate Transparency checks (crt.sh) and the
   public-IP check in Diagnostics (api.ipify.org).
+- Only on a company-managed phone, if the administrator turns it on: inspection
+  events (redacted) to the organisation's own SIEM server.
 
 The app does not check for updates itself. Settings › About shows your version and
 opens this releases page.
@@ -86,8 +108,8 @@ sha256sum PrivacyGuard-1.0.0.apk                      # Linux / macOS
 certutil -hashfile PrivacyGuard-1.0.0.apk SHA256      # Windows
 ```
 
-(`keytool -printcert -jarfile` does not work here: the APK uses APK Signature
-Scheme v2/v3 only.) After installing, Settings › Runtime integrity also shows
+(`keytool -printcert -jarfile` does not work here: the APK is signed with APK
+Signature Scheme v2 only.) After installing, Settings › Runtime integrity also shows
 whether the running app's signature is the expected one.
 
 ## Permissions
@@ -95,8 +117,13 @@ whether the running app's signature is the expected one.
 Network access and VPN; a foreground service for the VPN; notifications; starting
 after a reboot; exact alarms (to restart protection after a crash); the list of
 installed apps (to name the app behind each connection); optional Usage Access
-(foreground/background, for background-only rules). No storage, location,
-contacts, camera or microphone access.
+(foreground/background, for background-only rules).
+
+For HTTPS inspection and company phones only: storage on Android 9 and older (to
+save the certificate to Downloads so you can install it; asked only then), and a
+device admin entry for company MDM, which does nothing unless it is activated.
+
+No location, contacts, camera or microphone access.
 
 ## Known limitations
 
@@ -109,6 +136,9 @@ contacts, camera or microphone access.
 - **QUIC at Strict.** QUIC is blocked by default at Strict, and unreadable QUIC
   is dropped at Standard and Strict. Apps fall back to TCP, which can make some
   connections a little slower to start.
+- **HTTPS inspection reaches few apps.** Most apps on Android 7 and newer ignore
+  user-installed certificates or pin their own, so their content stays encrypted
+  and only metadata is shown.
 - **No Wi-Fi-only or mobile-only rules.** Rules apply on every network.
 - **Blocklists are held in memory** while protection runs (Strict uses the
   most), which counts toward the app's memory use.

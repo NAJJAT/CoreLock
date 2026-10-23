@@ -52,4 +52,8 @@
     <string name="notif_bg_text">%1$s probeerde op de achtergrond verbinding te maken met %2$s</string>
     <string name="notif_blocklist_updated">Blokkeerlijst bijgewerkt</string>
     <string name="notif_blocklist_entries">%1$s: %2$s items geladen</string>
+    <string name="notif_inspection_on">HTTPS-inspectie aan</string>
+    <string name="notif_inspection_on_org">HTTPS-inspectie aan, ingesteld door je organisatie</string>
+    <string name="notif_inspection_org_title">Je organisatie heeft HTTPS-inspectie aangezet</string>
+    <string name="notif_inspection_org_text">PrivacyGuard kan nu het HTTPS-verkeer lezen van apps die zijn certificaat vertrouwen. De meeste apps doen dat niet. Open PrivacyGuard om te zien wat er wordt vastgelegd.</string>
 </resources>

@@ -14,7 +14,7 @@ Contents
 5. [Detection logic](#5-detection-logic)
 6. [Every screen: where each number comes from](#6-every-screen-where-each-number-comes-from)
 7. [Privacy: what is stored, for how long, and what leaves the phone](#7-privacy-what-is-stored-for-how-long-and-what-leaves-the-phone)
-8. [Consumer and enterprise builds](#8-consumer-and-enterprise-builds)
+8. [HTTPS inspection, MDM and SIEM](#8-https-inspection-mdm-and-siem)
 9. [Known limits](#9-known-limits)
 
 ---
@@ -588,14 +588,16 @@ paths do not log addresses, ports, hosts, package names or exception messages.
 
 ---
 
-## 8. Consumer and enterprise builds
+## 8. HTTPS inspection, MDM and SIEM
 
-| | Consumer | Enterprise |
-|---|---|---|
-| Monitoring, blocking, detection, all screens above | Yes | Yes |
-| HTTPS inspection (payloads) | No; the code is not in the APK | Yes, opt-in |
-| MDM managed configuration | No | Yes |
-| SIEM shipping | No | Yes |
+There is one app (the consumer build was removed on 2026-10-23). Everything below
+is in it, and HTTPS inspection is **off by default**. On a company-managed phone the
+organisation's MDM can switch it on and give consent on the user's behalf
+(`mitm_enabled`, `mitm_consent_given`); nothing else can (security review,
+2026-10-23). While it decrypts, the VPN notification and the Home screen say so
+(`InspectionStatus`), and when the MDM turns it on the user is notified once.
+When the managed configuration disappears, what the MDM switched on or consented
+to is withdrawn (`ManagedConfigApplier.withdrawOrganisationSettings`).
 
 **HTTPS inspection** (`app/src/enterprise/java/com/privacyguard/vpn/mitm/`): the
 user gives consent during onboarding and later switches inspection on in the
@@ -620,8 +622,8 @@ key, an optional certificate pin and an optional body signature (`SiemEndpoint.k
 
 ## 9. Known limits
 
-- **Encrypted content is not visible** (consumer, and enterprise without
-  inspection). PrivacyGuard sees who, when, how much and how it is encrypted.
+- **Encrypted content is not visible** unless HTTPS inspection is on and the app
+  trusts user certificates (most apps on Android 7+ do not). PrivacyGuard sees who, when, how much and how it is encrypted.
 - **Attribution is best effort.** DNS lookups are made by Android's resolver, not
   by the app, so they are credited to an app only when the app connects to that
   name within 60 seconds. Camera and mic use is credited to the app on screen,

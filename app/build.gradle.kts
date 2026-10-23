@@ -147,7 +147,7 @@ android {
         create("enterprise") {
             dimension = "distribution"
             applicationIdSuffix = ".enterprise"
-            versionNameSuffix = "-enterprise"
+            // No version suffix: as the only app, users see plain "1.0.0".
             buildConfigField("boolean", "MITM_AVAILABLE", "true")
         }
     }

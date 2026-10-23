@@ -33,7 +33,8 @@ import kotlin.math.absoluteValue
  *
  * ## Key design decisions
  *
- * - Private key: always in AndroidKeyStore (hardware-backed, never leaves the device).
+ * - Private key: always in AndroidKeyStore, signing only and not exportable (hardware-backed
+ *   where the phone has a TEE or StrongBox; software-backed Keystore on some older phones).
  * - Certificate: persisted in SharedPreferences as Base64 DER.
  *
  * Why not store the cert in AndroidKeyStore too?
@@ -153,7 +154,7 @@ class CaManager(private val context: Context) {
     fun getCaCert(): X509Certificate? = _caCertFlow.value
 
     /**
-     * Returns the CA private key from AndroidKeyStore. The key never leaves hardware.
+     * Returns a handle to the CA private key in AndroidKeyStore; its bytes cannot be exported.
      * Returns null if [initialize] has not completed or the key was deleted.
      */
     fun getCaKey(): java.security.PrivateKey? {

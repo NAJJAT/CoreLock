@@ -27,6 +27,40 @@ class MitmConfig(
         private const val DEFAULT_RETENTION_DAYS = 7
         // Longer retention belongs in the SIEM, not on the device (data minimisation).
         const val MAX_RETENTION_DAYS = 30
+
+        private const val KEY_ENABLED = "mitm_enabled"
+        private const val KEY_ENABLED_BY_ORG = "mitm_enabled_by_org"
+        private const val KEY_CONSENT_TS = "mitm_consent_timestamp"
+        private const val KEY_CONSENT_BY_ORG = "mitm_consent_by_org"
+        private const val USER_CONSENT_VALIDITY_MS = 90L * 24 * 60 * 60 * 1000
+
+        /**
+         * A user's consent is asked again after 90 days. The organisation's consent lasts
+         * as long as its policy asserts it: ManagedConfigApplier withdraws it when the
+         * policy says false or the managed configuration disappears. (With the 90-day
+         * limit it expired silently mid-run and was renewed only at the next app start.)
+         */
+        internal fun consentValid(timestamp: Long, byOrganisation: Boolean, now: Long): Boolean {
+            if (timestamp == 0L) return false
+            if (byOrganisation) return true
+            return timestamp > now - USER_CONSENT_VALIDITY_MS
+        }
+
+        internal fun prefs(context: Context): SharedPreferences =
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+        /**
+         * The status without building a MitmConfig (which also opens the secret store):
+         * read on every VPN notification update.
+         */
+        fun readStatus(context: Context): com.privacyguard.vpn.interception.InspectionStatus {
+            val p = prefs(context)
+            return com.privacyguard.vpn.interception.TlsInterceptionFactory.statusOf(
+                enabled = p.getBoolean(KEY_ENABLED, false),
+                consentValid = consentValid(p.getLong(KEY_CONSENT_TS, 0L), p.getBoolean(KEY_CONSENT_BY_ORG, false), System.currentTimeMillis()),
+                byOrganisation = p.getBoolean(KEY_ENABLED_BY_ORG, false),
+            )
+        }
     }
 
     private val prefs: SharedPreferences =
@@ -88,8 +122,16 @@ class MitmConfig(
         _blockQuicWhenMitm.value = block
     }
 
-    fun setEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean("mitm_enabled", enabled).apply()
+    /** True when inspection is on because the organisation's MDM switched it on. */
+    val enabledByOrganisation: Boolean
+        get() = prefs.getBoolean(KEY_ENABLED_BY_ORG, false)
+
+    /** [byOrganisation]: set by ManagedConfigApplier, so the UI can say who turned it on. */
+    fun setEnabled(enabled: Boolean, byOrganisation: Boolean = false) {
+        prefs.edit()
+            .putBoolean(KEY_ENABLED, enabled)
+            .putBoolean(KEY_ENABLED_BY_ORG, enabled && byOrganisation)
+            .apply()
         _isEnabled.value = enabled
         // Decrypted payloads must not outlive the feature that captured them.
         if (!enabled) com.privacyguard.app.workers.PruneWorker.runNow(context)
@@ -146,19 +188,22 @@ class MitmConfig(
         prefs.edit().putInt("mitm_retention_days", clampedDays).apply()
     }
 
-    fun recordConsent() {
-        prefs.edit().putLong("mitm_consent_timestamp", System.currentTimeMillis()).apply()
+    /** True when the current consent was given by the organisation's MDM policy. */
+    val consentByOrganisation: Boolean
+        get() = prefs.getBoolean(KEY_CONSENT_BY_ORG, false)
+
+    fun recordConsent(byOrganisation: Boolean = false) {
+        prefs.edit()
+            .putLong(KEY_CONSENT_TS, System.currentTimeMillis())
+            .putBoolean(KEY_CONSENT_BY_ORG, byOrganisation)
+            .apply()
     }
 
     /** Withdraws consent; inspection stops at the next connection. */
     fun clearConsent() {
-        prefs.edit().remove("mitm_consent_timestamp").apply()
+        prefs.edit().remove(KEY_CONSENT_TS).remove(KEY_CONSENT_BY_ORG).apply()
     }
 
-    fun isConsentValid(): Boolean {
-        val timestamp = consentTimestamp
-        if (timestamp == 0L) return false
-        val ninetyDaysAgo = System.currentTimeMillis() - (90L * 24 * 60 * 60 * 1000)
-        return timestamp > ninetyDaysAgo
-    }
+    fun isConsentValid(): Boolean =
+        consentValid(consentTimestamp, consentByOrganisation, System.currentTimeMillis())
 }

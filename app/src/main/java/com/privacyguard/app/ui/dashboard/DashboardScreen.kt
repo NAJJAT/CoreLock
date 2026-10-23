@@ -88,6 +88,8 @@ import com.privacyguard.app.ui.theme.PgWarning
 import com.privacyguard.app.ui.theme.PgWarningDim
 import java.io.File
 import com.privacyguard.app.ui.traffic.EvidenceKind
+import com.privacyguard.vpn.interception.InspectionStatus
+import com.privacyguard.vpn.interception.TlsInterceptionFactory
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
@@ -116,6 +118,12 @@ fun DashboardScreen(
     androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
         privateDnsHost = com.privacyguard.app.core.network.PrivateDnsCheck.strictHostname(context)
         onPauseOrDispose { }
+    }
+    // HTTPS inspection is never silent: shown while it decrypts, updated the moment
+    // it is switched in the app or by an MDM policy.
+    val inspection by androidx.compose.runtime.produceState(TlsInterceptionFactory.status(context)) {
+        val watch = TlsInterceptionFactory.observeStatus(context) { value = TlsInterceptionFactory.status(context) }
+        awaitDispose { watch.close() }
     }
     var confirmStartHost by remember { mutableStateOf<String?>(null) }
     confirmStartHost?.let { host ->
@@ -271,6 +279,10 @@ fun DashboardScreen(
                 )
 
                 Spacer(modifier = Modifier.height(18.dp))
+                if (inspection != InspectionStatus.OFF) {
+                    InspectionOnCard(byOrganisation = inspection == InspectionStatus.ON_BY_ORGANISATION)
+                    Spacer(modifier = Modifier.height(18.dp))
+                }
                 privateDnsHost?.let { host ->
                     PrivateDnsWarningCard(host, onOpenSettings = { com.privacyguard.app.core.network.PrivateDnsCheck.openSettings(context) })
                     Spacer(modifier = Modifier.height(18.dp))
@@ -713,6 +725,20 @@ internal fun protectionLevelDescription(level: String): Int = when (level) {
     "MINIMAL" -> R.string.set_level_minimal_desc
     "STRICT" -> R.string.set_level_strict_desc
     else -> R.string.set_level_standard_desc
+}
+
+/** HTTPS inspection is decrypting traffic; says so plainly, and who turned it on. */
+@Composable
+private fun InspectionOnCard(byOrganisation: Boolean) {
+    PanelCard {
+        Text(stringResource(R.string.dash_inspection_title), style = MaterialTheme.typography.titleMedium, color = PgWarning)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            stringResource(if (byOrganisation) R.string.dash_inspection_org_body else R.string.dash_inspection_body),
+            style = MaterialTheme.typography.bodySmall,
+            color = PgTextMuted,
+        )
+    }
 }
 
 /** Private DNS in hostname mode: DNS fails while the VPN runs. */

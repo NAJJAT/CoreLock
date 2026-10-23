@@ -35,6 +35,27 @@ object TlsInterceptionFactory {
     /** Decrypting only when switched on and consented to; either alone is not enough. */
     internal fun isInspectionActive(enabled: Boolean, consentValid: Boolean): Boolean = enabled && consentValid
 
+    /** What the VPN notification and the dashboard tell the user (see [InspectionStatus]). */
+    fun status(context: Context): InspectionStatus = MitmConfig.readStatus(context)
+
+    internal fun statusOf(enabled: Boolean, consentValid: Boolean, byOrganisation: Boolean): InspectionStatus = when {
+        !isInspectionActive(enabled, consentValid) -> InspectionStatus.OFF
+        byOrganisation -> InspectionStatus.ON_BY_ORGANISATION
+        else -> InspectionStatus.ON
+    }
+
+    /**
+     * Calls [onChange] (on the main thread) whenever an inspection setting changes, so
+     * the indicator never lags behind a switch in the app or an MDM policy. Close the
+     * result to stop; keep a reference to it, since SharedPreferences holds listeners weakly.
+     */
+    fun observeStatus(context: Context, onChange: () -> Unit): AutoCloseable {
+        val prefs = MitmConfig.prefs(context)
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> onChange() }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        return AutoCloseable { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
     /**
      * Called from the VPN's background startup. The CA (a key that can sign for any
      * host) is only loaded or created when inspection is on and consented to; with

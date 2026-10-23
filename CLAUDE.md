@@ -94,7 +94,7 @@ Facts that shape every decision:
 | Fact | Consequence |
 |---|---|
 | **Not distributed on Google Play.** APKs are published on GitHub Releases. | Full ad blocking is allowed; no Play policy workarounds. No automatic update check, by design: Settings › About opens the GitHub releases page, so no extra server is contacted. Users must trust our signing key (§12). |
-| **Two flavors.** `consumer` is released. `enterprise` (consented HTTPS inspection/MITM, MDM, SIEM export) is not shipped in 1.0. | Both flavors must always build and pass tests. Enterprise-only code stays in `app/src/enterprise/` and must never leak into consumer. |
+| **One app.** The only flavor is `enterprise` (application ID `com.privacyguard.app.enterprise`, version shown without suffix). It includes consented HTTPS inspection (MITM), MDM and SIEM export, and it is what 1.0.0 releases. The consumer flavor was removed on 2026-10-23 (owner's decision). | HTTPS inspection now ships to every user, so its code is security-critical for everyone (§3.1, §4.2). It stays in `app/src/enterprise/`; the shared engine in `app/src/main/`. Don't reintroduce a second flavor without the owner. |
 | **Kotlin 2.2, Compose, Room + SQLCipher, WorkManager, AGP 9.2.0, minSdk 24, targetSdk 36.** | Code must work from Android 7.0 to the newest release. Check API levels for every platform call. |
 | **Languages:** English (default), Arabic (RTL), French, Dutch. | Every user-visible string exists in all four. |
 | **Release ABIs:** `arm64-v8a` and `armeabi-v7a`. | No per-device splits (no Play), so 32-bit phones must keep working. |
@@ -118,7 +118,8 @@ Use this when designing or reviewing any change. If a change creates a new asset
 | Database encryption key | **Secret** | Unlocks all of the above. Keystore only. |
 | Release signing key | **Secret** | Controls who can update the app on every device. |
 | Blocklists | Integrity-critical | A poisoned list can block the bank or allow malware. |
-| Enterprise MITM CA (enterprise only) | **Secret** | Can decrypt HTTPS for consenting managed devices. |
+| HTTPS-inspection CA private key | **Secret** | Shipped to every user since 2026-10-23. Once the user installed the CA, the key can decrypt that phone's HTTPS for apps that trust user CAs. Must never leave the device. |
+| Payload log (decrypted HTTPS content) | **Sensitive** | The most sensitive data the app can hold; exists only while inspection is on. |
 
 ### 3.2 Adversaries
 
@@ -153,6 +154,7 @@ Out of scope (state it honestly in docs): a rooted or fully compromised device, 
 | Formula injection in CSV export | Escaping of all attacker-controlled fields, tested through the real export code (§4). |
 | Malicious update / key compromise (spoofing) | Signing key never in repo, published fingerprint, release checksum (§12). |
 | Supply-chain compromise | Pinned versions, Gradle dependency verification, OSV scan, secret scan in CI (§10, §11). |
+| HTTPS inspection abused: CA key leaves the phone, consent skipped, or inspection switched on by another app (disclosure, elevation) | Off by default; consent in-app or via MDM only; CA key never exported; key deleted when turned off. Reviewed in step 3 of the single-app change (2026-10-23). |
 | Protection silently stopping | Notify the user when the tunnel drops; kill switch via Android's Always-on VPN + lockdown (§5.7). |
 
 ---
@@ -181,7 +183,7 @@ Out of scope (state it honestly in docs): a rooted or fully compromised device, 
 - No `Random()` for security (use `SecureRandom`), no ECB, no MD5/SHA-1 for security, no hardcoded keys or IVs.
 
 **Network (the app's own traffic)**
-- HTTPS only. No `cleartextTrafficPermitted`. No custom `TrustManager` or `HostnameVerifier` in consumer code.
+- HTTPS only. No `cleartextTrafficPermitted`. No custom `TrustManager` or `HostnameVerifier` outside the HTTPS-inspection engine (`app/src/enterprise/.../vpn/mitm/`), and none there for the app's own outbound connections.
 - Our own sockets are protected (`VpnService.protect()` or excluded) so they never loop back into the tunnel.
 - Downloads have size limits and timeouts.
 
@@ -203,8 +205,10 @@ Out of scope (state it honestly in docs): a rooted or fully compromised device, 
 - Data minimization: store only what a screen actually uses.
 - Permissions are explained in the README with a reason for each one.
 
-**Enterprise-only (MITM)**
-- HTTPS inspection only with explicit, informed consent, only in the enterprise flavor, and never compiled into consumer. Any change here gets an extra security review section in the report.
+**HTTPS inspection (MITM)**
+- Off by default. Only with explicit, informed consent from the user, or from the organisation's MDM on a managed phone (`mitm_consent_given`). Nothing may turn it on or record consent from outside the app or MDM.
+- Be honest about reach: most apps on Android 7+ ignore user CAs or pin certificates; they are shown as metadata only. Docs and UI must say so.
+- Any change here gets an extra security review section in the report.
 
 ### 4.3 Red-flag scan
 
@@ -338,7 +342,7 @@ The packet path runs for every packet of every connection on the phone. A few mi
 - **Measure before and after** any hot-path change and report both numbers (µs per decision or per connection). Current reference: SNI check ≈ 4.3 µs per connection. A regression over ~10% needs a written justification.
 - **Memory:** blocklists dominate the heap (measured: MINIMAL ≈ 23 MB, STANDARD ≈ 31 MB, STRICT ≈ 44 MB). Don't add per-name objects. The planned direction is compact storage (64-bit fingerprints in a sorted `LongArray`).
 - **UI:** observe Room `Flow`s. Don't add `while(true)` polling loops.
-- APK size is watched (consumer release ≈ 6.1 MiB). Report the size when a change could affect it.
+- APK size is watched (release ≈ 6.1 MiB measured earlier for the old consumer build; a consumer release measured 7.13 MiB on 2026-10-23; re-measure the enterprise release before 1.0). Report the size when a change could affect it.
 
 ### 6.3 Parsers (DNS, TLS ClientHello, QUIC, IP)
 
@@ -382,23 +386,23 @@ A broken migration deletes the user's rules and history. Treat schema changes as
 ### 9.1 Commands (match CI)
 
 ```bash
-# Unit tests, both flavors
-./gradlew --no-daemon :app:testConsumerDebugUnitTest :app:testEnterpriseDebugUnitTest
+# Unit tests
+./gradlew --no-daemon :app:testEnterpriseDebugUnitTest
 
-# Lint, both flavors
-./gradlew --no-daemon :app:lintConsumerDebug :app:lintEnterpriseDebug
+# Lint
+./gradlew --no-daemon :app:lintEnterpriseDebug
 
-# R8 / shrinking, both flavors
-./gradlew --no-daemon :app:minifyConsumerReleaseWithR8 :app:minifyEnterpriseReleaseWithR8
+# R8 / shrinking
+./gradlew --no-daemon :app:minifyEnterpriseReleaseWithR8
 
-# Instrumented tests incl. Room migrations (device or emulator required)
+# Instrumented tests incl. Room migrations (emulator only: it uninstalls the app)
 ./gradlew --no-daemon :app:connectedEnterpriseDebugAndroidTest
 ```
 
 ### 9.2 Definition of done
 
-1. Unit tests pass on **both** flavors; report counts (tests / failures).
-2. Lint: 0 errors on both flavors.
+1. Unit tests pass; report counts (tests / failures).
+2. Lint: 0 errors.
 3. `androidTest` code compiles; migration tests run if the schema changed.
 4. New behaviour has tests. **For every bug fix, prove the test catches the bug:** temporarily remove the fix, run, see it fail, restore, and say so in the report.
 5. Hot-path change: before/after measurement.
@@ -452,7 +456,7 @@ Rules:
 
 ## 12. Release process
 
-Only the **consumer** flavor is released, as a signed APK on GitHub Releases.
+The app (the `enterprise` flavor, the only one) is released as a signed APK on GitHub Releases: `./gradlew :app:assembleEnterpriseRelease`.
 
 1. `main` green on all four checks.
 2. Version: `versionCode` always increases by at least 1 (Android refuses updates otherwise); `versionName` follows semantic versioning (`1.0.0`, `1.0.1`, `1.1.0`). The first release is `versionName = "1.0.0"`, `versionCode = 1` (`app/build.gradle.kts`), tag `v1.0.0`. Git tag `vX.Y.Z` is created by the owner.
@@ -536,7 +540,7 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 
 1. **Summary** — two or three lines: what was done and whether it's ready.
 2. **What changed** — each file with a one-line reason.
-3. **Evidence** — test counts per flavor, lint, measurements, `file:line` for important claims. Mark each claim **verified** or **assumed**.
+3. **Evidence** — test counts, lint, measurements, `file:line` for important claims. Mark each claim **verified** or **assumed**.
 4. **Risks and caveats** — what couldn't be tested (e.g. "Windows only", "not run on a device"), and problems noticed but not fixed.
 5. **Proposed commits** — file lists and messages, in order.
 6. **Next** — what you're waiting for (a commit, a decision, a device test).
@@ -552,6 +556,7 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 - Encrypted Client Hello (ECH) hides the real server name; only the outer name is visible.
 - Apps using hardcoded IPs with no SNI can only be blocked per app.
 - The kill switch requires Android's Always-on VPN + lockdown.
+- HTTPS inspection reaches few apps: most apps on Android 7+ ignore user-installed CAs or pin certificates, so they stay metadata-only.
 - No automatic update check, by design: the app contacts no update server. Settings › About shows the version and opens the GitHub releases page.
 - A rooted or compromised device is out of scope.
 

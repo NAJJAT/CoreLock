@@ -4,6 +4,10 @@ import android.content.Context
 import android.content.RestrictionsManager
 import android.os.Bundle
 import android.util.Log
+import com.privacyguard.app.MainActivity
+import com.privacyguard.platform.android.NotificationHelper
+import com.privacyguard.vpn.interception.InspectionStatus
+import com.privacyguard.vpn.interception.TlsInterceptionFactory
 import com.privacyguard.vpn.mitm.MitmConfig
 
 /**
@@ -38,22 +42,26 @@ object ManagedConfigApplier {
         val bundle: Bundle = rm.applicationRestrictions
 
         if (bundle.isEmpty) {
-            Log.d(TAG, "No managed configuration present (consumer / unmanaged device)")
+            Log.d(TAG, "No managed configuration present (unmanaged device)")
+            withdrawOrganisationSettings(MitmConfig(context))
             return
         }
 
         Log.i(TAG, "Applying managed configuration — keys: ${bundle.keySet()}")
         val mitmConfig = MitmConfig(context)
+        val statusBefore = TlsInterceptionFactory.status(context)
 
-        applyBoolean(bundle, "mitm_enabled") { mitmConfig.setEnabled(it) }
+        applyBoolean(bundle, "mitm_enabled") { enabled ->
+            if (enabled) mitmConfig.setEnabled(true, byOrganisation = true) else mitmConfig.setEnabled(false)
+        }
 
-        // Organisation-level consent is valid for as long as the policy asserts it:
-        // it is recorded when missing or expired (not refreshed on every app start,
-        // which made the timestamp meaningless) and withdrawn when the policy
-        // switches it off, so an administrator can revoke it remotely.
+        // Organisation-level consent is valid for as long as the policy asserts it
+        // (MitmConfig.consentValid): it is recorded once, not refreshed on every app
+        // start, and withdrawn when the policy switches it off or disappears, so an
+        // administrator can revoke it remotely.
         applyBoolean(bundle, "mitm_consent_given") { given ->
-            if (given && !mitmConfig.isConsentValid()) {
-                mitmConfig.recordConsent()
+            if (given && !(mitmConfig.consentByOrganisation && mitmConfig.isConsentValid())) {
+                mitmConfig.recordConsent(byOrganisation = true)
                 Log.i(TAG, "Enterprise consent recorded by MDM policy")
             } else if (!given && mitmConfig.consentTimestamp != 0L) {
                 mitmConfig.clearConsent()
@@ -74,9 +82,11 @@ object ManagedConfigApplier {
         }
 
         // If the EMM pushes ca_install_automatic=true AND the app is Device/Profile
-        // Owner, install the CA silently right now.
+        // Owner, install the CA silently right now, but only while inspection is on and
+        // consented to: otherwise a CA would exist (and be trusted) with nothing using it.
         applyBoolean(bundle, "ca_install_automatic") { autoInstall ->
-            if (autoInstall && DeviceAdminReceiver.hasOwnerPrivileges(context)) {
+            val active = TlsInterceptionFactory.isInspectionActive(mitmConfig.isEnabled, mitmConfig.isConsentValid())
+            if (autoInstall && active && DeviceAdminReceiver.hasOwnerPrivileges(context)) {
                 // The CA is created lazily; without this, the install at app start
                 // always failed with "CA not yet generated". apply() only runs on IO
                 // threads (FlavorStartup, MdmConfigReceiver, DeviceAdminReceiver).
@@ -86,7 +96,30 @@ object ManagedConfigApplier {
             }
         }
 
+        // The user is told once when their organisation starts inspecting; afterwards the
+        // VPN notification and the dashboard keep saying so.
+        if (statusBefore != InspectionStatus.ON_BY_ORGANISATION &&
+            TlsInterceptionFactory.status(context) == InspectionStatus.ON_BY_ORGANISATION) {
+            runCatching { NotificationHelper(context).postInspectionEnabledByOrganisation(MainActivity::class.java) }
+                .onFailure { Log.w(TAG, "Inspection notice not posted: ${it.javaClass.simpleName}") }
+        }
+
         Log.i(TAG, "Managed configuration applied successfully")
+    }
+
+    /**
+     * The phone is no longer managed (or the policy was removed): what the organisation
+     * switched on or consented to ends with it. The user's own choices stay.
+     */
+    internal fun withdrawOrganisationSettings(mitmConfig: MitmConfig) {
+        if (mitmConfig.enabledByOrganisation) {
+            mitmConfig.setEnabled(false)
+            Log.i(TAG, "Inspection enabled by a removed policy: switched off")
+        }
+        if (mitmConfig.consentByOrganisation) {
+            mitmConfig.clearConsent()
+            Log.i(TAG, "Consent given by a removed policy: withdrawn")
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

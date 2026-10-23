@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import com.privacyguard.vpn.interception.TlsInterceptionFactory
 import com.privacyguard.vpn.mitm.CaManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -51,8 +52,9 @@ class DeviceAdminReceiver : android.app.admin.DeviceAdminReceiver() {
          * Requires the app to be Device Owner or Profile Owner — call
          * [hasOwnerPrivileges] before this.  Returns true on success.
          *
-         * The installed CA is trusted by all apps on the device (Device Owner)
-         * or all apps inside the work profile (Profile Owner).
+         * The CA goes into the device's (Device Owner) or work profile's (Profile
+         * Owner) user certificate store. On Android 7+ most apps still ignore it unless
+         * their developer allows user CAs.
          */
         fun installCaCertificate(context: Context): Boolean {
             if (!hasOwnerPrivileges(context)) {
@@ -114,19 +116,23 @@ class DeviceAdminReceiver : android.app.admin.DeviceAdminReceiver() {
 
     private fun installCaAndApplyConfig(context: Context) {
         scope.launch {
-            // 1. Generate the CA key pair if this is the first run.
-            val caManager = CaManager(context)
-            val ok = caManager.initialize()
-            Log.d(TAG, "CaManager.initialize()=$ok")
+            // 1. Apply any managed configuration already pushed by the EMM: it decides
+            //    whether inspection is on and consented to.
+            ManagedConfigApplier.apply(context)
 
-            // 2. Install the CA into the system / profile trust store.
+            // 2. Only then create and install the CA. Enrolment alone must not leave a
+            //    trusted CA on the phone that nothing uses (and that FlavorRetention
+            //    later deletes the key of, leaving the installed certificate orphaned).
+            if (!TlsInterceptionFactory.isInspectionActive(context)) {
+                Log.i(TAG, "Inspection not active: no CA created or installed")
+                return@launch
+            }
+            val ok = CaManager(context).initialize()
+            Log.d(TAG, "CaManager.initialize()=$ok")
             if (ok) {
                 val installed = installCaCertificate(context)
                 Log.i(TAG, "CA installation result: $installed")
             }
-
-            // 3. Apply any managed configuration already pushed by the EMM.
-            ManagedConfigApplier.apply(context)
         }
     }
 }

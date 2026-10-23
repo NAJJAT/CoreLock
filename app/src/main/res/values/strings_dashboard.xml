@@ -174,4 +174,8 @@
     <string name="dash_strict_shared_note">Android does not tell apps which Wi-Fi you are on without location access, so “Not on Wi-Fi” applies to all Wi-Fi networks.</string>
     <string name="dash_pcap_file">%1$s · %2$s</string>
     <string name="dash_pcap_file_limit">%1$s · %2$s · stopped at the 100 MB limit</string>
+    <!-- HTTPS inspection card on Home: shown whenever inspection is decrypting -->
+    <string name="dash_inspection_title">HTTPS inspection is on</string>
+    <string name="dash_inspection_body">PrivacyGuard decrypts HTTPS for apps that trust its certificate; most apps do not. You can turn it off in Payload.</string>
+    <string name="dash_inspection_org_body">Your organisation turned this on. PrivacyGuard decrypts HTTPS for apps that trust its certificate; most apps do not.</string>
 </resources>

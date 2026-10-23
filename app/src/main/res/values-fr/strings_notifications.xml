@@ -55,4 +55,8 @@
     <string name="notif_bg_text">%1$s a tenté de se connecter à %2$s en arrière-plan</string>
     <string name="notif_blocklist_updated">Liste de blocage mise à jour</string>
     <string name="notif_blocklist_entries">%1$s : %2$s entrées chargées</string>
+    <string name="notif_inspection_on">Inspection HTTPS activée</string>
+    <string name="notif_inspection_on_org">Inspection HTTPS activée par votre organisation</string>
+    <string name="notif_inspection_org_title">Votre organisation a activé l\'inspection HTTPS</string>
+    <string name="notif_inspection_org_text">PrivacyGuard peut désormais lire le trafic HTTPS des applications qui font confiance à son certificat. La plupart ne le font pas. Ouvrez PrivacyGuard pour voir ce qui est capturé.</string>
 </resources>

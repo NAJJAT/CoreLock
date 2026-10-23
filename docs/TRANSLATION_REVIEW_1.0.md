@@ -5,8 +5,8 @@ with the current English next to it. `⏎` is a line break in the app; `%d`, `%1
 and `%2$d` are filled in by the app and must stay as they are. Plurals list each
 quantity form on its own line (Arabic uses zero/one/two/few/many/other).
 
-The `enterprise` sections are for the enterprise flavor, which is not released;
-check them only if you have time.
+The `enterprise` sections are part of the released app too (since 2026-10-23 it is
+the only version), so check them as well.
 
 ### main / values-ar (53 to check)
 
@@ -205,3 +205,19 @@ Removed (nothing to check): `notif_block_app`, `notif_ch_high`, `notif_ch_high_d
 | String | | English | Translation |
 |---|---|---|---|
 | `onb_c_net_body` | changed | A local VPN is created on this device. All network traffic passes through it so the app can show which apps talk to whom. Nothing is ever sent to the makers of PrivacyGuard. ⏎ What does leave this phone: ⏎ • Your DNS lookups, to the resolver you choose in Settings (Cloudflare 1.1.1.1 by default; encrypted to cloudflare-dns.com, dns.google or dns.quad9.net only when you turn on DoH). ⏎ • Blocklist downloads, about once a week: the HaGeZi lists from raw.githubusercontent.com (or cdn.jsdelivr.net when GitHub cannot be reached) and the OISD list from small.oisd.nl. ⏎ • The Exodus tracker list, at most once a week: reports.exodus-privacy.eu.org. ⏎ • Only if your organisation sets up SIEM shipping: inspected HTTPS requests and responses (app, host, time, headers and bodies, with personal data redacted when redaction is on) go to your organisation’s server. ⏎ Only if you turn them on in Settings: ⏎ • Certificate Transparency checks: the domains you visit are sent to crt.sh. ⏎ • The public IP check in Diagnostics: asks api.ipify.org. | Er wordt een lokale VPN op dit toestel gemaakt. Al het netwerkverkeer gaat erdoor, zodat de app kan tonen welke apps met wie praten. Er wordt nooit iets naar de makers van PrivacyGuard gestuurd. ⏎ Wat dit toestel wel verlaat: ⏎ • Je DNS-opzoekingen, naar de resolver die je in Instellingen kiest (standaard Cloudflare 1.1.1.1; alleen versleuteld naar cloudflare-dns.com, dns.google of dns.quad9.net als je DoH aanzet). ⏎ • Downloads van blokkeerlijsten, ongeveer eens per week: de HaGeZi-lijsten van raw.githubusercontent.com (of cdn.jsdelivr.net als GitHub niet bereikbaar is) en de OISD-lijst van small.oisd.nl. ⏎ • De Exodus-trackerlijst, hoogstens eens per week: reports.exodus-privacy.eu.org. ⏎ • Alleen als je organisatie SIEM-verzending instelt: geïnspecteerde HTTPS-verzoeken en -antwoorden (app, host, tijd, headers en inhoud, met persoonsgegevens weggelaten als dat aanstaat) gaan naar de server van je organisatie. ⏎ Alleen als je ze in Instellingen aanzet: ⏎ • Certificate Transparency-controles: de domeinen die je bezoekt gaan naar crt.sh. ⏎ • De controle van je publieke IP-adres in Diagnose: vraagt api.ipify.org. |
+
+### Added 2026-10-23: HTTPS inspection indicator (machine-translated, 7 per language)
+
+Shown in the VPN notification and on Home while HTTPS inspection decrypts, and once
+when an organisation turns it on. "Payload" / «المحتوى» / « Contenu » is the name
+of that screen in the app.
+
+| String | English | Arabic | French | Dutch |
+|---|---|---|---|---|
+| `notif_inspection_on` | HTTPS inspection on | فحص HTTPS مفعّل | Inspection HTTPS activée | HTTPS-inspectie aan |
+| `notif_inspection_on_org` | HTTPS inspection on, set by your organisation | فحص HTTPS مفعّل، بقرار من مؤسستك | Inspection HTTPS activée par votre organisation | HTTPS-inspectie aan, ingesteld door je organisatie |
+| `notif_inspection_org_title` | Your organisation turned on HTTPS inspection | فعّلت مؤسستك فحص HTTPS | Votre organisation a activé l'inspection HTTPS | Je organisatie heeft HTTPS-inspectie aangezet |
+| `notif_inspection_org_text` | PrivacyGuard can now read the HTTPS traffic of apps that trust its certificate. Most apps do not. Open PrivacyGuard to see what is captured. | يستطيع PrivacyGuard الآن قراءة حركة HTTPS للتطبيقات التي تثق بشهادته. معظم التطبيقات لا تثق بها. افتح PrivacyGuard لمعرفة ما يُلتقط. | PrivacyGuard peut désormais lire le trafic HTTPS des applications qui font confiance à son certificat. La plupart ne le font pas. Ouvrez PrivacyGuard pour voir ce qui est capturé. | PrivacyGuard kan nu het HTTPS-verkeer lezen van apps die zijn certificaat vertrouwen. De meeste apps doen dat niet. Open PrivacyGuard om te zien wat er wordt vastgelegd. |
+| `dash_inspection_title` | HTTPS inspection is on | فحص HTTPS مفعّل | L'inspection HTTPS est activée | HTTPS-inspectie staat aan |
+| `dash_inspection_body` | PrivacyGuard decrypts HTTPS for apps that trust its certificate; most apps do not. You can turn it off in Payload. | يفك PrivacyGuard تشفير HTTPS للتطبيقات التي تثق بشهادته، ومعظم التطبيقات لا تثق بها. يمكنك إيقافه من «المحتوى». | PrivacyGuard déchiffre le HTTPS des applications qui font confiance à son certificat ; la plupart ne le font pas. Vous pouvez la désactiver dans Contenu. | PrivacyGuard ontsleutelt HTTPS van apps die zijn certificaat vertrouwen; de meeste apps doen dat niet. Je kunt het uitzetten in Payload. |
+| `dash_inspection_org_body` | Your organisation turned this on. PrivacyGuard decrypts HTTPS for apps that trust its certificate; most apps do not. | فعّلته مؤسستك. يفك PrivacyGuard تشفير HTTPS للتطبيقات التي تثق بشهادته، ومعظم التطبيقات لا تثق بها. | Votre organisation l'a activée. PrivacyGuard déchiffre le HTTPS des applications qui font confiance à son certificat ; la plupart ne le font pas. | Je organisatie heeft dit aangezet. PrivacyGuard ontsleutelt HTTPS van apps die zijn certificaat vertrouwen; de meeste apps doen dat niet. |

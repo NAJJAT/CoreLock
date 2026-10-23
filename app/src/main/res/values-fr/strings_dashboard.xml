@@ -186,4 +186,7 @@
     <string name="dash_strict_shared_note">Sans accès à la position, Android n’indique pas aux apps à quel Wi-Fi vous êtes connecté ; « Pas en Wi-Fi » s’applique donc à tous les réseaux Wi-Fi.</string>
     <string name="dash_pcap_file">%1$s · %2$s</string>
     <string name="dash_pcap_file_limit">%1$s · %2$s · arrêtée à la limite de 100 Mo</string>
+    <string name="dash_inspection_title">L\'inspection HTTPS est activée</string>
+    <string name="dash_inspection_body">PrivacyGuard déchiffre le HTTPS des applications qui font confiance à son certificat ; la plupart ne le font pas. Vous pouvez la désactiver dans Contenu.</string>
+    <string name="dash_inspection_org_body">Votre organisation l\'a activée. PrivacyGuard déchiffre le HTTPS des applications qui font confiance à son certificat ; la plupart ne le font pas.</string>
 </resources>

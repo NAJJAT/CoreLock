@@ -173,4 +173,7 @@
     <string name="dash_strict_shared_note">Zonder locatietoegang vertelt Android apps niet met welk wifinetwerk je verbonden bent, dus ‘Niet op wifi’ geldt voor alle wifinetwerken.</string>
     <string name="dash_pcap_file">%1$s · %2$s</string>
     <string name="dash_pcap_file_limit">%1$s · %2$s · gestopt bij de limiet van 100 MB</string>
+    <string name="dash_inspection_title">HTTPS-inspectie staat aan</string>
+    <string name="dash_inspection_body">PrivacyGuard ontsleutelt HTTPS van apps die zijn certificaat vertrouwen; de meeste apps doen dat niet. Je kunt het uitzetten in Payload.</string>
+    <string name="dash_inspection_org_body">Je organisatie heeft dit aangezet. PrivacyGuard ontsleutelt HTTPS van apps die zijn certificaat vertrouwen; de meeste apps doen dat niet.</string>
 </resources>

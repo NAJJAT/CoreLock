@@ -10,6 +10,8 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.privacyguard.app.R
+import com.privacyguard.vpn.interception.InspectionStatus
+import com.privacyguard.vpn.interception.TlsInterceptionFactory
 
 /**
  * Centralized helper for creating and posting all notifications used by PrivacyGuard.
@@ -114,11 +116,14 @@ class NotificationHelper(private val context: Context) {
      *
      * @param blockedCount  blocks in the last 24 h (BlockStats), the dashboard's number.
      * @param mainActivityClass class of the main activity (for tap-to-open).
+     * @param inspection HTTPS inspection state; anything but OFF is always shown, so
+     *   decryption is never silent (and says when the organisation turned it on).
      * @return a [Notification] ready to pass to [android.app.Service.startForeground].
      */
     fun buildVpnActiveNotification(
         blockedCount: Long,
         mainActivityClass: Class<*>,
+        inspection: InspectionStatus = TlsInterceptionFactory.status(context),
     ): Notification {
         val tapIntent    = Intent(context, mainActivityClass)
         val pendingTap   = PendingIntent.getActivity(
@@ -138,10 +143,17 @@ class NotificationHelper(private val context: Context) {
             else               -> quantity(R.plurals.notif_blocked_n, blockedCount)
         }
 
+        val inspectionText = when (inspection) {
+            InspectionStatus.OFF -> null
+            InspectionStatus.ON -> context.getString(R.string.notif_inspection_on)
+            InspectionStatus.ON_BY_ORGANISATION -> context.getString(R.string.notif_inspection_on_org)
+        }
+
         return PrivateNotifications.builder(context, CHANNEL_VPN_STATUS)
             .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
             .setContentTitle(context.getString(R.string.notif_active))
             .setContentText(body)
+            .setSubText(inspectionText)
             .setContentIntent(pendingTap)
             .setOngoing(true)
             .setShowWhen(false)
@@ -470,6 +482,28 @@ class NotificationHelper(private val context: Context) {
     fun cancelKillSwitchAlert() = manager.cancel(NOTIFICATION_ID_KILL_SWITCH)
 
     /**
+     * Once, when the organisation's MDM starts HTTPS inspection (ManagedConfigApplier).
+     * Not silenced by the Notifications switch: like "protection stopped", it is
+     * something the user must know. Names no app or server.
+     */
+    fun postInspectionEnabledByOrganisation(mainActivityClass: Class<*>) {
+        createChannels()
+        val pendingTap = PendingIntent.getActivity(
+            context, NOTIFICATION_ID_INSPECTION_BY_ORG, Intent(context, mainActivityClass),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val notification = PrivateNotifications.builder(context, CHANNEL_ALERTS)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
+            .setContentTitle(context.getString(R.string.notif_inspection_org_title))
+            .setContentText(context.getString(R.string.notif_inspection_org_text))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(context.getString(R.string.notif_inspection_org_text)))
+            .setContentIntent(pendingTap)
+            .setAutoCancel(true)
+            .build()
+        manager.notify(NOTIFICATION_ID_INSPECTION_BY_ORG, notification)
+    }
+
+    /**
      * Protection died with the process (see ProtectionWatchdog). Not silenced by the
      * Notifications switch: like the VPN drop alert it says protection is off. A tap
      * starts protection again (a notification tap may start a foreground service).
@@ -553,6 +587,7 @@ class NotificationHelper(private val context: Context) {
         const val NOTIFICATION_ID_BEHAVIOR        = 8
         const val NOTIFICATION_ID_BACKGROUND_BLOCK = 9
         const val NOTIFICATION_ID_PROTECTION_STOPPED = 10
+        const val NOTIFICATION_ID_INSPECTION_BY_ORG = 11
         // 1000..5095: one slot per app (see postTlsFingerprintChange).
         const val NOTIFICATION_ID_TLS_FP_BASE  = 1000
 

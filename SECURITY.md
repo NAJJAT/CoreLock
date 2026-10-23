@@ -13,7 +13,7 @@ Report it privately through GitHub's
 
 Include what you can of:
 
-- the affected build (consumer or enterprise, version, Android version)
+- the affected version and Android version
 - steps to reproduce, or a proof of concept
 - the impact you expect (for example: traffic leak, code execution, data exposure)
 
@@ -29,10 +29,10 @@ Only the latest release receives security fixes.
 
 In scope:
 
-- the Android app in `app/` (both flavors)
+- the Android app in `app/`
 - anything that lets traffic bypass the tunnel, filter or kill switch
 - exposure of captured data, the database, keys or the MITM CA
-- the enterprise MITM engine, SIEM shipping and MDM configuration
+- the HTTPS inspection (MITM) engine and its consent flow, SIEM shipping and MDM configuration
 
 Out of scope:
 
