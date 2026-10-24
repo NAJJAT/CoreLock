@@ -4,6 +4,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 
 /** Steps of the "Reduce ad tracking" checklist. The ids are persisted; don't rename. */
@@ -53,7 +54,18 @@ object AdPrivacyLinks {
         Intent(Settings.ACTION_PRIVACY_SETTINGS),
     )
 
-    fun usageAccess() = listOf(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS), Intent(Settings.ACTION_SETTINGS))
+    /**
+     * This app's own Usage Access switch where Android has one (10 and newer accept
+     * a package: URI), else the list of all apps, else Settings. The list alone made
+     * users pick between look-alike entries.
+     */
+    fun usageAccess(packageName: String) = listOfNotNull(
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+            Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS, Uri.fromParts("package", packageName, null))
+        else null,
+        Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS),
+        Intent(Settings.ACTION_SETTINGS),
+    )
 
     /** Starts the first intent that resolves; false if none could be opened. */
     fun open(context: Context, intents: List<Intent>): Boolean {

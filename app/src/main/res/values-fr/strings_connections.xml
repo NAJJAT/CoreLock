@@ -21,7 +21,9 @@
     <string name="conn_security">Sécurité</string>
     <string name="conn_transferred">Transféré</string>
     <string name="conn_blocked_by">Arrêté par</string>
+    <string name="conn_blocked_by_dns">Liste de blocage DNS : réponse « nom introuvable »</string>
     <string name="conn_blocked_by_sni">Nom du serveur (SNI) : un nom bloqué, atteint sans DNS</string>
+    <string name="conn_blocked_by_quic">Nom du serveur QUIC : un nom bloqué, atteint sans DNS</string>
     <string name="conn_blocked_by_doh">Serveur DNS chiffré : contournerait la liste de blocage</string>
     <string name="conn_blocked_by_dot">DNS sur TLS (port 853) : contournerait la liste de blocage</string>
     <string name="conn_up_down">%1$s envoyés · %2$s reçus</string>

@@ -143,9 +143,9 @@
         <item quantity="other">TCP en UDP over IPv6 gaan net als IPv4 door de tunnel. %d IPv6-pakketten van andere protocollen werden weggegooid.</item>
     </plurals>
     <string name="diag_sni">Blokkeren op servernaam (SNI)</string>
-    <string name="diag_sni_detail">Verbindingen gestopt op hun TLS- of QUIC-servernaam sinds de bescherming aanstaat: %d</string>
+    <string name="diag_sni_detail">Verbindingen gestopt op hun TLS-servernaam sinds de bescherming aanstaat: %d</string>
     <string name="diag_quic">QUIC-controles</string>
-    <string name="diag_quic_detail">QUIC-verbindingen weggegooid sinds de bescherming aanstaat (de app probeert opnieuw of gebruikt TCP). Onleesbaar: %1$d. Te veel wachtend: %2$d.</string>
+    <string name="diag_quic_detail">QUIC-verbindingen sinds de bescherming aanstaat. Gestopt op hun servernaam: %1$d. Weggegooid (de app probeert opnieuw of gebruikt TCP) omdat QUIC geblokkeerd is: %2$d, onleesbaar: %3$d, te veel wachtend: %4$d.</string>
     <string name="diag_inventory">App-overzicht</string>
     <plurals name="diag_inventory_detail">
         <item quantity="one">%d app met netwerktoegang zichtbaar</item>

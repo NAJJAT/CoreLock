@@ -1,8 +1,6 @@
 package com.privacyguard.app.ui.traffic
 
 import android.content.Context
-import android.content.Intent
-import android.provider.Settings
 import android.text.format.DateUtils
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -238,9 +236,7 @@ fun UsageAccessHint() {
     PanelCard(modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()) {
         Text(stringResource(R.string.trf_usage_hint), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
         TextButton(onClick = {
-            runCatching {
-                context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            }
+            com.privacyguard.app.adprivacy.AdPrivacyLinks.open(context, com.privacyguard.app.adprivacy.AdPrivacyLinks.usageAccess(context.packageName))
         }) { Text(stringResource(R.string.trf_usage_grant), color = PgAccent) }
     }
 }

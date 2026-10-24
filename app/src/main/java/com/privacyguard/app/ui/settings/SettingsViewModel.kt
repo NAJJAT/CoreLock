@@ -266,7 +266,8 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             DiagnosticCheck(
                 label = str(R.string.diag_quic),
                 status = DiagnosticStatus.PASS,
-                detail = str(R.string.diag_quic_detail, snapshot.quicUnreadableDropped, snapshot.quicHoldLimitDropped),
+                detail = str(R.string.diag_quic_detail, snapshot.quicNameBlocked, snapshot.quicOffDropped,
+                    snapshot.quicUnreadableDropped, snapshot.quicHoldLimitDropped),
             ),
             DiagnosticCheck(
                 label = str(R.string.diag_inventory),

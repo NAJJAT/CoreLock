@@ -60,8 +60,12 @@ data class StatsSnapshot(
     val ipv6PacketsBlocked:  Long                    = 0L,
     val ipv6BytesBlocked:    Long                    = 0L,
     val totalTrackersBlocked: Int                   = 0,
-    /** Connections stopped by their TLS/QUIC server name (SNI), not by DNS; part of [blockedToday]. */
+    /** TCP connections stopped by their TLS server name (SNI), not by DNS; part of [blockedToday]. */
     val sniBlocked:          Long                    = 0L,
+    /** QUIC flows stopped by the server name in their Initial; part of [blockedToday]. */
+    val quicNameBlocked:     Long                    = 0L,
+    /** QUIC flows dropped because QUIC is blocked (setting, Strict default, inspection). */
+    val quicOffDropped:      Long                    = 0L,
     /** QUIC flows dropped because their Initial could not be read; the app retries over TCP. */
     val quicUnreadableDropped: Long                  = 0L,
     /** QUIC flows dropped because the hold limits were reached; the app retries or uses TCP. */
@@ -93,6 +97,8 @@ object StatsManager {
     private val ipv6PacketsBlocked = AtomicLong()
     private val ipv6BytesBlocked = AtomicLong()
     private val sniBlocked = AtomicLong()
+    private val quicNameBlocked = AtomicLong()
+    private val quicOffDropped = AtomicLong()
     private val quicUnreadableDropped = AtomicLong()
     private val quicHoldLimitDropped = AtomicLong()
 
@@ -117,9 +123,21 @@ object StatsManager {
         schedulePublish()
     }
 
-    /** A connection stopped by its server name; count it with [incrementBlocked] as well. */
+    /** A TCP connection stopped by its server name; count it with [incrementBlocked] as well. */
     fun incrementSniBlocked() {
         sniBlocked.incrementAndGet()
+        schedulePublish()
+    }
+
+    /** A QUIC flow stopped by its server name; count it with [incrementBlocked] as well. */
+    fun incrementQuicNameBlocked() {
+        quicNameBlocked.incrementAndGet()
+        schedulePublish()
+    }
+
+    /** A QUIC flow dropped because QUIC is blocked: not a block (the app falls back to TCP). */
+    fun incrementQuicOffDropped() {
+        quicOffDropped.incrementAndGet()
         schedulePublish()
     }
 
@@ -149,7 +167,7 @@ object StatsManager {
     }
 
     fun reset() {
-        listOf(blockedToday, trackersBlocked, totalPackets, dataSavedBytes, ipv6PacketsBlocked, ipv6BytesBlocked, sniBlocked, quicUnreadableDropped, quicHoldLimitDropped)
+        listOf(blockedToday, trackersBlocked, totalPackets, dataSavedBytes, ipv6PacketsBlocked, ipv6BytesBlocked, sniBlocked, quicNameBlocked, quicOffDropped, quicUnreadableDropped, quicHoldLimitDropped)
             .forEach { it.set(0) }
         lists.value = StatsSnapshot()
         publishNow()
@@ -165,6 +183,8 @@ object StatsManager {
             ipv6BytesBlocked = ipv6BytesBlocked.get(),
             totalTrackersBlocked = trackersBlocked.get().toInt(),
             sniBlocked = sniBlocked.get(),
+            quicNameBlocked = quicNameBlocked.get(),
+            quicOffDropped = quicOffDropped.get(),
             quicUnreadableDropped = quicUnreadableDropped.get(),
             quicHoldLimitDropped = quicHoldLimitDropped.get(),
         )

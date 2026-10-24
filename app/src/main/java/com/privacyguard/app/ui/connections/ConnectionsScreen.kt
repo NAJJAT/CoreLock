@@ -317,7 +317,9 @@ private fun ConnectionDetailDialog(
                 DetailRow(stringResource(R.string.conn_transferred), stringResource(R.string.conn_up_down, formatBytes(connection.bytesSent), formatBytes(connection.bytesReceived)))
                 connection.blockSource?.let { source ->
                     DetailRow(stringResource(R.string.conn_blocked_by), stringResource(when (source) {
+                        com.privacyguard.core.session.BlockSource.DNS -> R.string.conn_blocked_by_dns
                         com.privacyguard.core.session.BlockSource.SNI -> R.string.conn_blocked_by_sni
+                        com.privacyguard.core.session.BlockSource.QUIC -> R.string.conn_blocked_by_quic
                         com.privacyguard.core.session.BlockSource.DOH -> R.string.conn_blocked_by_doh
                         com.privacyguard.core.session.BlockSource.DOT -> R.string.conn_blocked_by_dot
                     }))

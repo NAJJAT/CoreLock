@@ -324,9 +324,7 @@ private fun BackgroundRuleNeedsUsageAccess(appLabel: String) {
     ) {
         Text(stringResource(R.string.appd_bg_needs_usage, appLabel), style = MaterialTheme.typography.bodySmall, color = PgWarning)
         androidx.compose.material3.TextButton(onClick = {
-            runCatching {
-                context.startActivity(Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            }
+            com.privacyguard.app.adprivacy.AdPrivacyLinks.open(context, com.privacyguard.app.adprivacy.AdPrivacyLinks.usageAccess(context.packageName))
         }) { Text(stringResource(R.string.trf_usage_grant), color = PgWarning) }
     }
 }

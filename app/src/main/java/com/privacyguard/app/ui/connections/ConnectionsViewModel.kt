@@ -173,7 +173,7 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
                         destinationPort = it.destinationPort,
                         protocol = it.protocol,
                         isBlocked = it.wasBlocked,
-                        blockSource = if (it.wasBlocked) com.privacyguard.core.session.BlockSource.fromStored(it.blockSource) else null,
+                        blockSource = if (it.wasBlocked) com.privacyguard.core.session.BlockSource.fromStored(it.blockSource, it.protocol) else null,
                         // A total for a finished connection: never shown "per second".
                         dataRate = formatBytes(it.bytesSent + it.bytesReceived),
                         bytesSent = it.bytesSent,

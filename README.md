@@ -642,6 +642,13 @@ docs/  .github/
   to server→app segments being dropped at a full TUN queue and never resent.
   `TcpForwarder` now reads only what the app's window and the queue can take
   and retransmits lost segments; this still needs confirming on a device.
+- **Chrome's "Use secure DNS" must stay on automatic.** If it is set to a
+  specific provider (for example Cloudflare), Chrome sends every lookup to that
+  encrypted DNS server and does not fall back. PrivacyGuard blocks that server,
+  because it would skip the blocklist, so pages fail to load with
+  `DNS_PROBE_FINISHED_BAD_SECURE_CONFIG`. In Chrome, open Settings › Privacy and
+  security › Use secure DNS and choose "Use your current service provider".
+  Other apps with a fixed encrypted-DNS provider may fail the same way.
 - **Large DNS answers** need DNS over TCP, which the tunnel does not offer, so
   answers that do not fit in a 4 KB UDP reply fail.
 - **The JA3 watch-list is small and unverified;** treat matches as hints.

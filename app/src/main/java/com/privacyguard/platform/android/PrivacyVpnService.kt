@@ -756,7 +756,7 @@ class PrivacyVpnService : VpnService() {
         // short headers and no SNI, so they would otherwise start a new session).
         // Likewise when QUIC is off or the flow was dropped as unreadable, before the
         // owner lookup and rules run for every datagram.
-        if (dstPort == 443 && (isBlockedQuicFlow(key) || quicGate.dropsWithoutLooking(key))) return
+        if (dstPort == 443 && (isBlockedQuicFlow(key) || quicGate.dropsWithoutLooking(key, data))) return
         val existing = sessionTable.get(key)
         if (existing != null) {
             if (blockedOnRecheck(existing)) {
@@ -850,6 +850,7 @@ class PrivacyVpnService : VpnService() {
         interceptionBlocksQuic = { interception.blockQuic },
         onUnreadableFlow = { StatsManager.incrementQuicUnreadableDropped() },
         onHoldLimitFlow = { StatsManager.incrementQuicHoldLimitDropped() },
+        onQuicOffFlow = { StatsManager.incrementQuicOffDropped() },
     )
 
     /** QUIC flows dropped for their SNI, with the time they were blocked. */
@@ -862,7 +863,7 @@ class PrivacyVpnService : VpnService() {
         return false
     }
 
-    /** Why the flow's SNI stops it (a DoH endpoint, or the shared name decision), or null. */
+    /** Why the flow's SNI stops it (a DoH endpoint, or the shared name decision), or null. QUIC, not SNI: TCP and QUIC blocks stay apart. */
     private fun quicHelloBlockSource(
         key: SessionKey, hello: com.privacyguard.core.tls.ClientHello, pkg: String?,
     ): com.privacyguard.core.session.BlockSource? {
@@ -870,12 +871,12 @@ class PrivacyVpnService : VpnService() {
         val source = when {
             // A DoH name, or no name to a listed DoH address (see DnsBypassGuard).
             dohClientHelloBlocked(sni, key, pkg) -> com.privacyguard.core.session.BlockSource.DOH
-            sni != null && dnsHandler.blockReasonFor(sni, pkg) != null -> com.privacyguard.core.session.BlockSource.SNI
+            sni != null && dnsHandler.blockReasonFor(sni, pkg) != null -> com.privacyguard.core.session.BlockSource.QUIC
             else -> return null
         }
         if (blockedQuicFlows.size > 4_096) blockedQuicFlows.clear()
         blockedQuicFlows[key] = System.currentTimeMillis()
-        if (source == com.privacyguard.core.session.BlockSource.SNI) recordSniBlock() else recordBlock()
+        if (source == com.privacyguard.core.session.BlockSource.QUIC) recordQuicNameBlock() else recordBlock()
         return source
     }
 
@@ -1086,6 +1087,11 @@ class PrivacyVpnService : VpnService() {
     private fun recordSniBlock() {
         recordBlock()
         StatsManager.incrementSniBlocked()
+    }
+
+    private fun recordQuicNameBlock() {
+        recordBlock()
+        StatsManager.incrementQuicNameBlocked()
     }
 
     // ─────────────────────────────────────────────────────────────────────────

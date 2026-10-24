@@ -221,3 +221,16 @@ of that screen in the app.
 | `dash_inspection_title` | HTTPS inspection is on | فحص HTTPS مفعّل | L'inspection HTTPS est activée | HTTPS-inspectie staat aan |
 | `dash_inspection_body` | PrivacyGuard decrypts HTTPS for apps that trust its certificate; most apps do not. You can turn it off in Payload. | يفك PrivacyGuard تشفير HTTPS للتطبيقات التي تثق بشهادته، ومعظم التطبيقات لا تثق بها. يمكنك إيقافه من «المحتوى». | PrivacyGuard déchiffre le HTTPS des applications qui font confiance à son certificat ; la plupart ne le font pas. Vous pouvez la désactiver dans Contenu. | PrivacyGuard ontsleutelt HTTPS van apps die zijn certificaat vertrouwen; de meeste apps doen dat niet. Je kunt het uitzetten in Payload. |
 | `dash_inspection_org_body` | Your organisation turned this on. PrivacyGuard decrypts HTTPS for apps that trust its certificate; most apps do not. | فعّلته مؤسستك. يفك PrivacyGuard تشفير HTTPS للتطبيقات التي تثق بشهادته، ومعظم التطبيقات لا تثق بها. | Votre organisation l'a activée. PrivacyGuard déchiffre le HTTPS des applications qui font confiance à son certificat ; la plupart ne le font pas. | Je organisatie heeft dit aangezet. PrivacyGuard ontsleutelt HTTPS van apps die zijn certificaat vertrouwen; de meeste apps doen dat niet. |
+
+### Added 2026-10-24: QUIC and DNS as block sources (machine-translated, 4 per language)
+
+"Stopped by" in a connection's details now tells QUIC apart from TCP, and
+Diagnostics › QUIC checks counts more kinds of dropped QUIC. `diag_sni_detail` and
+`diag_quic_detail` replace the versions listed above.
+
+| String | English | Arabic | French | Dutch |
+|---|---|---|---|---|
+| `conn_blocked_by_dns` | DNS blocklist: the name was answered “not found” | قائمة حظر DNS: كان الجواب «الاسم غير موجود» | Liste de blocage DNS : réponse « nom introuvable » | DNS-blokkeerlijst: antwoord ‘naam niet gevonden’ |
+| `conn_blocked_by_quic` | QUIC server name: a blocked name, reached without DNS | اسم خادم QUIC: اسم محظور وصل إليه التطبيق دون DNS | Nom du serveur QUIC : un nom bloqué, atteint sans DNS | QUIC-servernaam: een geblokkeerde naam, bereikt zonder DNS |
+| `diag_sni_detail` | Connections stopped by their TLS server name since protection was turned on: %d | الاتصالات التي أُوقفت بسبب اسم خادم TLS منذ تشغيل الحماية: %d | Connexions arrêtées par leur nom de serveur TLS depuis l’activation de la protection : %d | Verbindingen gestopt op hun TLS-servernaam sinds de bescherming aanstaat: %d |
+| `diag_quic_detail` | QUIC connections since protection was turned on. Stopped by their server name: %1$d. Dropped (the app then retries or uses TCP) because QUIC is blocked: %2$d, unreadable: %3$d, too many waiting: %4$d. | اتصالات QUIC منذ تشغيل الحماية. أُوقفت بسبب اسم الخادم: %1$d. رُفضت (يعيد التطبيق المحاولة أو يستخدم TCP) لأن QUIC محظور: %2$d، غير مقروءة: %3$d، أكثر من اللازم في الانتظار: %4$d. | Connexions QUIC depuis l’activation de la protection. Arrêtées par leur nom de serveur : %1$d. Rejetées (l’app réessaie ou passe par TCP) car QUIC est bloqué : %2$d, illisibles : %3$d, trop en attente : %4$d. | QUIC-verbindingen sinds de bescherming aanstaat. Gestopt op hun servernaam: %1$d. Weggegooid (de app probeert opnieuw of gebruikt TCP) omdat QUIC geblokkeerd is: %2$d, onleesbaar: %3$d, te veel wachtend: %4$d. |

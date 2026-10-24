@@ -21,7 +21,9 @@
     <string name="conn_security">الأمان</string>
     <string name="conn_transferred">البيانات المنقولة</string>
     <string name="conn_blocked_by">أُوقف بواسطة</string>
+    <string name="conn_blocked_by_dns">قائمة حظر DNS: كان الجواب «الاسم غير موجود»</string>
     <string name="conn_blocked_by_sni">اسم الخادم (SNI): اسم محظور وصل إليه التطبيق دون DNS</string>
+    <string name="conn_blocked_by_quic">اسم خادم QUIC: اسم محظور وصل إليه التطبيق دون DNS</string>
     <string name="conn_blocked_by_doh">خادم DNS مشفّر: كان سيتجاوز قائمة الحظر</string>
     <string name="conn_blocked_by_dot">DNS عبر TLS (المنفذ 853): كان سيتجاوز قائمة الحظر</string>
     <string name="conn_up_down">أُرسل %1$s · استُقبل %2$s</string>

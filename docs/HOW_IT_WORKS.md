@@ -137,6 +137,12 @@ QUIC depends on the protection level (`vpn/firewall/QuicGate.kt`):
   limited to 128 flows and 512 KB at once; past that, new QUIC flows are dropped.
 - **Minimal:** packets are forwarded while the ClientHello is read, and QUIC that
   cannot be read passes.
+- **What is recorded.** A QUIC flow blocked by its server name is a blocked
+  connection, stopped by *QUIC server name* (TCP's is *Server name (SNI)*; older
+  rows stored SNI for both, and are shown as QUIC when they were UDP).
+  Dropped QUIC (QUIC blocked, unreadable, too many waiting) is only counted, in
+  Settings › Diagnostics › QUIC checks, since protection started: the app
+  retries, and one history row per retry would flood the history.
 
 ---
 
@@ -639,6 +645,14 @@ key, an optional certificate pin and an optional body signature (`SiemEndpoint.k
   whole domains that also serve other things (for example `cloudflare-gateway.com`
   used by Cloudflare WARP, and HTTPDNS services some apps use for their own lookups);
   a user Allow rule for the name opens them.
+- **A browser set to one encrypted-DNS provider stops loading pages.** Chrome's
+  "Use secure DNS" with a specific provider (for example Cloudflare) sends every
+  lookup to that DoH server and never falls back. Layer 2 blocks the server
+  (recorded as stopped by *Encrypted DNS server*), so Chrome shows
+  `DNS_PROBE_FINISHED_BAD_SECURE_CONFIG` for every page; ads are blocked, but so
+  is everything else. Chrome's default ("Use your current service provider")
+  falls back to the system resolver and works. Tested on an Android emulator
+  (API 37) on 24 October 2026.
 - **When the tunnel is down, nothing is filtered.** A test on 14 October 2026
   (Samsung, Android 13): after the app crashed, blocked names resolved directly
   until protection was back. Network changes (airplane mode, Wi-Fi to mobile)

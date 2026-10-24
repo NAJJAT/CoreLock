@@ -114,7 +114,7 @@ fun AdPrivacyScreen(viewModel: AdPrivacyViewModel = viewModel()) {
                 if (!usageAccess) {
                     Spacer(Modifier.height(8.dp))
                     Banner(stringResource(R.string.adp_usage_access_needed), warn = true)
-                    TextButton(onClick = { open(AdPrivacyLinks.usageAccess()) }) {
+                    TextButton(onClick = { open(AdPrivacyLinks.usageAccess(context.packageName)) }) {
                         Text(stringResource(R.string.adp_usage_access_button))
                     }
                 }

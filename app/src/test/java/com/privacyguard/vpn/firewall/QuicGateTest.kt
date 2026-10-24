@@ -20,10 +20,12 @@ class QuicGateTest {
     private var clock = 1_000_000L
     private var unreadableCallbacks = 0
     private var holdLimitCallbacks = 0
+    private var quicOffCallbacks = 0
 
     private fun gate(level: BlockLevel, choice: Boolean? = null, interception: Boolean = false) = QuicGate<String>(
         userChoice = { choice }, level = { level }, interceptionBlocksQuic = { interception },
-        onUnreadableFlow = { unreadableCallbacks++ }, onHoldLimitFlow = { holdLimitCallbacks++ }, now = { clock },
+        onUnreadableFlow = { unreadableCallbacks++ }, onHoldLimitFlow = { holdLimitCallbacks++ },
+        onQuicOffFlow = { quicOffCallbacks++ }, now = { clock },
     )
 
     private val hello = initial(crypto(0, clientHello("news.example.org")), pn = 0)
@@ -49,7 +51,7 @@ class QuicGateTest {
             assertTrue(g.dropsAllQuic())
             assertSame("$level", Verdict.Drop, g.onNewFlow("f", hello))
             assertSame("$level open flow", Verdict.Drop, g.onOpenFlow("f", hello, inspected = true))
-            assertTrue(g.dropsWithoutLooking("f"))
+            assertTrue(g.dropsWithoutLooking("f", hello))
         }
     }
 
@@ -170,14 +172,14 @@ class QuicGateTest {
     fun a_dropped_flow_stays_dropped_and_is_counted_once() {
         val g = gate(BlockLevel.STANDARD)
         g.onNewFlow("f", unknownVersion)
-        assertTrue(g.dropsWithoutLooking("f"))
+        assertTrue(g.dropsWithoutLooking("f", hello))
         repeat(5) { assertSame(Verdict.Drop, g.onNewFlow("f", hello)) }
         assertEquals(1L, g.unreadableFlows.get())
         assertEquals(1, unreadableCallbacks)
-        assertFalse("other flows unaffected", g.dropsWithoutLooking("g"))
+        assertFalse("other flows unaffected", g.dropsWithoutLooking("g", hello))
 
         clock += 120_000L
-        assertFalse("forgotten after two minutes", g.dropsWithoutLooking("f"))
+        assertFalse("forgotten after two minutes", g.dropsWithoutLooking("f", hello))
         assertEquals("news.example.org", g.onNewFlow("f", hello).forwardedHelloSni())
     }
 
@@ -188,6 +190,43 @@ class QuicGateTest {
         assertTrue(v.inspected)
         assertFalse(QuicInitial.isLongHeader(stun))
         assertEquals(0L, g.unreadableFlows.get())
+    }
+
+    // ── QUIC off: counted once per flow, never per datagram ─────────────────
+
+    @Test
+    fun quic_off_drops_are_counted_once_per_flow() {
+        val g = gate(BlockLevel.STANDARD, choice = true)
+        repeat(5) { assertTrue(g.dropsWithoutLooking("f", hello)) }
+        assertSame(Verdict.Drop, g.onNewFlow("f", hello))
+        assertSame(Verdict.Drop, g.onOpenFlow("f", hello, inspected = true))
+        assertEquals("retries of one flow count once", 1L, g.quicOffFlows.get())
+        g.dropsWithoutLooking("g", hello)
+        assertEquals("a new flow (new source port) counts again", 2L, g.quicOffFlows.get())
+        assertEquals(2, quicOffCallbacks)
+
+        clock += 120_000L
+        g.dropsWithoutLooking("f", hello)
+        assertEquals("counted again after two minutes", 3L, g.quicOffFlows.get())
+    }
+
+    @Test
+    fun quic_off_counts_only_quic_long_headers() {
+        val g = gate(BlockLevel.STRICT)
+        assertTrue(g.dropsAllQuic())
+        val shortHeader = byteArrayOf(0x40) + ByteArray(30)
+        assertTrue(g.dropsWithoutLooking("stun", stun))
+        assertTrue(g.dropsWithoutLooking("old", shortHeader))
+        assertEquals(0L, g.quicOffFlows.get())
+        assertEquals("not unreadable either", 0L, g.unreadableFlows.get())
+    }
+
+    @Test
+    fun quic_off_counter_stays_zero_while_quic_is_allowed() {
+        val g = gate(BlockLevel.STANDARD, choice = false)
+        g.onNewFlow("f", hello)
+        g.dropsWithoutLooking("f", hello)
+        assertEquals(0L, g.quicOffFlows.get())
     }
 
     // ── Open flows (started at Minimal or before a level change) ─────────────

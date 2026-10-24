@@ -155,9 +155,9 @@
         <item quantity="other">يمر TCP وUDP عبر IPv6 في النفق مثل IPv4. رُفضت %d حزمة IPv6 من بروتوكولات أخرى.</item>
     </plurals>
     <string name="diag_sni">الحظر حسب اسم الخادم (SNI)</string>
-    <string name="diag_sni_detail">الاتصالات التي أُوقفت بسبب اسم خادم TLS أو QUIC منذ تشغيل الحماية: %d</string>
+    <string name="diag_sni_detail">الاتصالات التي أُوقفت بسبب اسم خادم TLS منذ تشغيل الحماية: %d</string>
     <string name="diag_quic">فحوص QUIC</string>
-    <string name="diag_quic_detail">اتصالات QUIC المرفوضة منذ تشغيل الحماية (يعيد التطبيق المحاولة أو يستخدم TCP). غير مقروءة: %1$d. أكثر من اللازم في الانتظار: %2$d.</string>
+    <string name="diag_quic_detail">اتصالات QUIC منذ تشغيل الحماية. أُوقفت بسبب اسم الخادم: %1$d. رُفضت (يعيد التطبيق المحاولة أو يستخدم TCP) لأن QUIC محظور: %2$d، غير مقروءة: %3$d، أكثر من اللازم في الانتظار: %4$d.</string>
     <string name="diag_inventory">جرد التطبيقات</string>
     <plurals name="diag_inventory_detail">
         <item quantity="zero">لا يوجد تطبيق يستخدم الشبكة</item>

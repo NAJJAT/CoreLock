@@ -133,6 +133,11 @@ No location, contacts, camera or microphone access.
 - **Private DNS in hostname mode must be turned off.** With a hostname set
   ("strict"), lookups bypass the filter and fail while the VPN runs. Use "Off" or
   "Automatic". The app warns you on the Home screen and in Diagnostics.
+- **Chrome's "Use secure DNS" must stay on automatic.** With a specific provider
+  chosen (for example Cloudflare), Chrome sends lookups only to that encrypted
+  server, which PrivacyGuard blocks, and pages fail to load. In Chrome, open
+  Settings › Privacy and security › Use secure DNS and choose "Use your current
+  service provider".
 - **QUIC at Strict.** QUIC is blocked by default at Strict, and unreadable QUIC
   is dropped at Standard and Strict. Apps fall back to TCP, which can make some
   connections a little slower to start.

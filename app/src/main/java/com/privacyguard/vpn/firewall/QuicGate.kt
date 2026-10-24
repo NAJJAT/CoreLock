@@ -35,6 +35,8 @@ class QuicGate<K : Any>(
     private val onUnreadableFlow: () -> Unit = {},
     /** Called once per flow dropped because the global hold limits were reached. */
     private val onHoldLimitFlow: () -> Unit = {},
+    /** Called once per QUIC flow dropped because QUIC is blocked ([dropsAllQuic]). */
+    private val onQuicOffFlow: () -> Unit = {},
     private val now: () -> Long = System::currentTimeMillis,
 ) {
 
@@ -57,6 +59,9 @@ class QuicGate<K : Any>(
     /** Flows dropped because too many others were already being held. */
     val holdLimitFlows = AtomicLong(0)
 
+    /** QUIC flows dropped because QUIC is blocked. Counted, never logged as rows: apps retry. */
+    val quicOffFlows = AtomicLong(0)
+
     private val tracker = QuicSniTracker<K>(now)
 
     /** Unreadable flows already dropped, with the time: later datagrams are dropped without a new count. */
@@ -68,6 +73,9 @@ class QuicGate<K : Any>(
      */
     private val limitCounted = LinkedHashMap<K, Long>()
 
+    /** Flows already counted in [quicOffFlows], with the time: their retries are not counted again. */
+    private val offCounted = LinkedHashMap<K, Long>()
+
     fun dropsAllQuic(): Boolean =
         interceptionBlocksQuic() || (userChoice() ?: (level() == FilterEngine.BlockLevel.STRICT))
 
@@ -77,7 +85,10 @@ class QuicGate<K : Any>(
      * True when the datagram is dropped whatever it holds (QUIC off, or a flow already
      * dropped as unreadable). Cheap: lets the caller skip the owner lookup and rules.
      */
-    fun dropsWithoutLooking(key: K): Boolean = dropsAllQuic() || wasDropped(key)
+    fun dropsWithoutLooking(key: K, datagram: ByteArray): Boolean {
+        if (dropsAllQuic()) { countQuicOff(key, datagram); return true }
+        return wasDropped(key)
+    }
 
     /**
      * A datagram of a flow that has no session yet: nothing of it was forwarded.
@@ -85,7 +96,7 @@ class QuicGate<K : Any>(
      * ([pendingOwnerUid]).
      */
     fun onNewFlow(key: K, datagram: ByteArray, ownerUid: Int? = null): Verdict {
-        if (dropsAllQuic()) { tracker.forget(key); return Verdict.Drop }
+        if (dropsAllQuic()) { tracker.forget(key); countQuicOff(key, datagram); return Verdict.Drop }
         if (wasDropped(key)) return Verdict.Drop
         val closed = failsClosed()
         val v = verdict(key, datagram, hold = closed, closed = closed)
@@ -102,7 +113,7 @@ class QuicGate<K : Any>(
      * its first datagrams were already sent and cannot be held.
      */
     fun onOpenFlow(key: K, datagram: ByteArray, inspected: Boolean): Verdict {
-        if (dropsAllQuic()) return Verdict.Drop
+        if (dropsAllQuic()) { countQuicOff(key, datagram); return Verdict.Drop }
         if (inspected) return FORWARD_INSPECTED
         if (wasDropped(key)) return Verdict.Drop
         return verdict(key, datagram, hold = false, closed = failsClosed())
@@ -143,15 +154,30 @@ class QuicGate<K : Any>(
     }
 
     private fun countHoldLimit(key: K) {
-        synchronized(limitCounted) {
-            val at = limitCounted[key]
-            if (at != null && now() - at < DROPPED_MEMORY_MS) return
-            limitCounted.remove(key)
-            if (limitCounted.size >= MAX_DROPPED) limitCounted.remove(limitCounted.keys.first())
-            limitCounted[key] = now()
-        }
+        if (!firstInWindow(limitCounted, key)) return
         holdLimitFlows.incrementAndGet()
         runCatching { onHoldLimitFlow() }
+    }
+
+    /**
+     * Counts a flow dropped while QUIC is off, once per flow. Only a long-header packet
+     * starts one: short headers belong to flows opened before QUIC was turned off, and
+     * other UDP/443 traffic (STUN, VPNs) is not QUIC.
+     */
+    private fun countQuicOff(key: K, datagram: ByteArray) {
+        if (!QuicInitial.isLongHeader(datagram) || !firstInWindow(offCounted, key)) return
+        quicOffFlows.incrementAndGet()
+        runCatching { onQuicOffFlow() }
+    }
+
+    /** True unless [key] was already counted within [DROPPED_MEMORY_MS]; repeats do not extend that. */
+    private fun firstInWindow(seen: LinkedHashMap<K, Long>, key: K): Boolean = synchronized(seen) {
+        val at = seen[key]
+        if (at != null && now() - at < DROPPED_MEMORY_MS) return false
+        seen.remove(key)
+        if (seen.size >= MAX_DROPPED) seen.remove(seen.keys.first())
+        seen[key] = now()
+        true
     }
 
     companion object {
