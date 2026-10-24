@@ -569,6 +569,7 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 5. Per-packet allocations on the hot path (`copyOfRange` per UDP packet, IP addresses parsed into Strings per packet in `PrivacyVpnService`); measure first (§6.2). After 1.0.
 6. Wi-Fi-only / mobile-data-only rules.
 7. Reassemble split ClientHellos on ports other than 443; add DoH lists to the start-up cache (~30 s gap while the encrypted DB loads).
+8. Remove the unused master key (`pg_master_key_v1` in `SecureSecretStore`). It only wraps `installation_secret`, which nothing reads; `putString`/`getString` have no callers. Its only other use is `isHardwareBacked()`, which should check `pg_background_key_v1` instead (that key protects the real data, and the master key may not exist on phones without a lock). Also delete the old Keystore entry and the stored secret on upgrade. After 1.0.
 
 When you finish a backlog item, propose removing it here in the same change.
 

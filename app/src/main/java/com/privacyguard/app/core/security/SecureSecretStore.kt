@@ -10,6 +10,7 @@ import android.util.Log
 import java.nio.charset.StandardCharsets
 import java.security.GeneralSecurityException
 import java.security.KeyStore
+import java.security.ProviderException
 import java.security.SecureRandom
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -57,6 +58,12 @@ class SecureSecretStore private constructor(
             putBytes(KEY_INSTALLATION_SECRET, seed)
         } catch (e: GeneralSecurityException) {
             Log.w("SecureSecretStore", "Deferring bootstrap: keystore unavailable (device locked?)", e)
+        } catch (e: ProviderException) {
+            // Keystore reports key-generation failures as this RuntimeException, and
+            // some devices refuse an unlocked-device-required key when no secure lock
+            // screen is set. Escaping here would crash Application.onCreate, and with
+            // it the VPN service, on every start.
+            Log.w("SecureSecretStore", "Deferring bootstrap: master key could not be created", e)
         } finally {
             seed.fill(0)
         }
