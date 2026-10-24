@@ -945,13 +945,21 @@ class PrivacyVpnService : VpnService() {
     /** Collapses the record types and retries of one DNS lookup into one stored row. */
     private val dnsRepeats = com.privacyguard.core.utils.RepeatFilter(DNS_REPEAT_MS)
 
-    /** Five-tuples already logged as blocked: a dropped SYN or UDP packet is retried. */
+    /**
+     * Five-tuples already logged as blocked: a dropped SYN or UDP packet is retransmitted
+     * on the same tuple. Those are packets of one attempt, not new attempts, so they are
+     * skipped before the owner lookup and not counted by [blockRowGate].
+     */
     private val loggedBlocks = ConcurrentHashMap<SessionKey, Long>()
+
+    /** One history row per app, host and source per minute; the retries are only counted. */
+    private val blockRowGate = com.privacyguard.core.session.BlockRowGate()
 
     /**
      * Records a connection attempt PrivacyGuard dropped before any session existed
      * (a rule, or a DNS-bypass guard), so blocked numbers count connections too, not
-     * only DNS lookups. Retries of the same attempt within [BLOCK_DEDUP_MS] are one row.
+     * only DNS lookups. Retransmissions within [BLOCK_DEDUP_MS] are ignored; new
+     * attempts to the same place within a minute are merged ([blockRowGate]).
      */
     private fun logBlockedAttempt(
         key: SessionKey, knownUid: Int? = null, knownPkg: String? = null,
@@ -964,8 +972,9 @@ class PrivacyVpnService : VpnService() {
 
         val proto = if (key.protocol == IpPacket.PROTO_TCP) OsConstants.IPPROTO_TCP else OsConstants.IPPROTO_UDP
         val uid = knownUid ?: resolveOwnerUid(proto, key)
-        val pkg = resolvedPackageName(uid, knownPkg ?: appTracker.packageForUid(uid))
         val dstIp = key.destinationIp
+        if (!gateBlockedRow(uid, sni ?: hostByIp[dstIp] ?: dstIp, key, blockSource, now)) return
+        val pkg = resolvedPackageName(uid, knownPkg ?: appTracker.packageForUid(uid))
         val isIpv6 = dstIp.contains(':')
         connectionLogger.log(ConnectionEntity(
             appUid = uid,
@@ -986,6 +995,16 @@ class PrivacyVpnService : VpnService() {
             screenOn = !isPhoneIdle(),
             networkKey = com.privacyguard.app.core.network.NetworkIdentity.current(applicationContext).key,
         ))
+    }
+
+    /** [blockRowGate] for one blocked attempt, counted either way (StatsManager.recordBlockedRow). */
+    private fun gateBlockedRow(
+        uid: Int, host: String, key: SessionKey,
+        source: com.privacyguard.core.session.BlockSource?, now: Long,
+    ): Boolean {
+        val write = blockRowGate.shouldWrite(uid, host, key.destinationPort, key.protocolName, source, now)
+        StatsManager.recordBlockedRow(write)
+        return write
     }
 
     private fun onBlocked(decision: FilterEngine.Decision, pkg: String?, destination: String) {
@@ -1165,8 +1184,13 @@ class PrivacyVpnService : VpnService() {
             closedSessionBytes.addAndGet(sessionBytes)
             // Sessions that never moved a byte are failed or abandoned connection
             // attempts (e.g. browser pre-connects); they are not history, unless we
-            // ended them on purpose: then they are a blocked attempt.
-            if (sessionBytes > 0 || snapshot.blocked) connectionLogger.log(ConnectionEntity(
+            // ended them on purpose: then they are a blocked attempt, merged with the
+            // app's retries to the same place (blockRowGate).
+            val writeRow = if (snapshot.blocked) {
+                gateBlockedRow(snapshot.ownerUid, snapshot.tlsSni ?: hostname ?: dstIp, snapshot.key,
+                    snapshot.blockSource, System.currentTimeMillis())
+            } else sessionBytes > 0
+            if (writeRow) connectionLogger.log(ConnectionEntity(
                 appUid = snapshot.ownerUid,
                 appName = appLabel,
                 packageName = resolvedPackage,

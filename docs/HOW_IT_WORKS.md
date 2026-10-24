@@ -330,7 +330,9 @@ Two more findings come from the TLS server name (section 2, step 6;
 `core/tls/SniCheck.kt`): *Invalid server name* (the SNI is not a hostname: an IP,
 bidi or control characters, HTML) and *Server name does not match DNS*.
 
-Each finding is reported once per app and host per 24 hours. For the three
+Each finding is reported once per app and host per 24 hours. A *Lookup burst* is reported
+once per app per 24 hours, whichever host tipped it: one news page looks up dozens
+of ad hosts, and per host each one would be its own alert. For the three
 name-shape findings the base domain is used instead of the host, because CDN-like
 hosts are unique by design. CDN suffixes (CloudFront, Akamai, Fastly, Facebook and
 TikTok CDNs, Google video…) are exempt from the shape checks.
@@ -436,6 +438,12 @@ of the list are equal (`app/ui/traffic/HomeEvidence.kt`).
 **"Blocked"** means the same thing everywhere (`app/data/repository/BlockStats.kt`):
 DNS lookups answered *NXDOMAIN* by the lists or your rules, plus connection
 attempts PrivacyGuard dropped (rules, DNS-bypass guard, cleartext rule).
+Apps retry a blocked connection at once, from a new port each time (Chrome tried
+one blocked DoH server about six times a second). So one row is written per app,
+host, port, protocol and *Stopped by* per minute (fixed windows, `core/session/BlockRowGate.kt`);
+the retries are counted, not written. DNS lookups already merge repeats within 10 s.
+The exact number of attempts is in Settings › Diagnostics › *Blocked connection
+history*: attempts = written + merged, since protection started.
 **"Block rate"** = blocked lookups ÷ all lookups (lookups, not connections, so a
 visit is not counted twice).
 

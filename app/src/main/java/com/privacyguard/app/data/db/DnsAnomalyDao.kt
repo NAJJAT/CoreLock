@@ -21,12 +21,22 @@ interface DnsAnomalyDao {
     """)
     suspend fun countForBaseSince(pkg: String, base: String, since: Long): Int
 
+    @Query("SELECT COUNT(*) FROM dns_anomalies WHERE packageName = :pkg AND anomalyType = :type AND timestamp > :since")
+    suspend fun countTypeForSince(pkg: String, type: String, since: Long): Int
+
+    /**
+     * [perApp]: once per app and type, whatever the host (a burst of lookups is about the
+     * app; per host, one page load stored an alert for each of its ad hosts).
+     */
     @Transaction
-    suspend fun insert(anomaly: DnsAnomalyEntity, dedupeBase: String? = null): Boolean {
+    suspend fun insert(anomaly: DnsAnomalyEntity, dedupeBase: String? = null, perApp: Boolean = false): Boolean {
         val since = anomaly.timestamp - TlsAlertDao.ALERT_DEDUP_MS
         // Name-shape findings: once per app and base domain (their hosts are all unique).
-        val seen = if (dedupeBase != null) countForBaseSince(anomaly.packageName, dedupeBase, since)
-            else countForSince(anomaly.packageName, anomaly.domain, since)
+        val seen = when {
+            perApp -> countTypeForSince(anomaly.packageName, anomaly.anomalyType, since)
+            dedupeBase != null -> countForBaseSince(anomaly.packageName, dedupeBase, since)
+            else -> countForSince(anomaly.packageName, anomaly.domain, since)
+        }
         if (seen > 0) return false
         insertRow(anomaly)
         return true

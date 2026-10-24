@@ -234,3 +234,13 @@ Diagnostics › QUIC checks counts more kinds of dropped QUIC. `diag_sni_detail`
 | `conn_blocked_by_quic` | QUIC server name: a blocked name, reached without DNS | اسم خادم QUIC: اسم محظور وصل إليه التطبيق دون DNS | Nom du serveur QUIC : un nom bloqué, atteint sans DNS | QUIC-servernaam: een geblokkeerde naam, bereikt zonder DNS |
 | `diag_sni_detail` | Connections stopped by their TLS server name since protection was turned on: %d | الاتصالات التي أُوقفت بسبب اسم خادم TLS منذ تشغيل الحماية: %d | Connexions arrêtées par leur nom de serveur TLS depuis l’activation de la protection : %d | Verbindingen gestopt op hun TLS-servernaam sinds de bescherming aanstaat: %d |
 | `diag_quic_detail` | QUIC connections since protection was turned on. Stopped by their server name: %1$d. Dropped (the app then retries or uses TCP) because QUIC is blocked: %2$d, unreadable: %3$d, too many waiting: %4$d. | اتصالات QUIC منذ تشغيل الحماية. أُوقفت بسبب اسم الخادم: %1$d. رُفضت (يعيد التطبيق المحاولة أو يستخدم TCP) لأن QUIC محظور: %2$d، غير مقروءة: %3$d، أكثر من اللازم في الانتظار: %4$d. | Connexions QUIC depuis l’activation de la protection. Arrêtées par leur nom de serveur : %1$d. Rejetées (l’app réessaie ou passe par TCP) car QUIC est bloqué : %2$d, illisibles : %3$d, trop en attente : %4$d. | QUIC-verbindingen sinds de bescherming aanstaat. Gestopt op hun servernaam: %1$d. Weggegooid (de app probeert opnieuw of gebruikt TCP) omdat QUIC geblokkeerd is: %2$d, onleesbaar: %3$d, te veel wachtend: %4$d. |
+
+### Added 2026-10-24: blocked connection history in Diagnostics (machine-translated, 2 per language)
+
+Settings › Diagnostics. Retries of a blocked connection within a minute are counted
+but get no new history row; this line shows both numbers.
+
+| String | English | Arabic | French | Dutch |
+|---|---|---|---|---|
+| `diag_block_rows` | Blocked connection history | سجل الاتصالات المحظورة | Historique des connexions bloquées | Geschiedenis van geblokkeerde verbindingen |
+| `diag_block_rows_detail` | Blocked connection attempts since protection was turned on: %1$d. Written to the history: %2$d. Retries to the same place within a minute, counted but not written again: %3$d. | محاولات الاتصال المحظورة منذ تشغيل الحماية: %1$d. سُجّلت في السجل: %2$d. محاولات متكررة إلى الوجهة نفسها خلال دقيقة، احتُسبت ولم تُسجَّل مرة أخرى: %3$d. | Tentatives de connexion bloquées depuis l’activation de la protection : %1$d. Écrites dans l’historique : %2$d. Nouvelles tentatives vers la même destination en moins d’une minute, comptées mais pas réécrites : %3$d. | Geblokkeerde verbindingspogingen sinds de bescherming aanstaat: %1$d. In de geschiedenis gezet: %2$d. Nieuwe pogingen naar dezelfde bestemming binnen een minuut, geteld maar niet opnieuw opgeslagen: %3$d. |

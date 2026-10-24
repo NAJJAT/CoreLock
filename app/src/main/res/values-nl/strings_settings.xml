@@ -146,6 +146,8 @@
     <string name="diag_sni_detail">Verbindingen gestopt op hun TLS-servernaam sinds de bescherming aanstaat: %d</string>
     <string name="diag_quic">QUIC-controles</string>
     <string name="diag_quic_detail">QUIC-verbindingen sinds de bescherming aanstaat. Gestopt op hun servernaam: %1$d. Weggegooid (de app probeert opnieuw of gebruikt TCP) omdat QUIC geblokkeerd is: %2$d, onleesbaar: %3$d, te veel wachtend: %4$d.</string>
+    <string name="diag_block_rows">Geschiedenis van geblokkeerde verbindingen</string>
+    <string name="diag_block_rows_detail">Geblokkeerde verbindingspogingen sinds de bescherming aanstaat: %1$d. In de geschiedenis gezet: %2$d. Nieuwe pogingen naar dezelfde bestemming binnen een minuut, geteld maar niet opnieuw opgeslagen: %3$d.</string>
     <string name="diag_inventory">App-overzicht</string>
     <plurals name="diag_inventory_detail">
         <item quantity="one">%d app met netwerktoegang zichtbaar</item>

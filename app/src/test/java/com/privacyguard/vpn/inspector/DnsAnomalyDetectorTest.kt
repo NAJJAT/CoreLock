@@ -27,6 +27,27 @@ class DnsAnomalyDetectorTest {
     }
 
     @Test
+    fun a_burst_is_reported_once_per_app_not_once_per_host() {
+        val d = DnsAnomalyDetector()
+        // One news page: 80 different ad and content hosts in a few seconds.
+        val bursts = (1..80).flatMap { d.analyze("com.android.chrome", "ad$it.example.net") }
+            .count { it.type == DnsAnomalyDetector.AnomalyType.HIGH_FREQUENCY }
+        assertEquals(1, bursts)
+        // Another app's burst is its own alert.
+        val other = (1..40).flatMap { d.analyze("com.news", "n$it.example.org") }
+            .count { it.type == DnsAnomalyDetector.AnomalyType.HIGH_FREQUENCY }
+        assertEquals(1, other)
+    }
+
+    @Test
+    fun a_reported_burst_does_not_hide_other_findings_of_the_app() {
+        val d = DnsAnomalyDetector()
+        (1..40).forEach { d.analyze("com.app", "n$it.example.com") }
+        val long = d.analyze("com.app", "a".repeat(30) + ".b.c.d.e.f.example.com")
+        assertTrue(long.any { it.type != DnsAnomalyDetector.AnomalyType.HIGH_FREQUENCY })
+    }
+
+    @Test
     fun own_service_hosts_are_never_reported() {
         val d = DnsAnomalyDetector()
         val all = (1..50).flatMap { d.analyze(null, "crt.sh") + d.analyze(null, "a$it.raw.githubusercontent.com") }

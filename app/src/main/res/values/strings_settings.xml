@@ -146,6 +146,8 @@
     <string name="diag_sni_detail">Connections stopped by their TLS server name since protection was turned on: %d</string>
     <string name="diag_quic">QUIC checks</string>
     <string name="diag_quic_detail">QUIC connections since protection was turned on. Stopped by their server name: %1$d. Dropped (the app then retries or uses TCP) because QUIC is blocked: %2$d, unreadable: %3$d, too many waiting: %4$d.</string>
+    <string name="diag_block_rows">Blocked connection history</string>
+    <string name="diag_block_rows_detail">Blocked connection attempts since protection was turned on: %1$d. Written to the history: %2$d. Retries to the same place within a minute, counted but not written again: %3$d.</string>
     <string name="diag_inventory">App inventory</string>
     <plurals name="diag_inventory_detail">
         <item quantity="one">%d network-capable app visible</item>

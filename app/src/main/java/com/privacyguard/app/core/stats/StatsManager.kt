@@ -70,6 +70,10 @@ data class StatsSnapshot(
     val quicUnreadableDropped: Long                  = 0L,
     /** QUIC flows dropped because the hold limits were reached; the app retries or uses TCP. */
     val quicHoldLimitDropped: Long                   = 0L,
+    /** Blocked connection attempts written to the history (first of each retry window). */
+    val blockedRowsWritten:  Long                    = 0L,
+    /** Blocked connection attempts merged into that row: retries within BlockRowGate.WINDOW_MS. */
+    val blockedRowsMerged:   Long                    = 0L,
     val activeConnections:   List<ActiveConnectionInfo> = emptyList(),
     val recentActivity:      List<ActivityInfo>     = emptyList(),
     val topTrackers:         List<TrackerInfo>       = emptyList(),
@@ -101,6 +105,8 @@ object StatsManager {
     private val quicOffDropped = AtomicLong()
     private val quicUnreadableDropped = AtomicLong()
     private val quicHoldLimitDropped = AtomicLong()
+    private val blockedRowsWritten = AtomicLong()
+    private val blockedRowsMerged = AtomicLong()
 
     /** Lists (connections, activity, per-app stats); counter fields here are unused. */
     private val lists = MutableStateFlow(StatsSnapshot())
@@ -153,6 +159,15 @@ object StatsManager {
         schedulePublish()
     }
 
+    /**
+     * A blocked connection attempt and whether it got its own history row. Written +
+     * merged is every attempt, so the 60 s merge never hides how often an app retried.
+     */
+    fun recordBlockedRow(written: Boolean) {
+        (if (written) blockedRowsWritten else blockedRowsMerged).incrementAndGet()
+        schedulePublish()
+    }
+
     fun recordPacket(bytes: Long) {
         totalPackets.incrementAndGet()
         dataSavedBytes.addAndGet(bytes)
@@ -167,7 +182,7 @@ object StatsManager {
     }
 
     fun reset() {
-        listOf(blockedToday, trackersBlocked, totalPackets, dataSavedBytes, ipv6PacketsBlocked, ipv6BytesBlocked, sniBlocked, quicNameBlocked, quicOffDropped, quicUnreadableDropped, quicHoldLimitDropped)
+        listOf(blockedToday, trackersBlocked, totalPackets, dataSavedBytes, ipv6PacketsBlocked, ipv6BytesBlocked, sniBlocked, quicNameBlocked, quicOffDropped, quicUnreadableDropped, quicHoldLimitDropped, blockedRowsWritten, blockedRowsMerged)
             .forEach { it.set(0) }
         lists.value = StatsSnapshot()
         publishNow()
@@ -187,6 +202,8 @@ object StatsManager {
             quicOffDropped = quicOffDropped.get(),
             quicUnreadableDropped = quicUnreadableDropped.get(),
             quicHoldLimitDropped = quicHoldLimitDropped.get(),
+            blockedRowsWritten = blockedRowsWritten.get(),
+            blockedRowsMerged = blockedRowsMerged.get(),
         )
     }
 

@@ -158,6 +158,8 @@
     <string name="diag_sni_detail">الاتصالات التي أُوقفت بسبب اسم خادم TLS منذ تشغيل الحماية: %d</string>
     <string name="diag_quic">فحوص QUIC</string>
     <string name="diag_quic_detail">اتصالات QUIC منذ تشغيل الحماية. أُوقفت بسبب اسم الخادم: %1$d. رُفضت (يعيد التطبيق المحاولة أو يستخدم TCP) لأن QUIC محظور: %2$d، غير مقروءة: %3$d، أكثر من اللازم في الانتظار: %4$d.</string>
+    <string name="diag_block_rows">سجل الاتصالات المحظورة</string>
+    <string name="diag_block_rows_detail">محاولات الاتصال المحظورة منذ تشغيل الحماية: %1$d. سُجّلت في السجل: %2$d. محاولات متكررة إلى الوجهة نفسها خلال دقيقة، احتُسبت ولم تُسجَّل مرة أخرى: %3$d.</string>
     <string name="diag_inventory">جرد التطبيقات</string>
     <plurals name="diag_inventory_detail">
         <item quantity="zero">لا يوجد تطبيق يستخدم الشبكة</item>

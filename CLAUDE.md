@@ -275,7 +275,7 @@ All name decisions — DNS, CNAME, TCP SNI, QUIC SNI — go through **`NameBlock
 Invariants:
 - **Never add a second matching path.** If DNS and SNI disagree, a name blocked in one layer leaks through the other. The property test (fixed seed `20261021`) checks DNS and SNI against a model of this order; keep it, and keep its seed.
 - **Normalize every name** before matching: lowercase, remove the trailing dot. `ads.example.com.` once bypassed user rules because of a trailing dot. This also applies in `FilterRule.domainMatches`.
-- **Every block records a `BlockSource`** (`DNS`, `SNI`, `QUIC`, `DOH`, `DOT`) and is counted, so "Stopped by" in the connection details is always true. DNS blocks are rows in `dns_queries`, whose source is implied (no column). TCP SNI and QUIC SNI stay separate values. QUIC drops that are not a decision on a name (QUIC blocked, unreadable, hold limit) are counters only, never rows: apps retry them by the hundred. A new `BlockSource` value needs no migration (the column is text; unknown values read as null).
+- **Every block records a `BlockSource`** (`DNS`, `SNI`, `QUIC`, `DOH`, `DOT`) and is counted, so "Stopped by" in the connection details is always true. DNS blocks are rows in `dns_queries`, whose source is implied (no column). TCP SNI and QUIC SNI stay separate values. QUIC drops that are not a decision on a name (QUIC blocked, unreadable, hold limit) are counters only, never rows: apps retry them by the hundred. Blocked connection rows are merged per app, host, port, protocol and source in fixed 60 s windows (`BlockRowGate`); every attempt is still counted (written + merged, Settings › Diagnostics), so counters stay exact. A new `BlockSource` value needs no migration (the column is text; unknown values read as null).
 
 ### 5.4 QUIC (`QuicGate`)
 
@@ -563,7 +563,7 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 ### 16.2 Open backlog (most important first)
 
 1. Per-app rules at the DNS layer (correlate DNS answers with later connections).
-2. Block counters disagree: the notification counter excludes DNS and counts packets; screens use `BlockStats`. SNI and QUIC counters (name blocks, QUIC blocked, unreadable, hold limit) are shown only in Settings › Diagnostics and reset when protection restarts; dual-hop UDP drops aren't counted. Unify into one source of truth, after the retry dedup of blocked rows (proposed 2026-10-24).
+2. Block counters disagree: the notification counter excludes DNS and counts packets; screens use `BlockStats`. SNI and QUIC counters (name blocks, QUIC blocked, unreadable, hold limit) are shown only in Settings › Diagnostics and reset when protection restarts; dual-hop UDP drops aren't counted. Unify into one source of truth; blocked rows are merged per minute since 2026-10-24 (`BlockRowGate`), so the stored numbers no longer grow with retries.
 3. Compact blocklist storage (64-bit fingerprints in a sorted `LongArray`) to cut STRICT memory from ~44 MB to a few MB.
 4. Six ViewModels poll with `while(true)` — 8 loops: AlertInbox, AppDetail, Connections, Dashboard (2), Settings, Statistics (2). Empty `catch (_: Exception) { }` blocks in AlertInbox, Apps, Connections, Rules, Settings, Statistics. Move to Room `Flow` and surface errors. After 1.0.
 5. Per-packet allocations on the hot path (`copyOfRange` per UDP packet, IP addresses parsed into Strings per packet in `PrivacyVpnService`); measure first (§6.2). After 1.0.

@@ -8,7 +8,7 @@ import kotlinx.coroutines.withContext
 
 class DnsAnomalyRepo(private val dnsAnomalyDao: DnsAnomalyDao) {
 
-    /** False when the same app and host already has an anomaly today (see DnsAnomalyDao.insert). */
+    /** False when the same app and host (for a burst: the same app) already has one today (DnsAnomalyDao.insert). */
     suspend fun save(anomaly: DnsAnomalyDetector.Anomaly, networkKey: String? = null): Boolean = withContext(Dispatchers.IO) {
         dnsAnomalyDao.insert(DnsAnomalyEntity(
             timestamp = anomaly.timestamp,
@@ -18,7 +18,8 @@ class DnsAnomalyRepo(private val dnsAnomalyDao: DnsAnomalyDao) {
             description = com.privacyguard.core.utils.Hostnames.label(anomaly.description, max = 500),
             severity = anomaly.severity,
             networkKey = networkKey,
-        ), dedupeBase = DnsAnomalyDetector.baseForDedupe(anomaly))
+        ), dedupeBase = DnsAnomalyDetector.baseForDedupe(anomaly),
+            perApp = DnsAnomalyDetector.dedupesPerApp(anomaly.type))
     }
 
     suspend fun recent(limit: Int = 100): List<DnsAnomalyDetector.Anomaly> = withContext(Dispatchers.IO) {

@@ -269,6 +269,13 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 detail = str(R.string.diag_quic_detail, snapshot.quicNameBlocked, snapshot.quicOffDropped,
                     snapshot.quicUnreadableDropped, snapshot.quicHoldLimitDropped),
             ),
+            // Written + merged = every blocked connection attempt; the history keeps one row per minute.
+            DiagnosticCheck(
+                label = str(R.string.diag_block_rows),
+                status = DiagnosticStatus.PASS,
+                detail = str(R.string.diag_block_rows_detail, snapshot.blockedRowsWritten + snapshot.blockedRowsMerged,
+                    snapshot.blockedRowsWritten, snapshot.blockedRowsMerged),
+            ),
             DiagnosticCheck(
                 label = str(R.string.diag_inventory),
                 status = if (installedNetworkApps > 0) DiagnosticStatus.PASS else DiagnosticStatus.WARN,

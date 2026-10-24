@@ -149,6 +149,8 @@
     <string name="diag_sni_detail">Connexions arrêtées par leur nom de serveur TLS depuis l’activation de la protection : %d</string>
     <string name="diag_quic">Contrôles QUIC</string>
     <string name="diag_quic_detail">Connexions QUIC depuis l’activation de la protection. Arrêtées par leur nom de serveur : %1$d. Rejetées (l’app réessaie ou passe par TCP) car QUIC est bloqué : %2$d, illisibles : %3$d, trop en attente : %4$d.</string>
+    <string name="diag_block_rows">Historique des connexions bloquées</string>
+    <string name="diag_block_rows_detail">Tentatives de connexion bloquées depuis l’activation de la protection : %1$d. Écrites dans l’historique : %2$d. Nouvelles tentatives vers la même destination en moins d’une minute, comptées mais pas réécrites : %3$d.</string>
     <string name="diag_inventory">Inventaire des apps</string>
     <plurals name="diag_inventory_detail">
         <item quantity="one">%d app avec accès réseau visible</item>
