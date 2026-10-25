@@ -244,3 +244,29 @@ but get no new history row; this line shows both numbers.
 |---|---|---|---|---|
 | `diag_block_rows` | Blocked connection history | سجل الاتصالات المحظورة | Historique des connexions bloquées | Geschiedenis van geblokkeerde verbindingen |
 | `diag_block_rows_detail` | Blocked connection attempts since protection was turned on: %1$d. Written to the history: %2$d. Retries to the same place within a minute, counted but not written again: %3$d. | محاولات الاتصال المحظورة منذ تشغيل الحماية: %1$d. سُجّلت في السجل: %2$d. محاولات متكررة إلى الوجهة نفسها خلال دقيقة، احتُسبت ولم تُسجَّل مرة أخرى: %3$d. | Tentatives de connexion bloquées depuis l’activation de la protection : %1$d. Écrites dans l’historique : %2$d. Nouvelles tentatives vers la même destination en moins d’une minute, comptées mais pas réécrites : %3$d. | Geblokkeerde verbindingspogingen sinds de bescherming aanstaat: %1$d. In de geschiedenis gezet: %2$d. Nieuwe pogingen naar dezelfde bestemming binnen een minuut, geteld maar niet opnieuw opgeslagen: %3$d. |
+
+### Added 2026-10-25: Open-source licenses screen (machine-translated, 19 per language)
+
+License texts, names, copyright lines and addresses stay in English and are not listed.
+
+| String | English | Arabic | French | Dutch |
+|---|---|---|---|---|
+| `set_open_source_licenses` | Open-source licenses | تراخيص المصادر المفتوحة | Licences open source | Opensourcelicenties |
+| `lic_title` | Open-source licenses | تراخيص المصادر المفتوحة | Licences open source | Opensourcelicenties |
+| `lic_subtitle` | The license of this app, and of the software and data it uses | ترخيص هذا التطبيق، وتراخيص البرامج والبيانات التي يستخدمها | La licence de cette app, et celles des logiciels et données qu’elle utilise | De licentie van deze app, en van de software en gegevens die ze gebruikt |
+| `lic_app_title` | This app | هذا التطبيق | Cette app | Deze app |
+| `lic_app_body` | PrivacyGuard is free software under the GNU General Public License, version 3. You may share and change it under those terms. It comes with no warranty. The source code is published here: | PrivacyGuard برنامج حر مرخّص بموجب رخصة جنو العمومية العامة (GNU GPL)، الإصدار 3. يمكنك مشاركته وتعديله وفق شروطها. يأتي دون أي ضمان. الشيفرة المصدرية منشورة هنا: | PrivacyGuard est un logiciel libre sous licence publique générale GNU, version 3. Vous pouvez le partager et le modifier selon les conditions de cette licence. Il est fourni sans aucune garantie. Le code source est publié ici : | PrivacyGuard is vrije software onder de GNU General Public License, versie 3. Je mag de app onder die voorwaarden delen en aanpassen. Er wordt geen enkele garantie gegeven. De broncode staat hier: |
+| `lic_section_software` | Software inside the app | البرامج المضمّنة في التطبيق | Logiciels inclus dans l’app | Software in de app |
+| `lic_section_downloaded` | Lists the app downloads | القوائم التي ينزّلها التطبيق | Listes téléchargées par l’app | Lijsten die de app downloadt |
+| `lic_downloaded_note` | Downloaded from their authors when lists are refreshed; they are not part of the app. | تُنزَّل من مؤلفيها عند تحديث القوائم، وليست جزءًا من التطبيق. | Téléchargées auprès de leurs auteurs lors de la mise à jour des listes ; elles ne font pas partie de l’app. | Gedownload bij de makers wanneer de lijsten worden vernieuwd; ze maken geen deel uit van de app. |
+| `lic_section_bundled` | Data inside the app | البيانات المضمّنة في التطبيق | Données incluses dans l’app | Gegevens in de app |
+| `lic_license` | License: %1$s | الترخيص: %1$s | Licence : %1$s | Licentie: %1$s |
+| `lic_source` | Source: %1$s | المصدر: %1$s | Source : %1$s | Bron: %1$s |
+| `lic_show_text` | Show license text | عرض نص الترخيص | Afficher le texte de la licence | Licentietekst tonen |
+| `lic_text_error` | The license text could not be opened. | تعذّر فتح نص الترخيص. | Impossible d’ouvrir le texte de la licence. | De licentietekst kon niet worden geopend. |
+| `lic_desc_apache` | Libraries by Google, JetBrains, Square and others, each used under the Apache License 2.0. | مكتبات من Google وJetBrains وSquare وغيرها، تُستخدم كلٌّ منها بموجب رخصة Apache 2.0. | Bibliothèques de Google, JetBrains, Square et d’autres, chacune utilisée sous la licence Apache 2.0. | Bibliotheken van Google, JetBrains, Square en anderen, elk gebruikt onder de Apache License 2.0. |
+| `lic_desc_psl` | Included with OkHttp. | مضمّنة مع OkHttp. | Incluse avec OkHttp. | Meegeleverd met OkHttp. |
+| `lic_desc_hagezi` | Pro, Pro mini, Threat Intelligence Feeds mini, DoH and DoH IP lists. | قوائم Pro وPro mini وThreat Intelligence Feeds mini وDoH وعناوين IP لخوادم DoH. | Listes Pro, Pro mini, Threat Intelligence Feeds mini, DoH et adresses IP DoH. | De lijsten Pro, Pro mini, Threat Intelligence Feeds mini, DoH en DoH-IP-adressen. |
+| `lic_desc_oisd` | Maintained by Stephan van Ruth. | يشرف عليها Stephan van Ruth. | Maintenue par Stephan van Ruth. | Onderhouden door Stephan van Ruth. |
+| `lic_desc_exodus` | Known trackers, used to name the tracker behind a connection. | أدوات التتبّع المعروفة، وتُستخدم لتسمية أداة التتبّع التي تقف وراء الاتصال. | Traqueurs connus, utilisés pour nommer le traqueur derrière une connexion. | Bekende trackers, gebruikt om de tracker achter een verbinding te benoemen. |
+| `lic_desc_rir` | Their public delegated-extended files, turned into the built-in table that shows the country of an IP address. | ملفاتها العامة «delegated-extended»، وقد حُوّلت إلى الجدول المضمّن الذي يُظهر بلد عنوان IP. | Leurs fichiers publics « delegated-extended », transformés en table intégrée qui indique le pays d’une adresse IP. | Hun openbare delegated-extended-bestanden, omgezet in de ingebouwde tabel die het land van een IP-adres toont. |

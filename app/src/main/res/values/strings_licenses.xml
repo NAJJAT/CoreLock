@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="set_open_source_licenses">Open-source licenses</string>
+
+    <string name="lic_title">Open-source licenses</string>
+    <string name="lic_subtitle">The license of this app, and of the software and data it uses</string>
+    <string name="lic_app_title">This app</string>
+    <string name="lic_app_body">PrivacyGuard is free software under the GNU General Public License, version 3. You may share and change it under those terms. It comes with no warranty. The source code is published here:</string>
+    <string name="lic_section_software">Software inside the app</string>
+    <string name="lic_section_downloaded">Lists the app downloads</string>
+    <string name="lic_downloaded_note">Downloaded from their authors when lists are refreshed; they are not part of the app.</string>
+    <string name="lic_section_bundled">Data inside the app</string>
+    <string name="lic_license">License: %1$s</string>
+    <string name="lic_source">Source: %1$s</string>
+    <string name="lic_show_text">Show license text</string>
+    <string name="lic_text_error">The license text could not be opened.</string>
+
+    <string name="lic_desc_apache">Libraries by Google, JetBrains, Square and others, each used under the Apache License 2.0.</string>
+    <string name="lic_desc_psl">Included with OkHttp.</string>
+    <string name="lic_desc_hagezi">Pro, Pro mini, Threat Intelligence Feeds mini, DoH and DoH IP lists.</string>
+    <string name="lic_desc_oisd">Maintained by Stephan van Ruth.</string>
+    <string name="lic_desc_exodus">Known trackers, used to name the tracker behind a connection.</string>
+    <string name="lic_desc_rir">Their public delegated-extended files, turned into the built-in table that shows the country of an IP address.</string>
+
+    <!-- Names, copyright lines, license names and addresses are legal identifiers and
+         stay exactly as their owners write them, so they are not translated. -->
+    <string name="lic_repo_url" translatable="false">https://github.com/NAJJAT/CoreLock</string>
+
+    <string name="lic_name_sqlcipher" translatable="false">SQLCipher for Android</string>
+    <string name="lic_copy_sqlcipher" translatable="false">Copyright (c) 2008-2023, ZETETIC LLC</string>
+    <string name="lic_url_sqlcipher" translatable="false">https://github.com/sqlcipher/sqlcipher-android</string>
+    <string name="lic_name_bc" translatable="false">Bouncy Castle</string>
+    <string name="lic_copy_bc" translatable="false">Copyright (c) 2000-2026 The Legion of the Bouncy Castle Inc.</string>
+    <string name="lic_url_bc" translatable="false">https://www.bouncycastle.org</string>
+    <string name="lic_name_apache" translatable="false">Android Jetpack (AndroidX), Kotlin, kotlinx.coroutines, kotlinx.serialization, OkHttp, Okio, Guava ListenableFuture, JetBrains Annotations, JSpecify</string>
+    <string name="lic_name_psl" translatable="false">Public Suffix List</string>
+    <string name="lic_url_psl" translatable="false">https://publicsuffix.org</string>
+    <string name="lic_name_hagezi" translatable="false">HaGeZi DNS blocklists</string>
+    <string name="lic_url_hagezi" translatable="false">https://github.com/hagezi/dns-blocklists</string>
+    <string name="lic_name_oisd" translatable="false">OISD small</string>
+    <string name="lic_url_oisd" translatable="false">https://oisd.nl</string>
+    <string name="lic_name_exodus" translatable="false">Exodus Privacy tracker list</string>
+    <string name="lic_url_exodus" translatable="false">https://reports.exodus-privacy.eu.org</string>
+    <string name="lic_name_rir" translatable="false">ARIN, RIPE NCC, APNIC, LACNIC, AFRINIC</string>
+
+    <string name="lic_gpl_3" translatable="false">GNU General Public License v3.0</string>
+    <string name="lic_apache_2" translatable="false">Apache License 2.0</string>
+    <string name="lic_bsd_3" translatable="false">BSD 3-Clause License</string>
+    <string name="lic_mit" translatable="false">MIT License</string>
+    <string name="lic_mpl_2" translatable="false">Mozilla Public License 2.0</string>
+    <string name="lic_odbl" translatable="false">Open Database License 1.0 (contents: Database Contents License 1.0)</string>
+</resources>

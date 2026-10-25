@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="set_open_source_licenses">Licences open source</string>
+
+    <string name="lic_title">Licences open source</string>
+    <string name="lic_subtitle">La licence de cette app, et celles des logiciels et données qu’elle utilise</string>
+    <string name="lic_app_title">Cette app</string>
+    <string name="lic_app_body">PrivacyGuard est un logiciel libre sous licence publique générale GNU, version 3. Vous pouvez le partager et le modifier selon les conditions de cette licence. Il est fourni sans aucune garantie. Le code source est publié ici :</string>
+    <string name="lic_section_software">Logiciels inclus dans l’app</string>
+    <string name="lic_section_downloaded">Listes téléchargées par l’app</string>
+    <string name="lic_downloaded_note">Téléchargées auprès de leurs auteurs lors de la mise à jour des listes ; elles ne font pas partie de l’app.</string>
+    <string name="lic_section_bundled">Données incluses dans l’app</string>
+    <string name="lic_license">Licence : %1$s</string>
+    <string name="lic_source">Source : %1$s</string>
+    <string name="lic_show_text">Afficher le texte de la licence</string>
+    <string name="lic_text_error">Impossible d’ouvrir le texte de la licence.</string>
+
+    <string name="lic_desc_apache">Bibliothèques de Google, JetBrains, Square et d’autres, chacune utilisée sous la licence Apache 2.0.</string>
+    <string name="lic_desc_psl">Incluse avec OkHttp.</string>
+    <string name="lic_desc_hagezi">Listes Pro, Pro mini, Threat Intelligence Feeds mini, DoH et adresses IP DoH.</string>
+    <string name="lic_desc_oisd">Maintenue par Stephan van Ruth.</string>
+    <string name="lic_desc_exodus">Traqueurs connus, utilisés pour nommer le traqueur derrière une connexion.</string>
+    <string name="lic_desc_rir">Leurs fichiers publics « delegated-extended », transformés en table intégrée qui indique le pays d’une adresse IP.</string>
+</resources>

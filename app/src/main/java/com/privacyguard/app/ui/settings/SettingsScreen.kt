@@ -108,6 +108,7 @@ fun SettingsScreen(
     onOpenAdPrivacy: () -> Unit = {},
     onOpenRules: () -> Unit = {},
     onOpenPayloads: (() -> Unit)? = null,
+    onOpenLicenses: () -> Unit = {},
     settingsViewModel: SettingsViewModel = viewModel(),
 ) {
     val context = LocalContext.current
@@ -734,6 +735,10 @@ fun SettingsScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(R.string.set_check_updates)) }
+                Spacer(modifier = Modifier.height(4.dp))
+                androidx.compose.material3.TextButton(onClick = onOpenLicenses, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.set_open_source_licenses))
+                }
             }
         }
 

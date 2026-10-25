@@ -1,7 +1,7 @@
 # 0001. Distribute on GitHub Releases, not Google Play
 
 - **Status:** Accepted
-- **Date:** not recorded (written down 2026-10-25)
+- **Date:** October 2026
 - **Commits:** none single; see `README.md` › Install
 
 ## Context

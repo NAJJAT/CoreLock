@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="set_open_source_licenses">تراخيص المصادر المفتوحة</string>
+
+    <string name="lic_title">تراخيص المصادر المفتوحة</string>
+    <string name="lic_subtitle">ترخيص هذا التطبيق، وتراخيص البرامج والبيانات التي يستخدمها</string>
+    <string name="lic_app_title">هذا التطبيق</string>
+    <string name="lic_app_body">PrivacyGuard برنامج حر مرخّص بموجب رخصة جنو العمومية العامة (GNU GPL)، الإصدار 3. يمكنك مشاركته وتعديله وفق شروطها. يأتي دون أي ضمان. الشيفرة المصدرية منشورة هنا:</string>
+    <string name="lic_section_software">البرامج المضمّنة في التطبيق</string>
+    <string name="lic_section_downloaded">القوائم التي ينزّلها التطبيق</string>
+    <string name="lic_downloaded_note">تُنزَّل من مؤلفيها عند تحديث القوائم، وليست جزءًا من التطبيق.</string>
+    <string name="lic_section_bundled">البيانات المضمّنة في التطبيق</string>
+    <string name="lic_license">الترخيص: %1$s</string>
+    <string name="lic_source">المصدر: %1$s</string>
+    <string name="lic_show_text">عرض نص الترخيص</string>
+    <string name="lic_text_error">تعذّر فتح نص الترخيص.</string>
+
+    <string name="lic_desc_apache">مكتبات من Google وJetBrains وSquare وغيرها، تُستخدم كلٌّ منها بموجب رخصة Apache 2.0.</string>
+    <string name="lic_desc_psl">مضمّنة مع OkHttp.</string>
+    <string name="lic_desc_hagezi">قوائم Pro وPro mini وThreat Intelligence Feeds mini وDoH وعناوين IP لخوادم DoH.</string>
+    <string name="lic_desc_oisd">يشرف عليها Stephan van Ruth.</string>
+    <string name="lic_desc_exodus">أدوات التتبّع المعروفة، وتُستخدم لتسمية أداة التتبّع التي تقف وراء الاتصال.</string>
+    <string name="lic_desc_rir">ملفاتها العامة «delegated-extended»، وقد حُوّلت إلى الجدول المضمّن الذي يُظهر بلد عنوان IP.</string>
+</resources>

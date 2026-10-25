@@ -677,17 +677,32 @@ matches it.
 
 ## License
 
-Private / proprietary. All rights reserved.
+CoreLock (PrivacyGuard) is free software, licensed under the
+[GNU General Public License v3.0](LICENSE). You may use, share and change it under
+those terms; if you distribute a modified version, you must publish its source under
+the same license. It comes with no warranty.
 
-### Credits
+The app shows its license, the notices below and the full license texts under
+Settings › About › Open-source licenses.
+
+### Software inside the app
+
+| Software | Copyright | License |
+|---|---|---|
+| [SQLCipher for Android](https://github.com/sqlcipher/sqlcipher-android) | © 2008-2023 ZETETIC LLC | BSD 3-Clause |
+| [Bouncy Castle](https://www.bouncycastle.org) | © 2000-2026 The Legion of the Bouncy Castle Inc. | MIT |
+| Android Jetpack (AndroidX), Kotlin, kotlinx.coroutines, kotlinx.serialization, OkHttp, Okio, Guava ListenableFuture, JetBrains Annotations, JSpecify | Their authors | Apache-2.0 |
+| [Public Suffix List](https://publicsuffix.org) (included with OkHttp) | publicsuffix.org contributors | MPL-2.0 |
+
+### Data
 
 PrivacyGuard downloads these lists at runtime; they are not shipped inside the APK.
 
 | Data | Author | License |
 |---|---|---|
 | DNS blocklists (Pro, Pro mini, Threat Intelligence Feeds mini, DoH, DoH IPs) | [HaGeZi](https://github.com/hagezi/dns-blocklists) | GPL-3.0 |
-| OISD small | [OISD](https://oisd.nl) ([repository](https://github.com/sjhgvr/oisd)) | GPL-3.0 |
-| Tracker signatures | [Exodus Privacy](https://reports.exodus-privacy.eu.org) | Their software is AGPL-3.0; see their site for the data's terms |
+| OISD small | [OISD](https://oisd.nl), maintained by Stephan van Ruth ([repository](https://github.com/sjhgvr/oisd)) | GPL-3.0 |
+| Tracker list | [Exodus Privacy](https://reports.exodus-privacy.eu.org) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) (contents: [DbCL 1.0](https://opendatacommons.org/licenses/dbcl/1-0/)) |
 
 The country of an IP address comes from the five regional internet registries'
 public "delegated-extended" files (ARIN, RIPE NCC, APNIC, LACNIC, AFRINIC), built

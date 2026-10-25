@@ -99,6 +99,7 @@ Facts that shape every decision:
 | **Languages:** English (default), Arabic (RTL), French, Dutch. | Every user-visible string exists in all four. |
 | **Release ABIs:** `arm64-v8a` and `armeabi-v7a`. | No per-device splits (no Play), so 32-bit phones must keep working. |
 | **Android only.** Flutter, iOS, Rust, `testapp`, NativeBloom and `Ipv6Proxy` were removed deliberately. | Don't reintroduce them. Old code lives on branch `archive/before-cleanup`. |
+| **License: GPL-3.0** (owner's decision, 2026-10-25; `LICENSE` at the repo root). | Every dependency must be GPL-3.0-compatible: Apache-2.0, MIT, BSD and MPL-2.0 are; GPL-2.0-only and licenses with use restrictions (e.g. "non-commercial") are not. Ask before adding anything else (§1.4). A new library, list source or bundled data file is credited in the same change in `OpenSourceNotices.kt` (Settings › About › Open-source licenses) and the README License section; `OpenSourceNoticesTest` fails for an uncredited list source and checks that the in-app GPL text matches `LICENSE`. |
 
 **Owner's stated priority: quality and performance over effort.** When choosing between a quick fix and the correct fix, choose the correct one and explain the extra cost.
 

@@ -48,6 +48,9 @@ import com.privacyguard.app.ui.connections.ConnectionsScreen
 import com.privacyguard.app.ui.dashboard.DashboardScreen
 import com.privacyguard.app.ui.onboarding.OnboardingScreen
 import com.privacyguard.app.ui.security.SecurityAnalysisScreen
+import com.privacyguard.app.ui.settings.LicenseText
+import com.privacyguard.app.ui.settings.LicenseTextScreen
+import com.privacyguard.app.ui.settings.OpenSourceLicensesScreen
 import com.privacyguard.app.ui.settings.SettingsScreen
 import com.privacyguard.app.ui.sleep.SleepReportScreen
 import com.privacyguard.app.ui.statistics.StatisticsScreen
@@ -284,7 +287,17 @@ fun AppNavHost(
                     onOpenAdPrivacy = { navController.navigate("adPrivacy") },
                     onOpenRules = { navController.navigate("rules") },
                     onOpenPayloads = { navController.navigate("payloads") },
+                    onOpenLicenses = { navController.navigate("licenses") },
                 )
+            }
+
+            composable("licenses") {
+                OpenSourceLicensesScreen(onOpenText = { text -> navController.navigate("licenseText/${text.name}") })
+            }
+
+            composable("licenseText/{key}") { backStack ->
+                val key = backStack.arguments?.getString("key")
+                LicenseTextScreen(LicenseText.entries.firstOrNull { it.name == key })
             }
 
             composable("appDetail/{packageName}?appName={appName}") { backStack ->
