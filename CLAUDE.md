@@ -342,7 +342,7 @@ The packet path runs for every packet of every connection on the phone. A few mi
 - **Measure before and after** any hot-path change and report both numbers (µs per decision or per connection). Current reference: SNI check ≈ 4.3 µs per connection. A regression over ~10% needs a written justification.
 - **Memory:** blocklists dominate the heap (measured: MINIMAL ≈ 23 MB, STANDARD ≈ 31 MB, STRICT ≈ 44 MB). Don't add per-name objects. The planned direction is compact storage (64-bit fingerprints in a sorted `LongArray`).
 - **UI:** observe Room `Flow`s. Don't add `while(true)` polling loops.
-- APK size is watched (release ≈ 6.1 MiB measured earlier for the old consumer build; a consumer release measured 7.13 MiB on 2026-10-23; re-measure the enterprise release before 1.0). Report the size when a change could affect it.
+- APK size is watched (release ≈ 6.1 MiB measured earlier for the old consumer build; a consumer release measured 7.13 MiB on 2026-10-23; the enterprise release measured **9.99 MiB** on 2026-10-25, and most of the growth is BouncyCastle, kept whole by a blanket R8 rule, see §16.2). Report the size when a change could affect it.
 
 ### 6.3 Parsers (DNS, TLS ClientHello, QUIC, IP)
 
@@ -492,7 +492,7 @@ Documentation is part of the product. Outdated docs in a security app are a secu
 ### 13.2 Other documents
 
 - `docs/HOW_IT_WORKS.md` — deeper technical explanation of §5 for curious users and contributors.
-- `docs/adr/NNNN-title.md` — **to create** (the folder does not exist yet). One Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Examples worth recording: no Google Play, four-layer design, list choice, QUIC gate limits, removal of Flutter/Rust.
+- `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 exist (2026-10-25). Never rewrite an accepted record; supersede it with a new one.
 - `RELEASE_NOTES_X.Y.md`, `docs/TRANSLATION_REVIEW_X.Y.md`.
 - `SECURITY.md` — vulnerability reporting.
 
@@ -570,6 +570,7 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 6. Wi-Fi-only / mobile-data-only rules.
 7. Reassemble split ClientHellos on ports other than 443; add DoH lists to the start-up cache (~30 s gap while the encrypted DB loads).
 8. Remove the unused master key (`pg_master_key_v1` in `SecureSecretStore`). It only wraps `installation_secret`, which nothing reads; `putString`/`getString` have no callers. Its only other use is `isHardwareBacked()`, which should check `pg_background_key_v1` instead (that key protects the real data, and the master key may not exist on phones without a lock). Also delete the old Keystore entry and the stored secret on upgrade. After 1.0.
+9. Narrow the BouncyCastle keep rule (`app/proguard-rules.pro`, `-keep class org.bouncycastle.** { *; }`). It keeps all 2,730 BouncyCastle classes in the release (a third of all 8,382 kept classes, including 326 post-quantum `pqc` classes), measured 2026-10-25. The comment's reason (lookup by class name) applies to the BC JCA provider, and the app never registers it: no `BouncyCastleProvider`, `addProvider` or `setProvider`; it only uses the X.509 builder classes to create the inspection CA (`CaManager`) and per-site certificates (`CertForger`). Estimated saving 2–3 MiB (not measured). Before merging: run certificate creation on a **release** (R8) build, not only debug. MITM-related, so it needs the extra security review (§4.2). After 1.0.
 
 When you finish a backlog item, propose removing it here in the same change.
 
