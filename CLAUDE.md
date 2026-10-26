@@ -476,7 +476,7 @@ Documentation is part of the product. Outdated docs in a security app are a secu
 
 ### 13.1 README.md must contain, in this order
 
-> **Status (2026-10-23):** all eleven parts exist (Install, First setup, Protection levels and the Credits table were added). The order differs slightly (technical sections sit between them). **Still open:** the signing fingerprint under Security is `<CERT_SHA256_PLACEHOLDER>` until the owner signs the first release; fill it in together with `RELEASE_NOTES_1.0.md`.
+> **Status (2026-10-26):** all eleven parts exist (Install, First setup, Protection levels and the Credits table were added). The order differs slightly (technical sections sit between them). The signing fingerprint under Security was filled in with the 1.0.0 signing certificate, together with `RELEASE_NOTES_1.0.md`.
 
 1. **What CoreLock is** — one paragraph, no hype.
 2. **What it blocks and what it can't** — the four layers in plain words, and the honest limits (§16).
