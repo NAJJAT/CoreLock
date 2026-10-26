@@ -90,8 +90,8 @@ refuses an APK signed with a different key.
 Only install the APK if its signing certificate matches this fingerprint:
 
 ```
-Signing certificate SHA-256: <CERT_SHA256_PLACEHOLDER>
-APK file SHA-256:            <APK_SHA256_PLACEHOLDER>
+Signing certificate SHA-256: caa82092caf86f9ce7d94f5b7c4a4476a3eb1a5bfa238f7b1d18cd85809bc430
+APK file SHA-256:            23752350bf36dbd9bb9d11503f615df627f9dd1cdba201c7693d34b2b10e94dd
 ```
 
 On a computer with the Android SDK build-tools:

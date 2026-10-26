@@ -669,7 +669,7 @@ private vulnerability reporting, not in public issues.
 **Release signing certificate (SHA-256):**
 
 ```
-<CERT_SHA256_PLACEHOLDER>
+caa82092caf86f9ce7d94f5b7c4a4476a3eb1a5bfa238f7b1d18cd85809bc430
 ```
 
 Every release is signed with this key; the same fingerprint is on each release
