@@ -102,8 +102,8 @@
     <string name="trf_honesty">Nous voyons quand des données partent vers ce domaine, depuis quelle app et en quelle quantité, pas leur contenu. Le contenu chiffré reste privé, même pour nous.</string>
     <string name="trf_no_domain_data">Aucune requête ni connexion vers ce domaine ces 7 derniers jours.</string>
     <string name="trf_anomalies">Anomalies DNS</string>
-    <string name="ev_blocked_24h">Requêtes bloquées · 24 dernières h</string>
-    <string name="ev_blocked_24h_def">Requêtes DNS auxquelles vos listes de blocage ou vos règles ont répondu « introuvable », plus les tentatives de connexion arrêtées par vos règles. Rien n’a été envoyé à ces destinations.</string>
+    <string name="ev_blocked_24h">Bloqués · 24 dernières h</string>
+    <string name="ev_blocked_24h_def">Entrées de l’historique des blocages : requêtes DNS auxquelles vos listes de blocage ou vos règles ont répondu « introuvable », et connexions arrêtées par PrivacyGuard. Les nouvelles tentatives sont regroupées, pas comptées une à une : la même requête répétée moins de 10 secondes plus tard n’est pas une nouvelle entrée, et la même connexion bloquée dans la même minute est une seule entrée. Aucune donnée des apps n’a atteint ces destinations.</string>
     <string name="ev_cleartext_24h">Connexions non chiffrées · 24 dernières h</string>
     <string name="ev_cleartext_24h_def">Connexions où nous avons vu du HTTP simple. Toute personne sur le trajet réseau pouvait les lire.</string>
     <string name="ev_encryption_24h">Chiffrement · 24 dernières h</string>
@@ -124,7 +124,7 @@
     <string name="ev_behavior_def">Changements par rapport au comportement appris de chaque app.</string>
     <string name="ev_connections_7d">Connexions · 7 derniers jours</string>
     <string name="ev_connections_7d_def">Chaque connexion qui a transporté des données, la plus récente en premier.</string>
-    <string name="ev_blocked_7d">Requêtes bloquées · 7 derniers jours</string>
+    <string name="ev_blocked_7d">Bloqués · 7 derniers jours</string>
     <string name="ev_anomalies_7d">Anomalies DNS · 7 derniers jours</string>
     <string name="ev_anomalies_7d_def">Requêtes qui ressemblaient à un tunnel, une balise ou des noms générés.</string>
     <string name="ev_data_7d">Données transférées · 7 derniers jours</string>

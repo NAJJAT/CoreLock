@@ -85,6 +85,7 @@ object ProtectionWatchdog {
      * main process, checks the setting.
      */
     fun onProtectionProcessDied(context: Context) {
+        endDeadService(context)
         if (!canScheduleExact(context)) {
             // No restart is possible from the background: say so now, not later.
             com.privacyguard.platform.android.NotificationHelper(context).postProtectionStopped()
@@ -98,6 +99,22 @@ object ProtectionWatchdog {
             Log.w(TAG, "restart alarm failed: ${it.javaClass.simpleName}")
             com.privacyguard.platform.android.NotificationHelper(context).postProtectionStopped()
         }
+    }
+
+    /**
+     * Protection is off from this moment, so its "Protection on" must go now. After a
+     * crash Android kept the dead service as a started foreground service, with that
+     * notification, until its app-idle cleanup a minute later (API 37 emulator,
+     * 2026-10-25); while it counts as foreground the app cannot cancel the
+     * notification. Stopping the service ends that record. Nothing runs to stop: the
+     * process is dead, and Android's own restart of it was not relied on (see the
+     * class comment); the restart alarm, or "Protection stopped", follows.
+     */
+    private fun endDeadService(context: Context) {
+        runCatching {
+            context.stopService(Intent(context, com.privacyguard.platform.android.PrivacyVpnService::class.java))
+        }.onFailure { Log.w(TAG, "could not end the dead service: ${it.javaClass.simpleName}") }
+        com.privacyguard.platform.android.NotificationHelper(context).cancelVpnNotification()
     }
 
     /** Protection should be on (not stopped on purpose) and no service is running or starting it. */

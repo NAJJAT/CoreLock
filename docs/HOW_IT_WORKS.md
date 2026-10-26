@@ -125,10 +125,15 @@ values (RFC 9001/9369), so no interception is needed. It gets the same SNI and
 DoH checks as TLS; a blocked flow is dropped for two minutes. What happens to
 QUIC depends on the protection level (`vpn/firewall/QuicGate.kt`):
 
-- **Block QUIC for better filtering** (Settings; on by default at Strict): all
-  UDP 443 is dropped, and apps retry over TCP, where the SNI is always visible.
-  QUIC is also dropped when HTTPS inspection asks for it (enterprise) or while
-  dual-hop is on.
+- **Block QUIC for better filtering** (Settings; on by default at Strict): every
+  QUIC long-header packet (the Initial and the rest of the handshake) is
+  dropped, so no QUIC connection can start, and apps retry over TCP, where the
+  SNI is always visible. Other traffic on UDP 443 passes: calls over STUN/TURN,
+  WireGuard and DTLS never set both top bits of the first byte, as a QUIC long
+  header does. A QUIC connection that was already open when the setting was
+  turned on (short headers only) is not cut; it ends on its own. QUIC is also
+  blocked this way when HTTPS inspection asks for it. While dual-hop is on, all
+  UDP 443 is dropped (section 4.4).
 - **Standard and Strict:** a new QUIC flow's packets are held until its
   ClientHello is complete, so nothing reaches the server before the check. A
   QUIC Initial that cannot be read (unknown version or frame, or no complete
@@ -675,7 +680,12 @@ key, an optional certificate pin and an optional body signature (`SiemEndpoint.k
   is scheduled while protection is healthy; a non-wakeup backup alarm covers the
   case where both processes die. Exact alarms need "Alarms & reminders" access
   (not pre-granted on Android 14+); without it, or past the restart limit, the
-  user gets "Protection stopped" instead. Not covered: Force stop, and an app that
+  user gets "Protection stopped" instead. Either way the dead service's
+  "Protection on" notification is removed at once: Android kept it up for about
+  a minute after a crash (and the app may not remove it itself while Android
+  still counts the service as running), so the watcher stops the dead service's
+  record first. Measured on an API 37 emulator, 25 October 2026: removed 12–54 ms
+  after the kill, with and without a restart. Not covered: Force stop, and an app that
   Android marked as "crashed too many times", which Android itself will not
   start in the background until the user opens it. The start fails closed: the
   tunnel takes every route first and is read only once the filters are loaded.

@@ -240,4 +240,37 @@ class SessionTableTest {
         assertTrue(table.isEmpty)
         assertEquals(2, closed.size)
     }
+
+    // ── Reaper thread ─────────────────────────────────────────────────────────
+
+    private fun reaperThreads() = Thread.getAllStackTraces().keys.count { it.name == "session-reaper" && it.isAlive }
+
+    /** Each start of protection used to leave one more idle reaper thread behind. */
+    @Test
+    fun stopping_the_reaper_ends_its_thread() {
+        val before = reaperThreads()
+        repeat(5) {
+            val t = SessionTable(reaperIntervalMs = 60_000L)
+            t.startReaper()
+            t.startReaper()   // a second start replaces the first
+            t.clear()
+        }
+        val deadline = System.currentTimeMillis() + 5_000
+        while (reaperThreads() > before && System.currentTimeMillis() < deadline) Thread.sleep(20)
+        assertEquals(before, reaperThreads())
+    }
+
+    @Test
+    fun reaper_runs_again_after_a_restart() {
+        val t = SessionTable(udpTimeoutMs = 1L, reaperIntervalMs = 20L)
+        t.startReaper()
+        t.stopReaper()
+        t.startReaper()
+        t.getOrCreate(key(proto = SessionKey.PROTO_UDP))
+        val deadline = System.currentTimeMillis() + 5_000
+        while (t.size > 0 && System.currentTimeMillis() < deadline) Thread.sleep(10)
+        val reaped = t.size == 0
+        t.clear()
+        assertTrue("the restarted reaper evicted the idle session", reaped)
+    }
 }

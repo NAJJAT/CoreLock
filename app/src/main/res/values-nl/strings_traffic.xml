@@ -98,8 +98,8 @@
     <string name="trf_honesty">We zien wanneer gegevens naar dit domein gaan, vanuit welke app en hoeveel, niet wat erin staat. Versleutelde inhoud blijft privé, ook voor ons.</string>
     <string name="trf_no_domain_data">Geen opzoekingen of verbindingen naar dit domein in de laatste 7 dagen.</string>
     <string name="trf_anomalies">DNS-afwijkingen</string>
-    <string name="ev_blocked_24h">Geblokkeerde opzoekingen · laatste 24 u</string>
-    <string name="ev_blocked_24h_def">DNS-opzoekingen die je blokkeerlijsten of regels beantwoordden met ‘niet gevonden’, plus verbindingspogingen die je regels tegenhielden. Er is niets naar deze bestemmingen verstuurd.</string>
+    <string name="ev_blocked_24h">Geblokkeerd · laatste 24 u</string>
+    <string name="ev_blocked_24h_def">Items in de blokkeergeschiedenis: DNS-opzoekingen die je blokkeerlijsten of regels beantwoordden met ‘niet gevonden’, en verbindingen die PrivacyGuard tegenhield. Herhaalde pogingen worden samengenomen, niet één voor één geteld: dezelfde opzoeking minder dan 10 seconden later opnieuw is geen nieuw item, en dezelfde geblokkeerde verbinding binnen dezelfde minuut is één item. Er zijn geen app-gegevens bij deze bestemmingen aangekomen.</string>
     <string name="ev_cleartext_24h">Onversleutelde verbindingen · laatste 24 u</string>
     <string name="ev_cleartext_24h_def">Verbindingen waarin we gewoon HTTP zagen. Iedereen op de netwerkroute kan ze lezen.</string>
     <string name="ev_encryption_24h">Versleuteling · laatste 24 u</string>
@@ -120,7 +120,7 @@
     <string name="ev_behavior_def">Veranderingen ten opzichte van het aangeleerde patroon van elke app.</string>
     <string name="ev_connections_7d">Verbindingen · laatste 7 dagen</string>
     <string name="ev_connections_7d_def">Elke verbinding die gegevens vervoerde, nieuwste eerst.</string>
-    <string name="ev_blocked_7d">Geblokkeerde opzoekingen · laatste 7 dagen</string>
+    <string name="ev_blocked_7d">Geblokkeerd · laatste 7 dagen</string>
     <string name="ev_anomalies_7d">DNS-afwijkingen · laatste 7 dagen</string>
     <string name="ev_anomalies_7d_def">Opzoekingen die op tunneling, bakens of gegenereerde namen leken.</string>
     <string name="ev_data_7d">Overgedragen gegevens · laatste 7 dagen</string>

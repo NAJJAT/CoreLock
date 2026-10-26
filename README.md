@@ -482,7 +482,8 @@ SIEM code live in `src/enterprise`, the shared engine in `src/main`.
   - It forges per-host leaf certificates and logs requests and responses.
   - Apps that pin certificates or ignore user CAs are passed through as
     metadata-only, and the UI says why.
-  - *Block QUIC* drops UDP/443 so browsers fall back to TLS over TCP.
+  - *Block QUIC* drops QUIC handshakes on UDP/443 so browsers fall back to TLS
+    over TCP; other UDP/443 (calls, VPNs) is not affected.
   - Turning inspection off deletes the signing key and tells the user how to
     remove the installed CA.
 - **PII redaction**: emails, card numbers, phone numbers, JWTs, bearer tokens

@@ -523,6 +523,10 @@ class NotificationHelper(private val baseContext: Context) {
     fun postAlwaysOnTurnedOff() = postStopped(R.string.notif_always_on_turned_off_text)
 
     private fun postStopped(textRes: Int) {
+        // Never "Protection on" next to "Protection stopped": after a crash Android left
+        // the dead service's ongoing notification up for about a minute (emulator,
+        // 2026-10-25).
+        cancelVpnNotification()
         createChannels()  // may be the first thing a freshly started process does
         val start = PrivacyVpnService.startIntent(context)
         val restart = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)

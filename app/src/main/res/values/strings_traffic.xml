@@ -113,8 +113,8 @@
     <string name="trf_anomalies">DNS anomalies</string>
 
     <!-- Home drill-downs -->
-    <string name="ev_blocked_24h">Blocked lookups · last 24 h</string>
-    <string name="ev_blocked_24h_def">DNS lookups your blocklists or rules answered with “not found”, plus connection attempts your rules stopped. Nothing was sent to these destinations.</string>
+    <string name="ev_blocked_24h">Blocked · last 24 h</string>
+    <string name="ev_blocked_24h_def">Entries in the blocked history: DNS lookups your blocklists or rules answered with “not found”, and connections PrivacyGuard stopped. Retries are grouped, not counted one by one: the same lookup again less than 10 seconds later is not a new entry, and the same blocked connection within the same minute is one entry. No app data reached these destinations.</string>
     <string name="ev_cleartext_24h">Unencrypted connections · last 24 h</string>
     <string name="ev_cleartext_24h_def">Connections where we saw plain HTTP. Anyone on the network path could read them.</string>
     <string name="ev_encryption_24h">Encryption · last 24 h</string>
@@ -135,7 +135,7 @@
     <string name="ev_behavior_def">Changes compared with each app’s learned pattern.</string>
     <string name="ev_connections_7d">Connections · last 7 days</string>
     <string name="ev_connections_7d_def">Every connection that carried data, newest first.</string>
-    <string name="ev_blocked_7d">Blocked lookups · last 7 days</string>
+    <string name="ev_blocked_7d">Blocked · last 7 days</string>
     <string name="ev_anomalies_7d">DNS anomalies · last 7 days</string>
     <string name="ev_anomalies_7d_def">Lookups that looked like tunnelling, beacons or generated names.</string>
     <string name="ev_data_7d">Data transferred · last 7 days</string>

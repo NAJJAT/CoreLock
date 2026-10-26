@@ -245,11 +245,27 @@ class PrivacyVpnService : VpnService() {
         if (isRunning) notifHelper.updateVpnNotification(lastBlockCount, MainActivity::class.java)
     }
 
+    /**
+     * Android's own binder for this service (it carries onRevoke), held here while the
+     * service lives. Android gets a [WeakForwardingBinder] to it instead: Android keeps
+     * that reference long after onDestroy, and the real one would keep this whole
+     * service, filters and lists included, in memory.
+     */
+    @Volatile private var systemBinder: android.os.IBinder? = null
+
+    override fun onBind(intent: Intent?): android.os.IBinder? {
+        val fresh = super.onBind(intent) ?: return null
+        // One real binder per service, however often Android asks.
+        val real = systemBinder ?: fresh.also { systemBinder = it }
+        return WeakForwardingBinder(real)
+    }
+
     override fun onDestroy() {
         Log.i(TAG, "VPN service destroyed")
         com.privacyguard.app.data.repository.LocalDataEraser.unregister(dataClearListener)
         stopVpn()
         scope.cancel()
+        systemBinder = null
         isCreated = false
         super.onDestroy()
     }

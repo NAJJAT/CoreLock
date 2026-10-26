@@ -2,7 +2,7 @@ package com.privacyguard.core.session
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 /**
@@ -135,18 +135,22 @@ class SessionTable(
     // Reaper
     // ─────────────────────────────────────────────────────────────────────────
 
-    private val reaperExecutor = Executors.newSingleThreadScheduledExecutor { r ->
-        Thread(r, "session-reaper").also { it.isDaemon = true }
-    }
-
-    private var reaperFuture: ScheduledFuture<*>? = null
+    // Created by startReaper and shut down by stopReaper: a cancelled task leaves an
+    // idle executor's thread alive for good, one more after every start of protection.
+    private var reaperExecutor: ScheduledExecutorService? = null
 
     /**
      * Starts the background reaper that evicts timed-out / closed sessions.
      * Call this when the VPN service starts.
      */
+    @Synchronized
     fun startReaper() {
-        reaperFuture = reaperExecutor.scheduleWithFixedDelay(
+        stopReaper()
+        val executor = Executors.newSingleThreadScheduledExecutor { r ->
+            Thread(r, "session-reaper").also { it.isDaemon = true }
+        }
+        reaperExecutor = executor
+        executor.scheduleWithFixedDelay(
             // A scheduled task that throws is never run again: idle sessions would pile up.
             { com.privacyguard.vpn.WorkerGuard.guard("session-reaper") { reap() } },
             reaperIntervalMs,
@@ -159,9 +163,11 @@ class SessionTable(
      * Stops the background reaper.
      * Call this when the VPN service stops.
      */
+    @Synchronized
     fun stopReaper() {
-        reaperFuture?.cancel(false)
-        reaperFuture = null
+        // Not shutdownNow: interrupting a running reap could fail it half way.
+        reaperExecutor?.shutdown()
+        reaperExecutor = null
     }
 
     /**

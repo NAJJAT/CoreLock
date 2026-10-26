@@ -10,9 +10,12 @@ import java.util.concurrent.atomic.AtomicLong
  * What happens to a UDP/443 (QUIC) datagram before it is forwarded. The SNI decision
  * itself stays with the caller (NameBlockPolicy): this only gets it a ClientHello.
  *
- *  - QUIC off ([dropsAllQuic]): every datagram is dropped, and QUIC-capable apps
- *    retry over TCP, where the TLS SNI is checked. On when the user turned on "Block
- *    QUIC for better filtering", or by default at Strict, or when inspection needs it.
+ *  - QUIC off ([dropsAllQuic]): every QUIC long-header packet (the Initial and the
+ *    rest of the handshake) is dropped, so no QUIC connection can start, and
+ *    QUIC-capable apps retry over TCP, where the TLS SNI is checked. Other UDP/443
+ *    (STUN/TURN for calls, WireGuard, DTLS) passes: none of it has both top bits set.
+ *    On when the user turned on "Block QUIC for better filtering", or by default at
+ *    Strict, or when inspection needs it.
  *  - Standard and Strict ([failsClosed]): a new flow's datagrams are held until its
  *    ClientHello is complete, so nothing reaches the server unchecked. A QUIC Initial
  *    that cannot be read (unknown version, frame or damage) is dropped; the app then
@@ -82,11 +85,12 @@ class QuicGate<K : Any>(
     fun failsClosed(): Boolean = level() >= FilterEngine.BlockLevel.STANDARD
 
     /**
-     * True when the datagram is dropped whatever it holds (QUIC off, or a flow already
-     * dropped as unreadable). Cheap: lets the caller skip the owner lookup and rules.
+     * True when the datagram is dropped whatever it holds (a QUIC handshake packet while
+     * QUIC is off, or a flow already dropped as unreadable). Cheap: lets the caller skip
+     * the owner lookup and rules.
      */
     fun dropsWithoutLooking(key: K, datagram: ByteArray): Boolean {
-        if (dropsAllQuic()) { countQuicOff(key, datagram); return true }
+        if (dropsAsQuicOff(key, datagram)) return true
         return wasDropped(key)
     }
 
@@ -96,7 +100,7 @@ class QuicGate<K : Any>(
      * ([pendingOwnerUid]).
      */
     fun onNewFlow(key: K, datagram: ByteArray, ownerUid: Int? = null): Verdict {
-        if (dropsAllQuic()) { tracker.forget(key); countQuicOff(key, datagram); return Verdict.Drop }
+        if (dropsAsQuicOff(key, datagram)) { tracker.forget(key); return Verdict.Drop }
         if (wasDropped(key)) return Verdict.Drop
         val closed = failsClosed()
         val v = verdict(key, datagram, hold = closed, closed = closed)
@@ -113,7 +117,7 @@ class QuicGate<K : Any>(
      * its first datagrams were already sent and cannot be held.
      */
     fun onOpenFlow(key: K, datagram: ByteArray, inspected: Boolean): Verdict {
-        if (dropsAllQuic()) { countQuicOff(key, datagram); return Verdict.Drop }
+        if (dropsAsQuicOff(key, datagram)) return Verdict.Drop
         if (inspected) return FORWARD_INSPECTED
         if (wasDropped(key)) return Verdict.Drop
         return verdict(key, datagram, hold = false, closed = failsClosed())
@@ -160,14 +164,19 @@ class QuicGate<K : Any>(
     }
 
     /**
-     * Counts a flow dropped while QUIC is off, once per flow. Only a long-header packet
-     * starts one: short headers belong to flows opened before QUIC was turned off, and
-     * other UDP/443 traffic (STUN, VPNs) is not QUIC.
+     * QUIC is off and [datagram] is a QUIC long-header packet: dropped, and the flow
+     * counted once. Only long headers: without them no QUIC connection can start, and
+     * UDP/443 that is not QUIC (STUN/TURN, WireGuard, DTLS) must keep working. Short
+     * headers belong to connections opened before QUIC was turned off; they keep the
+     * decision made when they opened (rules are still re-checked) and end on their own.
      */
-    private fun countQuicOff(key: K, datagram: ByteArray) {
-        if (!QuicInitial.isLongHeader(datagram) || !firstInWindow(offCounted, key)) return
-        quicOffFlows.incrementAndGet()
-        runCatching { onQuicOffFlow() }
+    private fun dropsAsQuicOff(key: K, datagram: ByteArray): Boolean {
+        if (!dropsAllQuic() || !QuicInitial.isLongHeader(datagram)) return false
+        if (firstInWindow(offCounted, key)) {
+            quicOffFlows.incrementAndGet()
+            runCatching { onQuicOffFlow() }
+        }
+        return true
     }
 
     /** True unless [key] was already counted within [DROPPED_MEMORY_MS]; repeats do not extend that. */

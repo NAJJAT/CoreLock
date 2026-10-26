@@ -129,16 +129,20 @@ interface BlocklistDao {
     @Query("SELECT domain FROM blocklist WHERE isEnabled = 1 AND category IN (:categories)")
     suspend fun enabledDomainsIn(categories: List<String>): List<String>
 
-    /** Enabled domains in [categories], without the lists of [excludedSources] (another level's). */
-    @Query("SELECT domain FROM blocklist WHERE isEnabled = 1 AND category IN (:categories) AND source NOT IN (:excludedSources)")
-    suspend fun enabledDomainsForLevel(categories: List<String>, excludedSources: List<String>): List<String>
+    /**
+     * One page of the enabled domains in [categories], without the lists of
+     * [excludedSources] (another level's): rows after [afterId], in id order.
+     * Read page by page (BlocklistRepo.paged) so a long read can stop between pages.
+     */
+    @Query("SELECT id, domain FROM blocklist WHERE id > :afterId AND isEnabled = 1 AND category IN (:categories) AND source NOT IN (:excludedSources) ORDER BY id LIMIT :limit")
+    suspend fun enabledDomainsForLevelPage(categories: List<String>, excludedSources: List<String>, afterId: Long, limit: Int): List<DomainRow>
 
     @Query("SELECT COUNT(DISTINCT domain) FROM blocklist WHERE isEnabled = 1 AND category IN (:categories) AND source NOT IN (:excludedSources)")
     suspend fun enabledCountForLevel(categories: List<String>, excludedSources: List<String>): Int
 
-    /** Enabled domains outside [categories] (the tracker lists, without the DNS-bypass ones). */
-    @Query("SELECT domain FROM blocklist WHERE isEnabled = 1 AND category NOT IN (:categories)")
-    suspend fun enabledDomainsNotIn(categories: List<String>): List<String>
+    /** One page of the enabled domains outside [categories] (the tracker lists, without the DNS-bypass ones); see [enabledDomainsForLevelPage]. */
+    @Query("SELECT id, domain FROM blocklist WHERE id > :afterId AND isEnabled = 1 AND category NOT IN (:categories) ORDER BY id LIMIT :limit")
+    suspend fun enabledDomainsNotInPage(categories: List<String>, afterId: Long, limit: Int): List<DomainRow>
 
     @Query("SELECT COUNT(DISTINCT domain) FROM blocklist WHERE isEnabled = 1 AND category IN (:categories)")
     suspend fun enabledCountIn(categories: List<String>): Int
@@ -219,4 +223,10 @@ data class CategoryToggleStats(
     val category: String,
     val totalCount: Int,
     val enabledCount: Int,
+)
+
+/** A domain with its row id, for reading a list page by page. */
+data class DomainRow(
+    val id: Long,
+    val domain: String,
 )

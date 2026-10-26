@@ -7,6 +7,7 @@ import com.privacyguard.app.data.db.BlocklistToggleEntity
 import com.privacyguard.app.data.db.BlocklistToggleEntity.Companion.SCOPE_CATEGORY
 import com.privacyguard.app.data.db.BlocklistToggleEntity.Companion.SCOPE_SOURCE
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
 /**
@@ -75,14 +76,14 @@ class BlocklistRepo(
      */
     suspend fun levelListDomains(level: com.privacyguard.core.filter.FilterEngine.BlockLevel): List<String> = withContext(Dispatchers.IO) {
         val levels = com.privacyguard.core.filter.ProtectionLevels
-        blocklistDao.enabledDomainsForLevel(
-            (levels.categoriesFor(level) - CAT_MALWARE).toList(),
-            levels.excludedSourcesFor(level).toList(),
-        )
+        val categories = (levels.categoriesFor(level) - CAT_MALWARE).toList()
+        val excluded = levels.excludedSourcesFor(level).toList()
+        paged { after, limit -> blocklistDao.enabledDomainsForLevelPage(categories, excluded, after, limit) }
     }
 
     suspend fun domainsNotIn(categories: Set<String>): List<String> = withContext(Dispatchers.IO) {
-        blocklistDao.enabledDomainsNotIn(categories.toList())
+        val excluded = categories.toList()
+        paged { after, limit -> blocklistDao.enabledDomainsNotInPage(excluded, after, limit) }
     }
 
     /**
@@ -120,6 +121,34 @@ class BlocklistRepo(
     }
 
     companion object {
+        /** Rows per page of a paged read; see [paged]. */
+        internal const val PAGE_ROWS = 20_000
+
+        /**
+         * Reads a list page by page, in id order, until a page comes back short.
+         *
+         * Why: the level's list and the tracker list are most of the table, and one
+         * running query cannot be cancelled. On the emulator such a read took minutes;
+         * a stopped VPN service waited for it and stayed in memory, lists included, so
+         * quick start/stop cycles piled up several services and ended in
+         * OutOfMemoryError. Between pages the read stops when its coroutine is cancelled.
+         *
+         * A list refresh while reading (BlocklistDao.replaceSource) deletes old rows and
+         * adds new ones with higher ids, so the result is the new list, or old and new
+         * together for that one source: never a list with names missing.
+         */
+        internal suspend fun paged(page: suspend (afterId: Long, limit: Int) -> List<com.privacyguard.app.data.db.DomainRow>): List<String> {
+            val out = ArrayList<String>()
+            var after = Long.MIN_VALUE
+            while (true) {
+                kotlin.coroutines.coroutineContext.ensureActive()
+                val rows = page(after, PAGE_ROWS)
+                rows.mapTo(out) { it.domain }
+                if (rows.size < PAGE_ROWS) return out
+                after = rows.last().id
+            }
+        }
+
         /** The domain, each parent, and each as a "*." wildcard entry. */
         fun securityCandidates(domain: String): List<String> {
             val labels = domain.trim().lowercase().trimEnd('.').removePrefix("*.").split('.').filter { it.isNotEmpty() }

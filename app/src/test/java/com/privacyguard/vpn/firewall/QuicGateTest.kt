@@ -42,7 +42,7 @@ class QuicGateTest {
 
     private fun Verdict.forwardedHelloSni() = (this as Verdict.Forward).hello?.sni
 
-    // ── The setting: UDP/443 dropped when on, passed when off ────────────────
+    // ── The setting: QUIC dropped when on, passed when off ───────────────────
 
     @Test
     fun quic_is_dropped_when_the_setting_is_on() {
@@ -211,14 +211,34 @@ class QuicGateTest {
     }
 
     @Test
-    fun quic_off_counts_only_quic_long_headers() {
+    fun quic_off_drops_only_quic_long_headers() {
         val g = gate(BlockLevel.STRICT)
         assertTrue(g.dropsAllQuic())
         val shortHeader = byteArrayOf(0x40) + ByteArray(30)
-        assertTrue(g.dropsWithoutLooking("stun", stun))
-        assertTrue(g.dropsWithoutLooking("old", shortHeader))
-        assertEquals(0L, g.quicOffFlows.get())
+        assertFalse("STUN passes", g.dropsWithoutLooking("stun", stun))
+        assertFalse("an older QUIC connection ends on its own", g.dropsWithoutLooking("old", shortHeader))
+        assertTrue(g.dropsWithoutLooking("f", hello))
+        assertEquals("only the QUIC flow is counted", 1L, g.quicOffFlows.get())
         assertEquals("not unreadable either", 0L, g.unreadableFlows.get())
+    }
+
+    /** Calls (STUN/TURN), WireGuard and DTLS on UDP/443: never QUIC long headers. */
+    @Test
+    fun quic_off_lets_other_udp_on_443_through() {
+        val wireGuardInit = byteArrayOf(1, 0, 0, 0) + ByteArray(144)
+        val turnChannelData = byteArrayOf(0x40, 0, 0, 8) + ByteArray(8)
+        val dtlsClientHello = byteArrayOf(0x16, 0xFE.toByte(), 0xFD.toByte()) + ByteArray(60)
+        val rtp = byteArrayOf(0x80.toByte(), 0x60) + ByteArray(30)
+        for (level in BlockLevel.entries) {
+            val g = gate(level, choice = true)
+            for ((name, d) in listOf("STUN" to stun, "WireGuard" to wireGuardInit, "TURN" to turnChannelData, "DTLS" to dtlsClientHello, "RTP" to rtp)) {
+                assertFalse("$level $name", g.dropsWithoutLooking(name, d))
+                assertTrue("$level $name new flow", g.onNewFlow(name, d) is Verdict.Forward)
+                assertTrue("$level $name open flow", g.onOpenFlow(name, d, inspected = false) is Verdict.Forward)
+            }
+            assertEquals(0L, g.quicOffFlows.get())
+            assertEquals(0L, g.unreadableFlows.get())
+        }
     }
 
     @Test

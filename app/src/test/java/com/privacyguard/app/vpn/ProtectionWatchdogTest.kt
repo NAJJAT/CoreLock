@@ -146,6 +146,43 @@ class ProtectionWatchdogTest {
         assertNull(shadowOf(RuntimeEnvironment.getApplication()).nextStartedService)
     }
 
+    // ── The dead service's "Protection on" (Android left it up for about a minute) ──
+
+    private fun postProtectionOn() = notifications.notify(
+        NotificationHelper.NOTIFICATION_ID_VPN,
+        NotificationHelper(context).buildVpnActiveNotification(0, com.privacyguard.app.MainActivity::class.java),
+    )
+
+    private fun protectionOnNotification() = shadowOf(notifications).getNotification(NotificationHelper.NOTIFICATION_ID_VPN)
+
+    @Test
+    fun process_death_removes_protection_on_at_once() {
+        for (exact in listOf(true, false)) {
+            org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(exact)
+            postProtectionOn()
+            assertNotNull(protectionOnNotification())
+
+            ProtectionWatchdog.onProtectionProcessDied(context)
+
+            assertNull("exact alarms $exact", protectionOnNotification())
+            // Without exact alarms no restart is possible, and the user is told.
+            assertEquals("exact alarms $exact", !exact, stoppedNotification() != null)
+            notifications.cancelAll()
+        }
+    }
+
+    @Test
+    fun protection_stopped_is_never_shown_next_to_protection_on() {
+        ShadowVpnService.setPrepareResult(Intent("android.net.vpn.SETUP_VPN"))
+        BootReceiver.markVpnActive(context)
+        postProtectionOn()
+
+        ProtectionWatchdogReceiver().onReceive(context, Intent())
+
+        assertNotNull(stoppedNotification())
+        assertNull(protectionOnNotification())
+    }
+
     @Test
     fun other_broadcasts_are_ignored() {
         BootReceiver.markVpnActive(context)

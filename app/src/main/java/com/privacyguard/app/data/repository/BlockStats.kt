@@ -4,9 +4,13 @@ import com.privacyguard.app.data.db.AppDatabase
 
 /**
  * The one definition of "blocked" that every screen and report uses:
- * DNS lookups answered "not found" by the blocklists or rules, plus connection
- * attempts PrivacyGuard dropped (rules, DNS-bypass guard, cleartext policy).
- * Both are real rows, so each number opens a list of the same size.
+ * DNS lookups answered "not found" by the blocklists or rules, plus connections
+ * PrivacyGuard dropped (rules, DNS-bypass guard, cleartext policy, SNI). Both are
+ * history rows, so each number opens a list of the same size. Rows, not attempts:
+ * retries are merged (a lookup repeated less than 10 s after the last adds no row;
+ * one blocked connection row per app, host, port, protocol and source per minute,
+ * BlockRowGate), and
+ * ev_blocked_24h_def says so to the user.
  */
 class BlockStats(private val db: AppDatabase) {
 

@@ -114,8 +114,8 @@
     <string name="trf_honesty">نرى متى تذهب البيانات إلى هذا النطاق، ومن أي تطبيق، وبأي حجم، لا ما بداخلها. يبقى المحتوى المشفّر خاصًا، حتى عنّا.</string>
     <string name="trf_no_domain_data">لا طلبات ولا اتصالات بهذا النطاق في آخر 7 أيام.</string>
     <string name="trf_anomalies">حالات شاذة في DNS</string>
-    <string name="ev_blocked_24h">الطلبات المحظورة · آخر 24 ساعة</string>
-    <string name="ev_blocked_24h_def">طلبات DNS أجابت عنها قوائم الحظر أو قواعدك بـ«غير موجود»، إضافةً إلى محاولات الاتصال التي أوقفتها قواعدك. لم يُرسَل شيء إلى هذه الوجهات.</string>
+    <string name="ev_blocked_24h">المحظور · آخر 24 ساعة</string>
+    <string name="ev_blocked_24h_def">سجلات في سجل الحظر: طلبات DNS أجابت عنها قوائم الحظر أو قواعدك بـ«غير موجود»، والاتصالات التي أوقفها PrivacyGuard. تُجمَع المحاولات المتكررة ولا تُعدّ واحدةً واحدة: الطلب نفسه إذا تكرّر بعد أقل من 10 ثوانٍ لا يُعدّ سجلًا جديدًا، والاتصال المحظور نفسه خلال الدقيقة نفسها سجل واحد. لم تصل أي بيانات من التطبيقات إلى هذه الوجهات.</string>
     <string name="ev_cleartext_24h">اتصالات غير مشفّرة · آخر 24 ساعة</string>
     <string name="ev_cleartext_24h_def">اتصالات رأينا فيها HTTP عاديًا. يمكن لأي طرف على مسار الشبكة قراءتها.</string>
     <string name="ev_encryption_24h">التشفير · آخر 24 ساعة</string>
@@ -136,7 +136,7 @@
     <string name="ev_behavior_def">تغيّرات مقارنةً بالنمط الذي تعلّمناه لكل تطبيق.</string>
     <string name="ev_connections_7d">الاتصالات · آخر 7 أيام</string>
     <string name="ev_connections_7d_def">كل اتصال نقل بيانات، الأحدث أولًا.</string>
-    <string name="ev_blocked_7d">الطلبات المحظورة · آخر 7 أيام</string>
+    <string name="ev_blocked_7d">المحظور · آخر 7 أيام</string>
     <string name="ev_anomalies_7d">حالات DNS الشاذة · آخر 7 أيام</string>
     <string name="ev_anomalies_7d_def">طلبات بدت كأنفاق أو إرسال منتظم أو أسماء مولّدة.</string>
     <string name="ev_data_7d">البيانات المنقولة · آخر 7 أيام</string>
