@@ -495,7 +495,7 @@ Documentation is part of the product. Outdated docs in a security app are a secu
 
 - `docs/HOW_IT_WORKS.md` — deeper technical explanation of §5 for curious users and contributors.
 - `docs/BLOCKING_POLICY.md` — user-facing blocking policy: what each level blocks, what is exempt and why, what can't be blocked, how to allow-list and report. Update it in the same change as any list, level, exemption or precedence change. Issue forms in `.github/ISSUE_TEMPLATE/` link to it.
-- `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 exist (2026-10-25). Never rewrite an accepted record; supersede it with a new one.
+- `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 are accepted (2026-10-25); 0007–0011 are proposed (2026-10-28). Never rewrite an accepted record; supersede it with a new one.
 - `RELEASE_NOTES_X.Y.md`, `docs/TRANSLATION_REVIEW_X.Y.md`.
 - `SECURITY.md` — vulnerability reporting.
 
@@ -578,8 +578,22 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 
 11. **For 1.0.1: replace the placeholder malware fallback.** The built-in malware seed (`app/src/main/java/com/privacyguard/app/core/blocklist/BlocklistManager.kt:260-266`) is 5 test names (`malware.testcategory.com`, `command-and-control.example`, …), so a first start without network blocks no real malware at any level. That conflicts with §5.6 ("every list has a built-in fallback so a first start without network still protects"). Replace it with a real, credited fallback list (license checked per §2, credited in `OpenSourceNotices.kt` and the README).
 12. **Done (2026-10-28, in 1.0.0): `safebrowsing.googleapis.com` removed from Strict.** It was in the built-in telemetry seed; blocking it turned off Chrome's phishing and malware warnings. `BuiltInSeedTest` guards against it, or a parent such as `googleapis.com`, coming back. Remove this item once 1.0.0 ships.
+13. **Adblock-syntax parser, domain rules only** (ADR 0007, Proposed): `||domain^` lists and user rules with `$app`; list exceptions stay inside their own list.
+14. **AdGuard DNS filter as an optional list** (ADR 0008, Proposed): off by default, opt-in at Standard and Strict; after item 13 and ideally after item 3 (memory).
+15. **Content filtering in browsers through HTTPS inspection** (ADR 0009, Proposed, includes `$removeparam`): design only; needs a security review before code.
+16. **Show why a name was blocked and allow it in one tap** (ADR 0010, Proposed): list name at display time, "Allow this name" with the existing malware warning.
+17. **Blocklist update safety** (ADR 0011, Proposed): reject a list that shrinks by more than half, show last update per list, count download failures instead of the empty catch.
 
 When you finish a backlog item, propose removing it here in the same change.
+
+### 16.3 Not planned
+
+Don't build these; point requests here.
+
+- **AdGuard-style tracking-protection extras** (hiding the User-Agent, blocking WebRTC, DPI evasion, deleting cookies): they need to change traffic or browser state CoreLock does not control, and each breaks sites or apps for little gain.
+- **Removing ads inside YouTube, Instagram, Snapchat, TikTok or Facebook:** the ads come from the same hosts as the content and the apps pin certificates; it is impossible without root.
+- **Bypassing certificate pinning in other apps, by any method:** it means tampering with other apps, and would make CoreLock a tool that weakens the security of the phone it protects.
+- **Any feature that needs root:** CoreLock works without root by design, and a rooted device is out of scope (§3.2).
 
 ---
 

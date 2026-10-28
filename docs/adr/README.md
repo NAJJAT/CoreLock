@@ -12,6 +12,11 @@ replaces it and the old one is marked **Superseded by NNNN**.
 | [0004](0004-quic-gate-limits.md) | Hold QUIC until the ClientHello is readable, with hard limits | Accepted |
 | [0005](0005-remove-flutter-rust-ios.md) | Remove Flutter, Rust, iOS and the IPv6 proxy | Accepted |
 | [0006](0006-single-enterprise-flavor.md) | Ship one app: the enterprise flavor | Accepted |
+| [0007](0007-adblock-domain-rule-parser.md) | Read the domain-level subset of adblock rule syntax | Proposed |
+| [0008](0008-adguard-dns-filter-optional.md) | AdGuard DNS filter as an optional blocklist | Proposed |
+| [0009](0009-browser-content-filtering.md) | Content filtering in browsers through HTTPS inspection | Proposed |
+| [0010](0010-block-reason-and-one-tap-allow.md) | Show why a name was blocked, and allow it in one tap | Proposed |
+| [0011](0011-blocklist-update-safety.md) | Guard against bad list updates and show when lists last updated | Proposed |
 
 Where a record says *not recorded*, the reason was not written down at the time.
 The owner fills it in; nobody guesses it.
