@@ -50,23 +50,24 @@ nothing is filtered unless Android's Always-on VPN with lockdown is on.
 2. [Install](#install)
 3. [First setup](#first-setup)
 4. [Protection levels](#protection-levels)
-5. [Screens](#screens)
-6. [Network requests the app makes](#network-requests-the-app-makes)
-7. [What the app can and cannot see](#what-the-app-can-and-cannot-see)
-8. [Architecture](#architecture)
-9. [Data storage and privacy](#data-storage-and-privacy)
-10. [Languages and RTL](#languages-and-rtl)
-11. [Build](#build)
-12. [Build variants](#build-variants)
-13. [Permissions](#permissions)
-14. [HTTPS inspection: what it can and cannot do](#https-inspection-what-it-can-and-cannot-do)
-15. [MDM, payload inspection and SIEM (details)](#mdm-payload-inspection-and-siem-details)
-16. [Testing](#testing)
-17. [Debug tooling](#debug-tooling)
-18. [Project structure](#project-structure)
-19. [Known limitations](#known-limitations)
-20. [Security](#security)
-21. [License](#license)
+5. [Frequently asked questions](#frequently-asked-questions)
+6. [Screens](#screens)
+7. [Network requests the app makes](#network-requests-the-app-makes)
+8. [What the app can and cannot see](#what-the-app-can-and-cannot-see)
+9. [Architecture](#architecture)
+10. [Data storage and privacy](#data-storage-and-privacy)
+11. [Languages and RTL](#languages-and-rtl)
+12. [Build](#build)
+13. [Build variants](#build-variants)
+14. [Permissions](#permissions)
+15. [HTTPS inspection: what it can and cannot do](#https-inspection-what-it-can-and-cannot-do)
+16. [MDM, payload inspection and SIEM (details)](#mdm-payload-inspection-and-siem-details)
+17. [Testing](#testing)
+18. [Debug tooling](#debug-tooling)
+19. [Project structure](#project-structure)
+20. [Known limitations](#known-limitations)
+21. [Security](#security)
+22. [License](#license)
 
 ---
 
@@ -207,6 +208,58 @@ It runs on Android 7.0 and newer (ARM phones, 64- and 32-bit).
 At every level: your own rules (the more specific rule wins; Block wins a tie), the
 ad-SDK policy when it is on, and the HaGeZi DoH lists that stop apps from skipping
 the filter with encrypted DNS.
+
+What each level blocks, what is left open on purpose, what cannot be blocked, and how
+to allow a site or report a wrong block: [docs/BLOCKING_POLICY.md](docs/BLOCKING_POLICY.md).
+
+## Frequently asked questions
+
+CoreLock is an open-source privacy firewall that also blocks ads from separate ad
+servers; it is not a content-filtering ad blocker.
+
+### Why do I still see ads in YouTube, Instagram or Snapchat?
+
+These apps send their ads from the same servers as the videos, photos and stories.
+CoreLock blocks by server name, so it cannot block the ads without also blocking the
+content, which would break the app. It does block known separate ad and analytics
+servers (Snapchat's own ad servers, for example), but most ads in these apps do not
+come from those. Without root, no blocker can separate these ads from the content.
+The same is true for TikTok and Facebook. See
+[What CoreLock cannot block](docs/BLOCKING_POLICY.md#6-what-corelock-cannot-block).
+
+### How is CoreLock different from AdGuard or Pi-hole?
+
+- **Server names, not page content.** CoreLock decides by the name of the server an
+  app connects to. AdGuard can also filter inside web pages (hide elements, block
+  single addresses) in browsers that trust its certificate. CoreLock does not filter
+  page content.
+- **One phone, everywhere.** Pi-hole filters DNS for the devices on the network where
+  it runs, usually a home network. CoreLock runs on the phone itself, so it filters on
+  every Wi-Fi network and on mobile data.
+- **Per-app rules.** CoreLock knows which app made each connection: you can block an
+  app, block it only in the background, or set rules for one app, and see where each
+  app connects.
+- **Open source, no servers of its own.** All of CoreLock's code is published under
+  GPL-3.0. There is no CoreLock server: the few hosts the app contacts (blocklists,
+  your DNS resolver) are listed in
+  [Network requests the app makes](#network-requests-the-app-makes).
+
+### How do I get YouTube without ads?
+
+CoreLock cannot do this (see above). What works is a browser with a content blocker,
+for example Firefox with the uBlock Origin add-on, and watching YouTube there instead
+of in the YouTube app. It removes ads on websites that CoreLock cannot reach, and you
+can keep CoreLock on for everything else.
+
+### Does CoreLock hide my IP address?
+
+No. CoreLock's VPN is local: it runs on the phone and sends your traffic straight to
+its destination. Nothing is routed through an outside server, so websites and apps
+see your normal IP address, and your DNS resolver sees which names you look up. (The
+optional Dual VPN setting is the exception: it sends connections through SOCKS5
+servers you configure yourself, and those servers see your IP address instead.)
+
+CoreLock is not affiliated with or endorsed by AdGuard.
 
 ## Screens
 
@@ -621,6 +674,10 @@ docs/  .github/
 
 ## Known limitations
 
+- **In-app ads in YouTube, Instagram, Snapchat, TikTok and Facebook can't be blocked
+  without root.** They come from the same servers as the content, so blocking them by
+  name would break the app. More limits of name-based blocking are in
+  [docs/BLOCKING_POLICY.md](docs/BLOCKING_POLICY.md#5-limits-of-domain-level-blocking).
 - **TLS fingerprints:**
   - Learning covers only the code paths an app uses in its first 7 days, so a
     feature used later can alert once.

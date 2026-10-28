@@ -1,0 +1,77 @@
+name: Site or app broken
+description: Something stopped working because CoreLock (PrivacyGuard) blocked it.
+title: "[Broken] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a wrong block. Before you start:
+
+        - **Never paste passwords, private data, or full logs or exports that contain personal information.** Issues on GitHub are public.
+        - To get going again right away, you can allow the blocked name yourself: see [How to allow-list a domain or an app](https://github.com/NAJJAT/CoreLock/blob/main/docs/BLOCKING_POLICY.md#8-how-to-allow-list-a-domain-or-an-app).
+        - Security vulnerabilities go through private reporting, not here: see [SECURITY.md](https://github.com/NAJJAT/CoreLock/blob/main/SECURITY.md).
+  - type: input
+    id: target
+    attributes:
+      label: App or website
+      description: The app name (and package name if you know it) or the website address.
+      placeholder: "e.g. Example Bank app, or www.example.com"
+    validations:
+      required: true
+  - type: dropdown
+    id: level
+    attributes:
+      label: Protection level
+      description: Shown in Settings.
+      options:
+        - MINIMAL
+        - STANDARD
+        - STRICT
+    validations:
+      required: true
+  - type: input
+    id: android
+    attributes:
+      label: Android version
+      placeholder: "e.g. Android 14"
+    validations:
+      required: true
+  - type: input
+    id: corelock
+    attributes:
+      label: CoreLock version
+      description: Shown in Settings › About.
+      placeholder: "e.g. 1.0.0"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What broke, and what you expected instead. If you know the blocked server name and what "Stopped by" says in the connection details, add them here.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Turn on protection at STANDARD
+        2. Open the app
+        3. Tap ...
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Relevant Diagnostics numbers
+      description: From Settings › Diagnostics, for example "Server-name blocking (SNI)", "QUIC checks", "Blocked connection history" and "Private DNS". Copy only the numbers and short status lines, not full logs.
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Did it work with protection off? Did allowing a name fix it? Which one?
+    validations:
+      required: false

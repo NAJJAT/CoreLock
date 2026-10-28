@@ -151,6 +151,8 @@ No location, contacts, camera or microphone access.
   a crash, but without Always-on Android or the phone maker's battery saver may
   still stop it in the background, and until it is back traffic goes out
   unfiltered. With "Block connections without VPN" nothing leaves unprotected.
-- **In-app ads in YouTube, Instagram, TikTok and Facebook can't be blocked
-  without root.** They come from the same servers as the content, so blocking
-  them by name would break the app.
+- **In-app ads in YouTube, Instagram, Snapchat, TikTok and Facebook can't be
+  blocked without root.** They come from the same servers as the content, so
+  blocking them by name would break the app. What CoreLock blocks, and what it
+  can't, is explained in
+  [docs/BLOCKING_POLICY.md](https://github.com/NAJJAT/CoreLock/blob/main/docs/BLOCKING_POLICY.md).

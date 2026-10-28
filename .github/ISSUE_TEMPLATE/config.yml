@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Blocking policy (what CoreLock can and cannot block)
+    url: https://github.com/NAJJAT/CoreLock/blob/main/docs/BLOCKING_POLICY.md
+    about: Read this before reporting an ad that was not blocked.
+  - name: Report a security vulnerability privately
+    url: https://github.com/NAJJAT/CoreLock/security/advisories/new
+    about: Never report vulnerabilities in a public issue.

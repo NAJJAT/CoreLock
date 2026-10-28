@@ -1,0 +1,79 @@
+name: Ad or tracker not blocked
+description: An ad or tracker got through that CoreLock (PrivacyGuard) could block by server name.
+title: "[Not blocked] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Please read this first.** CoreLock blocks by server name. It **cannot** block ads inside **YouTube, Instagram, Snapchat, TikTok or Facebook**: those apps send their ads from the same servers as the content, so blocking them would break the app. No blocker can separate them without root. Issues about ads in these apps will be closed as a known limit.
+
+        It also cannot hide ads drawn by a web page, or block one file on a site without blocking the whole site. See [What CoreLock cannot block](https://github.com/NAJJAT/CoreLock/blob/main/docs/BLOCKING_POLICY.md#6-what-corelock-cannot-block) in the blocking policy.
+
+        **Never paste passwords, private data, or full logs or exports that contain personal information.** Issues on GitHub are public.
+  - type: input
+    id: target
+    attributes:
+      label: App or website
+      description: Where you saw the ad or tracker.
+      placeholder: "e.g. Example Weather app, or www.example.com"
+    validations:
+      required: true
+  - type: dropdown
+    id: level
+    attributes:
+      label: Protection level
+      description: Shown in Settings. Minimal does not block ads or trackers.
+      options:
+        - MINIMAL
+        - STANDARD
+        - STRICT
+    validations:
+      required: true
+  - type: input
+    id: android
+    attributes:
+      label: Android version
+      placeholder: "e.g. Android 14"
+    validations:
+      required: true
+  - type: input
+    id: corelock
+    attributes:
+      label: CoreLock version
+      description: Shown in Settings › About.
+      placeholder: "e.g. 1.0.0"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and the server name it came from if you know it (open the app in Traffic, or the app's Raw DNS lookups).
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Turn on protection at STANDARD
+        2. Open the app
+        3. The ad appears at ...
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Relevant Diagnostics numbers
+      description: From Settings › Diagnostics, for example "Private DNS", "Server-name blocking (SNI)", "QUIC checks" and "Blocked connection history". Copy only the numbers and short status lines, not full logs.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: The ad is not inside YouTube, Instagram, Snapchat, TikTok or Facebook.
+          required: true
+        - label: Android's Private DNS is set to Off or Automatic (Settings › Diagnostics › Private DNS).
+          required: false

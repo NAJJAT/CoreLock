@@ -93,7 +93,7 @@ Facts that shape every decision:
 
 | Fact | Consequence |
 |---|---|
-| **Not distributed on Google Play.** APKs are published on GitHub Releases. | Full ad blocking is allowed; no Play policy workarounds. No automatic update check, by design: Settings › About opens the GitHub releases page, so no extra server is contacted. Users must trust our signing key (§12). |
+| **Not distributed on Google Play.** APKs are published on GitHub Releases. | Ad blocking is allowed without Play's restrictions; no Play policy workarounds. (Never promise complete blocking: `docs/BLOCKING_POLICY.md` §10.) No automatic update check, by design: Settings › About opens the GitHub releases page, so no extra server is contacted. Users must trust our signing key (§12). |
 | **One app.** The only flavor is `enterprise` (application ID `com.privacyguard.app.enterprise`, version shown without suffix). It includes consented HTTPS inspection (MITM), MDM and SIEM export, and it is what 1.0.0 releases. The consumer flavor was removed on 2026-10-23 (owner's decision). | HTTPS inspection now ships to every user, so its code is security-critical for everyone (§3.1, §4.2). It stays in `app/src/enterprise/`; the shared engine in `app/src/main/`. Don't reintroduce a second flavor without the owner. |
 | **Kotlin 2.2, Compose, Room + SQLCipher, WorkManager, AGP 9.2.0, minSdk 24, targetSdk 36.** | Code must work from Android 7.0 to the newest release. Check API levels for every platform call. |
 | **Languages:** English (default), Arabic (RTL), French, Dutch. | Every user-visible string exists in all four. |
@@ -493,6 +493,7 @@ Documentation is part of the product. Outdated docs in a security app are a secu
 ### 13.2 Other documents
 
 - `docs/HOW_IT_WORKS.md` — deeper technical explanation of §5 for curious users and contributors.
+- `docs/BLOCKING_POLICY.md` — user-facing blocking policy: what each level blocks, what is exempt and why, what can't be blocked, how to allow-list and report. Update it in the same change as any list, level, exemption or precedence change. Issue forms in `.github/ISSUE_TEMPLATE/` link to it.
 - `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 exist (2026-10-25). Never rewrite an accepted record; supersede it with a new one.
 - `RELEASE_NOTES_X.Y.md`, `docs/TRANSLATION_REVIEW_X.Y.md`.
 - `SECURITY.md` — vulnerability reporting.
@@ -552,7 +553,7 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 
 ### 16.1 Limits by design (state them in the UI and release notes)
 
-- In-app ads in YouTube, Instagram, TikTok and Facebook can't be blocked without root: they come from the same hosts as the content.
+- In-app ads in YouTube, Instagram, Snapchat, TikTok and Facebook can't be blocked without root: they come from the same hosts as the content. User-facing wording: `docs/BLOCKING_POLICY.md`.
 - At the DNS layer, Android's resolver makes the request, so per-app Allow rules and ad-SDK exemptions only work at the connection (SNI) layer.
 - Encrypted Client Hello (ECH) hides the real server name; only the outer name is visible.
 - Apps using hardcoded IPs with no SNI can only be blocked per app.
