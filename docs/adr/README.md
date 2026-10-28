@@ -17,6 +17,7 @@ replaces it and the old one is marked **Superseded by NNNN**.
 | [0009](0009-browser-content-filtering.md) | Content filtering in browsers through HTTPS inspection | Proposed |
 | [0010](0010-block-reason-and-one-tap-allow.md) | Show why a name was blocked, and allow it in one tap | Proposed |
 | [0011](0011-blocklist-update-safety.md) | Guard against bad list updates and show when lists last updated | Proposed |
+| [0012](0012-doh-upstream-off-by-default.md) | Keep encrypted upstream DNS (DoH) off by default | Accepted |
 
 Where a record says *not recorded*, the reason was not written down at the time.
 The owner fills it in; nobody guesses it.

@@ -74,8 +74,9 @@ banking and payment, health, government and tax, password managers, and anything
 pinned. Today `BYPASS_DOMAINS` and `PINNED_DOMAINS` cover infrastructure and a few apps
 (PayPal is the only payment entry); there is no banking, health or government list.
 
-- A **category list in the repository** (`never_decrypt.txt`, data, not code),
-  reviewed in every change like a blocklist, with a source for each entry.
+- A **category list in the repository** (`never_decrypt.txt`, data, not code), with a
+  source for each entry. It changes **only through reviewed commits** (owner's
+  decision, 2026-10-28); it is never downloaded or updated at run time.
 - Category rules where a name is unambiguous: government suffixes (`gov`, `gov.uk`,
   `gouv.fr`, `overheid.nl`, `gov.sa`, …), checked against the Public Suffix List.
 - Users can add domains; they can never remove a built-in entry.
@@ -94,10 +95,10 @@ Order of work, each step shipped and measured before the next:
 1. **Network rules on the request** (`||example.com/ads/`, `$third-party`,
    `$domain=`): parse the HTTP/1.1 request line and `Host` with hard limits (header
    block ≤ 16 KB, line ≤ 8 KB); on a match, answer locally with an empty response and
-   close the stream. HTTP/2 needs a frame parser and HPACK; it is a separate step, and
-   until it exists HTTP/2 connections get no URL rules (most browsers negotiate h2, so
-   this step alone has limited reach; the ALPN offer could be limited to `http/1.1`
-   for browser connections, at a speed cost).
+   close the stream. **The first version offers only `http/1.1` in ALPN for inspected
+   browser connections** (owner's decision, 2026-10-28), so every inspected request
+   can be read; the cost is losing HTTP/2 multiplexing on those connections. HTTP/2
+   (frame parser and HPACK) is a later, separate step.
 2. **`$removeparam`** (below).
 3. **Cosmetic rules** (`##selector`): needs the response, decompressed, with an
    injected `<style>` in HTML. It changes the page, needs a strict size cap and
@@ -133,14 +134,15 @@ A separate rule type. It deletes named query parameters (`utm_source`, `fbclid`,
 
 ### 5. Performance budget
 
-Measured reference in the repo: SNI check ≈ 4.3 µs per connection (CLAUDE.md §6.2,
-ADR 0002). Request rules run per HTTP request, not per packet, and only for inspected
+References (CLAUDE.md §6.2; release build on the emulator, release verification,
+October 2026): **SNI check ≈ 3.46 µs per connection**, **QUIC gate ≈ 9.3 µs per new
+flow**. Request rules run per HTTP request, not per packet, and only for inspected
 browser connections, which already pay for TLS decryption and re-encryption (far more
 than the rule check). Budget: **≤ 20 µs per request for network rules** at the
-default list size, and no allocation per packet. Decrypted relays must not slow the
-packet thread: the relay runs on its own threads today (`MitmEngine`). Measure before
-and after, per CLAUDE.md §6.2. (The 3.46 µs SNI and 9.3 µs QUIC figures from the
-request could not be found in the repository; they need their source.)
+default list size (about twice the QUIC gate's per-flow cost, and paid per request
+only on inspected browser connections), and no allocation per packet. Decrypted
+relays must not slow the packet thread: the relay runs on its own threads today
+(`MitmEngine`). Measure before and after on the same setup, per CLAUDE.md §6.2.
 
 ### 6. Threat model changes (CLAUDE.md §3)
 
@@ -151,9 +153,12 @@ request could not be found in the repository; they need their source.)
   cannot copy it. Code running inside CoreLock's process can still use it to sign
   certificates. If it ever leaked, an attacker on the same network could decrypt that
   phone's HTTPS for every app that trusts user CAs, for up to 365 days.
-- **Proposed hardening, decided in the review:** name constraints are not usable (the
-  CA must sign any host); shorter CA life (90 days) with automatic rotation and a
-  clear prompt to reinstall; delete the key immediately when MDM switches inspection
+- **CA lifetime: 90 days with rotation** (owner's decision, 2026-10-28), instead of
+  today's 365 days (`CaManager.kt:63`). Before expiry a new CA is created, the user is
+  prompted to install it and to remove the old one, and the old key is deleted. This
+  limits a leaked key to at most 90 days.
+- **Further hardening, decided in the review:** name constraints are not usable (the
+  CA must sign any host); delete the key immediately when MDM switches inspection
   off, not at the next retention run; show the CA fingerprint so the user can check it.
 - **New attacker capability:** a hostile page cannot reach the CA key, but a
   hostile list could try to make CoreLock rewrite traffic. That is why rules are data
@@ -195,9 +200,14 @@ request could not be found in the repository; they need their source.)
 
 ## Open questions
 
-- Do Chrome and other Chromium browsers on current Android trust a user CA? Test on a
-  device.
-- Is HTTP/1.1-only ALPN for browser connections acceptable, given its speed cost?
-- Who maintains the never-decrypt list, and from which sources?
-- Should the CA lifetime drop to 90 days with rotation, in this change or before it?
-- Source of the 3.46 µs (SNI) and 9.3 µs (QUIC) figures.
+- Open: do Chrome and other Chromium browsers on current Android trust a user CA?
+  Device test after 1.0 (owner, 2026-10-28).
+- **Resolved (owner, 2026-10-28):** HTTP/1.1-only ALPN for inspected connections is
+  acceptable for the first version (Decision, step 3.1).
+- **Resolved (owner, 2026-10-28):** the never-decrypt list lives in the repository and
+  changes only through reviewed commits (Decision, step 2).
+- **Resolved (owner, 2026-10-28):** 90-day CA lifetime with rotation (Decision,
+  step 6).
+- **Resolved (owner, 2026-10-28):** the 3.46 µs (SNI) and 9.3 µs (QUIC) figures come
+  from the release verification on the emulator, release build, October 2026; now
+  recorded in CLAUDE.md §6.2 (Decision, step 5).

@@ -42,7 +42,8 @@ Gaps found:
    of the names of the list it replaces, or at least that list's built-in floor (a
    fixed minimum per source, about a tenth of today's size). Otherwise the run counts
    it as a failure (`UpdateResult.Failure`, so it retries), keeps last-known-good, and
-   records "rejected: too small" for Diagnostics. A user can force it from Diagnostics
+   shows the event in Diagnostics ("rejected: too small", old and new counts). **No
+   notification** (owner's decision, 2026-10-28). A user can force it from Diagnostics
    ("Accept smaller list") after seeing the numbers; that is the only override.
 2. **Show update times.** Settings › Ads & Trackers and Diagnostics show, per list:
    last success (date), number of names, and the last failure reason if any. Read from
@@ -71,6 +72,6 @@ Gaps found:
 
 ## Open questions
 
-- Is 50 % the right threshold? Check against the size history of HaGeZi and OISD
-  releases before deciding.
-- Should a rejected list raise a notification, or only show in Diagnostics?
+- **Resolved (owner, 2026-10-28):** the threshold is 50 %.
+- **Resolved (owner, 2026-10-28):** a rejected list keeps the old list and shows the
+  event in Diagnostics; no notification.

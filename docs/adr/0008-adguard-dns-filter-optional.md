@@ -96,10 +96,8 @@ from about 4.1 MB to about 5.7 MB (gzip).
    - **License text:** the GPL-3.0 text CoreLock already shows in Settings › About ›
      Open-source licenses (checked against `LICENSE` by `OpenSourceNoticesTest`)
      covers it, because it is the same license.
-   - **Copyright notice:** the upstream has no copyright line to copy. The credit
-     names the project and its authors the way the upstream names itself: "AdGuard DNS
-     filter, by the AdGuard team", with the link. We ask AdGuard whether they want a
-     specific line (open question).
+   - **Copyright notice:** the upstream has no copyright line, and none is added
+     (owner's decision, 2026-10-28).
    - **Changes:** CoreLock does not modify the file. It applies a subset at run time.
      The licenses screen and the README say so plainly: "CoreLock uses only the
      domain rules of this filter; rules that need page content are ignored." If
@@ -107,10 +105,12 @@ from about 4.1 MB to about 5.7 MB (gzip).
      header and published in this repository under GPL-3.0.
    - **Credit, in the same change** (CLAUDE.md §2, enforced by
      `OpenSourceNoticesTest`): a row in the README "Data" table and an entry in
-     `OpenSourceNotices.kt`, each with the link
-     `https://github.com/AdguardTeam/AdGuardSDNSFilter` and "GPL-3.0". Because the
-     filter is a compilation, the credit adds "compiled from AdGuard filters and other
-     lists, including EasyList and EasyPrivacy; see the upstream README".
+     `OpenSourceNotices.kt`, each reading "AdGuard DNS filter
+     (AdguardTeam/AdGuardSDNSFilter), GPL-3.0" with a link to
+     `https://github.com/AdguardTeam/AdGuardSDNSFilter`.
+   - **Third-party lists inside the compilation:** CoreLock downloads the filter on
+     the user's phone and does not bundle it, so it does not redistribute it. We rely
+     on AdGuard Support's written confirmation (2026-10-28) and do not ask further.
    - **Branding:** the name is used only to say which list it is. No logo, colours or
      wording that suggests AdGuard made, endorses or supports CoreLock. The README
      already says "CoreLock is not affiliated with or endorsed by AdGuard."
@@ -154,11 +154,13 @@ from about 4.1 MB to about 5.7 MB (gzip).
 
 ## Open questions
 
-- Does AdGuard want a specific copyright line in the credit, given that the
-  repository has none?
-- AdGuard publishes the compilation under GPL-3.0. Are we comfortable relying on that
-  for the third-party lists it includes, or do we ask AdGuard to confirm?
-- The heap estimate must be replaced by a measurement on the owner's phone
+- **Resolved (owner, 2026-10-28):** no copyright line is needed; the credit is
+  "AdGuard DNS filter (AdguardTeam/AdGuardSDNSFilter), GPL-3.0" with a link to the
+  repository.
+- **Resolved (owner, 2026-10-28):** the third-party lists inside the compilation need
+  no further question to AdGuard. CoreLock downloads the filter on the device and does
+  not redistribute it; AdGuard Support's written confirmation of 2026-10-28 is relied on.
+- Open: the heap estimate must be replaced by a measurement on the owner's phone
   (`adb shell dumpsys meminfo com.privacyguard.app.enterprise`, filter on and off).
 
 **Method.** All files were downloaded on 2026-10-28 to a temporary folder outside the

@@ -42,8 +42,9 @@ and list, reports are slower to act on.
    in a table that grows; not worth it while the display-time answer is the same in
    nearly every case.
 2. **"Allow this name" button** next to Block, for blocked rows. It creates a user
-   **Allow** rule with `HIGH_PRIORITY` for the exact name or, as a second option, the
-   parent domain (`*.parent`), through the same code path as the Rules screen
+   **Allow** rule with `HIGH_PRIORITY` for the **exact name by default** (owner's
+   decision, 2026-10-28); the parent domain (`*.parent`) is a second, explicit
+   option. Same code path as the Rules screen
    (`RulesViewModel.kt:141`).
    - If the name is on a **malware/phishing** list, the existing security warning is
      shown first and `overridesSecurity` is set only on confirmation (as in
@@ -78,5 +79,5 @@ and list, reports are slower to act on.
 
 ## Open questions
 
-- Should "Allow this name" default to the exact name or the parent domain?
-- Should the Apps screen get the same reason line for per-app blocks?
+- **Resolved (owner, 2026-10-28):** "Allow this name" defaults to the exact name.
+- Open: should the Apps screen get the same reason line for per-app blocks?

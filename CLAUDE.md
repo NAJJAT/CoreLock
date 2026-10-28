@@ -341,7 +341,7 @@ The packet path runs for every packet of every connection on the phone. A few mi
 - In `vpn/forwarder/`, `QuicGate`, `DnsBypassGuard`, the SNI parser and `NameBlockPolicy`: **no** per-packet allocation, logging, string formatting, regex, reflection or database access. Reuse buffers; cache per flow (e.g. owner UID).
 - Never block the packet thread on I/O or on locks the UI might hold.
 - Statistics are aggregated in memory and written to Room in batches.
-- **Measure before and after** any hot-path change and report both numbers (µs per decision or per connection). Current reference: SNI check ≈ 4.3 µs per connection. A regression over ~10% needs a written justification.
+- **Measure before and after** any hot-path change and report both numbers (µs per decision or per connection). Current reference (release verification, release build on the emulator, October 2026): SNI check ≈ 3.46 µs per connection (earlier ≈ 4.3 µs), QUIC gate ≈ 9.3 µs per new flow. A regression over ~10% needs a written justification.
 - **Memory:** blocklists dominate the heap (measured: MINIMAL ≈ 23 MB, STANDARD ≈ 31 MB, STRICT ≈ 44 MB). Don't add per-name objects. The planned direction is compact storage (64-bit fingerprints in a sorted `LongArray`).
 - **UI:** observe Room `Flow`s. Don't add `while(true)` polling loops.
 - APK size is watched (release ≈ 6.1 MiB measured earlier for the old consumer build; a consumer release measured 7.13 MiB on 2026-10-23; the enterprise release measured **9.99 MiB** on 2026-10-25, and most of the growth is BouncyCastle, kept whole by a blanket R8 rule, see §16.2). Report the size when a change could affect it.
@@ -495,7 +495,7 @@ Documentation is part of the product. Outdated docs in a security app are a secu
 
 - `docs/HOW_IT_WORKS.md` — deeper technical explanation of §5 for curious users and contributors.
 - `docs/BLOCKING_POLICY.md` — user-facing blocking policy: what each level blocks, what is exempt and why, what can't be blocked, how to allow-list and report. Update it in the same change as any list, level, exemption or precedence change. Issue forms in `.github/ISSUE_TEMPLATE/` link to it.
-- `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 are accepted (2026-10-25); 0007–0011 are proposed (2026-10-28). Never rewrite an accepted record; supersede it with a new one.
+- `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 are accepted (2026-10-25); 0007–0011 are proposed and 0012 is accepted (2026-10-28). Never rewrite an accepted record; supersede it with a new one.
 - `RELEASE_NOTES_X.Y.md`, `docs/TRANSLATION_REVIEW_X.Y.md`.
 - `SECURITY.md` — vulnerability reporting.
 
@@ -583,6 +583,7 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 15. **Content filtering in browsers through HTTPS inspection** (ADR 0009, Proposed, includes `$removeparam`): design only; needs a security review before code.
 16. **Show why a name was blocked and allow it in one tap** (ADR 0010, Proposed): list name at display time, "Allow this name" with the existing malware warning.
 17. **Blocklist update safety** (ADR 0011, Proposed): reject a list that shrinks by more than half, show last update per list, count download failures instead of the empty catch.
+18. **Revisit DoH as the default upstream** (ADR 0012): DoH stays off by default because a DoH failure answers SERVFAIL with no fallback (`DnsHandler.kt:378`), which breaks captive portals and networks that block DoH. Revisit once a fallback or captive-portal handling exists.
 
 When you finish a backlog item, propose removing it here in the same change.
 
