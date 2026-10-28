@@ -294,6 +294,7 @@ CoreLock is not affiliated with or endorsed by AdGuard.
 | crt.sh (Certificate Transparency) | Only if turned on in Settings | Registrable domains of TLS servers you contact |
 | api.ipify.org | Only if "External IP check" is on, when diagnostics run | Your public IP |
 | SIEM endpoint (set by MDM) | Only on a company-managed phone, when the administrator enables shipping | Payload metadata; HTTPS with optional pinning and signing |
+| The two SOCKS5 servers you enter for Dual VPN (first and second hop) | Only while Dual VPN is on: every TCP connection, and DNS when DoH is on | The first server sees your IP address; the second sees the hosts you connect to. SOCKS5 itself is not encrypted, so the first server can read those host names and your SOCKS5 user names and passwords too. The content of HTTPS connections stays encrypted. |
 
 Everything else (history, fingerprints, baselines, sensor events, reports)
 stays on the device.

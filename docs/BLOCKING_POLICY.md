@@ -44,9 +44,10 @@ decision, so a name blocked at one point cannot slip through another:
 ## 3. What each protection level blocks
 
 You choose the level in Settings. **Standard** is the default. The lists are
-downloaded from their authors and refreshed about once a week (on Wi-Fi or another
-unmetered network); the sizes below were counted on 2026-10-28 and change with every
-update.
+downloaded from their authors the first time the app starts with a network
+connection (Wi-Fi or mobile data), and again when you tap **Refresh now** under
+Settings › Blocklists. Version 1.0.0 does not refresh them automatically after that.
+The sizes below were counted on 2026-10-28 and change with every update.
 
 | Level | What it blocks | Lists used |
 |---|---|---|
