@@ -200,7 +200,7 @@ half a minute with the full lists.
 
 | Worker | When | What |
 |---|---|---|
-| `BlocklistUpdateWorker` | Every 7 days | Downloads the lists in 3.5 and tells the VPN to reload. |
+| `BlocklistUpdateWorker` | First start (any network); every 7 days on an unmetered network (battery not low); any network once a list has had no successful download for 14 days (checked daily); "Refresh now" at any time | Downloads the lists in 3.5 and tells the VPN to reload. Each list's last success is stored; a run fetches only the lists that are due, and if one fails the run is retried with backoff (1 h, doubling) and fetches only the failed lists again. |
 | `PruneWorker` | Daily | Deletes history older than the retention period (default 30 days), caps the big tables (500,000 connections, 500,000 DNS lookups, 5,000 payloads), deletes exports older than 24 h. |
 | `PruneWorker` (vacuum) | Weekly, charging and idle | Compacts the database so freed space is returned. |
 | `WeeklyReportWorker` | Weekly, if switched on | Posts the weekly summary notification. |
@@ -250,7 +250,7 @@ refused download keeps the lists already loaded.
 |---|---|
 | Minimal | Malware and phishing lists only. |
 | Standard (default) | Minimal + ads + trackers. |
-| Strict | Standard + system telemetry (Microsoft, Apple, Amazon, Mozilla, Dropbox, Google Safe Browsing). Some features can break. |
+| Strict | Standard + system telemetry (Microsoft, Apple, Amazon, Mozilla, Dropbox). Some features can break. Google Safe Browsing is never blocked: it powers the browser's phishing and malware warnings. |
 
 A source or category you switch off in Ad privacy stays off at every level.
 
@@ -581,7 +581,7 @@ Nothing is ever sent to the makers of PrivacyGuard. The app contacts:
 | Destination | When | What it learns |
 |---|---|---|
 | Your DNS resolver (Cloudflare 1.1.1.1 by default) | Every lookup | The names apps look up. Encrypted only with DoH. |
-| raw.githubusercontent.com, cdn.jsdelivr.net (mirror, only when GitHub fails), small.oisd.nl | Blocklist download, about weekly | That a PrivacyGuard install exists, your IP address. |
+| raw.githubusercontent.com, cdn.jsdelivr.net (mirror, only when GitHub fails), small.oisd.nl | Blocklist download: at first start, then weekly on Wi-Fi or another unmetered network, on any network after 14 days without a successful download, failed lists retried, and whenever you tap "Refresh now" (about 4 MB compressed for all lists) | That a PrivacyGuard install exists, your IP address. |
 | reports.exodus-privacy.eu.org | Tracker list, at most weekly | Same. |
 | crt.sh | Only if Certificate Transparency is on | The base domains of servers your apps contact. |
 | api.ipify.org | Only if the external-IP check is on, when you run Diagnostics | Your IP address. |

@@ -60,8 +60,12 @@ PrivacyGuard can also show the content of HTTPS traffic, for apps that allow it.
 
 - Your DNS lookups, to the resolver you choose (Cloudflare 1.1.1.1 by default;
   encrypted to cloudflare-dns.com, dns.google or dns.quad9.net if you turn on DoH).
-- Blocklist downloads, about weekly: raw.githubusercontent.com (cdn.jsdelivr.net if
-  GitHub can't be reached) and small.oisd.nl.
+- Blocklist downloads: raw.githubusercontent.com (cdn.jsdelivr.net if GitHub can't
+  be reached) and small.oisd.nl. The first download happens at first start, on any
+  network. After that, weekly on Wi-Fi or another unmetered network; on mobile data
+  only once a list has had no successful download for 14 days. A list that fails is
+  retried later. "Refresh now" (Settings › Blocklists) downloads them at any time.
+  All lists together are about 4 MB.
 - The Exodus tracker list, at most weekly: reports.exodus-privacy.eu.org.
 - Only if you turn them on: Certificate Transparency checks (crt.sh) and the
   public-IP check in Diagnostics (api.ipify.org).

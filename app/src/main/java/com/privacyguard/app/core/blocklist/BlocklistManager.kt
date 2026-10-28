@@ -56,28 +56,29 @@ object BlocklistManager {
         }
     }
 
-    suspend fun updateAllBlocklists(): UpdateResult {
+    /**
+     * Downloads every list whose last success is older than [dueBefore] (all of them by
+     * default). Failure when any list failed, so the worker retries; the lists that
+     * succeeded are stored and are not fetched again by that retry.
+     */
+    suspend fun updateAllBlocklists(dueBefore: Long = Long.MAX_VALUE): UpdateResult {
         val ctx = context ?: return UpdateResult.Failure("Not initialized")
-        if (_isUpdating.value) return UpdateResult.Failure("Update already in progress")
+        // Atomic: the one-time and the two periodic jobs can start together.
+        if (!_isUpdating.compareAndSet(false, true)) return UpdateResult.Failure("Update already in progress")
         return try {
-            _isUpdating.value = true
             val repo = blocklistRepo(ctx)
-            var totalEntries = 0
-            val updated = mutableSetOf<BlocklistSource>()
-            BlocklistSource.values().forEach { source ->
-                if (source.downloadUrl() != null) {
-                    val result = updateBlocklistInternal(source, repo)
-                    if (result is UpdateResult.Success) { totalEntries += result.totalEntries; updated += source }
-                }
+            val times = PrefsBlocklistUpdateTimes(ctx)
+            val outcome = refreshDue(times, dueBefore) { updateBlocklistInternal(it, repo) }
+            if (outcome.updated.isNotEmpty()) {
+                retireReplacedSources(repo, BlocklistSource.values().filter { times.lastSuccess(it) > 0 }.toSet())
+                _size.value = repo.totalCount()
+                _lastUpdate.value = System.currentTimeMillis()
+                // With protection on, the VPN reloads and refreshes the start-up cache itself.
+                if (!com.privacyguard.platform.android.PrivacyVpnService.isRunning) runCatching { writeStartupCache(ctx, repo) }
+                // The running VPN keeps its own in-memory filter; tell it to reload.
+                com.privacyguard.app.data.repository.BlocklistSyncBus.publish()
             }
-            retireReplacedSources(repo, updated)
-            _size.value = repo.totalCount()
-            _lastUpdate.value = System.currentTimeMillis()
-            // With protection on, the VPN reloads and refreshes the start-up cache itself.
-            if (!com.privacyguard.platform.android.PrivacyVpnService.isRunning) runCatching { writeStartupCache(ctx, repo) }
-            // The running VPN keeps its own in-memory filter; tell it to reload.
-            com.privacyguard.app.data.repository.BlocklistSyncBus.publish()
-            UpdateResult.Success(totalEntries)
+            outcome.toResult()
         } catch (e: Exception) {
             UpdateResult.Failure(e.message ?: "Unknown error")
         } finally {
@@ -98,11 +99,50 @@ object BlocklistManager {
         }
     }
 
+    internal data class RefreshOutcome(
+        val updated: Set<BlocklistSource>,
+        val failed: Set<BlocklistSource>,
+        val totalEntries: Int,
+    ) {
+        fun toResult(): UpdateResult =
+            if (failed.isEmpty()) UpdateResult.Success(totalEntries)
+            else UpdateResult.Failure("Download failed for ${failed.joinToString()}")
+    }
+
+    /**
+     * Runs [update] for every downloadable list last successful before [dueBefore] and
+     * records the time of each success. A failed list keeps its old rows and its old
+     * time, so it is due again on the next run.
+     */
+    internal suspend fun refreshDue(
+        times: BlocklistUpdateTimes,
+        dueBefore: Long,
+        now: () -> Long = System::currentTimeMillis,
+        update: suspend (BlocklistSource) -> UpdateResult,
+    ): RefreshOutcome {
+        val updated = mutableSetOf<BlocklistSource>()
+        val failed = mutableSetOf<BlocklistSource>()
+        var totalEntries = 0
+        for (source in BlocklistSource.values()) {
+            if (source.downloadUrl() == null || times.lastSuccess(source) >= dueBefore) continue
+            when (val result = update(source)) {
+                is UpdateResult.Success -> {
+                    times.recordSuccess(source, now())
+                    totalEntries += result.totalEntries
+                    updated += source
+                }
+                is UpdateResult.Failure -> failed += source
+            }
+        }
+        return RefreshOutcome(updated, failed, totalEntries)
+    }
+
     /**
      * Rows of lists this version no longer downloads (October 2026: StevenBlack,
      * EasyList, EasyPrivacy and HaGeZi Light replaced by HaGeZi Pro; URLhaus, gone,
      * by HaGeZi TIF) are deleted only once their replacement has downloaded, so an
-     * update never leaves a level with fewer names in between.
+     * update never leaves a level with fewer names in between. [updated]: the lists
+     * that have succeeded at least once, in this run or an earlier one.
      */
     private suspend fun retireReplacedSources(repo: BlocklistRepo, updated: Set<BlocklistSource>) {
         val retired = buildList {
@@ -198,7 +238,7 @@ object BlocklistManager {
         }
     }
 
-    private val BUILTIN_SEED: Map<String, Map<String, List<String>>> = mapOf(
+    internal val BUILTIN_SEED: Map<String, Map<String, List<String>>> = mapOf(
         BlocklistRepo.SOURCE_BUILTIN to mapOf(
             BlocklistRepo.CAT_ADS to listOf(
                 "doubleclick.net",
@@ -264,6 +304,8 @@ object BlocklistManager {
                 "c2-tracker.ru",
                 "command-and-control.example",
             ),
+            // No safebrowsing.googleapis.com: blocking it turns off Chrome's phishing and
+            // malware warnings (BuiltInSeedTest).
             BlocklistRepo.CAT_TELEMETRY to listOf(
                 "telemetry.dropbox.com",
                 "telemetry.mozilla.org",
@@ -271,7 +313,6 @@ object BlocklistManager {
                 "device-metrics-us.amazon.com",
                 "settings.data.microsoft.com",
                 "browser.events.data.msn.com",
-                "safebrowsing.googleapis.com",
                 "metrics.icloud.com",
                 "metrics.apple.com",
                 "diagnostics.support.apple.com",

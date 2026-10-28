@@ -4,6 +4,7 @@ import android.app.Application
 import com.privacyguard.app.core.blocklist.BlocklistManager
 import com.privacyguard.app.core.security.AppSecurityMonitor
 import com.privacyguard.app.core.security.SecureSecretStore
+import com.privacyguard.app.workers.BlocklistUpdateWorker
 import com.privacyguard.app.workers.PruneWorker
 
 class PrivacyGuardApplication : Application() {
@@ -43,6 +44,7 @@ class PrivacyGuardApplication : Application() {
         com.privacyguard.app.core.geoip.GeoIpResolver.init(this)
         FlavorStartup.onCreate(this)
         PruneWorker.schedule(this)
+        BlocklistUpdateWorker.schedulePeriodic(this)
     }
 
     /**

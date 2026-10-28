@@ -44,16 +44,23 @@ decision, so a name blocked at one point cannot slip through another:
 ## 3. What each protection level blocks
 
 You choose the level in Settings. **Standard** is the default. The lists are
-downloaded from their authors the first time the app starts with a network
-connection (Wi-Fi or mobile data), and again when you tap **Refresh now** under
-Settings › Blocklists. Version 1.0.0 does not refresh them automatically after that.
-The sizes below were counted on 2026-10-28 and change with every update.
+downloaded from their authors:
+
+- the first time the app starts, on any network (Wi-Fi or mobile data);
+- then once a week on Wi-Fi or another network that isn't metered;
+- on any network, mobile data included, once a list has gone 14 days without a
+  successful download;
+- whenever you tap **Refresh now** under Settings › Blocklists.
+
+A list that fails to download keeps its previous version and is tried again later.
+All lists together are about 4 MB to download. The sizes below were counted on
+2026-10-28 and change with every update.
 
 | Level | What it blocks | Lists used |
 |---|---|---|
 | **Minimal** | Malware, phishing and scam sites only. Ads and trackers load normally. | HaGeZi Threat Intelligence Feeds *mini* (about 213,000 names) |
 | **Standard** (default) | Minimal, plus ads and trackers | + HaGeZi *Pro mini* (about 88,000 names), plus about 60 ad and analytics servers built into the app (including Snapchat's separate ad and analytics servers). About 287,000 names in total. |
-| **Strict** | Standard, plus telemetry: diagnostics sent by operating systems and vendors | The full HaGeZi *Pro* (about 211,000 names) instead of Pro mini, + OISD *small* (about 60,000 names), plus 10 built-in telemetry servers. About 342,000 names in total. QUIC is blocked by default. |
+| **Strict** | Standard, plus telemetry: diagnostics sent by operating systems and vendors | The full HaGeZi *Pro* (about 211,000 names) instead of Pro mini, + OISD *small* (about 60,000 names), plus 9 built-in telemetry servers. About 342,000 names in total. QUIC is blocked by default. |
 
 At every level:
 
@@ -63,13 +70,8 @@ At every level:
 - **Encrypted-DNS servers** are stopped, so apps cannot skip the filter.
 - A list or category you switched off in **Settings › Ads & Trackers** stays off.
 
-Things to know about Strict:
-
-- The telemetry list includes `safebrowsing.googleapis.com`, which Chrome and other
-  Google apps use to warn about dangerous sites. At Strict those warnings may stop
-  working. Malware and phishing blocking by CoreLock itself stays on.
-- Blocking telemetry can break features that depend on it. That is why Strict is not
-  the default.
+Blocking telemetry at Strict can break features that depend on it. That is why
+Strict is not the default.
 
 A blocklist entry blocks the name **and every name under it**: blocking
 `ads.example.com` also blocks `x.ads.example.com`.
@@ -79,6 +81,7 @@ A blocklist entry blocks the name **and every name under it**: blocking
 | Not blocked | Why |
 |---|---|
 | **Login servers** (`graph.facebook.com`, `m.facebook.com`, `www.facebook.com`, `accounts.google.com`) | Blocking them breaks "Continue with Facebook" and Google sign-in. They stay open even if a downloaded ad list contains them. This also means Meta app events, which use the same server as Facebook login, are not blocked. |
+| **Google Safe Browsing** (`safebrowsing.googleapis.com`), at every level | Chrome and other apps use it to warn you about phishing and malware sites. Blocking it would turn those warnings off and make you less safe, so CoreLock's built-in lists never contain it. |
 | **Push notification servers** (`firebaseinstallations.googleapis.com`, `fcm.googleapis.com`, `mtalk.google.com`) | Without them apps stop receiving notifications. |
 | **Deep-link servers** (`branch.io`, `api2.branch.io`, `app.link`, `onelink.me`) | They open links inside apps; blocking them breaks shared links. |
 | **Ad-SDK blocking inside the kit maker's own apps** (for example Google's ad kit inside Google apps, Meta's inside Facebook or Instagram) | There, the kit is part of the app itself; blocking it breaks the app. Ad-SDK blocking only applies to *other* apps. The blocklists of your level still apply everywhere. |

@@ -308,6 +308,7 @@ Rules:
 - Enforce size and line limits; parse strictly; skip invalid lines; never crash on garbage.
 - **Replace an old list only after the new one downloaded and parsed successfully.** Keep last-known-good.
 - Every list has a built-in fallback so a first start without network still protects.
+- Refresh (`BlocklistUpdateWorker`): first download at first start on any network; weekly on unmetered networks; any network once a list has had no success for 14 days (a daily job that downloads nothing otherwise); "Refresh now" anytime. Each list's last success is stored (`BlocklistUpdateTimes`), a run fetches only due lists, and any failed list makes the run retry, so a list can't stay missing.
 - Swapping lists at runtime is atomic (`FilterEngine.setRules`); a lookup never sees half a list.
 - Removed on purpose: StevenBlack, EasyList, EasyPrivacy, HaGeZi Light, URLhaus (dead). Don't re-add without discussing.
 - Lists are data, never code.
@@ -576,7 +577,7 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 10. **Before 1.0: measure Home and Stats CPU on the owner's phone.** With the screen on and nothing else happening, the release build used **42 %** of one core on Home and **68 %** on Stats (emulator, 2026-10-25: 2,500 and 4,079 CPU ticks per 60 s; other screens 71–115), almost all on Room IO threads, so it is likely the polling loops of item 4 re-running database queries. The emulator runs SQLCipher translated (ARM build on x86_64), so the phone number decides. **Above 10 % of a core on the phone, it is a 1.0 blocker.** Measure with `adb shell top -H -d 5 -p <pid>` or the `utime`+`stime` of `/proc/<pid>/task/*/stat` over 60 s, each screen open and still. (Numbered 10, not first, so the reference to item 9 in ADR 0006 stays right.)
 
 11. **For 1.0.1: replace the placeholder malware fallback.** The built-in malware seed (`app/src/main/java/com/privacyguard/app/core/blocklist/BlocklistManager.kt:260-266`) is 5 test names (`malware.testcategory.com`, `command-and-control.example`, …), so a first start without network blocks no real malware at any level. That conflicts with §5.6 ("every list has a built-in fallback so a first start without network still protects"). Replace it with a real, credited fallback list (license checked per §2, credited in `OpenSourceNotices.kt` and the README).
-12. **For 1.0.1: remove `safebrowsing.googleapis.com` from Strict.** It is in the built-in telemetry seed (`BlocklistManager.kt:274`), which only Strict uses (`app/src/main/java/com/privacyguard/core/filter/ProtectionLevels.kt:29-32`). Blocking it turns off Chrome's and other Google apps' phishing and malware warnings, which makes users less safe. Update `docs/BLOCKING_POLICY.md` §3 in the same change.
+12. **Done (2026-10-28, in 1.0.0): `safebrowsing.googleapis.com` removed from Strict.** It was in the built-in telemetry seed; blocking it turned off Chrome's phishing and malware warnings. `BuiltInSeedTest` guards against it, or a parent such as `googleapis.com`, coming back. Remove this item once 1.0.0 ships.
 
 When you finish a backlog item, propose removing it here in the same change.
 

@@ -290,7 +290,7 @@ CoreLock is not affiliated with or endorsed by AdGuard.
 | Request | When | What the other side learns |
 |---|---|---|
 | Upstream DNS (default 1.1.1.1; configurable, IP address only) or DoH (Cloudflare / Google / Quad9) | Every DNS lookup by any app; only to the chosen provider | The names looked up, from your IP |
-| Blocklists (raw.githubusercontent.com, cdn.jsdelivr.net as fallback mirror, small.oisd.nl) and the Exodus tracker list | Periodic refresh / "Refresh now" | That the app is installed, from your IP |
+| Blocklists (raw.githubusercontent.com, cdn.jsdelivr.net as fallback mirror, small.oisd.nl) and the Exodus tracker list | Blocklists: at first start (any network); weekly on Wi-Fi or another unmetered network; on any network once a list has had no successful download for 14 days; failed lists are retried; "Refresh now" at any time. About 4 MB compressed for all lists. Exodus list: at most weekly | That the app is installed, from your IP |
 | crt.sh (Certificate Transparency) | Only if turned on in Settings | Registrable domains of TLS servers you contact |
 | api.ipify.org | Only if "External IP check" is on, when diagnostics run | Your public IP |
 | SIEM endpoint (set by MDM) | Only on a company-managed phone, when the administrator enables shipping | Payload metadata; HTTPS with optional pinning and signing |

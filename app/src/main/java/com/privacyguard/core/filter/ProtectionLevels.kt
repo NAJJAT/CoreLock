@@ -12,8 +12,9 @@ import com.privacyguard.app.data.repository.BlocklistRepo
  *              Strict swaps Pro mini for the full HaGeZi Pro plus OISD small
  *              ([excludedSourcesFor]).
  *  - STRICT:   STANDARD + telemetry: OS and vendor diagnostics (Microsoft, Apple,
- *              Amazon, Mozilla, Dropbox, Google Safe Browsing). This can break
- *              features that depend on them, which is why it is not the default.
+ *              Amazon, Mozilla, Dropbox). This can break features that depend on
+ *              them, which is why it is not the default. Never Safe Browsing: it
+ *              powers the browser's phishing warnings (BuiltInSeedTest).
  *
  * Always applied, whatever the level: the user's own rules, and the Ad-SDK policy
  * when it is switched on. A category or source the user switched off in the

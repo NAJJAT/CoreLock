@@ -15,7 +15,8 @@
  * - Guaranteed execution (even after app restart)
  * - Respects device battery (only runs when conditions met)
  * - Supports periodic work (weekly)
- * - Handles network constraints (unmetered network, battery not low)
+ * - Handles network constraints: weekly on an unmetered network (battery not low);
+ *   any network once a list has had no success for 14 days; retries failed lists
  *
  * Sources: see BlocklistSource and docs/HOW_IT_WORKS.md §3.5.
  *
@@ -44,46 +45,71 @@ class BlocklistUpdateWorker(
 
     companion object {
         const val WORK_NAME = "blocklist_update"
+        /** Any network, but only for lists without a success for [STALE_DAYS]. */
+        const val STALE_WORK_NAME = "blocklist_update_stale"
+        const val NOW_WORK_NAME = "blocklist_update_now"
 
+        private const val KEY_MAX_AGE_DAYS = "max_age_days"
+        private const val KEY_REQUESTED_AT = "requested_at"
+        // Not 7: a periodic run can come a little early and would then skip a week.
+        internal const val WEEKLY_MAX_AGE_DAYS = 6
+        internal const val STALE_DAYS = 14
+        private val DAY_MS = TimeUnit.DAYS.toMillis(1)
+
+        /** Called at every app start; KEEP leaves an existing schedule as it is. */
         fun schedulePeriodic(context: Context) {
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.UNMETERED)
-                .setRequiresBatteryNotLow(true)
-                .build()
-
-            val workRequest = PeriodicWorkRequestBuilder<BlocklistUpdateWorker>(
-                repeatInterval = 7,
-                repeatIntervalTimeUnit = TimeUnit.DAYS
-            )
-                .setConstraints(constraints)
-                .setBackoffCriteria(
-                    BackoffPolicy.EXPONENTIAL,
-                    1,
-                    TimeUnit.HOURS
-                )
-                .build()
-
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
-                workRequest
-            )
+            val workManager = WorkManager.getInstance(context)
+            workManager.enqueueUniquePeriodicWork(WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, weeklyRequest())
+            workManager.enqueueUniquePeriodicWork(STALE_WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, staleRequest())
         }
 
+        /** Weekly, on Wi-Fi or another unmetered network. */
+        internal fun weeklyRequest(): PeriodicWorkRequest =
+            PeriodicWorkRequestBuilder<BlocklistUpdateWorker>(repeatInterval = 7, repeatIntervalTimeUnit = TimeUnit.DAYS)
+                .setConstraints(
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.UNMETERED)
+                        .setRequiresBatteryNotLow(true)
+                        .build()
+                )
+                .setInputData(workDataOf(KEY_MAX_AGE_DAYS to WEEKLY_MAX_AGE_DAYS))
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS)
+                .build()
+
+        /**
+         * Daily on any network, for phones that are never on an unmetered network: it
+         * fetches only lists whose last success is older than [STALE_DAYS], so otherwise
+         * it ends at once without downloading anything.
+         */
+        internal fun staleRequest(): PeriodicWorkRequest =
+            PeriodicWorkRequestBuilder<BlocklistUpdateWorker>(repeatInterval = 1, repeatIntervalTimeUnit = TimeUnit.DAYS)
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .setInputData(workDataOf(KEY_MAX_AGE_DAYS to STALE_DAYS))
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.HOURS)
+                .build()
+
+        /** First download and "Refresh now": any network, every list once. */
         fun updateNow(context: Context) {
-            val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
+            // Unique: with retries, one request per app start would pile up while offline.
+            WorkManager.getInstance(context).enqueueUniqueWork(NOW_WORK_NAME, ExistingWorkPolicy.REPLACE, nowRequest(System.currentTimeMillis()))
+        }
+
+        internal fun nowRequest(requestedAt: Long): OneTimeWorkRequest =
+            OneTimeWorkRequestBuilder<BlocklistUpdateWorker>()
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                // A retry then skips the lists that succeeded since the request.
+                .setInputData(workDataOf(KEY_REQUESTED_AT to requestedAt))
                 .build()
 
-            val workRequest = OneTimeWorkRequestBuilder<BlocklistUpdateWorker>()
-                .setConstraints(constraints)
-                .build()
-
-            WorkManager.getInstance(context).enqueue(workRequest)
+        /** Lists last successful before this are fetched. */
+        internal fun dueBefore(input: Data, now: Long): Long {
+            val requestedAt = input.getLong(KEY_REQUESTED_AT, 0L)
+            return if (requestedAt > 0) requestedAt else now - input.getInt(KEY_MAX_AGE_DAYS, 0) * DAY_MS
         }
 
         fun cancelUpdates(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+            WorkManager.getInstance(context).cancelUniqueWork(STALE_WORK_NAME)
         }
     }
 
@@ -91,9 +117,12 @@ class BlocklistUpdateWorker(
         return withContext(Dispatchers.IO) {
             try {
                 BlocklistManager.initialize(applicationContext)
-                when (val result = BlocklistManager.updateAllBlocklists()) {
+                when (val result = BlocklistManager.updateAllBlocklists(dueBefore(inputData, System.currentTimeMillis()))) {
                     is UpdateResult.Success -> {
-                        NotificationService(applicationContext).blocklistUpdated("All sources", result.totalEntries)
+                        // 0: nothing was due (a list that downloads is never empty).
+                        if (result.totalEntries > 0) {
+                            NotificationService(applicationContext).blocklistUpdated("All sources", result.totalEntries)
+                        }
                         Result.success()
                     }
                     is UpdateResult.Failure -> Result.retry()
