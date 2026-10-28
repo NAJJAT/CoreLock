@@ -66,6 +66,21 @@ class BlocklistRefreshTest {
     }
 
     @Test
+    fun a_success_time_in_the_future_counts_as_due() {
+        // Stored while the clock was a year ahead, then corrected: without the check the
+        // list would look fresh for a year.
+        val year = 365L * 24 * 60 * 60 * 1000
+        val times = MapTimes().apply { downloadable.forEach { map[it] = 1_000L } }
+        times.map[BlocklistSource.HAGEZI_PRO_MINI] = 1_000L + year
+        val fetched = mutableListOf<BlocklistSource>()
+
+        refresh(times, dueBefore = 500L, now = 2_000L, fetched = fetched)
+
+        assertEquals(listOf(BlocklistSource.HAGEZI_PRO_MINI), fetched)
+        assertEquals(2_000L, times.lastSuccess(BlocklistSource.HAGEZI_PRO_MINI))
+    }
+
+    @Test
     fun all_lists_succeeding_is_a_success() {
         val outcome = refresh(MapTimes(), dueBefore = Long.MAX_VALUE, now = 1)
         assertEquals(UpdateResult.Success(10 * downloadable.size), outcome.toResult())

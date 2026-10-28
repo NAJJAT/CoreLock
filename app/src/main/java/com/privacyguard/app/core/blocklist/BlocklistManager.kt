@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @SuppressLint("StaticFieldLeak")
 object BlocklistManager {
@@ -61,16 +62,19 @@ object BlocklistManager {
      * default). Failure when any list failed, so the worker retries; the lists that
      * succeeded are stored and are not fetched again by that retry.
      */
-    suspend fun updateAllBlocklists(dueBefore: Long = Long.MAX_VALUE): UpdateResult {
-        val ctx = context ?: return UpdateResult.Failure("Not initialized")
-        // Atomic: the one-time and the two periodic jobs can start together.
-        if (!_isUpdating.compareAndSet(false, true)) return UpdateResult.Failure("Update already in progress")
-        return try {
+    suspend fun updateAllBlocklists(dueBefore: Long = Long.MAX_VALUE): UpdateResult = withContext(Dispatchers.IO) {
+        // IO for every caller: the Ads screen calls this from viewModelScope (main), and
+        // the update times are written with a blocking commit().
+        val ctx = context ?: return@withContext UpdateResult.Failure("Not initialized")
+        // Atomic: the one-time and the two periodic jobs can start together. Inside the
+        // IO block, so a job cancelled before it starts cannot leave the flag set.
+        if (!_isUpdating.compareAndSet(false, true)) return@withContext UpdateResult.Failure("Update already in progress")
+        try {
             val repo = blocklistRepo(ctx)
             val times = PrefsBlocklistUpdateTimes(ctx)
             val outcome = refreshDue(times, dueBefore) { updateBlocklistInternal(it, repo) }
             if (outcome.updated.isNotEmpty()) {
-                retireReplacedSources(repo, BlocklistSource.values().filter { times.lastSuccess(it) > 0 }.toSet())
+                retireReplacedSources(repo, succeededAtLeastOnce(times))
                 _size.value = repo.totalCount()
                 _lastUpdate.value = System.currentTimeMillis()
                 // With protection on, the VPN reloads and refreshes the start-up cache itself.
@@ -112,7 +116,9 @@ object BlocklistManager {
     /**
      * Runs [update] for every downloadable list last successful before [dueBefore] and
      * records the time of each success. A failed list keeps its old rows and its old
-     * time, so it is due again on the next run.
+     * time, so it is due again on the next run. A time after now is due too: the clock
+     * was ahead when it was stored, and the list would otherwise wait until the clock
+     * caught up.
      */
     internal suspend fun refreshDue(
         times: BlocklistUpdateTimes,
@@ -123,8 +129,11 @@ object BlocklistManager {
         val updated = mutableSetOf<BlocklistSource>()
         val failed = mutableSetOf<BlocklistSource>()
         var totalEntries = 0
+        val startedAt = now()
         for (source in BlocklistSource.values()) {
-            if (source.downloadUrl() == null || times.lastSuccess(source) >= dueBefore) continue
+            if (source.downloadUrl() == null) continue
+            val last = times.lastSuccess(source)
+            if (last >= dueBefore && last <= startedAt) continue
             when (val result = update(source)) {
                 is UpdateResult.Success -> {
                     times.recordSuccess(source, now())
@@ -145,11 +154,18 @@ object BlocklistManager {
      * that have succeeded at least once, in this run or an earlier one.
      */
     private suspend fun retireReplacedSources(repo: BlocklistRepo, updated: Set<BlocklistSource>) {
-        val retired = buildList {
-            if (BlocklistSource.HAGEZI_PRO_MINI in updated && BlocklistSource.HAGEZI_PRO in updated) addAll(BlocklistRepo.RETIRED_AD_SOURCES)
-            if (BlocklistSource.HAGEZI_TIF_MINI in updated) addAll(BlocklistRepo.RETIRED_SECURITY_SOURCES)
-        }
+        val retired = retiredSourceNames(updated)
         if (retired.isNotEmpty()) repo.removeSources(retired)
+    }
+
+    /** Lists with a stored success time; none on an install updated from 1.0.0 builds before this. */
+    internal fun succeededAtLeastOnce(times: BlocklistUpdateTimes): Set<BlocklistSource> =
+        BlocklistSource.values().filter { times.lastSuccess(it) > 0 }.toSet()
+
+    /** Only names of lists no longer downloaded; never a current one (RetireSourcesTest). */
+    internal fun retiredSourceNames(updated: Set<BlocklistSource>): List<String> = buildList {
+        if (BlocklistSource.HAGEZI_PRO_MINI in updated && BlocklistSource.HAGEZI_PRO in updated) addAll(BlocklistRepo.RETIRED_AD_SOURCES)
+        if (BlocklistSource.HAGEZI_TIF_MINI in updated) addAll(BlocklistRepo.RETIRED_SECURITY_SOURCES)
     }
 
     /**
@@ -217,7 +233,7 @@ object BlocklistManager {
     // Whole-text form of the line parser (tests).
     private fun parseDomainListFormat(raw: String): List<String> = raw.lineSequence().mapNotNull(::domainListLine).toList()
 
-    private fun sourceMetadata(source: BlocklistSource): Pair<String, String> = when (source) {
+    internal fun sourceMetadata(source: BlocklistSource): Pair<String, String> = when (source) {
         BlocklistSource.OISD_BASIC   -> Pair(BlocklistRepo.SOURCE_OISD, BlocklistRepo.CAT_ADS)
         BlocklistSource.OISD_FULL    -> Pair(BlocklistRepo.SOURCE_OISD, BlocklistRepo.CAT_ADS)
         BlocklistSource.HAGEZI_PRO_MINI -> Pair(BlocklistRepo.SOURCE_HAGEZI_PRO_MINI, BlocklistRepo.CAT_ADS)
