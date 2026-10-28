@@ -237,8 +237,11 @@ Downloads are HTTPS only, without redirects, and read line by line. Each entry i
 checked (`app/core/blocklist/ListEntryValidator.kt`): converted to punycode, and
 refused if it is not a valid name, is a public suffix (`co.uk`, `com.au`; the Public
 Suffix List bundled with OkHttp), or mixes scripts within a label (look-alike
-names). A source with more than 1.5 million names is refused whole. A failed or
-refused download keeps the lists already loaded.
+names). A source with more than 1.5 million names is refused whole, and so is a
+download with fewer than half the names of the stored copy of that list (a broken
+or truncated list; the event is recorded, and the run retries later). The first
+download of a list is never refused for its size. A failed or refused download
+keeps the lists already loaded.
 
 ---
 
@@ -289,6 +292,9 @@ server, and **DNS goes through the chain too when DoH is on** (DoH is TCP). SOCK
 - Other UDP (calls, games, video chat) goes directly, unless you switch on
   "Block UDP outside the chain", which drops it.
 - With DoH off, plain DNS goes directly to your resolver. Turn on DoH.
+- SOCKS5 is not encrypted. Hop 1 sees your IP, every destination and your hop 2
+  user name and password; hop 2 sees the destinations but not your IP. Only HTTPS
+  (TLS) keeps the content private.
 
 ---
 
@@ -585,7 +591,7 @@ Nothing is ever sent to the makers of PrivacyGuard. The app contacts:
 | reports.exodus-privacy.eu.org | Tracker list, at most weekly | Same. |
 | crt.sh | Only if Certificate Transparency is on | The base domains of servers your apps contact. |
 | api.ipify.org | Only if the external-IP check is on, when you run Diagnostics | Your IP address. |
-| Your SOCKS servers | Only with dual-hop | Hop 1 your IP and hop 2's address; hop 2 the destinations. |
+| Your SOCKS servers | Only with dual-hop | SOCKS5 is not encrypted: hop 1 sees your IP, hop 2's address and login, and every destination; hop 2 sees the destinations, not your IP. HTTPS content stays encrypted. |
 | Your organisation's SIEM | Enterprise only, if configured | Inspected HTTPS requests and responses (section 8). |
 
 Exports (PCAP, CSV, IT report) leave the phone only when you share them. A test
@@ -628,7 +634,9 @@ their certificates, can redact personal data, and keeps payloads for its own
 retention period. Only PrivacyGuard's own UID is exempt from inspection.
 Redaction runs on two bounded workers, not the capture thread; its scanners are
 one-pass and each call has a time budget. When time runs out the text is
-replaced, never stored or shipped unredacted. Turning inspection off deletes the CA key and the stored
+replaced, never stored or shipped unredacted. Redaction covers headers and text
+bodies; URL query strings, form data and binary bodies are not redacted yet, in
+the local log or in what is shipped to a SIEM. Turning inspection off deletes the CA key and the stored
 payloads. **Android keeps the installed certificate after PrivacyGuard is
 uninstalled**; onboarding tells the user how to remove it (Settings → search
 "User certificates" → "PrivacyGuard Enterprise CA" → Remove).
@@ -698,10 +706,11 @@ key, an optional certificate pin and an optional body signature (`SiemEndpoint.k
   database.
 - **Memory:** with all lists loaded the app uses about 200–260 MB (PSS) on a test
   phone, about 68 MB of it Java heap.
-- **The VPN drop alert only alerts.** It cannot restart protection or block
-  traffic, and it does not run if Android kills the app. Use Always-on VPN with
-  "Block connections without VPN" for that; Settings has a button to Android's
-  VPN settings.
+- **No in-app kill switch.** Only Android's Always-on VPN with "Block
+  connections without VPN" blocks traffic once the tunnel is gone; Settings has a
+  button to Android's VPN settings. The app shows lockdown as on only when
+  Android reports it, and as "not checked" while protection is off or before
+  Android 10.
 - **Dual-hop carries TCP only** (section 4.4).
 - **Rules:** exact names unless written `*.name`; no IPv6 rules.
 - **Weak-cipher alerts** are about what an app *offers*, which old libraries do

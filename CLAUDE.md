@@ -306,7 +306,7 @@ Invariants:
 Rules:
 - HTTPS only, from an allow-listed set of sources; jsDelivr is the fallback mirror.
 - Enforce size and line limits; parse strictly; skip invalid lines; never crash on garbage.
-- **Replace an old list only after the new one downloaded and parsed successfully.** Keep last-known-good.
+- **Replace an old list only after the new one downloaded and parsed successfully.** Keep last-known-good. A download with fewer than half the stored names of that list is refused and recorded (`BlocklistManager.storeDownloaded`, ADR 0011); a first download is never refused.
 - Every list has a built-in fallback so a first start without network still protects.
 - Refresh (`BlocklistUpdateWorker`): first download at first start on any network; weekly on unmetered networks; any network once a list has had no success for 14 days (a daily job that downloads nothing otherwise); "Refresh now" anytime. Each list's last success is stored (`BlocklistUpdateTimes`), a run fetches only due lists, and any failed list makes the run retry, so a list can't stay missing.
 - Swapping lists at runtime is atomic (`FilterEngine.setRules`); a lookup never sees half a list.
@@ -558,6 +558,7 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 - At the DNS layer, Android's resolver makes the request, so per-app Allow rules and ad-SDK exemptions only work at the connection (SNI) layer.
 - Encrypted Client Hello (ECH) hides the real server name; only the outer name is visible.
 - Apps using hardcoded IPs with no SNI can only be blocked per app.
+- On Android 7 to 9, a per-app rule can occasionally apply to the wrong app; Android 10 and newer are not affected.
 - The kill switch requires Android's Always-on VPN + lockdown.
 - HTTPS inspection reaches few apps: most apps on Android 7+ ignore user-installed CAs or pin certificates, so they stay metadata-only.
 - No automatic update check, by design: the app contacts no update server. Settings › About shows the version and opens the GitHub releases page.
@@ -582,8 +583,23 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 14. **AdGuard DNS filter as an optional list** (ADR 0008, Proposed): off by default, opt-in at Standard and Strict; after item 13 and ideally after item 3 (memory).
 15. **Content filtering in browsers through HTTPS inspection** (ADR 0009, Proposed, includes `$removeparam`): design only; needs a security review before code.
 16. **Show why a name was blocked and allow it in one tap** (ADR 0010, Proposed): list name at display time, "Allow this name" with the existing malware warning.
-17. **Blocklist update safety** (ADR 0011, Proposed): reject a list that shrinks by more than half, show last update per list, count download failures instead of the empty catch.
+17. **Blocklist update safety** (ADR 0011, Proposed): the half-size refusal is done (2026-10-28, `BlocklistManager.storeDownloaded`); still to do: show last update per list, count download failures instead of the empty catch.
 18. **Revisit DoH as the default upstream** (ADR 0012): DoH stays off by default because a DoH failure answers SERVFAIL with no fallback (`DnsHandler.kt:378`), which breaks captive portals and networks that block DoH. Revisit once a fallback or captive-portal handling exists.
+19. **For 1.0.1: hardening from the October 2026 security review** (one line each; details stay with the owner):
+    - Harden TLS and QUIC name handling for incomplete or unreadable handshakes.
+    - Cap the number of connections the engine tracks at once.
+    - Extend inspection redaction to URL query strings, form data and binary bodies (local log and SIEM).
+    - Improve app attribution on Android 7–9 (the limit in §16.1): faster lookup, off the packet thread, errors counted.
+    - Bound the SIEM queue's memory and back off between failed sends.
+    - Bound the stored TLS fingerprint baseline.
+    - Bound and protect the Certificate Transparency monitor's stored data.
+    - Check SIEM destination and consent again at send time.
+    - Apply name checks to more connection types.
+    - Re-check open connections when rules change.
+    - Replace the remaining empty catch blocks in the inspection engine and the list downloader.
+    - Harden storage of packet captures.
+    - Harden DNS and TLS parsers for remaining edge cases.
+    - Show refused list downloads (shrink guard, item 17) in Settings › Diagnostics, with a way to accept a list that legitimately got smaller.
 
 When you finish a backlog item, propose removing it here in the same change.
 

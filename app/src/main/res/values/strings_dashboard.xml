@@ -25,7 +25,7 @@
     <string name="dash_card_kill_switch">Kill switch</string>
     <string name="dash_kill_switch_off_desc">Turn on Always-on VPN and Block connections without VPN</string>
     <string name="dash_status_blocking">Blocking</string>
-    <string name="dash_status_alert_only">Alert only</string>
+    <string name="dash_status_not_checked">Not checked</string>
     <string name="dash_vpn_live">VPN live</string>
     <string name="dash_vpn_off">VPN off</string>
     <string name="dash_card_no_decrypt">No payload decryption</string>
@@ -83,7 +83,6 @@
         <item quantity="one">%d in 24 h</item>
         <item quantity="other">%d in 24 h</item>
     </plurals>
-    <string name="dash_rec_kill_switch">Turn on the kill switch so nothing leaks if protection drops.</string>
     <plurals name="dash_rec_behavior">
         <item quantity="one">Behavior DNA found %d app deviation. New destinations and odd-hour uploads deserve a review.</item>
         <item quantity="other">Behavior DNA found %d app deviations. New destinations and odd-hour uploads deserve a review.</item>

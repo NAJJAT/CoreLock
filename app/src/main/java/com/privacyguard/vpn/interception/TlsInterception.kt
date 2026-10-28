@@ -12,7 +12,7 @@ import com.privacyguard.core.session.Session
  */
 interface TlsInterception {
 
-    /** True when inspection is switched on; gates all capture work. */
+    /** True when inspection is switched on and consented to; gates all capture work. */
     val isEnabled: Boolean
 
     /** Drop UDP/443 so QUIC apps fall back to TCP/TLS, where inspection works. */

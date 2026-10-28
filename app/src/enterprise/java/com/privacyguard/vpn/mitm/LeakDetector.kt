@@ -53,18 +53,38 @@ object LeakDetector {
         LeakType.NETWORK_INFO to keyed("ssid|wifi_?name|wifi_?ssid", """[^"'&,\s]{2,}"""),
         LeakType.NETWORK_INFO to keyed("mcc|mnc", """\d{2,3}"""),
         LeakType.NETWORK_INFO to keyed("carrier|carrier_?name|network_?operator(?:_?name)?", """[A-Za-z][A-Za-z0-9 &.-]+"""),
-        // Excludes asset names like "icon@2x.png".
-        LeakType.EMAIL to Regex(
-            """\b([A-Za-z0-9._%+-]+(?:@|%40)[A-Za-z0-9.-]+\.(?!(?:png|jpe?g|gif|webp|svg|js|css)\b)[A-Za-z]{2,})\b"""
-        ),
         LeakType.PHONE_NUMBER to keyed("phone|phone_?number|msisdn|mobile|tel", """\+?[0-9][0-9 ()-]{6,}[0-9]"""),
     )
+
+    /** Asset names like "icon@2x.png" are not addresses. */
+    private val ASSET_TLDS = setOf("png", "jpg", "jpeg", "gif", "webp", "svg", "js", "css")
+
+    /**
+     * Emails are found by [EmailScanner], not a regex: the text is attacker-controlled and
+     * the email regex backtracked quadratically ("a." repeated over 64 KB ran for minutes
+     * on the single capture worker). Same budget as PiiRedactor.
+     */
+    private fun hasEmail(text: String): Boolean {
+        // "someone%40example.com" in a query string; "%40" -> "@" keeps the scan linear.
+        val s = if ("%40" in text) text.replace("%40", "@") else text
+        if ('@' !in s) return false
+        var found = false
+        val finished = EmailScanner.scan(
+            s,
+            deadline = System.nanoTime() + PiiRedactor.DEFAULT_BUDGET_MS * 1_000_000,
+            rejectTld = { str, start, end -> str.substring(start, end) in ASSET_TLDS },
+        ) { _, _ -> found = true; false }
+        // Out of time an address can't be ruled out: report it rather than hide it.
+        return found || !finished
+    }
 
     /** Leak types found in [text]. */
     fun detect(text: String?): Set<LeakType> {
         if (text.isNullOrEmpty()) return emptySet()
-        return rules.filter { (_, regex) -> regex.containsMatchIn(text) }
-            .mapTo(LinkedHashSet()) { it.first }
+        val found = rules.filter { (_, regex) -> regex.containsMatchIn(text) }.mapTo(HashSet()) { it.first }
+        if (hasEmail(text)) found += LeakType.EMAIL
+        // Declaration order, as when the email rule was a regex in [rules].
+        return found.sortedBy { it.ordinal }.toCollection(LinkedHashSet())
     }
 
     fun detect(urlPath: String?, headers: Map<String, String>, body: String?): Set<LeakType> {

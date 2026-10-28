@@ -214,11 +214,8 @@ class PrivacyVpnService : VpnService() {
         // Consent still ours: Always-on was not handed to another VPN app.
         val alwaysOnTurnedOff = alwaysOnSeen && !isAlwaysOnNow() && prepare(this) == null
         Log.w(TAG, "VPN revoked by Android (Always-on turned off: $alwaysOnTurnedOff)")
-        com.privacyguard.app.vpn.KillSwitch.stopMonitoring()
         stopVpn()
-        val helper = NotificationHelper(this)
-        helper.cancelKillSwitchAlert()
-        if (alwaysOnTurnedOff) helper.postAlwaysOnTurnedOff()
+        if (alwaysOnTurnedOff) NotificationHelper(this).postAlwaysOnTurnedOff()
         super.onRevoke()
     }
 
@@ -551,15 +548,13 @@ class PrivacyVpnService : VpnService() {
 
         com.privacyguard.app.vpn.KillSwitch.attach(this)
         alwaysOnSeen = isAlwaysOnNow()
-        if (com.privacyguard.app.vpn.KillSwitch.isEnabled()) {
-            com.privacyguard.app.vpn.KillSwitch.startMonitoring(this)
-        }
     }
 
     /** Applies setting and rule changes to the running tunnel. */
     private fun watchSettings(settings: SettingsPreferences) {
+        // Retried on failure: a collector that died would leave later changes unapplied.
         scope.launch {
-            RuleSyncBus.version.collect {
+            com.privacyguard.vpn.WorkerGuard.applyEach(RuleSyncBus.version, "rules") {
                 rulesRepo.loadIntoEngine()
                 blockCleartextRuleActive = hasBlockCleartextRule()
             }
@@ -577,12 +572,10 @@ class PrivacyVpnService : VpnService() {
         scope.launch { settings.dohProvider.collect { dnsHandler.dohProvider = it } }
         scope.launch { settings.upstreamDns.collect { dnsHandler.upstreamDns = validUpstream(it) } }
         scope.launch {
-            settings.protectionLevel.collect {
+            com.privacyguard.vpn.WorkerGuard.applyEach(settings.protectionLevel, "protection level") {
                 val level = parseBlockLevel(it)
-                if (level != filterEngine.blockLevel) {
-                    filterEngine.blockLevel = level
-                    reloadBlocklists()
-                }
+                // The level changes only once its lists are loaded (reloadBlocklists).
+                if (level != filterEngine.blockLevel) reloadBlocklists(level)
             }
         }
     }
@@ -595,8 +588,9 @@ class PrivacyVpnService : VpnService() {
     private val blocklistReloadLock = kotlinx.coroutines.sync.Mutex()
     @Volatile private var blocklistVersionLoaded = -1L
 
-    private suspend fun reloadBlocklists() = blocklistReloadLock.withLock {
-        val level = filterEngine.blockLevel
+    /** [newLevel]: a protection level change, set on the engine only once its lists loaded. */
+    private suspend fun reloadBlocklists(newLevel: FilterEngine.BlockLevel? = null) = blocklistReloadLock.withLock {
+        val level = newLevel ?: filterEngine.blockLevel
         val blocked = blocklistRepo.levelListDomains(level) +
             (if (com.privacyguard.core.filter.ProtectionLevels.includesCuratedAdHosts(level)) CuratedAdDomains.all else emptyList())
         val security = blocklistRepo.domainsIn(setOf(com.privacyguard.app.data.repository.BlocklistRepo.CAT_MALWARE))
@@ -607,6 +601,7 @@ class PrivacyVpnService : VpnService() {
             blocklistRepo.domainsIn(setOf(com.privacyguard.app.data.repository.BlocklistRepo.CAT_DOH)),
             blocklistRepo.domainsIn(setOf(com.privacyguard.app.data.repository.BlocklistRepo.CAT_DOH_IP)),
         )
+        filterEngine.blockLevel = level
         runCatching { BlocklistCache.write(this, level.name, blocked, security) }
         Log.i(TAG, "Blocklists loaded: ${domainFilter.size} names at $level")
         // Risk scoring only, not blocking: load it after the tunnel is up. At startup
@@ -1552,7 +1547,6 @@ class PrivacyVpnService : VpnService() {
             runCatching { unregisterReceiver(stopReceiver) }
             receiverRegistered = false
         }
-        com.privacyguard.app.vpn.KillSwitch.stopMonitoring()
         com.privacyguard.app.vpn.KillSwitch.detach()
         if (::tunReader.isInitialized) tunReader.stop()
         if (::sensorWatcher.isInitialized) sensorWatcher.stop()

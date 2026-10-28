@@ -47,8 +47,6 @@
     <string name="notif_ct_title">Certificate Transparency : %1$s</string>
     <string name="notif_ct_tap">%1$s. Touchez pour le consulter dans la boîte des alertes.</string>
     <string name="notif_vpn_down_title">Protection interrompue</string>
-    <string name="notif_vpn_down_blocked">Android bloque toutes les connexions jusqu’au rétablissement de la protection.</string>
-    <string name="notif_vpn_down_open">Le trafic n’est plus filtré. Ouvrez PrivacyGuard pour réactiver la protection.</string>
     <string name="notif_protection_stopped_text">PrivacyGuard s’est arrêté de façon inattendue. Touchez pour relancer la protection.</string>
     <string name="notif_always_on_turned_off_text">« VPN permanent » a été désactivé dans les paramètres Android, donc Android a arrêté PrivacyGuard. Touchez pour réactiver la protection.</string>
     <string name="notif_bg_title">Connexion en arrière-plan bloquée</string>

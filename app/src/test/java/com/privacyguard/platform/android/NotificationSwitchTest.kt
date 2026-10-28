@@ -7,15 +7,15 @@ import java.io.File
 
 /**
  * The Settings "Notifications" switch must silence every alert and summary. Each
- * post function checks it first. Exempt: the VPN drop alert (its own switch) and
- * "Protection stopped" (after the process died, or after Always-on was turned off;
- * postStopped is their shared body); all say that protection is off. Also exempt:
+ * post function checks it first. Exempt: "Protection stopped" (after the process
+ * died, or after Always-on was turned off; postStopped is their shared body); both
+ * say that protection is off. Also exempt:
  * the notice that the user's organisation turned on HTTPS inspection. Muting it
  * would make decryption silent again (security review finding #1).
  */
 class NotificationSwitchTest {
 
-    private val exempt = setOf("postKillSwitchAlert", "postProtectionStopped", "postStopped", "postInspectionEnabledByOrganisation")
+    private val exempt = setOf("postProtectionStopped", "postStopped", "postInspectionEnabledByOrganisation")
 
     @Test
     fun every_alert_checks_the_switch_first() {

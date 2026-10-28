@@ -46,6 +46,26 @@ class LeakDetectorTest {
         assertTrue(detect("""{"hotel": "12345678"}""").isEmpty())
     }
 
+    /** The email regex the scanner replaced; fine as an oracle on short inputs. */
+    private val oldEmailRegex =
+        Regex("""\b([A-Za-z0-9._%+-]+(?:@|%40)[A-Za-z0-9.-]+\.(?!(?:png|jpe?g|gif|webp|svg|js|css)\b)[A-Za-z]{2,})\b""")
+
+    @Test
+    fun `email scanner agrees with the old regex`() {
+        val inputs = listOf(
+            "user=someone%40example.com", "/img/icon@2x.png", "/a/b@c.min.js", "x@y.js", "x@y.JS",
+            "to=me@example.com.png", "to=me@example.jsx", "a@b.", "a@b.c", "@example.com", "a@.com",
+            "me@ex-ample.co.uk/x", "a@b@c.com", "a%40b%40c.org", "(me@example.org)", "_me@example.org",
+            "me@example.org_x", "me@example.org1", "%40example.com", "a@b.com.css", "a@b.cssx", "é@example.com",
+        )
+        val random = java.util.Random(20261028)
+        val alphabet = "ab1._%+-@.4%0jsxpng"
+        val generated = List(3_000) { String(CharArray(random.nextInt(14)) { alphabet[random.nextInt(alphabet.length)] }) }
+        for (s in inputs + generated) {
+            assertEquals(s, oldEmailRegex.containsMatchIn(s), LeakType.EMAIL in detect(s))
+        }
+    }
+
     @Test
     fun `combined detection and encoding round trip`() {
         val leaks = LeakDetector.detect(

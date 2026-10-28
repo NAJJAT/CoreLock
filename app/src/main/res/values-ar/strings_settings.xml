@@ -17,8 +17,6 @@
     <string name="set_kill_switch">مفتاح الإيقاف</string>
     <string name="set_kill_switch_on">يحظر Android حركة البيانات إذا انقطعت الشبكة الافتراضية</string>
     <string name="set_kill_switch_off">متوقف: افتح إعدادات VPN وفعّل «تشغيل دائم» و«حظر الاتصالات دون VPN»</string>
-    <string name="set_vpn_drop_alert">تنبيه انقطاع VPN</string>
-    <string name="set_vpn_drop_alert_desc">ينبّهك فقط عند توقف الحماية أثناء تشغيل PrivacyGuard. لا يعيد تشغيل الحماية ولا يحظر الحركة.</string>
     <string name="set_notifications">الإشعارات</string>
     <string name="set_notifications_desc">كل التنبيهات والملخص الأسبوعي وإشعارات تحديث قوائم الحظر. لتنبيه انقطاع VPN مفتاح خاص به.</string>
     <string name="set_notification_details">عرض التفاصيل في الإشعارات</string>
@@ -115,7 +113,7 @@
     <string name="set_nav_payloads_desc">سجلات حركة HTTPS المعترَضة</string>
     <string name="set_dual_vpn">VPN مزدوج</string>
     <string name="set_dual_enable">تفعيل VPN المزدوج</string>
-    <string name="set_dual_desc">يمرّر اتصالاتك عبر خادمي SOCKS5، فلا يعرف أي منهما هويتك ووجهتك معًا. لا ينقل SOCKS5 إلا حركة TCP؛ انظر أدناه ماذا يعني ذلك.</string>
+    <string name="set_dual_desc">يمرّر اتصالات TCP عبر خادمي SOCKS5، فترى المواقع عنوان الخادم 2 بدلًا من عنوانك. SOCKS5 غير مشفّر: يمكن للخادم 1 رؤية عنوان IP الخاص بك وكل وجهة وبيانات دخولك إلى الخادم 2. يبقى محتوى اتصالات HTTPS مشفّرًا. لا ينقل SOCKS5 إلا حركة TCP؛ انظر أدناه ماذا يعني ذلك.</string>
     <string name="set_hop1">الخادم الأول (الخادم 1)</string>
     <string name="set_hop2">الخادم الثاني (الخادم 2)</string>
     <string name="set_host">المضيف</string>

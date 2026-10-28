@@ -50,10 +50,7 @@ class PiiRedactor(private val budgetMs: Long = DEFAULT_BUDGET_MS) {
             Pattern.compile("\"$field\"\\s*+:\\s*+(\"[^\"]*+\"|\\d++|true|false|null)", Pattern.CASE_INSENSITIVE)
         }
 
-        private fun isLocalChar(c: Char) = c in 'a'..'z' || c in 'A'..'Z' || c in '0'..'9' || c in "._%+-"
-        private fun isDomainChar(c: Char) = c in 'a'..'z' || c in 'A'..'Z' || c in '0'..'9' || c == '.' || c == '-'
         private fun isWordChar(c: Char) = c in 'a'..'z' || c in 'A'..'Z' || c in '0'..'9' || c == '_'
-        private fun isLetter(c: Char) = c in 'a'..'z' || c in 'A'..'Z'
         private fun isTokenChar(c: Char) = isWordChar(c) || c == '-'
     }
 
@@ -122,46 +119,18 @@ class PiiRedactor(private val budgetMs: Long = DEFAULT_BUDGET_MS) {
         return redacted
     }
 
-    /**
-     * local@domain.tld, as `\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b` would
-     * match it, in one pass: from each '@' the local part is read leftwards (never
-     * into an earlier match) and the domain rightwards (up to the next '@').
-     */
+    /** Every address found by [EmailScanner] becomes "[EMAIL]". */
     private fun redactEmails(s: String, deadline: Long): String {
         if ('@' !in s) return s
         val out = StringBuilder(s.length)
         var copied = 0
-        var at = s.indexOf('@')
-        while (at >= 0) {
-            if (System.nanoTime() > deadline) throw OutOfTime()
-            var start = at
-            while (start > copied && isLocalChar(s[start - 1])) start--
-            // The match starts at a word boundary.
-            while (start < at && !(start == 0 || isWordChar(s[start - 1]) != isWordChar(s[start]))) start++
-            var runEnd = at + 1
-            while (runEnd < s.length && isDomainChar(s[runEnd])) runEnd++
-            val end = if (start < at) emailDomainEnd(s, at + 1, runEnd) else -1
-            if (end > 0) {
-                out.append(s, copied, start).append("[EMAIL]")
-                copied = end
-            }
-            at = s.indexOf('@', maxOf(runEnd, at + 1))
+        val finished = EmailScanner.scan(s, deadline) { start, end ->
+            out.append(s, copied, start).append("[EMAIL]")
+            copied = end
+            true
         }
+        if (!finished) throw OutOfTime()
         return out.append(s, copied, s.length).toString()
-    }
-
-    /** End of the longest domain in [from, runEnd) ending in ".letters{2,}" at a word boundary, or -1. */
-    private fun emailDomainEnd(s: String, from: Int, runEnd: Int): Int {
-        var e = runEnd
-        while (e > from + 2) {
-            if (e == s.length || !isWordChar(s[e])) {
-                var l = e
-                while (l > from && isLetter(s[l - 1])) l--
-                if (e - l >= 2 && l - 1 > from && s[l - 1] == '.') return e
-            }
-            e--
-        }
-        return -1
     }
 
     /** eyJ….….… as `\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b`, in one pass. */

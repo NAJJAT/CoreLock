@@ -149,6 +149,10 @@ interface BlocklistDao {
 
     @Query("SELECT COUNT(*) FROM blocklist WHERE source LIKE :prefix || '%'")
     suspend fun countBySourcePrefix(prefix: String): Int
+
+    /** Rows of exactly [source], switched off or not ("Hagezi-Pro" is a prefix of "Hagezi-Pro-mini"). */
+    @Query("SELECT COUNT(*) FROM blocklist WHERE source = :source")
+    suspend fun countBySource(source: String): Int
     
     /**
      * Gets total count

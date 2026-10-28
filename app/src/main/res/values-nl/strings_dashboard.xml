@@ -25,7 +25,7 @@
     <string name="dash_card_kill_switch">Kill switch</string>
     <string name="dash_kill_switch_off_desc">Zet ‘Altijd-aan-VPN’ en ‘Verbindingen zonder VPN blokkeren’ aan</string>
     <string name="dash_status_blocking">Blokkeert</string>
-    <string name="dash_status_alert_only">Alleen melden</string>
+    <string name="dash_status_not_checked">Niet gecontroleerd</string>
     <string name="dash_vpn_live">VPN actief</string>
     <string name="dash_vpn_off">VPN uit</string>
     <string name="dash_card_no_decrypt">Geen ontsleuteling van inhoud</string>
@@ -83,7 +83,6 @@
         <item quantity="one">%d in 24 u</item>
         <item quantity="other">%d in 24 u</item>
     </plurals>
-    <string name="dash_rec_kill_switch">Zet de kill switch aan, zodat er niets lekt als de bescherming wegvalt.</string>
     <plurals name="dash_rec_behavior">
         <item quantity="one">Gedrags-DNA vond %d afwijking bij een app. Nieuwe bestemmingen en uploads op vreemde tijden verdienen een controle.</item>
         <item quantity="other">Gedrags-DNA vond %d afwijkingen bij apps. Nieuwe bestemmingen en uploads op vreemde tijden verdienen een controle.</item>

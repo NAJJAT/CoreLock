@@ -25,7 +25,6 @@ class SettingsPreferences private constructor(context: Context) {
         private const val KEY_VPN_NOTIFICATIONS          = "vpn_notifications"
         private const val KEY_WEEKLY_REPORT              = "weekly_report"
         private const val KEY_KILL_SWITCH_NOTIFICATIONS  = "kill_switch_notifications"
-        private const val KEY_KILL_SWITCH_ENABLED        = "kill_switch_enabled"
         private const val KEY_DOH_ENABLED                = "doh_enabled"
         // Features that send data to a third party are opt-in (README: no external servers).
         private const val KEY_CT_MONITORING_ENABLED      = "ct_monitoring_enabled"
@@ -125,9 +124,6 @@ class SettingsPreferences private constructor(context: Context) {
 
     private val _killSwitchNotifications = MutableStateFlow(prefs.getBoolean(KEY_KILL_SWITCH_NOTIFICATIONS, true))
     val killSwitchNotifications: StateFlow<Boolean> = _killSwitchNotifications.asStateFlow()
-
-    private val _killSwitchEnabled = MutableStateFlow(prefs.getBoolean(KEY_KILL_SWITCH_ENABLED, true))
-    val killSwitchEnabled: StateFlow<Boolean> = _killSwitchEnabled.asStateFlow()
 
     private val _dohEnabled = MutableStateFlow(prefs.getBoolean(KEY_DOH_ENABLED, false))
     val dohEnabled: StateFlow<Boolean> = _dohEnabled.asStateFlow()
@@ -301,11 +297,6 @@ class SettingsPreferences private constructor(context: Context) {
     fun setKillSwitchNotifications(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_KILL_SWITCH_NOTIFICATIONS, enabled).apply()
         _killSwitchNotifications.value = enabled
-    }
-
-    fun setKillSwitchEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_KILL_SWITCH_ENABLED, enabled).apply()
-        _killSwitchEnabled.value = enabled
     }
 
     fun setCtMonitoringEnabled(enabled: Boolean) {

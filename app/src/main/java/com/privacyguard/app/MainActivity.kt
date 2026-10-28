@@ -10,7 +10,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
 import com.privacyguard.app.ui.theme.PrivacyGuardTheme
-import com.privacyguard.app.vpn.KillSwitch
 import com.privacyguard.app.vpn.VpnManager
 import com.privacyguard.app.workers.WeeklyReportWorker
 import com.privacyguard.platform.android.NotificationHelper
@@ -34,11 +33,6 @@ class MainActivity : com.privacyguard.BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val settings = SettingsPreferences.getInstance(this)
-        if (settings.killSwitchEnabled.value) {
-            KillSwitch.enable()
-        } else {
-            KillSwitch.disable()
-        }
         if (settings.weeklyReport.value) {
             WeeklyReportWorker.scheduleWeekly(this)
         }

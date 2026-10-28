@@ -17,8 +17,6 @@
     <string name="set_kill_switch">Kill switch</string>
     <string name="set_kill_switch_on">Android blocks traffic if the VPN drops</string>
     <string name="set_kill_switch_off">Off: open VPN settings, turn on Always-on and Block connections without VPN</string>
-    <string name="set_vpn_drop_alert">VPN drop alert</string>
-    <string name="set_vpn_drop_alert_desc">Only alerts you when protection stops while PrivacyGuard is running. It does not restart protection or block traffic.</string>
     <string name="set_notifications">Notifications</string>
     <string name="set_notifications_desc">Every alert, the weekly summary and blocklist update notices. The VPN drop alert has its own switch.</string>
     <string name="set_notification_details">Show details in notifications</string>
@@ -107,7 +105,7 @@
     <string name="set_nav_payloads_desc">Intercepted HTTPS traffic logs</string>
     <string name="set_dual_vpn">Dual VPN</string>
     <string name="set_dual_enable">Enable Dual VPN</string>
-    <string name="set_dual_desc">Sends your connections through two SOCKS5 servers, so neither server knows both who you are and where you go. SOCKS5 carries TCP only; see below for what that means.</string>
+    <string name="set_dual_desc">Sends your TCP connections through two SOCKS5 servers, so sites see server 2’s address instead of yours. SOCKS5 is not encrypted: server 1 can see your IP, every destination and your server 2 login. The content of HTTPS connections stays encrypted. SOCKS5 carries TCP only; see below for what that means.</string>
     <string name="set_hop1">First hop (server 1)</string>
     <string name="set_hop2">Second hop (server 2)</string>
     <string name="set_host">Host</string>

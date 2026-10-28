@@ -102,6 +102,10 @@ class BlocklistRepo(
         blocklistDao.countBySourcePrefix(prefix)
     }
 
+    suspend fun countBySource(source: String): Int = withContext(Dispatchers.IO) {
+        blocklistDao.countBySource(source)
+    }
+
     suspend fun totalCount(): Int = withContext(Dispatchers.IO) {
         blocklistDao.getSize()
     }

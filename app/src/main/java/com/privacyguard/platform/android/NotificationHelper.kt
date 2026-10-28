@@ -445,47 +445,6 @@ class NotificationHelper(private val baseContext: Context) {
         manager.notify(NOTIFICATION_ID_CT_CERT, notification)
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Kill Switch Alert
-    // ─────────────────────────────────────────────────────────────────────────
-
-    fun postKillSwitchAlert() {
-        val mainActivityClass = try {
-            Class.forName("com.privacyguard.app.MainActivity")
-        } catch (_: ClassNotFoundException) {
-            NotificationHelper::class.java
-        }
-
-        val tapIntent  = Intent(context, mainActivityClass)
-        val pendingTap = PendingIntent.getActivity(
-            context, NOTIFICATION_ID_KILL_SWITCH, tapIntent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-
-        val notification = PrivateNotifications.builder(context, CHANNEL_ALERTS)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
-            .setContentTitle(context.getString(R.string.notif_vpn_down_title))
-            // Only Android's lockdown mode blocks traffic without the tunnel; say which applies.
-            .setContentText(context.getString(
-                if (com.privacyguard.app.vpn.KillSwitch.lockdownActive) R.string.notif_vpn_down_blocked
-                else R.string.notif_vpn_down_open
-            ))
-            .setContentIntent(pendingTap)
-            .setOngoing(true)
-            // Always-on VPN is what restarts protection; this alert only tells.
-            .addAction(0, context.getString(R.string.set_open_vpn_settings), PendingIntent.getActivity(
-                context, NOTIFICATION_ID_KILL_SWITCH + 1,
-                Intent(android.provider.Settings.ACTION_VPN_SETTINGS),
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-            ))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .build()
-
-        manager.notify(NOTIFICATION_ID_KILL_SWITCH, notification)
-    }
-
-    fun cancelKillSwitchAlert() = manager.cancel(NOTIFICATION_ID_KILL_SWITCH)
-
     /**
      * Once, when the organisation's MDM starts HTTPS inspection (ManagedConfigApplier).
      * Not silenced by the Notifications switch: like "protection stopped", it is
@@ -589,7 +548,7 @@ class NotificationHelper(private val baseContext: Context) {
         const val NOTIFICATION_ID_VPN          = 1
         const val NOTIFICATION_ID_ALERT        = 2
         const val NOTIFICATION_ID_REPORT       = 3
-        const val NOTIFICATION_ID_KILL_SWITCH  = 4
+        // 4 was the removed VPN drop alert; not reused.
         const val NOTIFICATION_ID_JA3_THREAT   = 5
         const val NOTIFICATION_ID_CT_CERT      = 6
         const val NOTIFICATION_ID_CLEARTEXT    = 7

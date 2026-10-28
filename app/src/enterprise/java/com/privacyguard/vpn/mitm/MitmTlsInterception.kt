@@ -81,8 +81,10 @@ class MitmTlsInterception(
         }
     }
 
+    // Switched on AND consented to, the rule decryption and the status shown to the
+    // user follow: with consent expired or withdrawn, plain HTTP is not captured either.
     override val isEnabled: Boolean
-        get() = mitmConfig.isEnabled
+        get() = mitmConfig.isEnabled && mitmConfig.isConsentValid()
 
     override val blockQuic: Boolean
         get() = mitmConfig.isEnabled && mitmConfig.blockQuicWhenMitm
@@ -112,9 +114,9 @@ class MitmTlsInterception(
     override fun markPinned(sni: String) = pinningDetector.markAsPinned(sni)
 
     override fun logNotDecrypted(session: Session, sizeBytes: Int) {
+        if (!isEnabled) return
         val sni = session.tlsSni ?: return
         val reason = when {
-            !mitmConfig.isConsentValid() -> "mitm-off"
             pinningDetector.isBypassDomain(sni) -> "bypass"
             pinningDetector.isPinned(session.ownerPackage, sni) -> "pinned"
             else -> "failed"
@@ -255,14 +257,17 @@ class MitmTlsInterception(
     // ── Payload parse + save ─────────────────────────────────────────────────
     private fun processPayload(direction: String, bytes: ByteArray, session: Session) {
         try {
-            if (isPrivacyGuardTraffic(session.ownerUid)) return
+            // Second lock: a message queued before consent ended is not logged or shipped.
+            if (!isEnabled || isPrivacyGuardTraffic(session.ownerUid)) return
 
             val parsed = payloadParser.parse(bytes, direction, session)
             val redacted = payloadParser.redactForExport(parsed)
             // "Redact PII" (on by default, MDM key mitm_redact_pii) applies to the
             // local log as well: credentials and personal data are masked before
             // they reach the database. Off, the inspector shows exactly what left
-            // the phone. Anything leaving the device is always redacted.
+            // the phone. The SIEM copy is always the redacted one, but redactForExport
+            // covers headers and UTF-8 text bodies only: the URL path and query, form
+            // fields the text scanners miss, and binary bodies are shipped as captured.
             val stored = if (mitmConfig.redactPii) redacted else parsed
 
             val headersJson = try {

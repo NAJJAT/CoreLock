@@ -44,8 +44,6 @@
     <string name="notif_ct_title">Certificate Transparency: %1$s</string>
     <string name="notif_ct_tap">%1$s. Tik om het in de meldingen te bekijken.</string>
     <string name="notif_vpn_down_title">Bescherming gestopt</string>
-    <string name="notif_vpn_down_blocked">Android blokkeert alle verbindingen tot de bescherming weer verbonden is.</string>
-    <string name="notif_vpn_down_open">Verkeer wordt niet meer gefilterd. Open PrivacyGuard om de bescherming weer aan te zetten.</string>
     <string name="notif_protection_stopped_text">PrivacyGuard is onverwacht gestopt. Tik om de bescherming opnieuw te starten.</string>
     <string name="notif_always_on_turned_off_text">‘Altijd-aan-VPN’ is uitgezet in de Android-instellingen, dus Android heeft PrivacyGuard gestopt. Tik om de bescherming weer aan te zetten.</string>
     <string name="notif_bg_title">Verbinding op de achtergrond geblokkeerd</string>

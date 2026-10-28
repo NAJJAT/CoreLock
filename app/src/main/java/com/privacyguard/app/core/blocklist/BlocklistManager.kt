@@ -72,7 +72,8 @@ object BlocklistManager {
         try {
             val repo = blocklistRepo(ctx)
             val times = PrefsBlocklistUpdateTimes(ctx)
-            val outcome = refreshDue(times, dueBefore) { updateBlocklistInternal(it, repo) }
+            val rejections = PrefsBlocklistRejections(ctx)
+            val outcome = refreshDue(times, dueBefore) { updateBlocklistInternal(it, repo, rejections) }
             if (outcome.updated.isNotEmpty()) {
                 retireReplacedSources(repo, succeededAtLeastOnce(times))
                 _size.value = repo.totalCount()
@@ -94,7 +95,7 @@ object BlocklistManager {
         val ctx = context ?: return UpdateResult.Failure("Not initialized")
         return try {
             val repo = blocklistRepo(ctx)
-            val result = updateBlocklistInternal(source, repo)
+            val result = updateBlocklistInternal(source, repo, PrefsBlocklistRejections(ctx))
             _size.value = repo.totalCount()
             com.privacyguard.app.data.repository.BlocklistSyncBus.publish()
             result
@@ -185,16 +186,46 @@ object BlocklistManager {
         ConfigDatabase.getInstance(ctx).blocklistToggleDao(),
     )
 
-    private suspend fun updateBlocklistInternal(source: BlocklistSource, repo: BlocklistRepo): UpdateResult {
+    private suspend fun updateBlocklistInternal(
+        source: BlocklistSource,
+        repo: BlocklistRepo,
+        rejections: BlocklistRejections,
+    ): UpdateResult {
         // Streamed and validated line by line (V-10); null also when the list is
         // implausibly large, which a tampered source could use to exhaust memory.
         val domains = downloader.downloadLines(source) { lines -> parseLines(source, lines) }
             ?: return UpdateResult.Failure("Download failed for $source")
+        return storeDownloaded(source, domains, repo, rejections)
+    }
+
+    /**
+     * Replaces the stored list with [domains], unless it has fewer than half of the
+     * stored names (ADR 0011): a broken upstream build or a truncated mirror must not
+     * empty protection. Then the old list stays, the event is kept for Diagnostics,
+     * and the result is a failure so the worker retries. A first download (nothing
+     * stored) is never refused.
+     */
+    internal suspend fun storeDownloaded(
+        source: BlocklistSource,
+        domains: Set<String>,
+        repo: BlocklistRepo,
+        rejections: BlocklistRejections,
+        now: Long = System.currentTimeMillis(),
+    ): UpdateResult {
         if (domains.isEmpty()) return UpdateResult.Failure("No valid domains parsed from $source")
         val (sourceName, category) = sourceMetadata(source)
+        val stored = repo.countBySource(sourceName)
+        if (shrinksTooMuch(stored, domains.size)) {
+            rejections.record(source, stored, domains.size, now)
+            return UpdateResult.Failure("$source rejected: ${domains.size} names, $stored stored")
+        }
         repo.replaceSource(sourceName, category, domains.toList())
         return UpdateResult.Success(domains.size)
     }
+
+    /** Under half of what is stored; Long, so no count can overflow. */
+    internal fun shrinksTooMuch(stored: Int, downloaded: Int): Boolean =
+        stored > 0 && downloaded.toLong() * 2 < stored
 
     /** Distinct valid names of a list, or null past [ListEntryValidator.MAX_ENTRIES_PER_SOURCE]. */
     internal fun parseLines(

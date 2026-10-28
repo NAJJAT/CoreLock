@@ -243,13 +243,20 @@ fun SettingsScreen(
                     SettingUiItem(stringResource(R.string.set_block_quic), stringResource(R.string.set_block_quic_desc), blockQuicOn, Icons.Default.Lock, onClick = {
                         settingsPreferences.setBlockQuic(!blockQuicOn)
                     }),
-                    SettingUiItem(
-                        stringResource(R.string.set_kill_switch),
-                        if (KillSwitch.lockdownActive) stringResource(R.string.set_kill_switch_on)
-                        else stringResource(R.string.set_kill_switch_off),
-                        KillSwitch.lockdownActive, Icons.Default.Lock, onClick = {
-                            KillSwitch.openAlwaysOnSettings(context)
-                        }),
+                    // Android answers only the running VPN: "not checked" is never shown as on or off.
+                    KillSwitch.lockdownStatus.let { lockdown ->
+                        SettingUiItem(
+                            stringResource(R.string.set_kill_switch),
+                            stringResource(when (lockdown) {
+                                KillSwitch.LockdownStatus.ON -> R.string.set_kill_switch_on
+                                KillSwitch.LockdownStatus.OFF -> R.string.set_kill_switch_off
+                                KillSwitch.LockdownStatus.NOT_RUNNING -> R.string.dash_ks_unchecked
+                                KillSwitch.LockdownStatus.UNSUPPORTED -> R.string.diag_lockdown_unknown
+                            }),
+                            lockdown == KillSwitch.LockdownStatus.ON, Icons.Default.Lock, onClick = {
+                                KillSwitch.openAlwaysOnSettings(context)
+                            })
+                    },
                     SettingUiItem(stringResource(R.string.set_auto_restart), stringResource(R.string.set_auto_restart_desc), autoRestart && exactAlarmsAllowed, Icons.Default.Refresh, onClick = {
                         if (autoRestart && exactAlarmsAllowed) {
                             settingsPreferences.setAutoRestart(false)
@@ -258,9 +265,6 @@ fun SettingsScreen(
                             // Ask only now, when the user turns it on and access is missing.
                             if (!exactAlarmsAllowed) showAutoRestartDialog = true
                         }
-                    }),
-                    SettingUiItem(stringResource(R.string.set_vpn_drop_alert), stringResource(R.string.set_vpn_drop_alert_desc), securityState.killSwitch, Icons.Default.Warning, onClick = {
-                        settingsViewModel.toggleKillSwitch(!securityState.killSwitch)
                     }),
                     SettingUiItem(stringResource(R.string.set_notifications), stringResource(R.string.set_notifications_desc), notificationsEnabled, Icons.Default.Notifications, onClick = {
                         settingsPreferences.setNotificationsEnabled(!notificationsEnabled)
@@ -290,8 +294,8 @@ fun SettingsScreen(
                         settingsPreferences.setExternalIpCheckEnabled(!externalIpCheckEnabled)
                     })
                 ),
-                // The drop alert only notifies; Android's Always-on VPN is what keeps
-                // protection on and blocks traffic without it.
+                // Android's Always-on VPN is what keeps protection on and blocks
+                // traffic without it; the app can only point the user there.
                 footer = {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(stringResource(R.string.set_always_on_hint), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)

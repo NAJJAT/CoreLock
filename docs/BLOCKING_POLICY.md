@@ -191,6 +191,9 @@ instead (see above).
 To remove a block you placed on an app: open **Apps**, tap the app, and turn off its
 block.
 
+On Android 7 to 9, a per-app rule (block, background-only block or allow) can
+occasionally apply to the wrong app. Android 10 and newer are not affected.
+
 ## 9. How to report a problem
 
 Please use one of the two forms on GitHub:

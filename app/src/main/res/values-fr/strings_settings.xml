@@ -17,8 +17,6 @@
     <string name="set_kill_switch">Kill switch</string>
     <string name="set_kill_switch_on">Android bloque le trafic si le VPN se coupe</string>
     <string name="set_kill_switch_off">Désactivé : ouvrez les paramètres VPN et activez « VPN permanent » et « Bloquer les connexions sans VPN »</string>
-    <string name="set_vpn_drop_alert">Alerte de coupure du VPN</string>
-    <string name="set_vpn_drop_alert_desc">Vous alerte seulement si la protection s’arrête pendant que PrivacyGuard tourne. Elle ne relance pas la protection et ne bloque pas le trafic.</string>
     <string name="set_notifications">Notifications</string>
     <string name="set_notifications_desc">Toutes les alertes, le résumé hebdomadaire et les avis de mise à jour des listes de blocage. L’alerte de coupure du VPN a son propre interrupteur.</string>
     <string name="set_notification_details">Afficher les détails dans les notifications</string>
@@ -109,7 +107,7 @@
     <string name="set_nav_payloads_desc">Journaux du trafic HTTPS intercepté</string>
     <string name="set_dual_vpn">Double VPN</string>
     <string name="set_dual_enable">Activer le double VPN</string>
-    <string name="set_dual_desc">Fait passer vos connexions par deux serveurs SOCKS5, pour qu’aucun ne sache à la fois qui vous êtes et où vous allez. SOCKS5 ne transporte que le TCP ; voir ci-dessous ce que cela implique.</string>
+    <string name="set_dual_desc">Fait passer vos connexions TCP par deux serveurs SOCKS5 : les sites voient l’adresse du serveur 2 au lieu de la vôtre. SOCKS5 n’est pas chiffré : le serveur 1 peut voir votre IP, chaque destination et vos identifiants du serveur 2. Le contenu des connexions HTTPS reste chiffré. SOCKS5 ne transporte que le TCP ; voir ci-dessous ce que cela implique.</string>
     <string name="set_hop1">Premier serveur (serveur 1)</string>
     <string name="set_hop2">Second serveur (serveur 2)</string>
     <string name="set_host">Hôte</string>

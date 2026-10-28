@@ -54,7 +54,9 @@ PrivacyGuard can also show the content of HTTPS traffic, for apps that allow it.
   encrypted, and PrivacyGuard shows only the app, server, size and time, and says
   why. In practice it mostly reaches some browsers and apps built to allow it.
 - What it captures stays on the phone in the encrypted database, unless an
-  administrator turns on SIEM shipping (always with personal data redacted).
+  administrator turns on SIEM shipping. Personal data is removed from headers
+  and text bodies before shipping, but not yet from web addresses, form data or
+  binary bodies.
 
 ### What leaves the phone
 
@@ -70,7 +72,8 @@ PrivacyGuard can also show the content of HTTPS traffic, for apps that allow it.
 - Only if you turn them on: Certificate Transparency checks (crt.sh) and the
   public-IP check in Diagnostics (api.ipify.org).
 - Only on a company-managed phone, if the administrator turns it on: inspection
-  events (redacted) to the organisation's own SIEM server.
+  events (headers and text bodies redacted; web addresses, form data and binary
+  bodies not yet) to the organisation's own SIEM server.
 
 The app does not check for updates itself. Settings › About shows your version and
 opens this releases page.
@@ -134,6 +137,8 @@ No location, contacts, camera or microphone access.
 - **Per-app rules may miss at DNS level.** Android sends most lookups through its
   own resolver, so the app behind a lookup is often not known; per-app Allow
   rules and ad-SDK exceptions then fall back to the every-app decision.
+- **Per-app rules on Android 7 to 9.** On these versions a per-app rule can
+  occasionally apply to the wrong app. Android 10 and newer are not affected.
 - **Private DNS in hostname mode must be turned off.** With a hostname set
   ("strict"), lookups bypass the filter and fail while the VPN runs. Use "Off" or
   "Automatic". The app warns you on the Home screen and in Diagnostics.

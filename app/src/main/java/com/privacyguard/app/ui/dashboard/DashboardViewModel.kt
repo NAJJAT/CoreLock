@@ -183,18 +183,6 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         _uiState.value = _uiState.value.copy(strictSuggestion = null)
     }
 
-    fun setKillSwitch(enabled: Boolean) {
-        prefs.setKillSwitchEnabled(enabled)
-        if (enabled) {
-            KillSwitch.enable()
-            KillSwitch.startMonitoring(getApplication())
-        } else {
-            KillSwitch.disable()
-            KillSwitch.stopMonitoring()
-        }
-        viewModelScope.launch { refreshFast() }
-    }
-
     private suspend fun refreshSlow() {
         val at = System.currentTimeMillis()
         val weekSince = at - HomeEvidence.WEEK_MS
@@ -331,25 +319,28 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
                 value = plural(R.plurals.dash_ipv6_count, ipv6Sessions),
                 evidence = EvidenceKind.IPV6_24H,
             ),
-            SecurityCardState(
-                kind = CardKind.KILL_SWITCH,
-                title = str(R.string.dash_card_kill_switch),
-                subtitle = if (KillSwitch.lockdownActive) str(R.string.set_kill_switch_on)
-                    else str(R.string.dash_kill_switch_off_desc),
-                // Android only reports lockdown to the running VPN, so off = not checked.
-
-                status = when {
-                    KillSwitch.lockdownActive -> str(R.string.dash_status_blocking)
-                    prefs.killSwitchEnabled.value -> str(R.string.dash_status_alert_only)
-                    else -> str(R.string.diag_off)
-                },
-                severity = if (KillSwitch.lockdownActive) CardSeverity.GOOD else CardSeverity.WARNING,
-                value = when {
-                    !PrivacyVpnService.isRunning -> str(R.string.dash_ks_unchecked)
-                    KillSwitch.lockdownActive -> str(R.string.dash_ks_lockdown_on)
-                    else -> str(R.string.dash_ks_lockdown_off)
-                },
-            ),
+            // Android only reports lockdown to the running VPN: without an answer the
+            // card says "not checked", never "blocking" and never a plain "off".
+            KillSwitch.lockdownStatus.let { lockdown ->
+                SecurityCardState(
+                    kind = CardKind.KILL_SWITCH,
+                    title = str(R.string.dash_card_kill_switch),
+                    subtitle = if (lockdown == KillSwitch.LockdownStatus.ON) str(R.string.set_kill_switch_on)
+                        else str(R.string.dash_kill_switch_off_desc),
+                    status = when (lockdown) {
+                        KillSwitch.LockdownStatus.ON -> str(R.string.dash_status_blocking)
+                        KillSwitch.LockdownStatus.OFF -> str(R.string.diag_off)
+                        else -> str(R.string.dash_status_not_checked)
+                    },
+                    severity = if (lockdown == KillSwitch.LockdownStatus.ON) CardSeverity.GOOD else CardSeverity.WARNING,
+                    value = when (lockdown) {
+                        KillSwitch.LockdownStatus.ON -> str(R.string.dash_ks_lockdown_on)
+                        KillSwitch.LockdownStatus.OFF -> str(R.string.dash_ks_lockdown_off)
+                        KillSwitch.LockdownStatus.NOT_RUNNING -> str(R.string.dash_ks_unchecked)
+                        KillSwitch.LockdownStatus.UNSUPPORTED -> str(R.string.diag_lockdown_unknown)
+                    },
+                )
+            },
             // Read from the inspection setting itself, never assumed: enterprise builds
             // with HTTPS inspection on do decrypt traffic.
             DecryptionCard.of(inspectionActive).let { d ->
@@ -458,9 +449,6 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         strictSuggested: Boolean,
     ): List<String> {
         val notes = mutableListOf<String>()
-        if (cards.any { it.kind == CardKind.KILL_SWITCH && it.severity == CardSeverity.WARNING }) {
-            notes += str(R.string.dash_rec_kill_switch)
-        }
         if (behaviorAlerts > 0) {
             notes += plural(R.plurals.dash_rec_behavior, behaviorAlerts)
         }

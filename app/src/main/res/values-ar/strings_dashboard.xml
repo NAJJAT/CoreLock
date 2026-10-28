@@ -37,7 +37,7 @@
     <string name="dash_card_kill_switch">مفتاح الإيقاف</string>
     <string name="dash_kill_switch_off_desc">فعّل «VPN دائم التشغيل» و«حظر الاتصالات دون VPN»</string>
     <string name="dash_status_blocking">يحظر</string>
-    <string name="dash_status_alert_only">تنبيه فقط</string>
+    <string name="dash_status_not_checked">لم يُفحص</string>
     <string name="dash_vpn_live">VPN يعمل</string>
     <string name="dash_vpn_off">VPN متوقف</string>
     <string name="dash_card_no_decrypt">لا فكّ لتشفير المحتوى</string>
@@ -119,7 +119,6 @@
         <item quantity="many">%d خلال 24 ساعة</item>
         <item quantity="other">%d خلال 24 ساعة</item>
     </plurals>
-    <string name="dash_rec_kill_switch">فعّل مفتاح الإيقاف حتى لا يتسرّب شيء إذا انقطعت الحماية.</string>
     <plurals name="dash_rec_behavior">
         <item quantity="zero">لم ترصد البصمة السلوكية أي انحراف.</item>
         <item quantity="one">رصدت البصمة السلوكية انحرافًا واحدًا لدى تطبيق. تستحق الوجهات الجديدة وعمليات الرفع في أوقات غريبة المراجعة.</item>

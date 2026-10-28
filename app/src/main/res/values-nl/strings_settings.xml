@@ -17,8 +17,6 @@
     <string name="set_kill_switch">Kill switch</string>
     <string name="set_kill_switch_on">Android blokkeert verkeer als de VPN wegvalt</string>
     <string name="set_kill_switch_off">Uit: open de VPN-instellingen en zet ‘Altijd aan’ en ‘Verbindingen zonder VPN blokkeren’ aan</string>
-    <string name="set_vpn_drop_alert">Melding bij VPN-uitval</string>
-    <string name="set_vpn_drop_alert_desc">Waarschuwt alleen als de bescherming stopt terwijl PrivacyGuard draait. Het start de bescherming niet opnieuw en blokkeert geen verkeer.</string>
     <string name="set_notifications">Meldingen</string>
     <string name="set_notifications_desc">Alle waarschuwingen, het weekoverzicht en meldingen over blokkeerlijst-updates. De melding bij uitval van de VPN heeft een eigen schakelaar.</string>
     <string name="set_notification_details">Details in meldingen tonen</string>
@@ -107,7 +105,7 @@
     <string name="set_nav_payloads_desc">Logboeken van onderschept HTTPS-verkeer</string>
     <string name="set_dual_vpn">Dubbele VPN</string>
     <string name="set_dual_enable">Dubbele VPN inschakelen</string>
-    <string name="set_dual_desc">Stuurt je verbindingen via twee SOCKS5-servers, zodat geen van beide weet wie je bent én waar je naartoe gaat. SOCKS5 vervoert alleen TCP; zie hieronder wat dat betekent.</string>
+    <string name="set_dual_desc">Stuurt je TCP-verbindingen via twee SOCKS5-servers, zodat sites het adres van server 2 zien in plaats van het jouwe. SOCKS5 is niet versleuteld: server 1 kan je IP-adres, elke bestemming en je inloggegevens voor server 2 zien. De inhoud van HTTPS-verbindingen blijft versleuteld. SOCKS5 vervoert alleen TCP; zie hieronder wat dat betekent.</string>
     <string name="set_hop1">Eerste server (server 1)</string>
     <string name="set_hop2">Tweede server (server 2)</string>
     <string name="set_host">Host</string>

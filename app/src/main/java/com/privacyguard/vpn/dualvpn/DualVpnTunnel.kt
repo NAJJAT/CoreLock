@@ -12,8 +12,10 @@ import java.net.Socket
  *
  * Traffic path: device → hop1 → hop2 → target
  *
- * hop1 knows who you are (your real IP) but not the target.
- * hop2 knows the target but not your real IP.
+ * SOCKS5 is not encrypted, and the CONNECT to hop2 (with hop2's user name and
+ * password) and to the target both travel through hop1 in the clear: hop1 sees
+ * your real IP, every target and hop2's credentials. hop2 sees the targets, but
+ * not your real IP. Only TLS inside the tunnel protects content.
  */
 object DualVpnTunnel {
 

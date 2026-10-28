@@ -2,6 +2,7 @@ package com.privacyguard.vpn
 
 import android.util.Log
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.flow.collectLatest
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -50,6 +51,34 @@ object WorkerGuard {
         } catch (e: Exception) {
             failures.incrementAndGet()
             Log.e("WorkerGuard", "Task $name failed: ${e.javaClass.simpleName}")
+        }
+    }
+
+    /**
+     * Runs [apply] for every value of [flow] and never lets a failure end the
+     * collection: a failed apply is counted and retried every [retryMs] until it
+     * succeeds or a newer value replaces it. (A plain collect died on its first
+     * exception, so later rule or level changes were saved but never applied.)
+     */
+    suspend fun <T> applyEach(
+        flow: kotlinx.coroutines.flow.Flow<T>,
+        name: String,
+        retryMs: Long = 5_000L,
+        apply: suspend (T) -> Unit,
+    ) {
+        flow.collectLatest { value ->
+            while (true) {
+                try {
+                    apply(value)
+                    return@collectLatest
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    failures.incrementAndGet()
+                    Log.w("WorkerGuard", "Applying $name failed, retrying: ${e.javaClass.simpleName}")
+                    kotlinx.coroutines.delay(retryMs)
+                }
+            }
         }
     }
 }

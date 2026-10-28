@@ -82,7 +82,7 @@ nothing is filtered unless Android's Always-on VPN with lockdown is on.
 | **DNS over HTTPS** | Optional RFC 8484 DoH to Cloudflare, Google or Quad9. Connects to the provider's literal bootstrap address so the DoH host lookup cannot loop through the tunnel. If DoH fails the lookup is answered with *SERVFAIL*; it is never resent as plain DNS. |
 | **Encrypted-DNS bypass guard** | Drops DNS-over-TLS/QUIC and DoH to known resolver IPs from other apps, so they fall back to DNS that the filter can see. |
 | **Filter rules** | Block by domain, IP/CIDR, app or globally, optionally "only in the background". Three protection levels (Minimal, Standard, Strict). When two of your rules conflict, the more specific one wins (one app before every app, an exact name before a wildcard); between equally specific rules, Block wins. Rules apply instantly without restarting the VPN. Hit counters and suggested rules. |
-| **Kill switch** | Uses Android's *Always-on VPN* with *Block connections without VPN* (only Android can block once the tunnel is gone). The card shows "blocking" only when Android reports lockdown; otherwise the VPN drop alert can only notify you (it cannot restart or block). |
+| **Kill switch** | Uses Android's *Always-on VPN* with *Block connections without VPN* (only Android can block once the tunnel is gone). The card shows "blocking" only when Android reports lockdown, and "not checked" while protection is off or before Android 10 (Android tells only the running VPN). There is no in-app kill switch. |
 | **Cleartext / weak TLS** | Detects plain-HTTP connections and weak TLS versions and cipher suites (NULL, EXPORT, RC4, DES/3DES, anonymous). Optional rules block them. |
 | **Network trust** | Scores each network from network-side signs only: open Wi-Fi, captive portal, tampered DNS answers, DNS hijacking, TLS interception. On a low-trust Wi-Fi it suggests Strict mode. |
 | **Dual VPN** | Optional two-hop SOCKS5 chain. Carries every TCP connection, and DNS when DoH is on. QUIC is dropped while it is on so apps use TCP; other UDP goes direct unless "Block UDP outside the chain" is on. |
@@ -523,7 +523,9 @@ SIEM code live in `src/enterprise`, the shared engine in `src/main`.
   and says why. Apps that pin certificates are passed through the same way. In
   practice inspection mostly reaches some browsers and apps built to allow it.
 - **Who can see the content:** it stays on the phone, in the encrypted database,
-  unless an administrator turns on SIEM shipping (always PII-redacted).
+  unless an administrator turns on SIEM shipping. Shipped events have personal
+  data removed from headers and text bodies, but not yet from URL query strings,
+  form data or binary bodies.
 
 ---
 
@@ -541,9 +543,11 @@ SIEM code live in `src/enterprise`, the shared engine in `src/main`.
   - Turning inspection off deletes the signing key and tells the user how to
     remove the installed CA.
 - **PII redaction**: emails, card numbers, phone numbers, JWTs, bearer tokens
-  and sensitive JSON fields. Anything sent to the SIEM is always redacted. The
-  local payload log is redacted too while `mitm_redact_pii` is on (the
-  default); with it off, the inspector stores exactly what left the phone.
+  and sensitive JSON fields, in headers and text bodies. Anything sent to the
+  SIEM is always redacted this way; URL query strings, form data and binary
+  bodies are not redacted yet. The local payload log is redacted the same way
+  while `mitm_redact_pii` is on (the default); with it off, the inspector stores
+  exactly what left the phone.
 - **SIEM shipping** happens automatically once 100 events are queued or a
   minute after the first one, and "Ship now" sends the same queue.
 - **Consent from MDM** (`mitm_consent_given`) is valid for as long as the
@@ -685,6 +689,8 @@ docs/  .github/
   - New fingerprints are accepted silently after an update; that is also when a
     malicious SDK could arrive.
   - QUIC (UDP/443) is not fingerprinted.
+- **Per-app rules on Android 7 to 9.** On these versions a per-app rule can
+  occasionally apply to the wrong app. Android 10 and newer are not affected.
 - **Meta app events** share `graph.facebook.com` with login, so they cannot be
   blocked at DNS without breaking "Continue with Facebook".
 - **"First-party" is judged from hostnames.** A first-party label can include

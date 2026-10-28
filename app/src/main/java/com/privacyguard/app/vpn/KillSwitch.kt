@@ -2,47 +2,48 @@ package com.privacyguard.app.vpn
 
 import android.content.Context
 import android.content.Intent
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import android.net.VpnService
 import android.os.Build
 import android.provider.Settings
-import com.privacyguard.platform.android.NotificationHelper
 
 /**
- * Two separate things live here:
+ * The kill switch is Android's Always-on VPN with "Block connections without VPN".
+ * Only the OS can block traffic once our tunnel is gone, so the app has no switch of
+ * its own: it reports what Android says and opens Android's VPN settings.
  *
- * - The VPN drop alert ([enable]/[startMonitoring]): notifies when the tunnel goes
- *   away while this process is alive. It does not restart protection or block traffic — once our
- *   tunnel is gone, an app cannot stop other apps from using the network.
- * - The real kill switch ([lockdownActive]): Android's Always-on VPN with
- *   "Block connections without VPN". Only the OS can enforce it, so the UI
- *   reports the kill switch as active only when Android says lockdown is on.
+ * (An in-app "VPN drop alert" used to live here. It could not fire when protection
+ * really stopped: it was unregistered before the tunnel closed and died with the
+ * process. Removed rather than kept as a promise it did not keep.)
  */
 object KillSwitch {
 
-    @Volatile private var enabled: Boolean = false
-    private var connectivityManager: ConnectivityManager? = null
-    private var networkCallback: ConnectivityManager.NetworkCallback? = null
-
-    fun isEnabled(): Boolean = enabled
-
     @Volatile private var service: java.lang.ref.WeakReference<VpnService>? = null
 
-    /**
-     * True only when Android itself blocks traffic if the VPN drops (API 29+). Asked
-     * at each read, not cached: the user can switch Always-on and lockdown while we
-     * run, and a cached "on" made the drop alert say "Android is blocking all
-     * connections" right after both were turned off. False without a running service.
-     */
+    /** True only when [lockdownStatus] is [LockdownStatus.ON]. */
     val lockdownActive: Boolean
-        get() {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
-            val s = service?.get() ?: return false
-            return runCatching { s.isAlwaysOn && s.isLockdownEnabled }.getOrDefault(false)
-        }
+        get() = lockdownStatus == LockdownStatus.ON
+
+    /** What the app can say about Android's lockdown: on and off only when Android answered. */
+    enum class LockdownStatus { ON, OFF, NOT_RUNNING, UNSUPPORTED }
+
+    /**
+     * Asked at each read, not cached: the user can switch Always-on and lockdown
+     * while we run. Android answers only the running VPN service (API 29+), so
+     * without one the state is not checked, which is never reported as on or off.
+     */
+    val lockdownStatus: LockdownStatus
+        get() = statusOf(Build.VERSION.SDK_INT, service?.get()?.let { s ->
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) null
+            else runCatching { s.isAlwaysOn && s.isLockdownEnabled }.getOrNull()
+        })
+
+    /** [lockdown] null: no running service to ask, or Android did not answer. */
+    internal fun statusOf(sdk: Int, lockdown: Boolean?): LockdownStatus = when {
+        sdk < Build.VERSION_CODES.Q -> LockdownStatus.UNSUPPORTED
+        lockdown == null -> LockdownStatus.NOT_RUNNING
+        lockdown -> LockdownStatus.ON
+        else -> LockdownStatus.OFF
+    }
 
     /** Call from the running service; isAlwaysOn/isLockdownEnabled only answer for the calling VpnService. */
     fun attach(service: VpnService) {
@@ -58,49 +59,5 @@ object KillSwitch {
         runCatching {
             context.startActivity(Intent(Settings.ACTION_VPN_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
-    }
-
-    fun enable() {
-        enabled = true
-    }
-
-    fun disable() {
-        enabled = false
-    }
-
-    fun startMonitoring(context: Context) {
-        if (networkCallback != null) return
-        val appCtx = context.applicationContext
-        connectivityManager = appCtx.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-
-        val request = NetworkRequest.Builder()
-            .addTransportType(NetworkCapabilities.TRANSPORT_VPN)
-            .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
-            .build()
-
-        val helper = NotificationHelper(appCtx)
-        networkCallback = object : ConnectivityManager.NetworkCallback() {
-            override fun onLost(network: Network) {
-                if (!enabled) return
-                // Alert only. Restarting from here failed anyway (startService from the
-                // background is refused since Android 8); Always-on VPN restarts it.
-                helper.postKillSwitchAlert()
-            }
-
-            override fun onAvailable(network: Network) {
-                helper.cancelKillSwitchAlert()
-            }
-        }
-
-        val cb = networkCallback ?: return
-        connectivityManager?.registerNetworkCallback(request, cb)
-    }
-
-    fun stopMonitoring() {
-        networkCallback?.let { cb ->
-            runCatching { connectivityManager?.unregisterNetworkCallback(cb) }
-            networkCallback = null
-        }
-        connectivityManager = null
     }
 }

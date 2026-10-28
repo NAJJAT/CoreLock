@@ -36,7 +36,6 @@ import com.privacyguard.app.ui.launchWhileObserved
 data class SecuritySettingsState(
     val blockCleartext: Boolean = false,
     val blockWeakTls: Boolean = false,
-    val killSwitch: Boolean = false,
     val posture: SecurityPosture = SecurityPosture(),
 )
 
@@ -161,18 +160,6 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun toggleKillSwitch(enabled: Boolean) {
-        settingsPreferences.setKillSwitchEnabled(enabled)
-        if (enabled) {
-            KillSwitch.enable()
-            if (PrivacyVpnService.isRunning) KillSwitch.startMonitoring(getApplication())
-        } else {
-            KillSwitch.disable()
-            KillSwitch.stopMonitoring()
-        }
-        _securityState.value = _securityState.value.copy(killSwitch = enabled)
-    }
-
     fun clearConnectionData() {
         viewModelScope.launch { com.privacyguard.app.data.repository.LocalDataEraser.eraseAll(getApplication()) }
     }
@@ -211,7 +198,6 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                     it.action == FilterRule.Action.DENY.name &&
                     it.matchEncryption == EncryptionStatus.WEAK_TLS.name
             },
-            killSwitch = settingsPreferences.killSwitchEnabled.value,
         )
     }
 
@@ -237,15 +223,18 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 status = if (PrivacyVpnService.isRunning) DiagnosticStatus.PASS else DiagnosticStatus.WARN,
                 detail = if (PrivacyVpnService.isRunning) str(R.string.diag_vpn_active) else str(R.string.diag_vpn_inactive),
             ),
-            DiagnosticCheck(
-                label = str(R.string.set_kill_switch),
-                status = if (KillSwitch.lockdownActive) DiagnosticStatus.PASS else DiagnosticStatus.WARN,
-                detail = when {
-                    KillSwitch.lockdownActive -> str(R.string.diag_lockdown_on)
-                    Build.VERSION.SDK_INT < Build.VERSION_CODES.Q -> str(R.string.diag_lockdown_unknown)
-                    else -> str(R.string.diag_lockdown_off)
-                },
-            ),
+            KillSwitch.lockdownStatus.let { lockdown ->
+                DiagnosticCheck(
+                    label = str(R.string.set_kill_switch),
+                    status = if (lockdown == KillSwitch.LockdownStatus.ON) DiagnosticStatus.PASS else DiagnosticStatus.WARN,
+                    detail = when (lockdown) {
+                        KillSwitch.LockdownStatus.ON -> str(R.string.diag_lockdown_on)
+                        KillSwitch.LockdownStatus.OFF -> str(R.string.diag_lockdown_off)
+                        KillSwitch.LockdownStatus.NOT_RUNNING -> str(R.string.dash_ks_unchecked)
+                        KillSwitch.LockdownStatus.UNSUPPORTED -> str(R.string.diag_lockdown_unknown)
+                    },
+                )
+            },
             batteryCheck(),
             privateDnsCheck(),
             resolveHostCheck(str(R.string.diag_dns_resolution), "google.com"),

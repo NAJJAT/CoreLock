@@ -4,6 +4,7 @@ import com.privacyguard.core.packet.IpPacket
 import com.privacyguard.core.session.Session
 import com.privacyguard.core.session.SessionKey
 import com.privacyguard.fuzz.Fuzz
+import com.privacyguard.vpn.mitm.LeakDetector
 import com.privacyguard.vpn.mitm.PayloadParser
 import com.privacyguard.vpn.mitm.PiiRedactor
 import org.junit.Assert.assertTrue
@@ -54,6 +55,23 @@ class InspectionDosTest {
             if (ms > 2_000) slow += "$name=${if (ms == Long.MAX_VALUE) ">20s" else "${ms}ms"}"
         }
         assertTrue("ReDoS in PiiRedactor on 64 KB bodies: $slow", slow.isEmpty())
+    }
+
+    /** LeakDetector runs on the same capture worker, on every request URL, header and body. */
+    @Test
+    fun leakDetectorIsLinearOnHostileBodies() {
+        val size = 64 * 1024
+        val cases = mapOf(
+            "email: 'a.' repeated" to "a.".repeat(size / 2),
+            "email: 'a@a.' no TLD" to ("a@" + "a.".repeat(size / 2)),
+            "email: 'a%40a.' no TLD" to ("a%40" + "a.".repeat(size / 2)),
+        )
+        val slow = mutableListOf<String>()
+        for ((name, body) in cases) {
+            val ms = timed("LeakDetector $name (${body.length} chars)", 20_000) { LeakDetector.detect(body) }
+            if (ms > 500) slow += "$name=${if (ms == Long.MAX_VALUE) ">20s" else "${ms}ms"}"
+        }
+        assertTrue("ReDoS in LeakDetector on 64 KB bodies: $slow", slow.isEmpty())
     }
 
     @Test
