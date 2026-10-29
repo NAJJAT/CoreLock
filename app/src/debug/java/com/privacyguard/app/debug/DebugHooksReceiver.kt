@@ -211,8 +211,11 @@ class DebugHooksReceiver : BroadcastReceiver() {
                     delete != null -> { repo.deleteRule(delete); Log.i(TAG, "RULE deleted $delete") }
                     domain != null -> {
                         val allow = intent.getBooleanExtra("allow", true)
+                        // User rules share HIGH_PRIORITY (CLAUDE.md §5.3), as the Rules screen
+                        // creates them; at the default priority a block would lose to any Allow.
                         val base = if (allow) com.privacyguard.core.filter.FilterRule.allowDomain(domain)
-                            else com.privacyguard.core.filter.FilterRule.blockDomain(domain, source = com.privacyguard.core.filter.FilterRule.Source.USER)
+                            else com.privacyguard.core.filter.FilterRule.blockDomain(domain, source = com.privacyguard.core.filter.FilterRule.Source.USER,
+                                priority = com.privacyguard.core.filter.FilterRule.HIGH_PRIORITY)
                         val rule = base.copy(id = "debug-$domain", overridesSecurity = allow && intent.getBooleanExtra("risky", false))
                         repo.upsertRule(rule)
                         Log.i(TAG, "RULE ${rule.id} allow=$allow overridesSecurity=${rule.overridesSecurity}")

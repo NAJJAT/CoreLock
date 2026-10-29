@@ -169,6 +169,7 @@
     <string name="dash_ks_unchecked">Not checked (protection off)</string>
     <string name="dash_ks_lockdown_on">Always-on + block</string>
     <string name="dash_ks_lockdown_off">Not set up</string>
+    <string name="dash_ks_open_vpn_settings">Open VPN settings</string>
     <string name="dash_strict_dismiss_wifi">Not on Wi-Fi</string>
     <string name="dash_strict_shared_note">Android does not tell apps which Wi-Fi you are on without location access, so “Not on Wi-Fi” applies to all Wi-Fi networks.</string>
     <string name="dash_pcap_file">%1$s · %2$s</string>

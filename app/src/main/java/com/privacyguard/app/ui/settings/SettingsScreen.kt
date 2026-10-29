@@ -255,7 +255,9 @@ fun SettingsScreen(
                             }),
                             lockdown == KillSwitch.LockdownStatus.ON, Icons.Default.Lock, onClick = {
                                 KillSwitch.openAlwaysOnSettings(context)
-                            })
+                            },
+                            // Only Android controls lockdown: the subtitle states it, no On/Off chip.
+                            showsToggle = false)
                     },
                     SettingUiItem(stringResource(R.string.set_auto_restart), stringResource(R.string.set_auto_restart_desc), autoRestart && exactAlarmsAllowed, Icons.Default.Refresh, onClick = {
                         if (autoRestart && exactAlarmsAllowed) {

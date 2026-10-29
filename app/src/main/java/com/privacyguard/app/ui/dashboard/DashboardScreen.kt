@@ -312,9 +312,8 @@ fun DashboardScreen(
                 Spacer(modifier = Modifier.height(10.dp))
                 SecuritySystemsGrid(
                     cards = uiState.securityCards,
-                    killSwitchEnabled = KillSwitch.lockdownActive,
                     // Only Android can block traffic once the tunnel is gone; send the user there.
-                    onToggleKillSwitch = { KillSwitch.openAlwaysOnSettings(context) },
+                    onOpenVpnSettings = { KillSwitch.openAlwaysOnSettings(context) },
                     onCardClick = { card ->
                         val evidence = card.evidence
                         when {
@@ -495,8 +494,7 @@ private fun ProtectionLevelPicker(current: String, onSelect: (String) -> Unit) {
 @Composable
 private fun SecuritySystemsGrid(
     cards: List<SecurityCardState>,
-    killSwitchEnabled: Boolean,
-    onToggleKillSwitch: (Boolean) -> Unit,
+    onOpenVpnSettings: () -> Unit,
     onCardClick: (SecurityCardState) -> Unit = {},
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -506,8 +504,7 @@ private fun SecuritySystemsGrid(
                     SecuritySystemCard(
                         card = card,
                         modifier = Modifier.weight(1f),
-                        killSwitchEnabled = killSwitchEnabled,
-                        onToggleKillSwitch = onToggleKillSwitch,
+                        onOpenVpnSettings = onOpenVpnSettings,
                         onCardClick = { onCardClick(card) },
                     )
                 }
@@ -523,8 +520,7 @@ private fun SecuritySystemsGrid(
 private fun SecuritySystemCard(
     card: SecurityCardState,
     modifier: Modifier = Modifier,
-    killSwitchEnabled: Boolean,
-    onToggleKillSwitch: (Boolean) -> Unit,
+    onOpenVpnSettings: () -> Unit,
     onCardClick: () -> Unit = {},
 ) {
     val (tint, bg) = when (card.severity) {
@@ -566,8 +562,12 @@ private fun SecuritySystemCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(card.status.uppercase(), style = MaterialTheme.typography.labelSmall, color = tint)
-            if (card.kind == CardKind.KILL_SWITCH) {
-                PrivacySwitch(checked = killSwitchEnabled, onToggle = { onToggleKillSwitch(!killSwitchEnabled) })
+        }
+        // A status and a way to Android's settings, not a switch: only Android controls
+        // Always-on VPN and its lockdown. On its own line, as the cards are half width.
+        if (card.kind == CardKind.KILL_SWITCH) {
+            androidx.compose.material3.TextButton(onClick = onOpenVpnSettings) {
+                Text(stringResource(R.string.dash_ks_open_vpn_settings))
             }
         }
     }

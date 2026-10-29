@@ -56,6 +56,39 @@ class KillSwitchTest {
         assertFalse(src("app/ui/dashboard/DashboardViewModel.kt").contains("dash_rec_kill_switch"))
     }
 
+    /** The block that follows [marker] in [text], from its first '{' to the matching '}'. */
+    private fun blockAfter(text: String, marker: String): String {
+        val at = text.indexOf(marker)
+        assert(at >= 0) { "marker not found: $marker" }
+        val open = text.indexOf('{', at)
+        var depth = 0
+        for (i in open until text.length) {
+            when (text[i]) {
+                '{' -> depth++
+                '}' -> if (--depth == 0) return text.substring(open, i + 1)
+            }
+        }
+        error("unbalanced block after $marker")
+    }
+
+    /**
+     * A switch says the app controls the setting; only Android does. The Kill Switch is
+     * shown as its status and a way to Android's VPN settings, never as a switch or toggle.
+     */
+    @Test
+    fun no_switch_or_toggle_is_drawn_for_the_kill_switch() {
+        val dashboard = src("app/ui/dashboard/DashboardScreen.kt")
+        for (name in listOf("killSwitchEnabled", "onToggleKillSwitch", "lockdownActive")) {
+            assertFalse("DashboardScreen still has $name", dashboard.contains(name))
+        }
+        val card = blockAfter(dashboard, "if (card.kind == CardKind.KILL_SWITCH)")
+        assertFalse("Kill Switch card draws a switch: $card", card.contains("Switch(") || card.contains("Toggle"))
+
+        val settings = src("app/ui/settings/SettingsScreen.kt")
+        val row = blockAfter(settings, "KillSwitch.lockdownStatus.let")
+        assert(row.contains("showsToggle = false")) { "Kill Switch row shows an On/Off toggle chip: $row" }
+    }
+
     @Test
     fun screens_use_the_three_state_status() {
         for (path in listOf("app/ui/dashboard/DashboardViewModel.kt", "app/ui/settings/SettingsScreen.kt", "app/ui/settings/SettingsViewModel.kt")) {

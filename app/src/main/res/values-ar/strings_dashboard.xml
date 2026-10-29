@@ -220,6 +220,7 @@
     <string name="dash_ks_unchecked">لم يُفحص (الحماية متوقفة)</string>
     <string name="dash_ks_lockdown_on">دائم التشغيل + حظر</string>
     <string name="dash_ks_lockdown_off">غير مُعدّ</string>
+    <string name="dash_ks_open_vpn_settings">فتح إعدادات VPN</string>
     <string name="dash_strict_dismiss_wifi">ليس على Wi-Fi</string>
     <string name="dash_strict_shared_note">لا يُخبر Android التطبيقات بشبكة Wi-Fi التي تتصل بها دون إذن الموقع، لذا ينطبق «ليس على Wi-Fi» على كل شبكات Wi-Fi.</string>
     <string name="dash_pcap_file">%1$s · %2$s</string>
