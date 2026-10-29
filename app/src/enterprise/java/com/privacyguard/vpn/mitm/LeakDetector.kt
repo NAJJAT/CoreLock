@@ -74,7 +74,8 @@ object LeakDetector {
             deadline = System.nanoTime() + PiiRedactor.DEFAULT_BUDGET_MS * 1_000_000,
             rejectTld = { str, start, end -> str.substring(start, end) in ASSET_TLDS },
         ) { _, _ -> found = true; false }
-        // Out of time an address can't be ruled out: report it rather than hide it.
+        // Fail closed (owner's decision, 2026-10-29): out of time, an address can't be
+        // ruled out, so report EMAIL rather than hide a possible leak.
         return found || !finished
     }
 
