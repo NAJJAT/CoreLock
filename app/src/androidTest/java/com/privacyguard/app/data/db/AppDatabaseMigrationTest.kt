@@ -73,7 +73,10 @@ class AppDatabaseMigrationTest {
         }
 
         // Validates the version-6 entities; `rules` is no longer one of them.
-        val db = helper.runMigrationsAndValidate(dbName, 6, true, AppDatabase.MIGRATION_5_6)
+        // validateDroppedTables = false: `rules` is kept on purpose, so a check for
+        // tables outside the schema would fail on the very table this test protects.
+        // That check exists only in room-testing; the app's Room never runs it.
+        val db = helper.runMigrationsAndValidate(dbName, 6, false, AppDatabase.MIGRATION_5_6)
 
         // The user's rules must still be here: LegacyConfigImporter copies them to
         // config.db on its first open and only then drops this table.

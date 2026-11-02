@@ -23,13 +23,14 @@ Gaps found:
 
 1. **No shrink guard.** A list that downloads fine but holds a handful of valid names
    (a broken upstream build, a truncated mirror, an attacker who controls the source)
-   replaces a list of 200,000 names. Only an **empty** result is refused
-   (`BlocklistManager.kt:193`). Protection drops silently.
+   replaced a list of 200,000 names; only an empty result was refused. *Done
+   2026-10-28 (eefd049): `BlocklistManager.storeDownloaded` refuses a download with
+   under half the stored names, see Decision 1 and `BlocklistShrinkGuardTest`.*
 2. **No visible update time.** The success times are stored but no screen shows them
    (no reader under `app/ui`). A user, or a bug report, can't tell whether lists are
    fresh.
-3. **Swallowed errors.** `BlocklistDownloader.kt:66-67` catches every exception and
-   drops it: no count, no reason. CLAUDE.md §6.1 forbids empty catch blocks.
+3. **Swallowed errors.** The list downloader does not record why a download failed,
+   so failures are neither counted nor shown. Planned for 1.0.1 (Decision 3).
 4. **No upstream signature.** HaGeZi and OISD don't sign their lists; integrity rests on
    HTTPS to GitHub, jsDelivr and oisd.nl. This is a limit, not something CoreLock can
    fix alone.
