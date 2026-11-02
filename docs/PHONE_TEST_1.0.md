@@ -183,8 +183,9 @@ screen and keep the higher value. Also measure with the screen off for 60 s.
 ### 13. Battery
 
 After a full day, Android Settings › Battery › Battery usage › PrivacyGuard.
-Write down the percentage. **Fail:** PrivacyGuard is in the top 3, or above 10 % of the
-day's battery. (A proposed limit; adjust it if you have a better reference.)
+Write down the percentage. **Fail:** above 10 % of the day's battery.
+Note: if PrivacyGuard is among the top 3 apps, investigate but do not fail it for that
+alone: Android often charges a VPN app for traffic that belongs to other apps.
 
 ### 14. Mobile data used by PrivacyGuard
 
