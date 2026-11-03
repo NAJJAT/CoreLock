@@ -87,12 +87,16 @@ object ItReportExporter {
             })
         }
         jsonFile.writeText(json.toString(2))
-        exportPdf(pdfFile, privacyScore.score, allowed, blocked.total, anomalies, behavior, backgroundCount, cleartextCount)
+        exportPdf(pdfFile, pdfTitle(context.getString(com.privacyguard.app.R.string.app_name)), privacyScore.score, allowed, blocked.total, anomalies, behavior, backgroundCount, cleartextCount)
         return ItReportFiles(jsonFile, pdfFile)
     }
 
+    /** The PDF's heading; from the app label, so a rename can't leave the old name in reports. */
+    internal fun pdfTitle(appName: String): String = "$appName Share with IT Report"
+
     private fun exportPdf(
         file: File,
+        title: String,
         privacyScore: Int,
         connections: List<ConnectionEntity>,
         blockedTotal: Int,
@@ -108,7 +112,7 @@ object ItReportExporter {
         val titlePaint = Paint().apply { textSize = 20f; isFakeBoldText = true }
         val bodyPaint = Paint().apply { textSize = 12f }
         var y = 40f
-        canvas.drawText("PrivacyGuard Share with IT Report", 36f, y, titlePaint)
+        canvas.drawText(title, 36f, y, titlePaint)
         y += 28f
         canvas.drawText("Privacy Score: $privacyScore/100", 36f, y, bodyPaint)
         y += 20f

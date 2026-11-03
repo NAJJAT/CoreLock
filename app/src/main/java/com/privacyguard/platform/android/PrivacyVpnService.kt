@@ -441,7 +441,7 @@ class PrivacyVpnService : VpnService() {
     private fun openTun(): ParcelFileDescriptor? {
         Log.i(TAG, "Calling Builder().establish() — requesting TUN fd")
         return Builder()
-            .setSession("PrivacyGuard")
+            .setSession(getString(com.privacyguard.app.R.string.app_name)) // the VPN name Android shows
             .addAddress("10.0.0.2", 24)
             .addAddress("fd00:1:fd00:1::2", 64)
             // The tunnel's own address: DnsHandler answers every UDP/53 query and

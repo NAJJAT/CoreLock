@@ -5,7 +5,7 @@
     <string name="lic_title">Licences open source</string>
     <string name="lic_subtitle">La licence de cette app, et celles des logiciels et données qu’elle utilise</string>
     <string name="lic_app_title">Cette app</string>
-    <string name="lic_app_body">PrivacyGuard est un logiciel libre sous licence publique générale GNU, version 3. Vous pouvez le partager et le modifier selon les conditions de cette licence. Il est fourni sans aucune garantie. Le code source est publié ici :</string>
+    <string name="lic_app_body">CoreLock est un logiciel libre sous licence publique générale GNU, version 3. Vous pouvez le partager et le modifier selon les conditions de cette licence. Il est fourni sans aucune garantie. Le code source est publié ici :</string>
     <string name="lic_section_software">Logiciels inclus dans l’app</string>
     <string name="lic_section_downloaded">Listes téléchargées par l’app</string>
     <string name="lic_downloaded_note">Téléchargées auprès de leurs auteurs lors de la mise à jour des listes ; elles ne font pas partie de l’app.</string>

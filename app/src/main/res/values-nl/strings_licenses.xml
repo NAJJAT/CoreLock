@@ -5,7 +5,7 @@
     <string name="lic_title">Opensourcelicenties</string>
     <string name="lic_subtitle">De licentie van deze app, en van de software en gegevens die ze gebruikt</string>
     <string name="lic_app_title">Deze app</string>
-    <string name="lic_app_body">PrivacyGuard is vrije software onder de GNU General Public License, versie 3. Je mag de app onder die voorwaarden delen en aanpassen. Er wordt geen enkele garantie gegeven. De broncode staat hier:</string>
+    <string name="lic_app_body">CoreLock is vrije software onder de GNU General Public License, versie 3. Je mag de app onder die voorwaarden delen en aanpassen. Er wordt geen enkele garantie gegeven. De broncode staat hier:</string>
     <string name="lic_section_software">Software in de app</string>
     <string name="lic_section_downloaded">Lijsten die de app downloadt</string>
     <string name="lic_downloaded_note">Gedownload bij de makers wanneer de lijsten worden vernieuwd; ze maken geen deel uit van de app.</string>

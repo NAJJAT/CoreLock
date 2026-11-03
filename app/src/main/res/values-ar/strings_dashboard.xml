@@ -210,7 +210,7 @@
     <string name="dash_status_off">لا يفكّ التشفير</string>
     <string name="dash_strict_title">التبديل إلى المستوى «صارم» على %1$s؟</string>
     <string name="dash_private_dns_title">سيمنع DNS الخاص عمل DNS</string>
-    <string name="dash_private_dns_body">تم ضبط DNS الخاص على %1$s. يرشّح PrivacyGuard طلبات DNS بنفسه ويحظر DNS عبر TLS، ومع اسم مضيف لـ DNS الخاص لا يعود Android إلى DNS العادي، فتتوقف ترجمة الأسماء ولا تستطيع التطبيقات الاتصال. اضبط DNS الخاص على «تلقائي» أو «إيقاف» (في Samsung: الاتصالات، إعدادات اتصال إضافية، DNS الخاص؛ وفي معظم الهواتف الأخرى: الشبكة والإنترنت).</string>
+    <string name="dash_private_dns_body">تم ضبط DNS الخاص على %1$s. يرشّح CoreLock طلبات DNS بنفسه ويحظر DNS عبر TLS، ومع اسم مضيف لـ DNS الخاص لا يعود Android إلى DNS العادي، فتتوقف ترجمة الأسماء ولا تستطيع التطبيقات الاتصال. اضبط DNS الخاص على «تلقائي» أو «إيقاف» (في Samsung: الاتصالات، إعدادات اتصال إضافية، DNS الخاص؛ وفي معظم الهواتف الأخرى: الشبكة والإنترنت).</string>
     <string name="dash_private_dns_open">فتح إعدادات الشبكة</string>
     <string name="dash_private_dns_start_anyway">التشغيل على أي حال</string>
     <string name="dash_strict_body">انخفضت الثقة في هذه الشبكة إلى %1$d/100. يحظر المستوى «صارم» أيضًا قياسات النظام عن بُعد. لن يتغير شيء إلا إذا اخترت ذلك.</string>
@@ -226,6 +226,6 @@
     <string name="dash_pcap_file">%1$s · %2$s</string>
     <string name="dash_pcap_file_limit">%1$s · %2$s · توقف عند حد 100 ميغابايت</string>
     <string name="dash_inspection_title">فحص HTTPS مفعّل</string>
-    <string name="dash_inspection_body">يفك PrivacyGuard تشفير HTTPS للتطبيقات التي تثق بشهادته، ومعظم التطبيقات لا تثق بها. يمكنك إيقافه من «المحتوى».</string>
-    <string name="dash_inspection_org_body">فعّلته مؤسستك. يفك PrivacyGuard تشفير HTTPS للتطبيقات التي تثق بشهادته، ومعظم التطبيقات لا تثق بها.</string>
+    <string name="dash_inspection_body">يفك CoreLock تشفير HTTPS للتطبيقات التي تثق بشهادته، ومعظم التطبيقات لا تثق بها. يمكنك إيقافه من «المحتوى».</string>
+    <string name="dash_inspection_org_body">فعّلته مؤسستك. يفك CoreLock تشفير HTTPS للتطبيقات التي تثق بشهادته، ومعظم التطبيقات لا تثق بها.</string>
 </resources>

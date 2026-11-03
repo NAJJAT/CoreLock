@@ -5,7 +5,7 @@
     <string name="lic_title">تراخيص المصادر المفتوحة</string>
     <string name="lic_subtitle">ترخيص هذا التطبيق، وتراخيص البرامج والبيانات التي يستخدمها</string>
     <string name="lic_app_title">هذا التطبيق</string>
-    <string name="lic_app_body">PrivacyGuard برنامج حر مرخّص بموجب رخصة جنو العمومية العامة (GNU GPL)، الإصدار 3. يمكنك مشاركته وتعديله وفق شروطها. يأتي دون أي ضمان. الشيفرة المصدرية منشورة هنا:</string>
+    <string name="lic_app_body">CoreLock برنامج حر مرخّص بموجب رخصة جنو العمومية العامة (GNU GPL)، الإصدار 3. يمكنك مشاركته وتعديله وفق شروطها. يأتي دون أي ضمان. الشيفرة المصدرية منشورة هنا:</string>
     <string name="lic_section_software">البرامج المضمّنة في التطبيق</string>
     <string name="lic_section_downloaded">القوائم التي ينزّلها التطبيق</string>
     <string name="lic_downloaded_note">تُنزَّل من مؤلفيها عند تحديث القوائم، وليست جزءًا من التطبيق.</string>

@@ -16,7 +16,7 @@
     <!-- Shown instead of the notification on a locked phone that hides sensitive content. -->
     <string name="notif_public_text">Unlock to see this notification</string>
     <!-- Alerts without "Show details in notifications": the kind of alert only, no app or host. -->
-    <string name="notif_open_for_details">Open PrivacyGuard to see which app and server.</string>
+    <string name="notif_open_for_details">Open CoreLock to see which app and server.</string>
     <string name="notif_kind_malware">Possible malware connection</string>
     <string name="notif_kind_tls_fp">An app is connecting in a new way</string>
     <string name="notif_kind_behavior">Unusual app behavior</string>
@@ -46,8 +46,8 @@
     <string name="notif_ct_title">Certificate Transparency: %1$s</string>
     <string name="notif_ct_tap">%1$s. Tap to review it in the alert inbox.</string>
     <string name="notif_vpn_down_title">Protection stopped</string>
-    <string name="notif_protection_stopped_text">PrivacyGuard stopped unexpectedly. Tap to restart protection.</string>
-    <string name="notif_always_on_turned_off_text">Always-on VPN was turned off in Android settings, so Android stopped PrivacyGuard. Tap to turn protection back on.</string>
+    <string name="notif_protection_stopped_text">CoreLock stopped unexpectedly. Tap to restart protection.</string>
+    <string name="notif_always_on_turned_off_text">Always-on VPN was turned off in Android settings, so Android stopped CoreLock. Tap to turn protection back on.</string>
     <string name="notif_bg_title">Background connection blocked</string>
     <string name="notif_bg_text">%1$s tried to connect to %2$s while in the background</string>
     <string name="notif_blocklist_updated">Blocklist updated</string>
@@ -56,5 +56,5 @@
     <string name="notif_inspection_on">HTTPS inspection on</string>
     <string name="notif_inspection_on_org">HTTPS inspection on, set by your organisation</string>
     <string name="notif_inspection_org_title">Your organisation turned on HTTPS inspection</string>
-    <string name="notif_inspection_org_text">PrivacyGuard can now read the HTTPS traffic of apps that trust its certificate. Most apps do not. Open PrivacyGuard to see what is captured.</string>
+    <string name="notif_inspection_org_text">CoreLock can now read the HTTPS traffic of apps that trust its certificate. Most apps do not. Open CoreLock to see what is captured.</string>
 </resources>

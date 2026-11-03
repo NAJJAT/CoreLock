@@ -428,7 +428,7 @@ private fun CaptureListScreen(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.size(8.dp).clip(CircleShape).background(if (uiState.isEnabled) Ac else TxM))
-                Text("PRIVACYGUARD", color = Ac, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                Text(stringResource(R.string.app_name).uppercase(java.util.Locale.ROOT), color = Ac, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
                 Surface(color = AcDim, shape = RoundedCornerShape(5.dp), border = BorderStroke(1.dp, Ac.copy(alpha = 0.3f))) {
                     Text(stringResource(R.string.mitm_badge_payload).uppercase(), Modifier.padding(horizontal = 7.dp, vertical = 2.dp), color = Ac, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 }
