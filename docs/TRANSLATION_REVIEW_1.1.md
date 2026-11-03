@@ -51,7 +51,7 @@ screens of Phases 3 to 6 (Home, Activity, Apps, Settings).
 | `ui_level_strict_desc` | Blocks more. Some apps or sites may break. | يحظر أكثر. قد تتعطل بعض التطبيقات أو المواقع. | Bloque davantage. Certaines applis ou certains sites peuvent ne plus marcher. | Blokkeert meer. Sommige apps of sites werken misschien niet meer. |
 | `ui_blocked_today` | Blocked today | المحظور اليوم | Bloqués aujourd'hui | Vandaag geblokkeerd |
 | `ui_something_not_working` | Something not working? | هل هناك شيء لا يعمل؟ | Quelque chose ne marche pas ? | Werkt er iets niet? |
-| `ui_attention_private_dns` | Private DNS is on. Apps can skip CoreLock. | DNS الخاص مفعّل. يمكن للتطبيقات تجاوز CoreLock. | Le DNS privé est activé. Des applis peuvent contourner CoreLock. | Privé-DNS staat aan. Apps kunnen CoreLock omzeilen. |
+| `ui_attention_private_dns` | Private DNS is on. Websites and apps may not load until you turn it off. | DNS الخاص مفعّل. قد لا تفتح المواقع والتطبيقات حتى توقفه. | Le DNS privé est activé. Sites et applis risquent de ne pas se charger tant qu'il reste activé. | Privé-DNS staat aan. Websites en apps laden misschien niet tot je het uitzet. |
 | `ui_filter_blocked` | Blocked | المحظور | Bloqués | Geblokkeerd |
 | `ui_filter_all` | All | الكل | Tout | Alles |
 | `ui_reason_ads` | Blocked · Ads and trackers list | محظور · قائمة الإعلانات وأدوات التتبع | Bloqué · Liste pubs et traqueurs | Geblokkeerd · Lijst met advertenties en trackers |
@@ -92,3 +92,29 @@ screens of Phases 3 to 6 (Home, Activity, Apps, Settings).
 | `ui_what_corelock_cant` | What CoreLock can and can't do | ما يستطيعه CoreLock وما لا يستطيعه | Ce que CoreLock peut faire ou non | Wat CoreLock wel en niet kan |
 | `ui_what_corelock_cant_body` | CoreLock blocks ads, trackers and malware for the apps on this phone. It can't block ads inside YouTube, Instagram, Snapchat, TikTok or Facebook, because they come from the same servers as the videos and posts. | يحظر CoreLock الإعلانات وأدوات التتبع والبرامج الضارة للتطبيقات على هذا الهاتف. لا يستطيع حظر الإعلانات داخل YouTube وInstagram وSnapchat وTikTok وFacebook، لأنها تأتي من الخوادم نفسها التي تأتي منها المقاطع والمنشورات. | CoreLock bloque les pubs, les traqueurs et les logiciels malveillants pour les applis de ce téléphone. Il ne peut pas bloquer les pubs dans YouTube, Instagram, Snapchat, TikTok ou Facebook, car elles viennent des mêmes serveurs que les vidéos et les publications. | CoreLock blokkeert advertenties, trackers en malware voor de apps op deze telefoon. Het kan geen advertenties blokkeren in YouTube, Instagram, Snapchat, TikTok of Facebook, omdat die van dezelfde servers komen als de video's en berichten. |
 | `ui_blocked_today_n` | one: %d blocked today<br>other: %d blocked today | zero: لم يُحظر شيء اليوم<br>one: حُظر اتصال واحد اليوم<br>two: حُظر اتصالان اليوم<br>few: حُظرت %d اتصالات اليوم<br>many: حُظر %d اتصالًا اليوم<br>other: حُظر %d اتصال اليوم | one: %d bloqué aujourd'hui<br>many: %d bloqués aujourd'hui<br>other: %d bloqués aujourd'hui | one: %d vandaag geblokkeerd<br>other: %d vandaag geblokkeerd |
+
+## Phase 3: Home (`res/values*/strings_ui.xml`, 12 new strings, 1 changed)
+
+- **Changed:** `ui_attention_private_dns` (row in the Phase 2 table above). Phase 2 said
+  "Apps can skip CoreLock". That is not what happens: CoreLock drops DNS over TLS, and
+  with a Private DNS hostname Android does not fall back, so names stop resolving
+  (`dash_private_dns_body`). The new text says websites and apps may not load.
+- The protection level names reuse the reviewed 1.0 strings `set_level_minimal`,
+  `set_level_standard` and `set_level_strict`; nothing new to check there.
+- `ui_whats_new` and its two buttons are hidden until Phase 6 moves Statistics and HTTPS
+  inspection (the text would not be true before), but they can be reviewed now.
+
+| String | English | Arabic | French | Dutch |
+|---|---|---|---|---|
+| `ui_home_stopped_sub` | It stopped without you turning it off. Turn it on again. | توقفت الحماية دون أن توقفها أنت. شغّلها مرة أخرى. | Elle s'est arrêtée sans que vous l'ayez désactivée. Réactivez-la. | De bescherming stopte zonder dat je die uitzette. Zet haar weer aan. |
+| `ui_couldnt_load` | Couldn't load | تعذّر التحميل | Chargement impossible | Kon niet laden |
+| `ui_attention_usage_access` | Blocking apps in the background needs Usage Access. | حظر التطبيقات في الخلفية يحتاج إلى إذن الوصول إلى بيانات الاستخدام. | Bloquer des applis en arrière-plan nécessite l'accès aux données d'utilisation. | Apps op de achtergrond blokkeren heeft toegang tot gebruiksgegevens nodig. |
+| `ui_attention_battery_restricted` | Battery use is restricted, so Android can stop CoreLock. | استخدام البطارية مقيّد، لذلك قد يوقف Android تطبيق CoreLock. | L'utilisation de la batterie est limitée : Android peut arrêter CoreLock. | Batterijgebruik is beperkt, dus Android kan CoreLock stoppen. |
+| `ui_attention_battery_optimized` | Some phones stop CoreLock to save battery. Let it run in the background. | بعض الهواتف توقف CoreLock لتوفير البطارية. اسمح له بالعمل في الخلفية. | Certains téléphones arrêtent CoreLock pour économiser la batterie. Autorisez-le à fonctionner en arrière-plan. | Sommige telefoons stoppen CoreLock om batterij te sparen. Laat het op de achtergrond werken. |
+| `ui_attention_alert` | New alert: %1$s | تنبيه جديد: %1$s | Nouvelle alerte : %1$s | Nieuwe melding: %1$s |
+| `ui_open_alerts` | Open alerts | افتح التنبيهات | Ouvrir les alertes | Meldingen openen |
+| `ui_whats_new` | Some things moved. Statistics and HTTPS inspection are now in Settings › Advanced. | تغيّرت أماكن بعض الأشياء. الإحصاءات وفحص HTTPS موجودة الآن في الإعدادات › متقدم. | Certaines choses ont changé de place. Les statistiques et l'inspection HTTPS sont maintenant dans Paramètres › Avancé. | Sommige dingen zijn verplaatst. Statistieken en HTTPS-inspectie staan nu in Instellingen › Geavanceerd. |
+| `ui_open_statistics` | Open Statistics | افتح الإحصاءات | Ouvrir les statistiques | Statistieken openen |
+| `ui_open_https_inspection` | Open HTTPS inspection | افتح فحص HTTPS | Ouvrir l'inspection HTTPS | HTTPS-inspectie openen |
+| `ui_home_security_details` | Security details | تفاصيل الأمان | Détails de sécurité | Beveiligingsdetails |
+| `ui_home_security_details_sub` | Alerts, security checks and reports | التنبيهات وفحوص الأمان والتقارير | Alertes, contrôles de sécurité et rapports | Meldingen, beveiligingscontroles en rapporten |

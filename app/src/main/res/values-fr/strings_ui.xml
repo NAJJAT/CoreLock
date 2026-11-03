@@ -36,7 +36,21 @@
     <!-- Home -->
     <string name="ui_blocked_today">Bloqués aujourd\'hui</string>
     <string name="ui_something_not_working">Quelque chose ne marche pas ?</string>
-    <string name="ui_attention_private_dns">Le DNS privé est activé. Des applis peuvent contourner CoreLock.</string>
+    <string name="ui_attention_private_dns">Le DNS privé est activé. Sites et applis risquent de ne pas se charger tant qu\'il reste activé.</string>
+
+    <!-- Home, Phase 3 (DESIGN_SPEC_1.1.md §6.1) -->
+    <string name="ui_home_stopped_sub">Elle s\'est arrêtée sans que vous l\'ayez désactivée. Réactivez-la.</string>
+    <string name="ui_couldnt_load">Chargement impossible</string>
+    <string name="ui_attention_usage_access">Bloquer des applis en arrière-plan nécessite l\'accès aux données d\'utilisation.</string>
+    <string name="ui_attention_battery_restricted">L\'utilisation de la batterie est limitée : Android peut arrêter CoreLock.</string>
+    <string name="ui_attention_battery_optimized">Certains téléphones arrêtent CoreLock pour économiser la batterie. Autorisez-le à fonctionner en arrière-plan.</string>
+    <string name="ui_attention_alert">Nouvelle alerte : %1$s</string>
+    <string name="ui_open_alerts">Ouvrir les alertes</string>
+    <string name="ui_whats_new">Certaines choses ont changé de place. Les statistiques et l\'inspection HTTPS sont maintenant dans Paramètres › Avancé.</string>
+    <string name="ui_open_statistics">Ouvrir les statistiques</string>
+    <string name="ui_open_https_inspection">Ouvrir l\'inspection HTTPS</string>
+    <string name="ui_home_security_details">Détails de sécurité</string>
+    <string name="ui_home_security_details_sub">Alertes, contrôles de sécurité et rapports</string>
 
     <!-- Activity -->
     <string name="ui_filter_blocked">Bloqués</string>

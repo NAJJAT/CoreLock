@@ -2,6 +2,7 @@ package com.privacyguard.app.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -45,6 +46,8 @@ fun AttentionBanner(
     modifier: Modifier = Modifier,
     tone: BannerTone = BannerTone.ATTENTION,
     onDismiss: (() -> Unit)? = null,
+    /** A second verb, only where the card links to two places ("Some things moved"). */
+    secondaryAction: Pair<String, () -> Unit>? = null,
 ) {
     val colors = CoreLockTheme.colors
     val (container, content, icon) = when (tone) {
@@ -68,11 +71,8 @@ fun AttentionBanner(
             Spacer(Modifier.width(CoreLockTheme.spacing.m))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(CoreLockTheme.spacing.xs)) {
                 Text(message, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = CoreLockTheme.spacing.xs))
-                TextButton(
-                    onClick = onAction,
-                    colors = ButtonDefaults.textButtonColors(contentColor = content),
-                    modifier = Modifier.align(Alignment.Start).heightIn(min = CoreLockTheme.spacing.minTouchTarget),
-                ) { Text(actionLabel, style = MaterialTheme.typography.labelLarge) }
+                BannerAction(actionLabel, onAction, content)
+                secondaryAction?.let { (label, action) -> BannerAction(label, action, content) }
             }
             if (onDismiss != null) {
                 IconButton(onClick = onDismiss, modifier = Modifier.size(CoreLockTheme.spacing.minTouchTarget)) {
@@ -102,4 +102,14 @@ private fun AttentionBannerPreview() = PreviewSurface {
             onDismiss = {},
         )
     }
+}
+
+/** Stacked, not side by side: two verbs in French or Dutch at 200 % don't fit one line. */
+@Composable
+private fun ColumnScope.BannerAction(label: String, onClick: () -> Unit, color: androidx.compose.ui.graphics.Color) {
+    TextButton(
+        onClick = onClick,
+        colors = ButtonDefaults.textButtonColors(contentColor = color),
+        modifier = Modifier.align(Alignment.Start).heightIn(min = CoreLockTheme.spacing.minTouchTarget),
+    ) { Text(label, style = MaterialTheme.typography.labelLarge) }
 }

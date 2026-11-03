@@ -37,7 +37,21 @@
     <!-- Home -->
     <string name="ui_blocked_today">Blocked today</string>
     <string name="ui_something_not_working">Something not working?</string>
-    <string name="ui_attention_private_dns">Private DNS is on. Apps can skip CoreLock.</string>
+    <string name="ui_attention_private_dns">Private DNS is on. Websites and apps may not load until you turn it off.</string>
+
+    <!-- Home, Phase 3 (DESIGN_SPEC_1.1.md §6.1) -->
+    <string name="ui_home_stopped_sub">It stopped without you turning it off. Turn it on again.</string>
+    <string name="ui_couldnt_load">Couldn\'t load</string>
+    <string name="ui_attention_usage_access">Blocking apps in the background needs Usage Access.</string>
+    <string name="ui_attention_battery_restricted">Battery use is restricted, so Android can stop CoreLock.</string>
+    <string name="ui_attention_battery_optimized">Some phones stop CoreLock to save battery. Let it run in the background.</string>
+    <string name="ui_attention_alert">New alert: %1$s</string>
+    <string name="ui_open_alerts">Open alerts</string>
+    <string name="ui_whats_new">Some things moved. Statistics and HTTPS inspection are now in Settings › Advanced.</string>
+    <string name="ui_open_statistics">Open Statistics</string>
+    <string name="ui_open_https_inspection">Open HTTPS inspection</string>
+    <string name="ui_home_security_details">Security details</string>
+    <string name="ui_home_security_details_sub">Alerts, security checks and reports</string>
 
     <!-- Activity -->
     <string name="ui_filter_blocked">Blocked</string>

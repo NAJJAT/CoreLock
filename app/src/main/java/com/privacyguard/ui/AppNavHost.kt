@@ -173,6 +173,20 @@ fun AppNavHost(
             }
 
             composable("dashboard") {
+                com.privacyguard.app.ui.home.HomeScreen(
+                    onRequestVpn = onRequestVpn,
+                    // Phase 4 replaces this with Activity › Blocked (a list since midnight, like the count).
+                    onOpenBlocked = { navController.navigate("connections") { launchSingleTop = true } },
+                    onOpenAlerts = { navController.navigate("alerts") },
+                    onOpenStatistics = { navController.navigate("statistics") { launchSingleTop = true } },
+                    onOpenPayloads = { navController.navigate("payloads") { launchSingleTop = true } },
+                    onOpenSecurityDetails = { navController.navigate("securityOverview") },
+                )
+            }
+
+            // TEMPORARY (Phase 3 → 6): the 1.0 Home, whole, until its cards move to
+            // Settings › Advanced › Analysis (DESIGN_SPEC_1.1.md §5.2).
+            composable("securityOverview") {
                 DashboardScreen(
                     onRequestVpn = onRequestVpn,
                     onOpenSettings = { navController.navigate("settings") },

@@ -178,6 +178,15 @@ class PrivacyVpnService : VpnService() {
         private val _isRunningFlow = MutableStateFlow(false)
         val isRunningFlow: StateFlow<Boolean> = _isRunningFlow.asStateFlow()
 
+        /**
+         * What Home shows (DESIGN_SPEC_1.1.md §6.1): starting, running or stopped, read at
+         * the first frame so the status never flashes "off" while protection is on.
+         * STOPPED is published only after BootReceiver.markVpnStopped, so a stop the user
+         * asked for is never mistaken for an unexpected one.
+         */
+        private val _state = MutableStateFlow(State.STOPPED)
+        val state: StateFlow<State> = _state.asStateFlow()
+
         @Volatile var isRunning = false
             private set
 
@@ -197,6 +206,9 @@ class PrivacyVpnService : VpnService() {
         fun startIntent(ctx: Context) = Intent(ctx, PrivacyVpnService::class.java)
         fun stopIntent(ctx: Context) = Intent(ctx, PrivacyVpnService::class.java).also { it.action = ACTION_STOP }
     }
+
+    /** Published as [state]; see there. */
+    enum class State { STOPPED, STARTING, RUNNING }
 
     override fun onCreate() {
         super.onCreate()
@@ -293,6 +305,7 @@ class PrivacyVpnService : VpnService() {
         watcher.bind()
         keepBackupArmed()
         notifHelper.cancelProtectionStopped()
+        _state.value = State.STARTING
         startJob = scope.launch {
             try {
                 startVpnInternal()
@@ -418,6 +431,7 @@ class PrivacyVpnService : VpnService() {
             isRunning = true
             running = this
             _isRunningFlow.value = true
+            _state.value = State.RUNNING
         }
         // Blocks from before a restart still fall in the last 24 h.
         scheduleBlockCountRefresh()
@@ -1528,6 +1542,7 @@ class PrivacyVpnService : VpnService() {
         isRunning = false
         running = null
         _isRunningFlow.value = false
+        _state.value = State.STOPPED
         // Nothing passes through the tunnel any more; an open capture would only grow stale.
         com.privacyguard.app.core.pcap.PcapWriter.stopCapture()
         if (::ctMonitor.isInitialized) ctMonitor.stop()

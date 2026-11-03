@@ -36,7 +36,21 @@
     <!-- Home -->
     <string name="ui_blocked_today">Vandaag geblokkeerd</string>
     <string name="ui_something_not_working">Werkt er iets niet?</string>
-    <string name="ui_attention_private_dns">Privé-DNS staat aan. Apps kunnen CoreLock omzeilen.</string>
+    <string name="ui_attention_private_dns">Privé-DNS staat aan. Websites en apps laden misschien niet tot je het uitzet.</string>
+
+    <!-- Home, Phase 3 (DESIGN_SPEC_1.1.md §6.1) -->
+    <string name="ui_home_stopped_sub">De bescherming stopte zonder dat je die uitzette. Zet haar weer aan.</string>
+    <string name="ui_couldnt_load">Kon niet laden</string>
+    <string name="ui_attention_usage_access">Apps op de achtergrond blokkeren heeft toegang tot gebruiksgegevens nodig.</string>
+    <string name="ui_attention_battery_restricted">Batterijgebruik is beperkt, dus Android kan CoreLock stoppen.</string>
+    <string name="ui_attention_battery_optimized">Sommige telefoons stoppen CoreLock om batterij te sparen. Laat het op de achtergrond werken.</string>
+    <string name="ui_attention_alert">Nieuwe melding: %1$s</string>
+    <string name="ui_open_alerts">Meldingen openen</string>
+    <string name="ui_whats_new">Sommige dingen zijn verplaatst. Statistieken en HTTPS-inspectie staan nu in Instellingen › Geavanceerd.</string>
+    <string name="ui_open_statistics">Statistieken openen</string>
+    <string name="ui_open_https_inspection">HTTPS-inspectie openen</string>
+    <string name="ui_home_security_details">Beveiligingsdetails</string>
+    <string name="ui_home_security_details_sub">Meldingen, beveiligingscontroles en rapporten</string>
 
     <!-- Activity -->
     <string name="ui_filter_blocked">Geblokkeerd</string>

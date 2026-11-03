@@ -36,7 +36,21 @@
     <!-- Home -->
     <string name="ui_blocked_today">المحظور اليوم</string>
     <string name="ui_something_not_working">هل هناك شيء لا يعمل؟</string>
-    <string name="ui_attention_private_dns">‏DNS الخاص مفعّل. يمكن للتطبيقات تجاوز CoreLock.</string>
+    <string name="ui_attention_private_dns">‏DNS الخاص مفعّل. قد لا تفتح المواقع والتطبيقات حتى توقفه.</string>
+
+    <!-- Home, Phase 3 (DESIGN_SPEC_1.1.md §6.1) -->
+    <string name="ui_home_stopped_sub">توقفت الحماية دون أن توقفها أنت. شغّلها مرة أخرى.</string>
+    <string name="ui_couldnt_load">تعذّر التحميل</string>
+    <string name="ui_attention_usage_access">حظر التطبيقات في الخلفية يحتاج إلى إذن الوصول إلى بيانات الاستخدام.</string>
+    <string name="ui_attention_battery_restricted">استخدام البطارية مقيّد، لذلك قد يوقف Android تطبيق CoreLock.</string>
+    <string name="ui_attention_battery_optimized">بعض الهواتف توقف CoreLock لتوفير البطارية. اسمح له بالعمل في الخلفية.</string>
+    <string name="ui_attention_alert">تنبيه جديد: %1$s</string>
+    <string name="ui_open_alerts">افتح التنبيهات</string>
+    <string name="ui_whats_new">تغيّرت أماكن بعض الأشياء. الإحصاءات وفحص HTTPS موجودة الآن في الإعدادات › متقدم.</string>
+    <string name="ui_open_statistics">افتح الإحصاءات</string>
+    <string name="ui_open_https_inspection">افتح فحص HTTPS</string>
+    <string name="ui_home_security_details">تفاصيل الأمان</string>
+    <string name="ui_home_security_details_sub">التنبيهات وفحوص الأمان والتقارير</string>
 
     <!-- Activity -->
     <string name="ui_filter_blocked">المحظور</string>

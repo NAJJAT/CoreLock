@@ -6,7 +6,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.privacyguard.app.core.blocklist.BlocklistManager
 import com.privacyguard.app.core.behavior.BehaviorDnaAnalyzer
-import com.privacyguard.app.core.network.NetworkTrustAnalyzer
 import com.privacyguard.app.core.pcap.PcapWriter
 import com.privacyguard.app.core.privacy.PrivacyScoreBreakdown
 import com.privacyguard.app.core.privacy.PrivacyScoreCalculator
@@ -14,7 +13,6 @@ import com.privacyguard.app.core.stats.StatsManager
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.db.ConnectionEntity
 import com.privacyguard.app.data.db.DnsAnomalyEntity
-import com.privacyguard.app.data.db.NetworkTrustEntity
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
 import com.privacyguard.app.data.repository.MetadataRepo
 import com.privacyguard.app.ui.components.formatBytes
@@ -193,21 +191,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         val behaviorFindings = evidence.behaviorFindings(at)
         val behaviorAlerts = behaviorFindings.size
 
-        val trustSummary = NetworkTrustAnalyzer.summarize(getApplication(), weekAnomalies)
-        db.networkTrustDao().upsert(
-            NetworkTrustEntity(
-                networkKey = trustSummary.networkKey,
-                networkLabel = trustSummary.networkLabel,
-                trustScore = trustSummary.score,
-                trustLevel = trustSummary.level,
-                openWifi = trustSummary.openWifi,
-                captivePortal = trustSummary.captivePortal,
-                tamperedAnswers = trustSummary.tamperedAnswers,
-                dnsHijacked = trustSummary.dnsHijacked,
-                tlsIntercepted = trustSummary.tlsIntercepted,
-                lastSeen = at,
-            )
-        )
+        val trustSummary = com.privacyguard.app.core.network.NetworkTrustRecorder.record(getApplication(), db, weekAnomalies, at)
         // Never change the level for the user: only suggest it.
         val strictSuggestion = StrictSuggestion.of(trustSummary, prefs.protectionLevel.value, prefs.strictSuggestionDismissed.value)
         val inspectionActive = com.privacyguard.vpn.interception.TlsInterceptionFactory.isInspectionActive(getApplication())
