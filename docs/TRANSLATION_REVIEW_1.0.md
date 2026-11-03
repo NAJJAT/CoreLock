@@ -8,6 +8,10 @@ quantity form on its own line (Arabic uses zero/one/two/few/many/other).
 The `enterprise` sections are part of the released app too (since 2026-10-23 it is
 the only version), so check them as well.
 
+The app is now called CoreLock (2026-11-03). Rows added before that date show the text
+as it was reviewed, with the old name PrivacyGuard; the last section lists the renamed
+strings with their current text.
+
 ### main / values-ar (53 to check)
 
 | String | | English | Translation |

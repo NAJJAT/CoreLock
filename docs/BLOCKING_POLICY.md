@@ -1,7 +1,7 @@
 # Blocking policy
 
 What CoreLock blocks, what it leaves alone on purpose, what it cannot block, and how
-to report a mistake. On the phone the app is called **PrivacyGuard**.
+to report a mistake.
 
 This page describes version 1.0.0. For the technical detail behind it, see
 [HOW_IT_WORKS.md](HOW_IT_WORKS.md).

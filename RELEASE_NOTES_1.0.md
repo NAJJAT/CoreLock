@@ -1,4 +1,4 @@
-# PrivacyGuard 1.0.0
+# CoreLock 1.0.0
 
 First public release. One APK for Android 7.0 and newer (ARM phones, 64- and
 32-bit), published only on GitHub Releases. No root, no account, no backend:
@@ -6,10 +6,10 @@ analysis runs on the phone.
 
 ## What it does
 
-PrivacyGuard runs a **local VPN** on your phone. All traffic passes through it, so
+CoreLock runs a **local VPN** on your phone. All traffic passes through it, so
 the app can show, per app, which servers and companies it talks to, how much, and
 when (screen on or off, app open or in the background), and block what you don't
-want. Nothing is sent to the makers of PrivacyGuard. It comes in English, Dutch,
+want. Nothing is sent to the makers of CoreLock. It comes in English, Dutch,
 French and Arabic.
 
 Blocking works in four layers:
@@ -38,7 +38,7 @@ rules conflict, the more specific one wins, and Block wins a tie.
 
 ### HTTPS inspection (optional, off by default)
 
-PrivacyGuard can also show the content of HTTPS traffic, for apps that allow it.
+CoreLock can also show the content of HTTPS traffic, for apps that allow it.
 
 - **Off by default.** It only starts after you turn it on and confirm a consent
   screen, and after you install the app's certificate in Android's settings
@@ -51,7 +51,7 @@ PrivacyGuard can also show the content of HTTPS traffic, for apps that allow it.
   notification the moment it does.
 - **Most apps ignore it.** Since Android 7, apps only trust certificates you
   install if their developer allows it, and most do not. Their traffic stays
-  encrypted, and PrivacyGuard shows only the app, server, size and time, and says
+  encrypted, and CoreLock shows only the app, server, size and time, and says
   why. In practice it mostly reaches some browsers and apps built to allow it.
 - What it captures stays on the phone in the encrypted database, unless an
   administrator turns on SIEM shipping. Personal data is removed from headers
@@ -80,13 +80,13 @@ opens this releases page.
 
 ## Install
 
-1. On the phone, download `PrivacyGuard-1.0.0.apk` from this release.
+1. On the phone, download `CoreLock-1.0.0.apk` from this release.
 2. Before installing, check the signing certificate (below).
 3. Open the APK. Android asks to allow installs from the app you used (browser or
    file manager): allow it for this install, then you can turn it off again.
-4. Open PrivacyGuard and follow the setup. Android asks once to allow the VPN.
+4. Open CoreLock and follow the setup. Android asks once to allow the VPN.
 5. Recommended: in Android's VPN settings turn on **Always-on VPN** for
-   PrivacyGuard (and optionally "Block connections without VPN"), and in
+   CoreLock (and optionally "Block connections without VPN"), and in
    Settings › Diagnostics check **Battery use** and **Private DNS**.
 
 Updating later: install the newer APK over this one. Your data stays; Android
@@ -104,15 +104,15 @@ APK file SHA-256:            23752350bf36dbd9bb9d11503f615df627f9dd1cdba201c7693
 On a computer with the Android SDK build-tools:
 
 ```bash
-apksigner verify --print-certs PrivacyGuard-1.0.0.apk
+apksigner verify --print-certs CoreLock-1.0.0.apk
 # "Signer #1 certificate SHA-256 digest:" must equal the fingerprint above
 ```
 
 The file itself:
 
 ```bash
-sha256sum PrivacyGuard-1.0.0.apk                      # Linux / macOS
-certutil -hashfile PrivacyGuard-1.0.0.apk SHA256      # Windows
+sha256sum CoreLock-1.0.0.apk                      # Linux / macOS
+certutil -hashfile CoreLock-1.0.0.apk SHA256      # Windows
 ```
 
 (`keytool -printcert -jarfile` does not work here: the APK is signed with APK
@@ -144,7 +144,7 @@ No location, contacts, camera or microphone access.
   "Automatic". The app warns you on the Home screen and in Diagnostics.
 - **Chrome's "Use secure DNS" must stay on automatic.** With a specific provider
   chosen (for example Cloudflare), Chrome sends lookups only to that encrypted
-  server, which PrivacyGuard blocks, and pages fail to load. In Chrome, open
+  server, which CoreLock blocks, and pages fail to load. In Chrome, open
   Settings › Privacy and security › Use secure DNS and choose "Use your current
   service provider".
 - **QUIC at Strict.** QUIC is blocked by default at Strict, and unreadable QUIC
@@ -156,7 +156,7 @@ No location, contacts, camera or microphone access.
 - **No Wi-Fi-only or mobile-only rules.** Rules apply on every network.
 - **Blocklists are held in memory** while protection runs (Strict uses the
   most), which counts toward the app's memory use.
-- **Always-on VPN is recommended.** PrivacyGuard restarts itself after a reboot or
+- **Always-on VPN is recommended.** CoreLock restarts itself after a reboot or
   a crash, but without Always-on Android or the phone maker's battery saver may
   still stop it in the background, and until it is back traffic goes out
   unfiltered. With "Block connections without VPN" nothing leaves unprotected.

@@ -1,5 +1,7 @@
 # CoreLock security test, 2026-10-14
 
+> The app was called PrivacyGuard when this test ran; it is now called CoreLock. The record below is kept as it was.
+
 Scope: commit 5c977b6, consumer + enterprise. Checklist: OWASP MASVS / MASTG.
 The test itself changed nothing in `app/src/main` or `app/src/enterprise`; the fixes came
 afterwards, each in its own commit. Status updated 2026-10-15: the Status column gives the
