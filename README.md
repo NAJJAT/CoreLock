@@ -1,4 +1,4 @@
-# CoreLock (PrivacyGuard)
+# CoreLock
 
 A privacy and security app for Android that runs a **local VPN** on the phone and
 shows, per app, where your data goes: which servers, which companies, how much,
@@ -19,8 +19,10 @@ explains what it finds in plain language in **English, Dutch, French and Arabic*
   content of encrypted traffic, and every number on the Home screen opens the
   exact list it was counted from.
 
-> App name on the device: **PrivacyGuard**. Application ID:
-> `com.privacyguard.app.enterprise`. Repository name: **CoreLock**.
+> App name on the device: **CoreLock**. Application ID:
+> `com.privacyguard.app.enterprise`
+> ([why it says privacyguard](#why-does-the-package-name-say-privacyguard)).
+> Repository name: **CoreLock**.
 
 **How it works, in plain English:** [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md)
 describes what the code actually does: the path of one connection, how every
@@ -158,19 +160,21 @@ or Instagram.
 
 ## Install
 
-PrivacyGuard is published only on
+CoreLock is published only on
 [GitHub Releases](https://github.com/NAJJAT/CoreLock/releases), not on Google Play.
 It runs on Android 7.0 and newer (ARM phones, 64- and 32-bit).
 
-1. On the phone, download the APK (`PrivacyGuard-<version>.apk`) from the release page.
+Latest version: **1.0.1** ([release notes](RELEASE_NOTES_1.0.1.md)). Earlier: [1.0.0](RELEASE_NOTES_1.0.md).
+
+1. On the phone, download the APK (`CoreLock-1.0.1.apk`) from the release page.
 2. **Check it before installing.** The release page lists the APK's SHA-256 and the
    signing certificate's SHA-256 fingerprint (also under [Security](#security)).
    On a computer with the Android SDK build-tools:
 
    ```bash
-   apksigner verify --print-certs PrivacyGuard-<version>.apk   # certificate fingerprint
-   sha256sum PrivacyGuard-<version>.apk                        # Linux / macOS
-   certutil -hashfile PrivacyGuard-<version>.apk SHA256        # Windows
+   apksigner verify --print-certs CoreLock-1.0.1.apk   # certificate fingerprint
+   sha256sum CoreLock-1.0.1.apk                        # Linux / macOS
+   certutil -hashfile CoreLock-1.0.1.apk SHA256        # Windows
    ```
 
    Install only if both match. (`keytool -printcert -jarfile` does not work: the
@@ -182,7 +186,7 @@ It runs on Android 7.0 and newer (ARM phones, 64- and 32-bit).
 
 ## First setup
 
-1. **VPN permission.** Open PrivacyGuard and follow the setup; Android asks once to
+1. **VPN permission.** Open CoreLock and follow the setup; Android asks once to
    allow the VPN. Everything stays on the phone.
 2. **Protection level.** Standard is the default; see
    [Protection levels](#protection-levels).
@@ -192,7 +196,7 @@ It runs on Android 7.0 and newer (ARM phones, 64- and 32-bit).
 4. **Battery.** Settings › Diagnostics › Battery use shows whether Android may stop
    protection in the background, and opens the battery settings.
 5. **Kill switch.** In Android's VPN settings turn on **Always-on VPN** for
-   PrivacyGuard, and optionally **Block connections without VPN**. Only Android can
+   CoreLock, and optionally **Block connections without VPN**. Only Android can
    block traffic once the tunnel is gone.
 6. **Language.** Settings › Language: System default, English, العربية, Français
    or Nederlands.
@@ -258,6 +262,12 @@ its destination. Nothing is routed through an outside server, so websites and ap
 see your normal IP address, and your DNS resolver sees which names you look up. (The
 optional Dual VPN setting is the exception: it sends connections through SOCKS5
 servers you configure yourself, and those servers see your IP address instead.)
+
+### Why does the package name say privacyguard?
+
+CoreLock was first developed as PrivacyGuard. The application ID stays
+`com.privacyguard.app.enterprise` because Android only installs an update over an
+app with the same ID: changing it would make installed apps unable to update.
 
 CoreLock is not affiliated with or endorsed by AdGuard.
 
@@ -442,7 +452,7 @@ unsigned release fails.
    ```bash
    keytool -genkey -v -keystore privacyguard-release.jks -alias privacyguard \
      -keyalg RSA -keysize 4096 -validity 10000 \
-     -dname "CN=PrivacyGuard, OU=Mobile, O=YourOrg, L=City, S=State, C=US"
+     -dname "CN=CoreLock, OU=Mobile, O=YourOrg, L=City, S=State, C=US"
    ```
 
 2. Get the SHA-256 fingerprint (used by the integrity check):
@@ -519,7 +529,7 @@ SIEM code live in `src/enterprise`, the shared engine in `src/main`.
   (CA) on the phone; you install it in Android's settings yourself.
 - **Most apps ignore it.** Since Android 7, apps trust user-installed
   certificates only if their developer allows it, and most do not. Their traffic
-  stays encrypted; PrivacyGuard shows only its metadata (app, server, size, time)
+  stays encrypted; CoreLock shows only its metadata (app, server, size, time)
   and says why. Apps that pin certificates are passed through the same way. In
   practice inspection mostly reaches some browsers and apps built to allow it.
 - **Who can see the content:** it stays on the phone, in the encrypted database,
@@ -709,7 +719,7 @@ docs/  .github/
   and retransmits lost segments; this still needs confirming on a device.
 - **Chrome's "Use secure DNS" must stay on automatic.** If it is set to a
   specific provider (for example Cloudflare), Chrome sends every lookup to that
-  encrypted DNS server and does not fall back. PrivacyGuard blocks that server,
+  encrypted DNS server and does not fall back. CoreLock blocks that server,
   because it would skip the blocklist, so pages fail to load with
   `DNS_PROBE_FINISHED_BAD_SECURE_CONFIG`. In Chrome, open Settings › Privacy and
   security › Use secure DNS and choose "Use your current service provider".
@@ -742,7 +752,7 @@ matches it.
 
 ## License
 
-CoreLock (PrivacyGuard) is free software, licensed under the
+CoreLock is free software, licensed under the
 [GNU General Public License v3.0](LICENSE). You may use, share and change it under
 those terms; if you distribute a modified version, you must publish its source under
 the same license. It comes with no warranty.
@@ -761,7 +771,7 @@ Settings › About › Open-source licenses.
 
 ### Data
 
-PrivacyGuard downloads these lists at runtime; they are not shipped inside the APK.
+CoreLock downloads these lists at runtime; they are not shipped inside the APK.
 
 | Data | Author | License |
 |---|---|---|

@@ -1,4 +1,4 @@
-# CLAUDE.md — CoreLock (PrivacyGuard)
+# CLAUDE.md — CoreLock
 
 > Engineering handbook for Claude Code in this repository.
 > Read it completely at the start of every session. It explains **what** the rules are, **why** they exist, and **how** the system works, so you can make good decisions in situations this file doesn't cover.
@@ -79,7 +79,7 @@ These exist because breaking any of them causes damage that is expensive or impo
 
 ## 2. The product and its promise
 
-**CoreLock** (internal name and package: `com.privacyguard.app`, app name *PrivacyGuard*) is an Android firewall and privacy tool that works **without root**, using Android's `VpnService` to route the device's traffic through the app on the device itself. No traffic is sent to any server we operate — we don't have any.
+**CoreLock** (package `com.privacyguard.app`, kept from its first name *PrivacyGuard* because the application ID can't change; the app name on the device is CoreLock) is an Android firewall and privacy tool that works **without root**, using Android's `VpnService` to route the device's traffic through the app on the device itself. No traffic is sent to any server we operate — we don't have any.
 
 What it does for the user:
 

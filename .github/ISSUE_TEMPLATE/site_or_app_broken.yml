@@ -1,5 +1,5 @@
 name: Site or app broken
-description: Something stopped working because CoreLock (PrivacyGuard) blocked it.
+description: Something stopped working because CoreLock blocked it.
 title: "[Broken] "
 body:
   - type: markdown

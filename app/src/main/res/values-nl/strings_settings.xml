@@ -172,7 +172,7 @@
     <string name="set_posture_high">Tekenen van manipulatie gevonden</string>
     <string name="set_level_minimal_desc">Minimaal blokkeert alleen malware- en phishingservers. Advertenties en trackers laden, behalve de advertentie-SDK-servers die ‘Advertentie- en attributie-SDK’s blokkeren’ in ‘Waarom zie ik deze advertentie?’ blokkeert (standaard aan). Je eigen regels gelden altijd.</string>
     <string name="set_level_standard_desc">Standaard blokkeert malware, advertenties en trackers. Op elk niveau gelden je eigen regels, en ook ‘Advertentie- en attributie-SDK’s blokkeren’ in ‘Waarom zie ik deze advertentie?’ als dat aanstaat.</string>
-    <string name="set_level_strict_desc">Streng blokkeert ook systeemtelemetrie (Microsoft, Apple, Amazon, Mozilla, Google Safe Browsing). Sommige functies werken dan misschien niet meer. Op elk niveau gelden je eigen regels, en ook ‘Advertentie- en attributie-SDK’s blokkeren’ in ‘Waarom zie ik deze advertentie?’ als dat aanstaat.</string>
+    <string name="set_level_strict_desc">Streng blokkeert ook systeemtelemetrie (Microsoft, Apple, Amazon, Mozilla, Dropbox). Sommige functies werken dan misschien niet meer. Op elk niveau gelden je eigen regels, en ook ‘Advertentie- en attributie-SDK’s blokkeren’ in ‘Waarom zie ik deze advertentie?’ als dat aanstaat.</string>
     <string name="set_dual_block_udp">UDP buiten de keten blokkeren</string>
     <string name="set_dual_block_udp_desc">Blokkeert al het andere UDP-verkeer zolang Dubbele VPN aanstaat, zodat niets zonder de keten vertrekt. Spraak- en videogesprekken en veel games werken dan niet meer.</string>
     <string name="diag_upstream_vpn_off">Niet getest: de bescherming staat uit, dus DNS gaat naar de resolver van het netwerk.</string>

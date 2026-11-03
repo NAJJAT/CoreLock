@@ -1,4 +1,4 @@
-# How PrivacyGuard works
+# How CoreLock works
 
 This document describes what the code does today, not what it was meant to do.
 Where a feature has a limit or a known gap, it says so. File names are given so
@@ -21,9 +21,9 @@ Contents
 
 ## 1. The big picture
 
-PrivacyGuard is an Android app that creates a **local VPN**: a virtual network
+CoreLock is an Android app that creates a **local VPN**: a virtual network
 interface on the phone that every app's traffic is routed into. Nothing is sent
-to a VPN server. PrivacyGuard reads each packet, decides whether to let it out,
+to a VPN server. CoreLock reads each packet, decides whether to let it out,
 opens the real connection itself, and records what happened (which app, which
 server, how much data, encrypted or not, screen on or off).
 
@@ -51,7 +51,7 @@ flowchart LR
 ```
 
 "Protected socket" means `VpnService.protect()` was called on it, so the
-connection PrivacyGuard opens leaves through the real network instead of looping
+connection CoreLock opens leaves through the real network instead of looping
 back into the tunnel.
 
 ---
@@ -61,24 +61,24 @@ back into the tunnel.
 Say a news app opens `https://ads.example.net/pixel`.
 
 1. **DNS lookup.** The app asks for the address of `ads.example.net`. The tunnel
-   gives apps only one DNS server, `10.0.0.1`, which is PrivacyGuard itself
+   gives apps only one DNS server, `10.0.0.1`, which is CoreLock itself
    (`vpn/forwarder/DnsHandler.kt`).
 2. **Anomaly check.** The name is checked for odd shapes and odd rhythms
    (section 5.2). Findings are stored, not used to block.
-3. **Block decision** (section 4). If the name is blocked, PrivacyGuard answers
+3. **Block decision** (section 4). If the name is blocked, CoreLock answers
    *NXDOMAIN* ("no such name") at once, records a blocked lookup, and the app never
    connects. Otherwise the query goes to the resolver you chose: plain DNS to
    Cloudflare `1.1.1.1` by default, or DNS over HTTPS when you turn DoH on. The
    answer is checked (it must match the question) and handed back to the app.
    If the answer's CNAME chain points at a blocked name, the app gets NXDOMAIN
    instead (CNAME cloaking). A query with more than one question is dropped.
-   PrivacyGuard remembers which address belongs to which name. Every UDP packet
+   CoreLock remembers which address belongs to which name. Every UDP packet
    to port 53 goes to `DnsHandler`, whatever else is open on that flow.
 4. **Connection.** The app sends a TCP SYN to the returned address. `TunReader`
    reads the packet and `PrivacyVpnService.onTcp` takes over:
    - DNS-over-TLS and DNS over QUIC (port 853, TCP and UDP) and DoH to the IP
      addresses of a built-in set of public resolvers (Google, Cloudflare, Quad9,
-     OpenDNS, AdGuard) are dropped, so apps fall back to DNS that PrivacyGuard can
+     OpenDNS, AdGuard) are dropped, so apps fall back to DNS that CoreLock can
      see (`vpn/firewall/DnsBypassGuard.kt`). Plain DNS on UDP 53 to any address is
      answered by `DnsHandler` from your chosen resolver; DNS over TCP 53, and DNS
      over IPv6, are dropped so the app retries on UDP. A user Allow rule for one of
@@ -304,7 +304,7 @@ Nothing in this section blocks traffic. It produces findings, alerts and scores.
 
 ### 5.1 Per-destination profiles and risk (`core/metadata/MetadataEngine.kt`)
 
-For each (app, host) pair PrivacyGuard keeps: connection count, bytes each way,
+For each (app, host) pair CoreLock keeps: connection count, bytes each way,
 first and last seen, average and shortest interval between connections, share
 made in the background, and a 24-hour histogram. The risk score is the sum of
 these signals × 10, capped at 100:
@@ -326,7 +326,7 @@ first-party, not tracker.
 
 ### 5.2 DNS anomalies (`vpn/inspector/DnsAnomalyDetector.kt`)
 
-Checked on every lookup an app makes (not PrivacyGuard's own). A, AAAA and HTTPS
+Checked on every lookup an app makes (not CoreLock's own). A, AAAA and HTTPS
 queries for one name within 1 second count as one lookup.
 
 | Finding | Rule | Severity |
@@ -420,7 +420,7 @@ removed because they flagged messengers and banking apps.
 ### 5.8 Camera & Mic Watch (`app/adprivacy/SensorUsageWatcher.kt`)
 
 Android reports *that* the microphone (`AudioRecordingCallback`) or a camera
-(`CameraManager.AvailabilityCallback`) is in use, but not *which app*. PrivacyGuard
+(`CameraManager.AvailabilityCallback`) is in use, but not *which app*. CoreLock
 records start and end and whether the screen was on. If the screen was on, it
 names the app that was on screen 1.5 seconds after the start (needs Usage access).
 If the screen was off, it names no app ("App not known (screen was off)"),
@@ -448,7 +448,7 @@ of the list are equal (`app/ui/traffic/HomeEvidence.kt`).
 
 **"Blocked"** means the same thing everywhere (`app/data/repository/BlockStats.kt`):
 DNS lookups answered *NXDOMAIN* by the lists or your rules, plus connection
-attempts PrivacyGuard dropped (rules, DNS-bypass guard, cleartext rule).
+attempts CoreLock dropped (rules, DNS-bypass guard, cleartext rule).
 Apps retry a blocked connection at once, from a new port each time (Chrome tried
 one blocked DoH server about six times a second). So one row is written per app,
 host, port, protocol and *Stopped by* per minute (fixed windows, `core/session/BlockRowGate.kt`);
@@ -548,7 +548,7 @@ Inspected HTTPS requests and responses, see section 8.
 ### PCAP export (Home)
 
 Raw packets in both directions (what apps send and what they receive, including
-DNS answers PrivacyGuard makes) in Wireshark format. Stops at 100 MB or when
+DNS answers CoreLock makes) in Wireshark format. Stops at 100 MB or when
 protection stops; deleted after 24 hours.
 
 ### CSV export (Stats)
@@ -582,12 +582,12 @@ classified).
 
 ### 7.2 What leaves the phone
 
-Nothing is ever sent to the makers of PrivacyGuard. The app contacts:
+Nothing is ever sent to the makers of CoreLock. The app contacts:
 
 | Destination | When | What it learns |
 |---|---|---|
 | Your DNS resolver (Cloudflare 1.1.1.1 by default) | Every lookup | The names apps look up. Encrypted only with DoH. |
-| raw.githubusercontent.com, cdn.jsdelivr.net (mirror, only when GitHub fails), small.oisd.nl | Blocklist download: at first start, then weekly on Wi-Fi or another unmetered network, on any network after 14 days without a successful download, failed lists retried, and whenever you tap "Refresh now" (about 4 MB compressed for all lists) | That a PrivacyGuard install exists, your IP address. |
+| raw.githubusercontent.com, cdn.jsdelivr.net (mirror, only when GitHub fails), small.oisd.nl | Blocklist download: at first start, then weekly on Wi-Fi or another unmetered network, on any network after 14 days without a successful download, failed lists retried, and whenever you tap "Refresh now" (about 4 MB compressed for all lists) | That a CoreLock install exists, your IP address. |
 | reports.exodus-privacy.eu.org | Tracker list, at most weekly | Same. |
 | crt.sh | Only if Certificate Transparency is on | The base domains of servers your apps contact. |
 | api.ipify.org | Only if the external-IP check is on, when you run Diagnostics | Your IP address. |
@@ -626,18 +626,18 @@ to is withdrawn (`ManagedConfigApplier.withdrawOrganisationSettings`).
 
 **HTTPS inspection** (`app/src/enterprise/java/com/privacyguard/vpn/mitm/`): the
 user gives consent during onboarding and later switches inspection on in the
-Payloads screen. PrivacyGuard then creates its own certificate authority, which the
+Payloads screen. CoreLock then creates its own certificate authority, which the
 user installs in Android's settings, and acts as a proxy for apps that trust user
 certificates (most apps do not, since Android 7; browsers and apps that opt in
 do). It records requests and responses up to a size limit, flags apps that pin
 their certificates, can redact personal data, and keeps payloads for its own
-retention period. Only PrivacyGuard's own UID is exempt from inspection.
+retention period. Only CoreLock's own UID is exempt from inspection.
 Redaction runs on two bounded workers, not the capture thread; its scanners are
 one-pass and each call has a time budget. When time runs out the text is
 replaced, never stored or shipped unredacted. Redaction covers headers and text
 bodies; URL query strings, form data and binary bodies are not redacted yet, in
 the local log or in what is shipped to a SIEM. Turning inspection off deletes the CA key and the stored
-payloads. **Android keeps the installed certificate after PrivacyGuard is
+payloads. **Android keeps the installed certificate after CoreLock is
 uninstalled**; onboarding tells the user how to remove it (Settings → search
 "User certificates" → "PrivacyGuard Enterprise CA" → Remove).
 
@@ -650,7 +650,7 @@ key, an optional certificate pin and an optional body signature (`SiemEndpoint.k
 ## 9. Known limits
 
 - **Encrypted content is not visible** unless HTTPS inspection is on and the app
-  trusts user certificates (most apps on Android 7+ do not). PrivacyGuard sees who, when, how much and how it is encrypted.
+  trusts user certificates (most apps on Android 7+ do not). CoreLock sees who, when, how much and how it is encrypted.
 - **Attribution is best effort.** DNS lookups are made by Android's resolver, not
   by the app, so they are credited to an app only when the app connects to that
   name within 60 seconds. Camera and mic use is credited to the app on screen,
@@ -681,7 +681,7 @@ key, an optional certificate pin and an optional body signature (`SiemEndpoint.k
   connections without VPN", nothing leaked, but nothing else got through either.
 - **A crash is not always recovered by Android.** Android restarted the service
   after a quick second crash, but after an ordinary crash it did not, even with
-  Always-on. PrivacyGuard therefore watches itself: a small `:watchdog` process,
+  Always-on. CoreLock therefore watches itself: a small `:watchdog` process,
   bound by the VPN service, learns from the binder driver the moment the VPN
   process dies and sets one exact alarm that starts protection again (Settings →
   "Automatic restart after a crash", at most 3 restarts in 30 minutes). Nothing

@@ -1,5 +1,5 @@
 name: Ad or tracker not blocked
-description: An ad or tracker got through that CoreLock (PrivacyGuard) could block by server name.
+description: An ad or tracker got through that CoreLock could block by server name.
 title: "[Not blocked] "
 body:
   - type: markdown

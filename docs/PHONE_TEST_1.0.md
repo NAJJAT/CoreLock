@@ -6,7 +6,7 @@ real apps, real networks, real battery and real CPU.
 
 **Who:** the owner, on his own phone. **Build:** the signed release APK that will be
 published, nothing else (no debug build). On the phone the app is called
-**PrivacyGuard**; its package is `com.privacyguard.app.enterprise`.
+**CoreLock**; its package is `com.privacyguard.app.enterprise`.
 
 ## How to use this checklist
 
@@ -23,34 +23,53 @@ published, nothing else (no debug build). On the phone the app is called
 
 ## Day 1
 
-### 1. Install and verify
+### 1. Install 1.0.0, then update to 1.0.1
 
-1. Check the APK before installing:
+Users update from the published 1.0.0, so test exactly that path: the published 1.0.0
+APK first, then 1.0.1 installed over it.
+
+1. Download the APK attached to the published **v1.0.0** release on GitHub and save it
+   as `release-1.0.0.apk`. Check both APKs before installing:
    ```
+   certutil -hashfile release-1.0.0.apk SHA256
+   apksigner verify --print-certs release-1.0.0.apk
    certutil -hashfile app-enterprise-release.apk SHA256
    apksigner verify --print-certs app-enterprise-release.apk
    ```
-   **Expected:** the SHA-256 equals the one in `RELEASE_NOTES_1.0.md`; "Signer #1
+   **Expected:** the 1.0.0 SHA-256 equals the one in `RELEASE_NOTES_1.0.md`; the 1.0.1
+   SHA-256 equals the one in `RELEASE_NOTES_1.0.1.md`; for both, "Signer #1
    certificate SHA-256 digest" equals the fingerprint in the README (Security).
-   **Fail (blocker):** either value differs.
-2. If an older PrivacyGuard is on the phone, note its version (Settings › About)
-   and keep it: step 1.3 is then an update test.
-3. Install: `adb -s PHONE_ID install -r app-enterprise-release.apk`.
-   **Expected:** `Success`. When updating, your rules, level and history are still
-   there afterwards. **Fail (blocker):** install refused, or data lost on update.
+   **Fail (blocker):** any value differs.
+2. Start from 1.0.0. If any CoreLock or PrivacyGuard build is on the phone, uninstall
+   it first (this deletes its data): `adb -s PHONE_ID uninstall com.privacyguard.app.enterprise`.
+   Then: `adb -s PHONE_ID install release-1.0.0.apk`.
+   **Expected:** `Success`; the app is called **PrivacyGuard**; Settings › About shows
+   1.0.0.
+3. Give the update something to keep: open the app, go through onboarding, accept the
+   VPN request, choose **Strict**, add one Block rule (for example `example.org`),
+   and browse for a few minutes so the history has entries. Note the blocked count
+   on Home.
+4. Update: `adb -s PHONE_ID install -r app-enterprise-release.apk` (the 1.0.1 APK).
+   **Expected:** `Success`, without uninstalling. The app is now called **CoreLock**
+   (launcher, notification, Android's VPN settings); Settings › About shows 1.0.1;
+   the level is still Strict, the Block rule is still there, the history kept its
+   entries and the blocked count did not go back to 0; no onboarding again;
+   protection is on again (or one tap on Home turns it on).
+   **Fail (blocker):** install refused, onboarding shown again, or any rule,
+   setting or history lost.
 
 ### 2. First setup
 
-1. Open the app. Go through onboarding; accept the VPN request.
+1. Open the updated app (onboarding was done on 1.0.0 in step 1.3).
    **Expected:** no crash; Home shows **Protected** within a few seconds; the
    notification says protection is on.
 2. Private DNS: Android Settings › Network › Private DNS. Set it to a hostname (for
    example `dns.google`), then start protection again.
-   **Expected:** PrivacyGuard warns before starting and on Home. Set Private DNS back
+   **Expected:** CoreLock warns before starting and on Home. Set Private DNS back
    to **Automatic** afterwards.
 3. Settings › Diagnostics › Battery use: note the state; tap the button.
    **Expected:** Android's battery settings for the app open.
-4. Kill switch: Android Settings › Network › VPN › PrivacyGuard › turn on
+4. Kill switch: Android Settings › Network › VPN › CoreLock › turn on
    **Always-on VPN** and **Block connections without VPN**.
    **Expected:** see step 6.
 
@@ -86,7 +105,7 @@ including:
 | Any app that showed ads before | Use it 5 minutes | Fewer or no ads from separate ad servers |
 
 **Fail (blocker):** a video call fails or drops repeatedly; a banking login or a
-normal site that worked without PrivacyGuard breaks at Standard. Note the app, the
+normal site that worked without CoreLock breaks at Standard. Note the app, the
 time and what happened; the Traffic screen shows what was blocked ("Stopped by").
 
 ### 5. Daily use at Strict
@@ -182,18 +201,18 @@ screen and keep the higher value. Also measure with the screen off for 60 s.
 
 ### 13. Battery
 
-After a full day, Android Settings › Battery › Battery usage › PrivacyGuard.
+After a full day, Android Settings › Battery › Battery usage › CoreLock.
 Write down the percentage. **Fail:** above 10 % of the day's battery.
-Note: if PrivacyGuard is among the top 3 apps, investigate but do not fail it for that
+Note: if CoreLock is among the top 3 apps, investigate but do not fail it for that
 alone: Android often charges a VPN app for traffic that belongs to other apps.
 
-### 14. Mobile data used by PrivacyGuard
+### 14. Mobile data used by CoreLock
 
-Android Settings › Network › Data usage › Mobile › PrivacyGuard, over the two days.
+Android Settings › Network › Data usage › Mobile › CoreLock, over the two days.
 **Expected:** the app's own downloads are small: all blocklists together are about
 4 MB, fetched weekly on Wi-Fi (or after 14 days without success on mobile data).
-Note: on some Android versions, the traffic PrivacyGuard forwards for other apps is
-also counted under PrivacyGuard. If the number is large, compare it with your total
+Note: on some Android versions, the traffic CoreLock forwards for other apps is
+also counted under CoreLock. If the number is large, compare it with your total
 mobile data; when it roughly matches, it is the forwarded traffic, not ours.
 
 ### 15. Blocklists after two days
@@ -210,7 +229,7 @@ Dates: ________
 
 | # | Check | Result (PASS / FAIL / SKIP) | Numbers and notes |
 |---|---|---|---|
-| 1 | Checksum and signing fingerprint; install or update | | |
+| 1 | Checksums and fingerprint; 1.0.0, then 1.0.1 over it, data kept | | |
 | 2 | First setup, Private DNS warning, battery screen | | |
 | 3 | Blocklist counts (Standard / Strict total), refresh jobs | | Standard: ___ Strict: ___ |
 | 4 | Daily use at Standard (Chrome, YouTube, WhatsApp video call, bank) | | |
@@ -223,7 +242,7 @@ Dates: ________
 | 11 | Memory (TOTAL PSS at Strict) | | Morning: ___ MB Evening: ___ MB |
 | 12 | CPU, Home / Stats / screen off (blocker above 10 %) | | Home: ___ % Stats: ___ % Off: ___ % |
 | 13 | Battery over one day | | ___ % |
-| 14 | Mobile data used by PrivacyGuard, 2 days | | ___ MB |
+| 14 | Mobile data used by CoreLock, 2 days | | ___ MB |
 | 15 | Blocklists after two days | | |
 
 **Decision:** release 1.0.0 / fix first. Blockers found: ________

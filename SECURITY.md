@@ -1,6 +1,6 @@
 # Security Policy
 
-CoreLock (PrivacyGuard) sits on every network connection of the device it runs on,
+CoreLock sits on every network connection of the device it runs on,
 and the enterprise build can decrypt HTTPS traffic. Security reports get priority.
 
 ## Reporting a vulnerability

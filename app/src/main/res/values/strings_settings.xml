@@ -173,7 +173,7 @@
     <!-- What each protection level blocks; see core/filter/ProtectionLevels.kt -->
     <string name="set_level_minimal_desc">Minimal blocks malware and phishing hosts only. Ads and trackers load, except the ad-SDK servers that “Block ad and attribution SDKs” in “Why am I seeing this ad?” blocks (on by default). Your own rules always apply.</string>
     <string name="set_level_standard_desc">Standard blocks malware, ads and trackers. At every level, your own rules apply, and so does “Block ad and attribution SDKs” in “Why am I seeing this ad?” when it is on.</string>
-    <string name="set_level_strict_desc">Strict also blocks system telemetry (Microsoft, Apple, Amazon, Mozilla, Google Safe Browsing). Some features may stop working. At every level, your own rules apply, and so does “Block ad and attribution SDKs” in “Why am I seeing this ad?” when it is on.</string>
+    <string name="set_level_strict_desc">Strict also blocks system telemetry (Microsoft, Apple, Amazon, Mozilla, Dropbox). Some features may stop working. At every level, your own rules apply, and so does “Block ad and attribution SDKs” in “Why am I seeing this ad?” when it is on.</string>
     <string name="set_dual_block_udp">Block UDP outside the chain</string>
     <string name="set_dual_block_udp_desc">Drops all other UDP while Dual VPN is on, so nothing leaves without the chain. Voice and video calls and many games will stop working.</string>
     <string name="diag_upstream_vpn_off">Not tested: protection is off, so DNS goes to the network’s own resolver.</string>
