@@ -759,7 +759,7 @@ private fun PrivateDnsWarningCard(host: String, onOpenSettings: () -> Unit) {
 
 /** Asked before starting protection while Private DNS has a hostname. */
 @Composable
-private fun PrivateDnsStartDialog(host: String, onOpenSettings: () -> Unit, onStartAnyway: () -> Unit, onDismiss: () -> Unit) {
+internal fun PrivateDnsStartDialog(host: String, onOpenSettings: () -> Unit, onStartAnyway: () -> Unit, onDismiss: () -> Unit) {
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.dash_private_dns_title)) },

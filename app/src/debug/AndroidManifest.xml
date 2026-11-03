@@ -27,5 +27,13 @@
                 <action android:name="com.privacyguard.debug.CRASH_PROCESS" />
             </intent-filter>
         </receiver>
+
+        <!-- 1.1 component catalog for screenshots (ComponentCatalogActivity). Same
+             guard as above: only `adb shell am start` holds DUMP. -->
+        <activity
+            android:name="com.privacyguard.app.debug.ComponentCatalogActivity"
+            android:exported="true"
+            android:permission="android.permission.DUMP"
+            android:theme="@style/Theme.Privacyguard" />
     </application>
 </manifest>

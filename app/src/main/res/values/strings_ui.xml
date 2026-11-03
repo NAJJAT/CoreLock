@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 1.1 design system (docs/ux/DESIGN_SPEC_1.1.md). Machine translations of these
+     strings are listed in docs/TRANSLATION_REVIEW_1.1.md. -->
+<resources>
+    <!-- Components -->
+    <string name="ui_protection">Protection</string>
+    <string name="ui_technical_details">Technical details</string>
+    <string name="ui_expanded">Expanded</string>
+    <string name="ui_collapsed">Collapsed</string>
+    <string name="ui_try_again">Try again</string>
+    <string name="ui_dismiss">Dismiss</string>
+    <string name="ui_close">Close</string>
+    <string name="ui_loading">Loading</string>
+    <string name="ui_learn_more">Learn more</string>
+    <string name="ui_warning">Warning</string>
+    <string name="ui_open_settings">Open settings</string>
+    <string name="ui_turn_on">Turn on</string>
+
+    <!-- Status hero -->
+    <string name="ui_hero_on">You\'re protected</string>
+    <string name="ui_hero_off">Protection is off</string>
+    <string name="ui_hero_starting">Starting…</string>
+    <string name="ui_hero_stopped">Protection stopped</string>
+    <string name="ui_hero_sub_minimal">Blocking malware · Minimal</string>
+    <string name="ui_hero_sub_standard">Blocking ads and trackers · Standard</string>
+    <string name="ui_hero_sub_strict">Blocking ads, trackers and more · Strict</string>
+    <string name="ui_hero_off_sub">Turn it on to block ads, trackers and malware.</string>
+    <string name="ui_hero_starting_sub">This takes a few seconds.</string>
+    <string name="ui_hero_stopped_sub">Another VPN may have taken over.</string>
+
+    <!-- Protection levels, explained by their trade-off -->
+    <string name="ui_protection_level">Protection level</string>
+    <string name="ui_level_minimal_desc">Blocks malware. Nothing breaks.</string>
+    <string name="ui_level_standard_desc">Blocks ads and trackers. Recommended.</string>
+    <string name="ui_level_strict_desc">Blocks more. Some apps or sites may break.</string>
+
+    <!-- Home -->
+    <string name="ui_blocked_today">Blocked today</string>
+    <string name="ui_something_not_working">Something not working?</string>
+    <string name="ui_attention_private_dns">Private DNS is on. Websites and apps may not load until you turn it off.</string>
+
+    <!-- Home, Phase 3 (DESIGN_SPEC_1.1.md §6.1) -->
+    <string name="ui_home_stopped_sub">It stopped without you turning it off. Turn it on again.</string>
+    <string name="ui_home_stopped_other_vpn">Another VPN app took over. Turn CoreLock on to block again.</string>
+    <string name="ui_home_stopped_failed">CoreLock hit a problem and stopped. Turn it on again.</string>
+    <string name="ui_couldnt_load">Couldn\'t load</string>
+    <string name="ui_attention_usage_access">Blocking apps in the background needs Usage Access.</string>
+    <string name="ui_attention_battery_restricted">Battery use is restricted, so Android can stop CoreLock.</string>
+    <string name="ui_attention_battery_optimized">Some phones stop CoreLock to save battery. Let it run in the background.</string>
+    <string name="ui_attention_alert">New alert: %1$s</string>
+    <string name="ui_open_alerts">Open alerts</string>
+    <string name="ui_whats_new">Some things moved. Statistics and HTTPS inspection are now in Settings › Advanced.</string>
+    <string name="ui_open_statistics">Open Statistics</string>
+    <string name="ui_open_https_inspection">Open HTTPS inspection</string>
+    <string name="ui_home_security_details">Security details</string>
+    <string name="ui_home_security_details_sub">Alerts, security checks and reports</string>
+
+    <!-- Activity -->
+    <string name="ui_filter_blocked">Blocked</string>
+    <string name="ui_filter_all">All</string>
+    <string name="ui_reason_ads">Blocked · Ads and trackers list</string>
+    <string name="ui_reason_malware">Blocked · Malware list</string>
+    <string name="ui_reason_rule">Blocked · Your rule</string>
+    <string name="ui_reason_allowed">Allowed</string>
+    <string name="ui_allow_for_app">Allow for this app</string>
+    <string name="ui_allow_everywhere">Allow everywhere</string>
+    <string name="ui_keep_blocked">Keep blocked</string>
+    <string name="ui_remove_my_rule">Remove my rule</string>
+    <string name="ui_dns_allow_everywhere_only">This was blocked before the app connected, so it can only be allowed for all apps.</string>
+    <string name="ui_empty_activity">Nothing blocked yet. CoreLock will show blocked ads and trackers here.</string>
+    <string name="ui_error_activity">Couldn\'t load activity.</string>
+
+    <!-- Apps -->
+    <string name="ui_app_allowed">Allowed</string>
+    <string name="ui_app_blocked_background">Blocked in background</string>
+    <string name="ui_app_blocked">Blocked</string>
+    <string name="ui_app_blocked_background_desc">Can use the internet only while you\'re using it.</string>
+    <string name="ui_app_blocked_desc">Can\'t use the internet.</string>
+    <plurals name="ui_blocked_today_n">
+        <item quantity="one">%d blocked today</item>
+        <item quantity="other">%d blocked today</item>
+    </plurals>
+
+    <!-- Plain risk word per app (DESIGN_SPEC_1.1.md §6.3.1) -->
+    <string name="ui_risk_watch">Could watch you</string>
+    <string name="ui_risk_watch_desc">This app has permissions and behaviour often seen in apps that track a person: %1$s. If you didn\'t install it yourself, check it.</string>
+    <string name="ui_risk_high">High risk</string>
+    <string name="ui_risk_high_desc">CoreLock saw risky connections from this app in the last 24 hours. Open the app to see them.</string>
+    <string name="ui_risk_unprotected">Sends unprotected data</string>
+    <string name="ui_risk_unprotected_desc">Some of this app\'s connections weren\'t encrypted, so others on the network could read them.</string>
+    <string name="ui_risk_trackers">Uses trackers</string>
+    <string name="ui_risk_trackers_desc">CoreLock blocked tracker or ad connections from this app. That\'s normal for many apps.</string>
+    <string name="ui_risk_background">Active in the background</string>
+    <string name="ui_risk_background_desc">This app used the internet while you weren\'t using it.</string>
+    <string name="ui_risk_none">No activity</string>
+    <string name="ui_risk_none_desc">This app didn\'t use the internet in the last 24 hours.</string>
+    <string name="ui_risk_normal">Looks normal</string>
+    <string name="ui_risk_normal_desc">Nothing unusual in the last 24 hours.</string>
+
+    <!-- Settings -->
+    <string name="ui_advanced">Advanced</string>
+    <string name="ui_advanced_sub">For experts. Wrong settings can break your connection.</string>
+    <string name="ui_restart_after_crash">Restart after a crash</string>
+    <string name="ui_restart_after_crash_sub">Turn protection back on by itself</string>
+    <string name="ui_clear_all_data">Clear all data</string>
+    <string name="ui_what_corelock_cant">What CoreLock can and can\'t do</string>
+    <string name="ui_what_corelock_cant_body">CoreLock blocks ads, trackers and malware for the apps on this phone. It can\'t block ads inside YouTube, Instagram, Snapchat, TikTok or Facebook, because they come from the same servers as the videos and posts.</string>
+</resources>

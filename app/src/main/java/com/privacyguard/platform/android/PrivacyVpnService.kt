@@ -178,6 +178,15 @@ class PrivacyVpnService : VpnService() {
         private val _isRunningFlow = MutableStateFlow(false)
         val isRunningFlow: StateFlow<Boolean> = _isRunningFlow.asStateFlow()
 
+        /**
+         * What Home shows (DESIGN_SPEC_1.1.md §6.1): starting, running or stopped, read at
+         * the first frame so the status never flashes "off" while protection is on.
+         * STOPPED is published only after BootReceiver.markVpnStopped, so a stop the user
+         * asked for is never mistaken for an unexpected one.
+         */
+        private val _state = MutableStateFlow(State.STOPPED)
+        val state: StateFlow<State> = _state.asStateFlow()
+
         @Volatile var isRunning = false
             private set
 
@@ -198,6 +207,9 @@ class PrivacyVpnService : VpnService() {
         fun stopIntent(ctx: Context) = Intent(ctx, PrivacyVpnService::class.java).also { it.action = ACTION_STOP }
     }
 
+    /** Published as [state]; see there. */
+    enum class State { STOPPED, STARTING, RUNNING }
+
     override fun onCreate() {
         super.onCreate()
         isCreated = true
@@ -214,6 +226,9 @@ class PrivacyVpnService : VpnService() {
         // Consent still ours: Always-on was not handed to another VPN app.
         val alwaysOnTurnedOff = alwaysOnSeen && !isAlwaysOnNow() && prepare(this) == null
         Log.w(TAG, "VPN revoked by Android (Always-on turned off: $alwaysOnTurnedOff)")
+        // Recorded before the stop, so Home already reads the reason when it sees "stopped".
+        com.privacyguard.app.vpn.UnexpectedStop.forRevoke(consentStillOurs = prepare(this) == null)
+            ?.let { com.privacyguard.app.vpn.UnexpectedStop.record(this, it) }
         stopVpn()
         if (alwaysOnTurnedOff) NotificationHelper(this).postAlwaysOnTurnedOff()
         super.onRevoke()
@@ -293,6 +308,9 @@ class PrivacyVpnService : VpnService() {
         watcher.bind()
         keepBackupArmed()
         notifHelper.cancelProtectionStopped()
+        // A new start: whatever stopped protection last time is no longer the current state.
+        com.privacyguard.app.vpn.UnexpectedStop.clear(this)
+        _state.value = State.STARTING
         startJob = scope.launch {
             try {
                 startVpnInternal()
@@ -418,6 +436,7 @@ class PrivacyVpnService : VpnService() {
             isRunning = true
             running = this
             _isRunningFlow.value = true
+            _state.value = State.RUNNING
         }
         // Blocks from before a restart still fall in the last 24 h.
         scheduleBlockCountRefresh()
@@ -1528,6 +1547,7 @@ class PrivacyVpnService : VpnService() {
         isRunning = false
         running = null
         _isRunningFlow.value = false
+        _state.value = State.STOPPED
         // Nothing passes through the tunnel any more; an open capture would only grow stale.
         com.privacyguard.app.core.pcap.PcapWriter.stopCapture()
         if (::ctMonitor.isInitialized) ctMonitor.stop()
@@ -1577,6 +1597,7 @@ class PrivacyVpnService : VpnService() {
             if (stopRequested) return@launch
             if (!restartBudget.tryAcquire(System.currentTimeMillis())) {
                 Log.e(TAG, "Packet path keeps failing; stopping protection")
+                com.privacyguard.app.vpn.UnexpectedStop.record(this@PrivacyVpnService, com.privacyguard.app.vpn.UnexpectedStop.Reason.PACKET_PATH_FAILED)
                 stopVpn()
                 notifHelper.postProtectionStopped()
                 return@launch
@@ -1589,6 +1610,7 @@ class PrivacyVpnService : VpnService() {
                 val fresh = openTun()
                 teardownTunnelLocked()
                 if (fresh == null) {
+                    com.privacyguard.app.vpn.UnexpectedStop.record(this@PrivacyVpnService, com.privacyguard.app.vpn.UnexpectedStop.Reason.PACKET_PATH_FAILED)
                     com.privacyguard.app.vpn.BootReceiver.markVpnStopped(this@PrivacyVpnService)
                     releaseResourcesLocked()
                     false

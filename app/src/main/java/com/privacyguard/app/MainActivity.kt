@@ -9,7 +9,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
-import com.privacyguard.app.ui.theme.PrivacyGuardTheme
+import com.privacyguard.app.ui.home.HomePreferences
+import com.privacyguard.app.ui.theme.Appearance
+import com.privacyguard.app.ui.theme.CoreLockTheme
 import com.privacyguard.app.vpn.VpnManager
 import com.privacyguard.app.workers.WeeklyReportWorker
 import com.privacyguard.platform.android.NotificationHelper
@@ -36,13 +38,17 @@ class MainActivity : com.privacyguard.BaseActivity() {
         if (settings.weeklyReport.value) {
             WeeklyReportWorker.scheduleWeekly(this)
         }
+        // Before onboarding can complete: the first 1.1 start decides update vs fresh install.
+        HomePreferences.getInstance(this).decideWhatsNew(settings.onboardingCompleted.value)
         // MainActivity is exported (launcher), so any app can set this extra. Only the
         // routes our own notifications use are honoured: an arbitrary route could open
         // internal screens directly, and an unknown one crashed navigate().
         val initialRoute = intent.getStringExtra(NotificationHelper.EXTRA_NAV_ROUTE)
             ?.takeIf { it in NOTIFICATION_ROUTES }
         setContent {
-            PrivacyGuardTheme {
+            // Dark until every 1.0 screen is migrated: they still use fixed dark colours and
+            // would break in light mode. Settings › Appearance (D4) comes in Phase 6.
+            CoreLockTheme(Appearance.DARK) {
                 AppNavHost(
                     onRequestVpn = { requestVpnPermission() },
                     initialRoute = initialRoute,

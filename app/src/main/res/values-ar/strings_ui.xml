@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ترجمة آلية: تحتاج إلى مراجعة (docs/TRANSLATION_REVIEW_1.1.md). -->
+<resources>
+    <!-- Components -->
+    <string name="ui_protection">الحماية</string>
+    <string name="ui_technical_details">التفاصيل التقنية</string>
+    <string name="ui_expanded">مفتوحة</string>
+    <string name="ui_collapsed">مطوية</string>
+    <string name="ui_try_again">حاول مرة أخرى</string>
+    <string name="ui_dismiss">إخفاء</string>
+    <string name="ui_close">إغلاق</string>
+    <string name="ui_loading">جارٍ التحميل</string>
+    <string name="ui_learn_more">اعرف المزيد</string>
+    <string name="ui_warning">تحذير</string>
+    <string name="ui_open_settings">افتح الإعدادات</string>
+    <string name="ui_turn_on">شغّل الحماية</string>
+
+    <!-- Status hero -->
+    <string name="ui_hero_on">أنت محمي</string>
+    <string name="ui_hero_off">الحماية متوقفة</string>
+    <string name="ui_hero_starting">جارٍ التشغيل…</string>
+    <string name="ui_hero_stopped">توقفت الحماية</string>
+    <string name="ui_hero_sub_minimal">يحظر البرامج الضارة · الحد الأدنى</string>
+    <string name="ui_hero_sub_standard">يحظر الإعلانات وأدوات التتبع · قياسي</string>
+    <string name="ui_hero_sub_strict">يحظر الإعلانات وأدوات التتبع وأكثر · صارم</string>
+    <string name="ui_hero_off_sub">شغّلها لحظر الإعلانات وأدوات التتبع والبرامج الضارة.</string>
+    <string name="ui_hero_starting_sub">يستغرق ذلك بضع ثوانٍ.</string>
+    <string name="ui_hero_stopped_sub">ربما تولّى تطبيق VPN آخر الاتصال.</string>
+
+    <!-- Protection levels -->
+    <string name="ui_protection_level">مستوى الحماية</string>
+    <string name="ui_level_minimal_desc">يحظر البرامج الضارة. لا يتعطل شيء.</string>
+    <string name="ui_level_standard_desc">يحظر الإعلانات وأدوات التتبع. موصى به.</string>
+    <string name="ui_level_strict_desc">يحظر أكثر. قد تتعطل بعض التطبيقات أو المواقع.</string>
+
+    <!-- Home -->
+    <string name="ui_blocked_today">المحظور اليوم</string>
+    <string name="ui_something_not_working">هل هناك شيء لا يعمل؟</string>
+    <string name="ui_attention_private_dns">‏DNS الخاص مفعّل. قد لا تفتح المواقع والتطبيقات حتى توقفه.</string>
+
+    <!-- Home, Phase 3 (DESIGN_SPEC_1.1.md §6.1) -->
+    <string name="ui_home_stopped_sub">توقفت الحماية دون أن توقفها أنت. شغّلها مرة أخرى.</string>
+    <string name="ui_home_stopped_other_vpn">تولّى تطبيق VPN آخر الاتصال. شغّل CoreLock ليعود الحظر.</string>
+    <string name="ui_home_stopped_failed">واجه CoreLock مشكلة فتوقّف. شغّله مرة أخرى.</string>
+    <string name="ui_couldnt_load">تعذّر التحميل</string>
+    <string name="ui_attention_usage_access">حظر التطبيقات في الخلفية يحتاج إلى إذن الوصول إلى بيانات الاستخدام.</string>
+    <string name="ui_attention_battery_restricted">استخدام البطارية مقيّد، لذلك قد يوقف Android تطبيق CoreLock.</string>
+    <string name="ui_attention_battery_optimized">بعض الهواتف توقف CoreLock لتوفير البطارية. اسمح له بالعمل في الخلفية.</string>
+    <string name="ui_attention_alert">تنبيه جديد: %1$s</string>
+    <string name="ui_open_alerts">افتح التنبيهات</string>
+    <string name="ui_whats_new">تغيّرت أماكن بعض الأشياء. الإحصاءات وفحص HTTPS موجودة الآن في الإعدادات › متقدم.</string>
+    <string name="ui_open_statistics">افتح الإحصاءات</string>
+    <string name="ui_open_https_inspection">افتح فحص HTTPS</string>
+    <string name="ui_home_security_details">تفاصيل الأمان</string>
+    <string name="ui_home_security_details_sub">التنبيهات وفحوص الأمان والتقارير</string>
+
+    <!-- Activity -->
+    <string name="ui_filter_blocked">المحظور</string>
+    <string name="ui_filter_all">الكل</string>
+    <string name="ui_reason_ads">محظور · قائمة الإعلانات وأدوات التتبع</string>
+    <string name="ui_reason_malware">محظور · قائمة البرامج الضارة</string>
+    <string name="ui_reason_rule">محظور · قاعدتك</string>
+    <string name="ui_reason_allowed">مسموح</string>
+    <string name="ui_allow_for_app">اسمح لهذا التطبيق</string>
+    <string name="ui_allow_everywhere">اسمح لكل التطبيقات</string>
+    <string name="ui_keep_blocked">أبقِه محظورًا</string>
+    <string name="ui_remove_my_rule">احذف قاعدتي</string>
+    <string name="ui_dns_allow_everywhere_only">حُظر هذا قبل أن يتصل التطبيق، لذلك لا يمكن السماح به إلا لكل التطبيقات.</string>
+    <string name="ui_empty_activity">لم يُحظر شيء بعد. سيعرض CoreLock هنا الإعلانات وأدوات التتبع المحظورة.</string>
+    <string name="ui_error_activity">تعذّر تحميل النشاط.</string>
+
+    <!-- Apps -->
+    <string name="ui_app_allowed">مسموح</string>
+    <string name="ui_app_blocked_background">محظور في الخلفية</string>
+    <string name="ui_app_blocked">محظور</string>
+    <string name="ui_app_blocked_background_desc">يستخدم الإنترنت فقط أثناء استخدامك له.</string>
+    <string name="ui_app_blocked_desc">لا يمكنه استخدام الإنترنت.</string>
+    <plurals name="ui_blocked_today_n">
+        <item quantity="zero">لم يُحظر شيء اليوم</item>
+        <item quantity="one">حُظر اتصال واحد اليوم</item>
+        <item quantity="two">حُظر اتصالان اليوم</item>
+        <item quantity="few">حُظرت %d اتصالات اليوم</item>
+        <item quantity="many">حُظر %d اتصالًا اليوم</item>
+        <item quantity="other">حُظر %d اتصال اليوم</item>
+    </plurals>
+
+    <!-- Plain risk word per app -->
+    <string name="ui_risk_watch">قد يراقبك</string>
+    <string name="ui_risk_watch_desc">لهذا التطبيق أذونات وسلوك يظهران غالبًا في تطبيقات تتعقّب الأشخاص: %1$s. إن لم تثبّته بنفسك، فتحقّق منه.</string>
+    <string name="ui_risk_high">خطورة عالية</string>
+    <string name="ui_risk_high_desc">رصد CoreLock اتصالات خطرة من هذا التطبيق خلال آخر 24 ساعة. افتح التطبيق لرؤيتها.</string>
+    <string name="ui_risk_unprotected">يرسل بيانات غير محمية</string>
+    <string name="ui_risk_unprotected_desc">بعض اتصالات هذا التطبيق لم تكن مشفّرة، لذلك يمكن لآخرين على الشبكة قراءتها.</string>
+    <string name="ui_risk_trackers">يستخدم أدوات تتبع</string>
+    <string name="ui_risk_trackers_desc">حظر CoreLock اتصالات تتبع أو إعلانات من هذا التطبيق. هذا أمر عادي في كثير من التطبيقات.</string>
+    <string name="ui_risk_background">نشط في الخلفية</string>
+    <string name="ui_risk_background_desc">استخدم هذا التطبيق الإنترنت عندما لم تكن تستخدمه.</string>
+    <string name="ui_risk_none">لا نشاط</string>
+    <string name="ui_risk_none_desc">لم يستخدم هذا التطبيق الإنترنت خلال آخر 24 ساعة.</string>
+    <string name="ui_risk_normal">يبدو طبيعيًا</string>
+    <string name="ui_risk_normal_desc">لا شيء غير عادي خلال آخر 24 ساعة.</string>
+
+    <!-- Settings -->
+    <string name="ui_advanced">متقدم</string>
+    <string name="ui_advanced_sub">للخبراء. الإعدادات الخاطئة قد تقطع اتصالك.</string>
+    <string name="ui_restart_after_crash">إعادة التشغيل بعد التعطل</string>
+    <string name="ui_restart_after_crash_sub">إعادة تشغيل الحماية تلقائيًا</string>
+    <string name="ui_clear_all_data">امسح كل البيانات</string>
+    <string name="ui_what_corelock_cant">ما يستطيعه CoreLock وما لا يستطيعه</string>
+    <string name="ui_what_corelock_cant_body">يحظر CoreLock الإعلانات وأدوات التتبع والبرامج الضارة للتطبيقات على هذا الهاتف. لا يستطيع حظر الإعلانات داخل YouTube وInstagram وSnapchat وTikTok وFacebook، لأنها تأتي من الخوادم نفسها التي تأتي منها المقاطع والمنشورات.</string>
+</resources>
