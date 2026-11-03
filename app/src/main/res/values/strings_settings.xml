@@ -22,11 +22,11 @@
     <string name="set_notification_details">Show details in notifications</string>
     <string name="set_notification_details_desc">Name the app and the server in alerts. Off: notifications only say what kind of alert it is, so nothing about your apps shows on the lock screen or to apps that read notifications.</string>
     <string name="set_allow_screenshots">Allow screenshots</string>
-    <string name="set_allow_screenshots_desc">Let screenshots, screen recording and the recent-apps preview show PrivacyGuard. Off: screens with your history are blocked from them.</string>
+    <string name="set_allow_screenshots_desc">Let screenshots, screen recording and the recent-apps preview show CoreLock. Off: screens with your history are blocked from them.</string>
     <string name="set_auto_restart">Automatic restart after a crash</string>
-    <string name="set_auto_restart_desc">If PrivacyGuard crashes, start protection again within seconds. Needs Android’s Alarms &amp; reminders access.</string>
+    <string name="set_auto_restart_desc">If CoreLock crashes, start protection again within seconds. Needs Android’s Alarms &amp; reminders access.</string>
     <string name="set_auto_restart_dialog_title">Allow Alarms &amp; reminders?</string>
-    <string name="set_auto_restart_dialog_body">After a crash, Android only lets an app start its protection again from an exact alarm, and exact alarms need Alarms &amp; reminders access. PrivacyGuard sets that alarm only after a crash, never while protection runs, so it does not wake your phone otherwise. Without it you get a “Protection stopped” notification instead.</string>
+    <string name="set_auto_restart_dialog_body">After a crash, Android only lets an app start its protection again from an exact alarm, and exact alarms need Alarms &amp; reminders access. CoreLock sets that alarm only after a crash, never while protection runs, so it does not wake your phone otherwise. Without it you get a “Protection stopped” notification instead.</string>
     <string name="set_auto_restart_dialog_allow">Open settings</string>
     <string name="set_auto_restart_dialog_cancel">Not now</string>
     <string name="set_weekly_report">Weekly report</string>
@@ -178,15 +178,15 @@
     <string name="set_dual_block_udp_desc">Drops all other UDP while Dual VPN is on, so nothing leaves without the chain. Voice and video calls and many games will stop working.</string>
     <string name="diag_upstream_vpn_off">Not tested: protection is off, so DNS goes to the network’s own resolver.</string>
     <string name="diag_upstream_failed">%1$s did not answer a test lookup. Websites may fail to load.</string>
-    <string name="set_always_on_hint">To keep protection on, turn on Always-on VPN for PrivacyGuard in Android. Android then starts it after a reboot. With “Block connections without VPN” nothing goes out unprotected, but if PrivacyGuard crashes the phone is offline until PrivacyGuard restarts (Automatic restart after a crash) or you open it again.</string>
+    <string name="set_always_on_hint">To keep protection on, turn on Always-on VPN for CoreLock in Android. Android then starts it after a reboot. With “Block connections without VPN” nothing goes out unprotected, but if CoreLock crashes the phone is offline until CoreLock restarts (Automatic restart after a crash) or you open it again.</string>
     <string name="set_open_vpn_settings">Open Android VPN settings</string>
     <string name="diag_battery">Battery use</string>
-    <string name="diag_battery_restricted">Background use is set to Restricted, so Android can stop protection when PrivacyGuard is not on screen. Open battery settings and choose Unrestricted.</string>
-    <string name="diag_battery_optimized">Battery optimization is on (the Android default). Some phones stop protection in the background anyway; if protection keeps turning off, set PrivacyGuard\'s battery use to Unrestricted.</string>
-    <string name="diag_battery_unrestricted">Unrestricted: Android will not stop PrivacyGuard to save battery.</string>
+    <string name="diag_battery_restricted">Background use is set to Restricted, so Android can stop protection when CoreLock is not on screen. Open battery settings and choose Unrestricted.</string>
+    <string name="diag_battery_optimized">Battery optimization is on (the Android default). Some phones stop protection in the background anyway; if protection keeps turning off, set CoreLock\'s battery use to Unrestricted.</string>
+    <string name="diag_battery_unrestricted">Unrestricted: Android will not stop CoreLock to save battery.</string>
     <string name="set_open_battery_settings">Open battery settings</string>
     <string name="set_about">About</string>
     <string name="set_version">Version %1$s (%2$d)</string>
-    <string name="set_updates_hint">PrivacyGuard does not check for updates itself, so no extra server is contacted. Open the releases page to see whether a newer version exists.</string>
+    <string name="set_updates_hint">CoreLock does not check for updates itself, so no extra server is contacted. Open the releases page to see whether a newer version exists.</string>
     <string name="set_check_updates">Check for updates</string>
 </resources>

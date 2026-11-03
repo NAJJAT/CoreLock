@@ -102,6 +102,8 @@ object HomeLogic {
         val battery: com.privacyguard.app.core.power.BatteryCheck.State =
             com.privacyguard.app.core.power.BatteryCheck.State.UNRESTRICTED,
         val batteryDismissed: Boolean = false,
+        /** Protection died with the app process and Android says the system killed it ([stoppedBySystem]). */
+        val stoppedBySystem: Boolean = false,
         val newHighAlert: HighAlert? = null,
         val whatsNew: Boolean = false,
         val strictSuggestion: com.privacyguard.app.ui.dashboard.StrictSuggestion? = null,
@@ -112,7 +114,10 @@ object HomeLogic {
     sealed interface Attention {
         data class PrivateDns(val host: String) : Attention
         data object UsageAccess : Attention
-        /** [canDismiss]: "Optimized" is Android's default and only a risk on some phones; "Restricted" always stops protection. */
+        /**
+         * [canDismiss]: "Restricted" always stops protection, so it stays. "Optimized" (Android's
+         * default) is shown only after the system really stopped protection, and can be dismissed.
+         */
         data class Battery(val canDismiss: Boolean) : Attention
         data class NewAlert(val alert: HighAlert) : Attention
         data object WhatsNew : Attention
@@ -130,8 +135,9 @@ object HomeLogic {
         if (inputs.usageAccessMissingForRule) return Attention.UsageAccess
         when (inputs.battery) {
             com.privacyguard.app.core.power.BatteryCheck.State.RESTRICTED -> return Attention.Battery(canDismiss = false)
+            // Not for every new install: general battery advice belongs in onboarding (Phase 7).
             com.privacyguard.app.core.power.BatteryCheck.State.OPTIMIZED ->
-                if (!inputs.batteryDismissed) return Attention.Battery(canDismiss = true)
+                if (inputs.stoppedBySystem && !inputs.batteryDismissed) return Attention.Battery(canDismiss = true)
             com.privacyguard.app.core.power.BatteryCheck.State.UNRESTRICTED -> {}
         }
         inputs.newHighAlert?.let { return Attention.NewAlert(it) }
@@ -139,6 +145,19 @@ object HomeLogic {
         inputs.strictSuggestion?.let { return Attention.Strict(it) }
         return null
     }
+
+    /**
+     * Protection was stopped by the system: it stopped unexpectedly with no reason the app
+     * recorded (not another VPN, not the packet path), so its process died, and Android's
+     * exit record names a system kill. A crash or the user is not the battery's fault; on
+     * Android 10 and older there is no record, so the card is not shown there.
+     */
+    fun stoppedBySystem(
+        state: ProtectionState,
+        stopReason: UnexpectedStop.Reason?,
+        lastExit: com.privacyguard.app.core.power.SystemStopCheck.Result,
+    ): Boolean = state == ProtectionState.STOPPED_UNEXPECTEDLY && stopReason == null &&
+        lastExit == com.privacyguard.app.core.power.SystemStopCheck.Result.SYSTEM
 
     /** Same threshold the old Home and the alert inbox use for red alerts. */
     const val HIGH_ALERT_SEVERITY = 8

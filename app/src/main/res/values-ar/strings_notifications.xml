@@ -18,7 +18,7 @@
     </plurals>
     <string name="notif_active">الحماية مفعّلة</string>
     <string name="notif_public_text">افتح القفل لرؤية هذا الإشعار</string>
-    <string name="notif_open_for_details">افتح PrivacyGuard لمعرفة التطبيق والخادم.</string>
+    <string name="notif_open_for_details">افتح CoreLock لمعرفة التطبيق والخادم.</string>
     <string name="notif_kind_malware">اتصال محتمل ببرمجية خبيثة</string>
     <string name="notif_kind_tls_fp">تطبيق يتصل بطريقة جديدة</string>
     <string name="notif_kind_behavior">سلوك غير معتاد لتطبيق</string>
@@ -56,8 +56,8 @@
     <string name="notif_ct_title">شفافية الشهادات: %1$s</string>
     <string name="notif_ct_tap">%1$s. اضغط لمراجعتها في صندوق التنبيهات.</string>
     <string name="notif_vpn_down_title">توقفت الحماية</string>
-    <string name="notif_protection_stopped_text">توقف PrivacyGuard بشكل غير متوقع. اضغط لإعادة تشغيل الحماية.</string>
-    <string name="notif_always_on_turned_off_text">أُوقف «VPN الدائم» في إعدادات Android، فأوقف Android تطبيق PrivacyGuard. اضغط لتفعيل الحماية من جديد.</string>
+    <string name="notif_protection_stopped_text">توقف CoreLock بشكل غير متوقع. اضغط لإعادة تشغيل الحماية.</string>
+    <string name="notif_always_on_turned_off_text">أُوقف «VPN الدائم» في إعدادات Android، فأوقف Android تطبيق CoreLock. اضغط لتفعيل الحماية من جديد.</string>
     <string name="notif_bg_title">حُظر اتصال في الخلفية</string>
     <string name="notif_bg_text">حاول %1$s الاتصال بـ %2$s وهو في الخلفية</string>
     <string name="notif_blocklist_updated">حُدّثت قائمة الحظر</string>
@@ -65,5 +65,5 @@
     <string name="notif_inspection_on">فحص HTTPS مفعّل</string>
     <string name="notif_inspection_on_org">فحص HTTPS مفعّل، بقرار من مؤسستك</string>
     <string name="notif_inspection_org_title">فعّلت مؤسستك فحص HTTPS</string>
-    <string name="notif_inspection_org_text">يستطيع PrivacyGuard الآن قراءة حركة HTTPS للتطبيقات التي تثق بشهادته. معظم التطبيقات لا تثق بها. افتح PrivacyGuard لمعرفة ما يُلتقط.</string>
+    <string name="notif_inspection_org_text">يستطيع CoreLock الآن قراءة حركة HTTPS للتطبيقات التي تثق بشهادته. معظم التطبيقات لا تثق بها. افتح CoreLock لمعرفة ما يُلتقط.</string>
 </resources>

@@ -114,7 +114,7 @@
 
     <!-- Home drill-downs -->
     <string name="ev_blocked_24h">Blocked · last 24 h</string>
-    <string name="ev_blocked_24h_def">Entries in the blocked history: DNS lookups your blocklists or rules answered with “not found”, and connections PrivacyGuard stopped. Retries are grouped, not counted one by one: the same lookup again less than 10 seconds later is not a new entry, and the same blocked connection within the same minute is one entry. No app data reached these destinations.</string>
+    <string name="ev_blocked_24h_def">Entries in the blocked history: DNS lookups your blocklists or rules answered with “not found”, and connections CoreLock stopped. Retries are grouped, not counted one by one: the same lookup again less than 10 seconds later is not a new entry, and the same blocked connection within the same minute is one entry. No app data reached these destinations.</string>
     <string name="ev_cleartext_24h">Unencrypted connections · last 24 h</string>
     <string name="ev_cleartext_24h_def">Connections where we saw plain HTTP. Anyone on the network path could read them.</string>
     <string name="ev_encryption_24h">Encryption · last 24 h</string>
@@ -124,7 +124,7 @@
     <string name="ev_background_24h">Background connections · last 24 h</string>
     <string name="ev_background_24h_def">Connections that started while the app was not on screen. Needs Usage Access; connections we could not place are not counted.</string>
     <string name="ev_ipv6_24h">IPv6 sessions · last 24 h</string>
-    <string name="ev_ipv6_24h_def">Sessions to IPv6 addresses. They went through PrivacyGuard’s tunnel like IPv4 traffic.</string>
+    <string name="ev_ipv6_24h_def">Sessions to IPv6 addresses. They went through CoreLock’s tunnel like IPv4 traffic.</string>
     <string name="ev_uploads_24h">Uploads · last 24 h</string>
     <string name="ev_uploads_24h_def">Connections that sent data while the app was not on screen, largest upload first. Uploads you make yourself (app on screen) are not listed.</string>
     <string name="ev_beacons_24h">Repeating patterns · last 24 h</string>

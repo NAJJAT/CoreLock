@@ -17,7 +17,7 @@
 
     <!-- Status hero -->
     <string name="ui_hero_on">Vous êtes protégé</string>
-    <string name="ui_hero_off">La protection est désactivée</string>
+    <string name="ui_hero_off">Protection désactivée</string>
     <string name="ui_hero_starting">Démarrage…</string>
     <string name="ui_hero_stopped">La protection s\'est arrêtée</string>
     <string name="ui_hero_sub_minimal">Bloque les logiciels malveillants · Minimal</string>

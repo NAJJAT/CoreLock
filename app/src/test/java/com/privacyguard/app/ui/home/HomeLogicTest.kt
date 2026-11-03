@@ -2,11 +2,14 @@ package com.privacyguard.app.ui.home
 
 import com.privacyguard.app.R
 import com.privacyguard.app.core.power.BatteryCheck
+import com.privacyguard.app.core.power.SystemStopCheck
 import com.privacyguard.app.ui.components.ProtectionState
 import com.privacyguard.app.ui.dashboard.StrictSuggestion
 import com.privacyguard.app.vpn.UnexpectedStop
 import com.privacyguard.platform.android.PrivacyVpnService
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.LocalDateTime
@@ -108,8 +111,28 @@ class HomeLogicTest {
     }
 
     @Test
+    fun battery_optimized_alone_shows_nothing_on_a_fresh_install() {
+        // "Optimized" is Android's default: no card until the system really stopped protection.
+        assertNull(HomeLogic.attention(HomeLogic.AttentionInputs(battery = BatteryCheck.State.OPTIMIZED)))
+        assertNull(HomeLogic.attention(HomeLogic.AttentionInputs(battery = BatteryCheck.State.UNRESTRICTED, stoppedBySystem = true)))
+    }
+
+    @Test
+    fun stopped_by_the_system_needs_an_unexplained_stop_and_a_system_kill_record() {
+        val stopped = ProtectionState.STOPPED_UNEXPECTEDLY
+        assertTrue(HomeLogic.stoppedBySystem(stopped, null, SystemStopCheck.Result.SYSTEM))
+        assertFalse("a crash is not the battery", HomeLogic.stoppedBySystem(stopped, null, SystemStopCheck.Result.NOT_SYSTEM))
+        assertFalse("no record: Android 10 and older", HomeLogic.stoppedBySystem(stopped, null, SystemStopCheck.Result.UNKNOWN))
+        assertFalse(HomeLogic.stoppedBySystem(stopped, UnexpectedStop.Reason.OTHER_VPN, SystemStopCheck.Result.SYSTEM))
+        assertFalse(HomeLogic.stoppedBySystem(stopped, UnexpectedStop.Reason.PACKET_PATH_FAILED, SystemStopCheck.Result.SYSTEM))
+        for (state in listOf(ProtectionState.ON, ProtectionState.OFF, ProtectionState.STARTING)) {
+            assertFalse(HomeLogic.stoppedBySystem(state, null, SystemStopCheck.Result.SYSTEM))
+        }
+    }
+
+    @Test
     fun battery_optimized_is_optional_and_stays_dismissed_but_restricted_is_not() {
-        val optimized = HomeLogic.AttentionInputs(battery = BatteryCheck.State.OPTIMIZED)
+        val optimized = HomeLogic.AttentionInputs(battery = BatteryCheck.State.OPTIMIZED, stoppedBySystem = true)
         assertEquals(HomeLogic.Attention.Battery(canDismiss = true), HomeLogic.attention(optimized))
         assertNull(HomeLogic.attention(optimized.copy(batteryDismissed = true)))
         val restricted = HomeLogic.AttentionInputs(battery = BatteryCheck.State.RESTRICTED, batteryDismissed = true)

@@ -157,6 +157,10 @@ relays must not slow the packet thread: the relay runs on its own threads today
   today's 365 days (`CaManager.kt:63`). Before expiry a new CA is created, the user is
   prompted to install it and to remove the old one, and the old key is deleted. This
   limits a leaked key to at most 90 days.
+- **CA name** (owner's decision, 2026-11-03): the certificate is still called "PrivacyGuard
+  Enterprise CA" (`CaManager.kt`, `CertForger.kt`); it is renamed to CoreLock, together with
+  every text that names it, with the first 90-day rotation and under this review, not
+  before: the name is what users look for in Android's certificate list.
 - **Further hardening, decided in the review:** name constraints are not usable (the
   CA must sign any host); delete the key immediately when MDM switches inspection
   off, not at the next retention run; show the CA fingerprint so the user can check it.

@@ -61,7 +61,7 @@
     <string name="dns_hijack">Le réseau réécrit le DNS</string>
     <string name="dns_hijack_desc">Le réseau a répondu pour un nom qui ne peut pas exister. Il intercepte ou réécrit le DNS et peut donc vous envoyer vers d’autres serveurs.</string>
     <string name="tls_interception">Interception TLS détectée</string>
-    <string name="tls_interception_desc">Un certificat de la connexion DNS chiffrée de PrivacyGuard a été remplacé en chemin. Quelqu’un sur ce réseau peut lire et modifier le HTTPS.</string>
+    <string name="tls_interception_desc">Un certificat de la connexion DNS chiffrée de CoreLock a été remplacé en chemin. Quelqu’un sur ce réseau peut lire et modifier le HTTPS.</string>
     <string name="sni_invalid">Nom de serveur invalide</string>
     <string name="sni_invalid_desc">L’app a envoyé un nom de serveur TLS qui n’est pas un nom d’hôte. Les apps normales ne le font jamais ; cela peut servir à tromper les filtres ou à cacher la destination.</string>
     <string name="sni_mismatch">Nom de serveur différent du DNS</string>

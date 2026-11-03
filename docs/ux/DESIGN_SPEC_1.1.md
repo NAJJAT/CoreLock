@@ -336,8 +336,16 @@ restyled with the new tokens). Nothing is removed.
 
 Attention card priority (only the first that applies is shown): 1 Private DNS in hostname
 mode → 2 protection stopped unexpectedly → 3 malware blocked in the last hour → 4 Usage
-Access missing while a background rule exists → 5 battery optimisation on → 6 new high
+Access missing while a background rule exists → 5 battery (see below) → 6 new high
 alert → 7 "What's new: some things moved" (D12, one time) → 8 a recommendation.
+
+Battery card (changed after the Phase 3 screenshots, 2026-11-03): shown only when
+background use is **Restricted** (always, can't be dismissed), or when battery use is
+**Optimized** and protection was really stopped by the system: it stopped unexpectedly with
+no reason the app recorded, and Android's exit record (`ApplicationExitInfo`, Android 11+)
+names a system kill (`SystemStopCheck`). Never for "Optimized" alone: that is Android's
+default, so the card showed on every fresh install. General battery advice moves into
+onboarding (Phase 7, §6.7 step 3).
 
 ### 5.3 Statistics sections (`StatisticsScreen.kt`) → Advanced › Analysis › Statistics
 
@@ -635,7 +643,10 @@ allowed in subtitles and Technical details, but every title stays plain.
    connections on your phone. Your traffic isn't sent to us — we have no servers." →
    "Continue" opens the system dialog.
 3. **Choose a level** — the three trade-off rows, Standard preselected. Battery guidance
-   appears on this screen only when the phone restricts background apps.
+   appears on this screen only when the phone restricts background apps. This is where
+   general battery advice lives now; Home shows a battery card only after a real system
+   stop (§5.2).
+
 
 Splash: Android 12+ SplashScreen through the theme (`windowSplashScreenAnimatedIcon`
 with a vector), no extra dependency if `core-splashscreen` is not needed (D6). Launcher

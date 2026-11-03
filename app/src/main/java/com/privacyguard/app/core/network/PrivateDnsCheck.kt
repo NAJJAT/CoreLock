@@ -3,9 +3,17 @@ package com.privacyguard.app.core.network
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
+import android.net.LinkProperties
+import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.emptyFlow
 
 /**
  * Android's Private DNS in hostname ("strict") mode. CoreLock drops DNS over TLS so
@@ -13,6 +21,8 @@ import android.provider.Settings
  * DNS, but with a hostname set it does not, and every lookup fails while the VPN runs.
  */
 object PrivateDnsCheck {
+
+    private const val TAG = "PrivateDnsCheck"
 
     /**
      * The Private DNS hostname set on the device's real network (not the VPN), or null
@@ -32,6 +42,30 @@ object PrivateDnsCheck {
                 cm.getLinkProperties(network)?.privateDnsServerName?.takeIf { it.isNotBlank() }
             }
         }.getOrNull()
+    }
+
+    /**
+     * Emits when the Private DNS setting may have changed, while collected. Android applies
+     * the setting to each real network's LinkProperties, so a change there is the moment
+     * [strictHostname] can read the new value; a screen that only re-checks on resume
+     * stays wrong while it is visible (the "Start anyway" dialog case). Only real networks:
+     * a NetworkRequest excludes VPNs by default, and the VPN (us) carries no Private DNS.
+     */
+    fun changes(context: Context): Flow<Unit> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return emptyFlow()
+        val cm = context.getSystemService(ConnectivityManager::class.java) ?: return emptyFlow()
+        return callbackFlow {
+            val callback = object : ConnectivityManager.NetworkCallback() {
+                override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) { trySend(Unit) }
+                override fun onLost(network: Network) { trySend(Unit) }
+            }
+            val request = NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build()
+            val registered = runCatching { cm.registerNetworkCallback(request, callback) }
+                // Too many callbacks for this app (Android allows 100): resume still re-checks.
+                .onFailure { Log.w(TAG, "Private DNS watch not registered: ${it.javaClass.simpleName}") }
+                .isSuccess
+            awaitClose { if (registered) runCatching { cm.unregisterNetworkCallback(callback) } }
+        }
     }
 
     /**

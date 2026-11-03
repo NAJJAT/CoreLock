@@ -36,7 +36,7 @@ screens of Phases 3 to 6 (Home, Activity, Apps, Settings).
 | `ui_open_settings` | Open settings | افتح الإعدادات | Ouvrir les paramètres | Instellingen openen |
 | `ui_turn_on` | Turn on | شغّل الحماية | Activer | Aanzetten |
 | `ui_hero_on` | You're protected | أنت محمي | Vous êtes protégé | Je bent beschermd |
-| `ui_hero_off` | Protection is off | الحماية متوقفة | La protection est désactivée | Bescherming staat uit |
+| `ui_hero_off` | Protection is off | الحماية متوقفة | Protection désactivée (shortened in Phase 3b: the long form needed 3 lines at 200 %) | Bescherming staat uit |
 | `ui_hero_starting` | Starting… | جارٍ التشغيل… | Démarrage… | Starten… |
 | `ui_hero_stopped` | Protection stopped | توقفت الحماية | La protection s'est arrêtée | Bescherming is gestopt |
 | `ui_hero_sub_minimal` | Blocking malware · Minimal | يحظر البرامج الضارة · الحد الأدنى | Bloque les logiciels malveillants · Minimal | Blokkeert malware · Minimaal |
@@ -120,3 +120,28 @@ screens of Phases 3 to 6 (Home, Activity, Apps, Settings).
 | `ui_open_https_inspection` | Open HTTPS inspection | افتح فحص HTTPS | Ouvrir l'inspection HTTPS | HTTPS-inspectie openen |
 | `ui_home_security_details` | Security details | تفاصيل الأمان | Détails de sécurité | Beveiligingsdetails |
 | `ui_home_security_details_sub` | Alerts, security checks and reports | التنبيهات وفحوص الأمان والتقارير | Alertes, contrôles de sécurité et rapports | Meldingen, beveiligingscontroles en rapporten |
+
+## Phase 3b: fixes after the Phase 3 screenshots (2026-11-03)
+
+- **French `ui_hero_off` shortened:** "La protection est désactivée" → "Protection
+  désactivée". At 200 % font the long form needed three lines in the Home hero ("La
+  protection / est / désactivée"); the hero allows two (`StatusHeroHeadlineTest`).
+  Please check that it reads naturally as a status title.
+- **"PrivacyGuard" → "CoreLock"** in the app's own name and in every user-visible string,
+  all four languages (the app label is now "CoreLock", the Quick Settings tile "CoreLock
+  VPN"). Only the name changed; please check that the sentence around it still reads well,
+  especially in Arabic, where "CoreLock" sits next to particles such as لـ and بـ:
+  `appd_bg_needs_usage`, `dash_inspection_body`, `dash_inspection_org_body`,
+  `dash_private_dns_body`, `diag_battery_optimized`, `diag_battery_restricted`,
+  `diag_battery_unrestricted`, `ev_blocked_24h_def`, `ev_ipv6_24h_def`, `lic_app_body`,
+  `notif_always_on_turned_off_text`, `notif_inspection_org_text`, `notif_open_for_details`,
+  `notif_protection_stopped_text`, `onb_c_https_body`, `onb_c_net_body` (main and
+  enterprise), `rule_security_warn_body`, `set_allow_screenshots_desc`,
+  `set_always_on_hint`, `set_auto_restart_desc`, `set_auto_restart_dialog_body`,
+  `set_updates_hint`, `tls_interception_desc`.
+- **Kept "PrivacyGuard" on purpose:** strings that name the HTTPS-inspection certificate,
+  which is still called "PrivacyGuard Enterprise CA" in Android's settings
+  (`dash_card_decrypt_on_desc`, the old-certificate plurals in `strings_mitm.xml`, the MDM
+  description `restriction_ca_install_automatic_desc`), and the `X-PrivacyGuard-Sig` header
+  in `restriction_mitm_siem_signing_key_desc`. Renaming the certificate is a change to the
+  inspection code and is not part of this step.

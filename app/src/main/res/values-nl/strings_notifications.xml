@@ -14,7 +14,7 @@
     </plurals>
     <string name="notif_active">Bescherming aan</string>
     <string name="notif_public_text">Ontgrendel om deze melding te zien</string>
-    <string name="notif_open_for_details">Open PrivacyGuard om te zien welke app en server.</string>
+    <string name="notif_open_for_details">Open CoreLock om te zien welke app en server.</string>
     <string name="notif_kind_malware">Mogelijke malwareverbinding</string>
     <string name="notif_kind_tls_fp">Een app maakt op een nieuwe manier verbinding</string>
     <string name="notif_kind_behavior">Ongewoon gedrag van een app</string>
@@ -44,8 +44,8 @@
     <string name="notif_ct_title">Certificate Transparency: %1$s</string>
     <string name="notif_ct_tap">%1$s. Tik om het in de meldingen te bekijken.</string>
     <string name="notif_vpn_down_title">Bescherming gestopt</string>
-    <string name="notif_protection_stopped_text">PrivacyGuard is onverwacht gestopt. Tik om de bescherming opnieuw te starten.</string>
-    <string name="notif_always_on_turned_off_text">‘Altijd-aan-VPN’ is uitgezet in de Android-instellingen, dus Android heeft PrivacyGuard gestopt. Tik om de bescherming weer aan te zetten.</string>
+    <string name="notif_protection_stopped_text">CoreLock is onverwacht gestopt. Tik om de bescherming opnieuw te starten.</string>
+    <string name="notif_always_on_turned_off_text">‘Altijd-aan-VPN’ is uitgezet in de Android-instellingen, dus Android heeft CoreLock gestopt. Tik om de bescherming weer aan te zetten.</string>
     <string name="notif_bg_title">Verbinding op de achtergrond geblokkeerd</string>
     <string name="notif_bg_text">%1$s probeerde op de achtergrond verbinding te maken met %2$s</string>
     <string name="notif_blocklist_updated">Blokkeerlijst bijgewerkt</string>
@@ -53,5 +53,5 @@
     <string name="notif_inspection_on">HTTPS-inspectie aan</string>
     <string name="notif_inspection_on_org">HTTPS-inspectie aan, ingesteld door je organisatie</string>
     <string name="notif_inspection_org_title">Je organisatie heeft HTTPS-inspectie aangezet</string>
-    <string name="notif_inspection_org_text">PrivacyGuard kan nu het HTTPS-verkeer lezen van apps die zijn certificaat vertrouwen. De meeste apps doen dat niet. Open PrivacyGuard om te zien wat er wordt vastgelegd.</string>
+    <string name="notif_inspection_org_text">CoreLock kan nu het HTTPS-verkeer lezen van apps die zijn certificaat vertrouwen. De meeste apps doen dat niet. Open CoreLock om te zien wat er wordt vastgelegd.</string>
 </resources>

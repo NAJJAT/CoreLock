@@ -1,6 +1,7 @@
 package com.privacyguard.app.ui.home
 
 import android.app.Application
+import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.util.Log
@@ -9,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.privacyguard.app.core.network.NetworkTrustRecorder
 import com.privacyguard.app.core.network.PrivateDnsCheck
 import com.privacyguard.app.core.power.BatteryCheck
+import com.privacyguard.app.core.power.SystemStopCheck
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.db.ConfigDatabase
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
@@ -70,7 +72,14 @@ data class HomeUiState(
  * Home ran a 1 s and a 15 s loop for as long as it was visible (CLAUDE.md §16.2 item 4).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class HomeViewModel(app: Application) : AndroidViewModel(app) {
+class HomeViewModel internal constructor(
+    app: Application,
+    /** Seams for tests: what the phone says, and when its Private DNS may have changed. */
+    private val readPrivateDns: (Context) -> String?,
+    private val privateDnsChanges: Flow<Unit>,
+) : AndroidViewModel(app) {
+
+    constructor(app: Application) : this(app, PrivateDnsCheck::strictHostname, PrivateDnsCheck.changes(app))
 
     private val prefs = SettingsPreferences.getInstance(app)
     private val homePrefs = HomePreferences.getInstance(app)
@@ -118,12 +127,15 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             }
     }.flowOn(Dispatchers.IO)
 
-    /** What the phone's settings say; read again on every resume. */
+    /**
+     * What the phone's settings say: read again on every resume (battery and Usage Access
+     * change only in system screens), and when Private DNS changes while Home is visible.
+     */
     private data class PhoneChecks(val privateDnsHost: String?, val battery: BatteryCheck.State, val hasUsageAccess: Boolean)
 
-    private val phoneChecks: Flow<PhoneChecks> = resumed.map {
+    private val phoneChecks: Flow<PhoneChecks> = merge(resumed, privateDnsChanges).conflate().map {
         val context = getApplication<Application>()
-        PhoneChecks(PrivateDnsCheck.strictHostname(context), BatteryCheck.state(context), usageAccess.hasUsageAccess())
+        PhoneChecks(readPrivateDns(context), BatteryCheck.state(context), usageAccess.hasUsageAccess())
     }.flowOn(Dispatchers.Default)
 
     /** Background-only rules need Usage Access to know what is in the foreground. */
@@ -165,19 +177,30 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     }.catch { e -> if (e is CancellationException) throw e; Log.w(TAG, "Network trust failed: ${e.javaClass.simpleName}"); emit(null) }
         .flowOn(Dispatchers.IO)
 
+    /** Android's exit record for the previous app process: fixed for this process, read once. */
+    private val lastExit: Flow<SystemStopCheck.Result> =
+        flow { emit(SystemStopCheck.lastExit(getApplication())) }.flowOn(Dispatchers.IO)
+
+    private val stoppedBySystem: Flow<Boolean> = combine(protection, lastExit.onStart { emit(SystemStopCheck.Result.UNKNOWN) }) { hero, exit ->
+        HomeLogic.stoppedBySystem(hero.state, hero.reason, exit)
+    }
+
+    private data class SystemInputs(val checks: PhoneChecks, val backgroundRule: Boolean, val stoppedBySystem: Boolean)
+
     private val attention: Flow<HomeLogic.Attention?> = combine(
-        combine(phoneChecks, hasBackgroundRule.onStart { emit(false) }) { checks, bgRule -> checks to bgRule },
+        combine(phoneChecks, hasBackgroundRule.onStart { emit(false) }, stoppedBySystem, ::SystemInputs),
         homePrefs.batteryDismissed,
         newHighAlert.onStart { emit(null) },
         homePrefs.whatsNew,
         strictSuggestion.onStart { emit(null) },
-    ) { (checks, bgRule), batteryDismissed, alert, whatsNew, strict ->
+    ) { (checks, bgRule, bySystem), batteryDismissed, alert, whatsNew, strict ->
         HomeLogic.attention(
             HomeLogic.AttentionInputs(
                 privateDnsHost = checks.privateDnsHost,
                 usageAccessMissingForRule = bgRule && !checks.hasUsageAccess,
                 battery = checks.battery,
                 batteryDismissed = batteryDismissed,
+                stoppedBySystem = bySystem,
                 newHighAlert = alert,
                 whatsNew = whatsNew && HomeLogic.WHATS_NEW_ENABLED,
                 strictSuggestion = strict,

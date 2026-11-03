@@ -5,7 +5,7 @@
     <string name="lic_title">Open-source licenses</string>
     <string name="lic_subtitle">The license of this app, and of the software and data it uses</string>
     <string name="lic_app_title">This app</string>
-    <string name="lic_app_body">PrivacyGuard is free software under the GNU General Public License, version 3. You may share and change it under those terms. It comes with no warranty. The source code is published here:</string>
+    <string name="lic_app_body">CoreLock is free software under the GNU General Public License, version 3. You may share and change it under those terms. It comes with no warranty. The source code is published here:</string>
     <string name="lic_section_software">Software inside the app</string>
     <string name="lic_section_downloaded">Lists the app downloads</string>
     <string name="lic_downloaded_note">Downloaded from their authors when lists are refreshed; they are not part of the app.</string>

@@ -2,6 +2,7 @@ package com.privacyguard.app.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import com.privacyguard.app.R
 import com.privacyguard.app.ui.theme.CoreLockTheme
 
@@ -104,12 +106,20 @@ private fun AttentionBannerPreview() = PreviewSurface {
     }
 }
 
-/** Stacked, not side by side: two verbs in French or Dutch at 200 % don't fit one line. */
+/**
+ * Stacked, not side by side: two verbs in French or Dutch at 200 % don't fit one line.
+ * No start padding, so the label lines up with the message above it (start, so RTL too);
+ * the button keeps its 48 dp height and its end and vertical padding.
+ */
 @Composable
 private fun ColumnScope.BannerAction(label: String, onClick: () -> Unit, color: androidx.compose.ui.graphics.Color) {
     TextButton(
         onClick = onClick,
         colors = ButtonDefaults.textButtonColors(contentColor = color),
+        contentPadding = BannerActionPadding,
         modifier = Modifier.align(Alignment.Start).heightIn(min = CoreLockTheme.spacing.minTouchTarget),
     ) { Text(label, style = MaterialTheme.typography.labelLarge) }
 }
+
+/** Material's text button padding (12 dp / 8 dp) without the start side. */
+internal val BannerActionPadding = PaddingValues(start = 0.dp, top = 8.dp, end = 12.dp, bottom = 8.dp)

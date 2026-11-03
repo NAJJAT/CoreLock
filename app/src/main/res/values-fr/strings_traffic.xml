@@ -103,7 +103,7 @@
     <string name="trf_no_domain_data">Aucune requête ni connexion vers ce domaine ces 7 derniers jours.</string>
     <string name="trf_anomalies">Anomalies DNS</string>
     <string name="ev_blocked_24h">Bloqués · 24 dernières h</string>
-    <string name="ev_blocked_24h_def">Entrées de l’historique des blocages : requêtes DNS auxquelles vos listes de blocage ou vos règles ont répondu « introuvable », et connexions arrêtées par PrivacyGuard. Les nouvelles tentatives sont regroupées, pas comptées une à une : la même requête répétée moins de 10 secondes plus tard n’est pas une nouvelle entrée, et la même connexion bloquée dans la même minute est une seule entrée. Aucune donnée des apps n’a atteint ces destinations.</string>
+    <string name="ev_blocked_24h_def">Entrées de l’historique des blocages : requêtes DNS auxquelles vos listes de blocage ou vos règles ont répondu « introuvable », et connexions arrêtées par CoreLock. Les nouvelles tentatives sont regroupées, pas comptées une à une : la même requête répétée moins de 10 secondes plus tard n’est pas une nouvelle entrée, et la même connexion bloquée dans la même minute est une seule entrée. Aucune donnée des apps n’a atteint ces destinations.</string>
     <string name="ev_cleartext_24h">Connexions non chiffrées · 24 dernières h</string>
     <string name="ev_cleartext_24h_def">Connexions où nous avons vu du HTTP simple. Toute personne sur le trajet réseau pouvait les lire.</string>
     <string name="ev_encryption_24h">Chiffrement · 24 dernières h</string>
@@ -113,7 +113,7 @@
     <string name="ev_background_24h">Connexions en arrière-plan · 24 dernières h</string>
     <string name="ev_background_24h_def">Connexions commencées alors que l’app n’était pas à l’écran. Nécessite l’accès aux données d’utilisation ; les connexions non situables ne sont pas comptées.</string>
     <string name="ev_ipv6_24h">Sessions IPv6 · 24 dernières h</string>
-    <string name="ev_ipv6_24h_def">Sessions vers des adresses IPv6. Elles sont passées par le tunnel de PrivacyGuard, comme le trafic IPv4.</string>
+    <string name="ev_ipv6_24h_def">Sessions vers des adresses IPv6. Elles sont passées par le tunnel de CoreLock, comme le trafic IPv4.</string>
     <string name="ev_uploads_24h">Envois · 24 dernières h</string>
     <string name="ev_uploads_24h_def">Connexions qui ont envoyé des données pendant que l’app n’était pas à l’écran, plus gros envoi en premier. Les envois que vous faites vous-même (app à l’écran) ne sont pas listés.</string>
     <string name="ev_beacons_24h">Motifs répétitifs · 24 dernières h</string>

@@ -30,7 +30,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import com.privacyguard.app.R
 import com.privacyguard.app.ui.theme.CoreLockTheme
 
@@ -85,7 +87,7 @@ fun StatusHeroCard(
             Icon(look.icon, contentDescription = null, tint = look.iconTint, modifier = Modifier.size(40.dp))
             Spacer(Modifier.width(CoreLockTheme.spacing.l))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(CoreLockTheme.spacing.xs)) {
-                Text(title, style = MaterialTheme.typography.headlineMedium)
+                Text(title, style = MaterialTheme.typography.headlineMedium.merge(HeroTitleStyle))
                 Text(subtitle, style = MaterialTheme.typography.bodyMedium)
             }
             Spacer(Modifier.width(CoreLockTheme.spacing.m))
@@ -104,6 +106,14 @@ fun StatusHeroCard(
         }
     }
 }
+
+/**
+ * The headline may take two lines on purpose ("Protection / stopped" in English at 100 %,
+ * most titles at 200 %, French and Dutch often): balanced breaks, so two lines come out of
+ * similar length instead of one long line and a lone word, and a tighter line height, so
+ * the two lines read as one title rather than as two paragraphs.
+ */
+internal val HeroTitleStyle = androidx.compose.ui.text.TextStyle(lineBreak = LineBreak.Heading, lineHeight = 1.15.em)
 
 private class HeroLook(val container: Color, val content: Color, val iconTint: Color, val icon: ImageVector)
 
