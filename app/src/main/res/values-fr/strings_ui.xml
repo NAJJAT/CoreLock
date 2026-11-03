@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Traduction automatique : à relire (docs/TRANSLATION_REVIEW_1.1.md). -->
+<resources>
+    <!-- Components -->
+    <string name="ui_protection">Protection</string>
+    <string name="ui_technical_details">Détails techniques</string>
+    <string name="ui_expanded">Développé</string>
+    <string name="ui_collapsed">Réduit</string>
+    <string name="ui_try_again">Réessayer</string>
+    <string name="ui_dismiss">Masquer</string>
+    <string name="ui_close">Fermer</string>
+    <string name="ui_loading">Chargement</string>
+    <string name="ui_learn_more">En savoir plus</string>
+    <string name="ui_warning">Avertissement</string>
+    <string name="ui_open_settings">Ouvrir les paramètres</string>
+    <string name="ui_turn_on">Activer</string>
+
+    <!-- Status hero -->
+    <string name="ui_hero_on">Vous êtes protégé</string>
+    <string name="ui_hero_off">La protection est désactivée</string>
+    <string name="ui_hero_starting">Démarrage…</string>
+    <string name="ui_hero_stopped">La protection s\'est arrêtée</string>
+    <string name="ui_hero_sub_minimal">Bloque les logiciels malveillants · Minimal</string>
+    <string name="ui_hero_sub_standard">Bloque les pubs et les traqueurs · Standard</string>
+    <string name="ui_hero_sub_strict">Bloque les pubs, les traqueurs et plus · Strict</string>
+    <string name="ui_hero_off_sub">Activez-la pour bloquer les pubs, les traqueurs et les logiciels malveillants.</string>
+    <string name="ui_hero_starting_sub">Cela prend quelques secondes.</string>
+    <string name="ui_hero_stopped_sub">Un autre VPN a peut-être pris le relais.</string>
+
+    <!-- Protection levels -->
+    <string name="ui_protection_level">Niveau de protection</string>
+    <string name="ui_level_minimal_desc">Bloque les logiciels malveillants. Rien ne se casse.</string>
+    <string name="ui_level_standard_desc">Bloque les pubs et les traqueurs. Recommandé.</string>
+    <string name="ui_level_strict_desc">Bloque davantage. Certaines applis ou certains sites peuvent ne plus marcher.</string>
+
+    <!-- Home -->
+    <string name="ui_blocked_today">Bloqués aujourd\'hui</string>
+    <string name="ui_something_not_working">Quelque chose ne marche pas ?</string>
+    <string name="ui_attention_private_dns">Le DNS privé est activé. Des applis peuvent contourner CoreLock.</string>
+
+    <!-- Activity -->
+    <string name="ui_filter_blocked">Bloqués</string>
+    <string name="ui_filter_all">Tout</string>
+    <string name="ui_reason_ads">Bloqué · Liste pubs et traqueurs</string>
+    <string name="ui_reason_malware">Bloqué · Liste logiciels malveillants</string>
+    <string name="ui_reason_rule">Bloqué · Votre règle</string>
+    <string name="ui_reason_allowed">Autorisé</string>
+    <string name="ui_allow_for_app">Autoriser pour cette appli</string>
+    <string name="ui_allow_everywhere">Autoriser partout</string>
+    <string name="ui_keep_blocked">Laisser bloqué</string>
+    <string name="ui_remove_my_rule">Supprimer ma règle</string>
+    <string name="ui_dns_allow_everywhere_only">Ceci a été bloqué avant que l\'appli se connecte. On ne peut donc l\'autoriser que pour toutes les applis.</string>
+    <string name="ui_empty_activity">Rien n\'a encore été bloqué. CoreLock affichera ici les pubs et traqueurs bloqués.</string>
+    <string name="ui_error_activity">Impossible de charger l\'activité.</string>
+
+    <!-- Apps -->
+    <string name="ui_app_allowed">Autorisée</string>
+    <string name="ui_app_blocked_background">Bloquée en arrière-plan</string>
+    <string name="ui_app_blocked">Bloquée</string>
+    <string name="ui_app_blocked_background_desc">Peut utiliser Internet seulement quand vous l\'utilisez.</string>
+    <string name="ui_app_blocked_desc">Ne peut pas utiliser Internet.</string>
+    <plurals name="ui_blocked_today_n">
+        <item quantity="one">%d bloqué aujourd\'hui</item>
+        <item quantity="many">%d bloqués aujourd\'hui</item>
+        <item quantity="other">%d bloqués aujourd\'hui</item>
+    </plurals>
+
+    <!-- Plain risk word per app -->
+    <string name="ui_risk_watch">Peut vous surveiller</string>
+    <string name="ui_risk_watch_desc">Cette appli a des autorisations et un comportement souvent vus dans les applis qui suivent une personne : %1$s. Si vous ne l\'avez pas installée vous-même, vérifiez-la.</string>
+    <string name="ui_risk_high">Risque élevé</string>
+    <string name="ui_risk_high_desc">CoreLock a vu des connexions risquées de cette appli ces dernières 24 heures. Ouvrez l\'appli pour les voir.</string>
+    <string name="ui_risk_unprotected">Envoie des données non protégées</string>
+    <string name="ui_risk_unprotected_desc">Certaines connexions de cette appli n\'étaient pas chiffrées : d\'autres personnes sur le réseau pouvaient les lire.</string>
+    <string name="ui_risk_trackers">Utilise des traqueurs</string>
+    <string name="ui_risk_trackers_desc">CoreLock a bloqué des connexions de pub ou de suivi de cette appli. C\'est courant pour beaucoup d\'applis.</string>
+    <string name="ui_risk_background">Active en arrière-plan</string>
+    <string name="ui_risk_background_desc">Cette appli a utilisé Internet quand vous ne l\'utilisiez pas.</string>
+    <string name="ui_risk_none">Aucune activité</string>
+    <string name="ui_risk_none_desc">Cette appli n\'a pas utilisé Internet ces dernières 24 heures.</string>
+    <string name="ui_risk_normal">Semble normale</string>
+    <string name="ui_risk_normal_desc">Rien d\'inhabituel ces dernières 24 heures.</string>
+
+    <!-- Settings -->
+    <string name="ui_advanced">Avancé</string>
+    <string name="ui_advanced_sub">Pour les experts. De mauvais réglages peuvent couper votre connexion.</string>
+    <string name="ui_restart_after_crash">Redémarrer après un plantage</string>
+    <string name="ui_restart_after_crash_sub">Réactiver la protection automatiquement</string>
+    <string name="ui_clear_all_data">Effacer toutes les données</string>
+    <string name="ui_what_corelock_cant">Ce que CoreLock peut faire ou non</string>
+    <string name="ui_what_corelock_cant_body">CoreLock bloque les pubs, les traqueurs et les logiciels malveillants pour les applis de ce téléphone. Il ne peut pas bloquer les pubs dans YouTube, Instagram, Snapchat, TikTok ou Facebook, car elles viennent des mêmes serveurs que les vidéos et les publications.</string>
+</resources>

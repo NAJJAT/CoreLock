@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Machinevertaling: moet nagekeken worden (docs/TRANSLATION_REVIEW_1.1.md). -->
+<resources>
+    <!-- Components -->
+    <string name="ui_protection">Bescherming</string>
+    <string name="ui_technical_details">Technische details</string>
+    <string name="ui_expanded">Uitgeklapt</string>
+    <string name="ui_collapsed">Ingeklapt</string>
+    <string name="ui_try_again">Opnieuw proberen</string>
+    <string name="ui_dismiss">Verbergen</string>
+    <string name="ui_close">Sluiten</string>
+    <string name="ui_loading">Laden</string>
+    <string name="ui_learn_more">Meer informatie</string>
+    <string name="ui_warning">Waarschuwing</string>
+    <string name="ui_open_settings">Instellingen openen</string>
+    <string name="ui_turn_on">Aanzetten</string>
+
+    <!-- Status hero -->
+    <string name="ui_hero_on">Je bent beschermd</string>
+    <string name="ui_hero_off">Bescherming staat uit</string>
+    <string name="ui_hero_starting">Starten…</string>
+    <string name="ui_hero_stopped">Bescherming is gestopt</string>
+    <string name="ui_hero_sub_minimal">Blokkeert malware · Minimaal</string>
+    <string name="ui_hero_sub_standard">Blokkeert advertenties en trackers · Standaard</string>
+    <string name="ui_hero_sub_strict">Blokkeert advertenties, trackers en meer · Streng</string>
+    <string name="ui_hero_off_sub">Zet het aan om advertenties, trackers en malware te blokkeren.</string>
+    <string name="ui_hero_starting_sub">Dit duurt een paar seconden.</string>
+    <string name="ui_hero_stopped_sub">Misschien heeft een andere VPN het overgenomen.</string>
+
+    <!-- Protection levels -->
+    <string name="ui_protection_level">Beschermingsniveau</string>
+    <string name="ui_level_minimal_desc">Blokkeert malware. Er gaat niets kapot.</string>
+    <string name="ui_level_standard_desc">Blokkeert advertenties en trackers. Aanbevolen.</string>
+    <string name="ui_level_strict_desc">Blokkeert meer. Sommige apps of sites werken misschien niet meer.</string>
+
+    <!-- Home -->
+    <string name="ui_blocked_today">Vandaag geblokkeerd</string>
+    <string name="ui_something_not_working">Werkt er iets niet?</string>
+    <string name="ui_attention_private_dns">Privé-DNS staat aan. Apps kunnen CoreLock omzeilen.</string>
+
+    <!-- Activity -->
+    <string name="ui_filter_blocked">Geblokkeerd</string>
+    <string name="ui_filter_all">Alles</string>
+    <string name="ui_reason_ads">Geblokkeerd · Lijst met advertenties en trackers</string>
+    <string name="ui_reason_malware">Geblokkeerd · Malwarelijst</string>
+    <string name="ui_reason_rule">Geblokkeerd · Je eigen regel</string>
+    <string name="ui_reason_allowed">Toegestaan</string>
+    <string name="ui_allow_for_app">Toestaan voor deze app</string>
+    <string name="ui_allow_everywhere">Overal toestaan</string>
+    <string name="ui_keep_blocked">Geblokkeerd laten</string>
+    <string name="ui_remove_my_rule">Mijn regel verwijderen</string>
+    <string name="ui_dns_allow_everywhere_only">Dit werd geblokkeerd voordat de app verbinding maakte, dus het kan alleen voor alle apps worden toegestaan.</string>
+    <string name="ui_empty_activity">Nog niets geblokkeerd. CoreLock laat hier geblokkeerde advertenties en trackers zien.</string>
+    <string name="ui_error_activity">Activiteit kon niet worden geladen.</string>
+
+    <!-- Apps -->
+    <string name="ui_app_allowed">Toegestaan</string>
+    <string name="ui_app_blocked_background">Geblokkeerd op de achtergrond</string>
+    <string name="ui_app_blocked">Geblokkeerd</string>
+    <string name="ui_app_blocked_background_desc">Kan internet alleen gebruiken terwijl jij de app gebruikt.</string>
+    <string name="ui_app_blocked_desc">Kan internet niet gebruiken.</string>
+    <plurals name="ui_blocked_today_n">
+        <item quantity="one">%d vandaag geblokkeerd</item>
+        <item quantity="other">%d vandaag geblokkeerd</item>
+    </plurals>
+
+    <!-- Plain risk word per app -->
+    <string name="ui_risk_watch">Kan je in de gaten houden</string>
+    <string name="ui_risk_watch_desc">Deze app heeft rechten en gedrag die vaak voorkomen bij apps die iemand volgen: %1$s. Heb je hem niet zelf geïnstalleerd? Controleer hem dan.</string>
+    <string name="ui_risk_high">Hoog risico</string>
+    <string name="ui_risk_high_desc">CoreLock zag de afgelopen 24 uur riskante verbindingen van deze app. Open de app om ze te zien.</string>
+    <string name="ui_risk_unprotected">Verstuurt onbeschermde gegevens</string>
+    <string name="ui_risk_unprotected_desc">Sommige verbindingen van deze app waren niet versleuteld, dus anderen op het netwerk konden ze lezen.</string>
+    <string name="ui_risk_trackers">Gebruikt trackers</string>
+    <string name="ui_risk_trackers_desc">CoreLock blokkeerde tracker- of advertentieverbindingen van deze app. Dat is normaal voor veel apps.</string>
+    <string name="ui_risk_background">Actief op de achtergrond</string>
+    <string name="ui_risk_background_desc">Deze app gebruikte internet terwijl jij hem niet gebruikte.</string>
+    <string name="ui_risk_none">Geen activiteit</string>
+    <string name="ui_risk_none_desc">Deze app heeft de afgelopen 24 uur geen internet gebruikt.</string>
+    <string name="ui_risk_normal">Ziet er normaal uit</string>
+    <string name="ui_risk_normal_desc">Niets ongewoons in de afgelopen 24 uur.</string>
+
+    <!-- Settings -->
+    <string name="ui_advanced">Geavanceerd</string>
+    <string name="ui_advanced_sub">Voor experts. Verkeerde instellingen kunnen je verbinding verbreken.</string>
+    <string name="ui_restart_after_crash">Herstarten na een crash</string>
+    <string name="ui_restart_after_crash_sub">Bescherming vanzelf weer aanzetten</string>
+    <string name="ui_clear_all_data">Alle gegevens wissen</string>
+    <string name="ui_what_corelock_cant">Wat CoreLock wel en niet kan</string>
+    <string name="ui_what_corelock_cant_body">CoreLock blokkeert advertenties, trackers en malware voor de apps op deze telefoon. Het kan geen advertenties blokkeren in YouTube, Instagram, Snapchat, TikTok of Facebook, omdat die van dezelfde servers komen als de video\'s en berichten.</string>
+</resources>
