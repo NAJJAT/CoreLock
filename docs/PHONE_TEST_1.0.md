@@ -23,25 +23,44 @@ published, nothing else (no debug build). On the phone the app is called
 
 ## Day 1
 
-### 1. Install and verify
+### 1. Install 1.0.0, then update to 1.0.1
 
-1. Check the APK before installing:
+Users update from the published 1.0.0, so test exactly that path: the published 1.0.0
+APK first, then 1.0.1 installed over it.
+
+1. Download the APK attached to the published **v1.0.0** release on GitHub and save it
+   as `release-1.0.0.apk`. Check both APKs before installing:
    ```
+   certutil -hashfile release-1.0.0.apk SHA256
+   apksigner verify --print-certs release-1.0.0.apk
    certutil -hashfile app-enterprise-release.apk SHA256
    apksigner verify --print-certs app-enterprise-release.apk
    ```
-   **Expected:** the SHA-256 equals the one in `RELEASE_NOTES_1.0.md`; "Signer #1
+   **Expected:** the 1.0.0 SHA-256 equals the one in `RELEASE_NOTES_1.0.md`; the 1.0.1
+   SHA-256 equals the one in `RELEASE_NOTES_1.0.1.md`; for both, "Signer #1
    certificate SHA-256 digest" equals the fingerprint in the README (Security).
-   **Fail (blocker):** either value differs.
-2. If an older build (named PrivacyGuard) is on the phone, note its version (Settings › About)
-   and keep it: step 1.3 is then an update test.
-3. Install: `adb -s PHONE_ID install -r app-enterprise-release.apk`.
-   **Expected:** `Success`. When updating, your rules, level and history are still
-   there afterwards. **Fail (blocker):** install refused, or data lost on update.
+   **Fail (blocker):** any value differs.
+2. Start from 1.0.0. If any CoreLock or PrivacyGuard build is on the phone, uninstall
+   it first (this deletes its data): `adb -s PHONE_ID uninstall com.privacyguard.app.enterprise`.
+   Then: `adb -s PHONE_ID install release-1.0.0.apk`.
+   **Expected:** `Success`; the app is called **PrivacyGuard**; Settings › About shows
+   1.0.0.
+3. Give the update something to keep: open the app, go through onboarding, accept the
+   VPN request, choose **Strict**, add one Block rule (for example `example.org`),
+   and browse for a few minutes so the history has entries. Note the blocked count
+   on Home.
+4. Update: `adb -s PHONE_ID install -r app-enterprise-release.apk` (the 1.0.1 APK).
+   **Expected:** `Success`, without uninstalling. The app is now called **CoreLock**
+   (launcher, notification, Android's VPN settings); Settings › About shows 1.0.1;
+   the level is still Strict, the Block rule is still there, the history kept its
+   entries and the blocked count did not go back to 0; no onboarding again;
+   protection is on again (or one tap on Home turns it on).
+   **Fail (blocker):** install refused, onboarding shown again, or any rule,
+   setting or history lost.
 
 ### 2. First setup
 
-1. Open the app. Go through onboarding; accept the VPN request.
+1. Open the updated app (onboarding was done on 1.0.0 in step 1.3).
    **Expected:** no crash; Home shows **Protected** within a few seconds; the
    notification says protection is on.
 2. Private DNS: Android Settings › Network › Private DNS. Set it to a hostname (for
@@ -210,7 +229,7 @@ Dates: ________
 
 | # | Check | Result (PASS / FAIL / SKIP) | Numbers and notes |
 |---|---|---|---|
-| 1 | Checksum and signing fingerprint; install or update | | |
+| 1 | Checksums and fingerprint; 1.0.0, then 1.0.1 over it, data kept | | |
 | 2 | First setup, Private DNS warning, battery screen | | |
 | 3 | Blocklist counts (Standard / Strict total), refresh jobs | | Standard: ___ Strict: ___ |
 | 4 | Daily use at Standard (Chrome, YouTube, WhatsApp video call, bank) | | |

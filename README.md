@@ -164,15 +164,17 @@ CoreLock is published only on
 [GitHub Releases](https://github.com/NAJJAT/CoreLock/releases), not on Google Play.
 It runs on Android 7.0 and newer (ARM phones, 64- and 32-bit).
 
-1. On the phone, download the APK (`CoreLock-<version>.apk`) from the release page.
+Latest version: **1.0.1** ([release notes](RELEASE_NOTES_1.0.1.md)). Earlier: [1.0.0](RELEASE_NOTES_1.0.md).
+
+1. On the phone, download the APK (`CoreLock-1.0.1.apk`) from the release page.
 2. **Check it before installing.** The release page lists the APK's SHA-256 and the
    signing certificate's SHA-256 fingerprint (also under [Security](#security)).
    On a computer with the Android SDK build-tools:
 
    ```bash
-   apksigner verify --print-certs CoreLock-<version>.apk   # certificate fingerprint
-   sha256sum CoreLock-<version>.apk                        # Linux / macOS
-   certutil -hashfile CoreLock-<version>.apk SHA256        # Windows
+   apksigner verify --print-certs CoreLock-1.0.1.apk   # certificate fingerprint
+   sha256sum CoreLock-1.0.1.apk                        # Linux / macOS
+   certutil -hashfile CoreLock-1.0.1.apk SHA256        # Windows
    ```
 
    Install only if both match. (`keytool -printcert -jarfile` does not work: the
