@@ -226,6 +226,9 @@ class PrivacyVpnService : VpnService() {
         // Consent still ours: Always-on was not handed to another VPN app.
         val alwaysOnTurnedOff = alwaysOnSeen && !isAlwaysOnNow() && prepare(this) == null
         Log.w(TAG, "VPN revoked by Android (Always-on turned off: $alwaysOnTurnedOff)")
+        // Recorded before the stop, so Home already reads the reason when it sees "stopped".
+        com.privacyguard.app.vpn.UnexpectedStop.forRevoke(consentStillOurs = prepare(this) == null)
+            ?.let { com.privacyguard.app.vpn.UnexpectedStop.record(this, it) }
         stopVpn()
         if (alwaysOnTurnedOff) NotificationHelper(this).postAlwaysOnTurnedOff()
         super.onRevoke()
@@ -305,6 +308,8 @@ class PrivacyVpnService : VpnService() {
         watcher.bind()
         keepBackupArmed()
         notifHelper.cancelProtectionStopped()
+        // A new start: whatever stopped protection last time is no longer the current state.
+        com.privacyguard.app.vpn.UnexpectedStop.clear(this)
         _state.value = State.STARTING
         startJob = scope.launch {
             try {
@@ -1592,6 +1597,7 @@ class PrivacyVpnService : VpnService() {
             if (stopRequested) return@launch
             if (!restartBudget.tryAcquire(System.currentTimeMillis())) {
                 Log.e(TAG, "Packet path keeps failing; stopping protection")
+                com.privacyguard.app.vpn.UnexpectedStop.record(this@PrivacyVpnService, com.privacyguard.app.vpn.UnexpectedStop.Reason.PACKET_PATH_FAILED)
                 stopVpn()
                 notifHelper.postProtectionStopped()
                 return@launch
@@ -1604,6 +1610,7 @@ class PrivacyVpnService : VpnService() {
                 val fresh = openTun()
                 teardownTunnelLocked()
                 if (fresh == null) {
+                    com.privacyguard.app.vpn.UnexpectedStop.record(this@PrivacyVpnService, com.privacyguard.app.vpn.UnexpectedStop.Reason.PACKET_PATH_FAILED)
                     com.privacyguard.app.vpn.BootReceiver.markVpnStopped(this@PrivacyVpnService)
                     releaseResourcesLocked()
                     false

@@ -3,6 +3,7 @@ package com.privacyguard.app.ui.home
 import androidx.annotation.StringRes
 import com.privacyguard.app.R
 import com.privacyguard.app.ui.components.ProtectionState
+import com.privacyguard.app.vpn.UnexpectedStop
 import com.privacyguard.platform.android.PrivacyVpnService
 import java.util.Calendar
 import java.util.TimeZone
@@ -18,11 +19,18 @@ object HomeLogic {
      * "Stopped unexpectedly" means protection should be on (the last stop was not one the
      * user or the app asked for) and no service is running or starting: a crash, or the
      * process killed. A stop the user asked for clears [shouldBeActive] first.
+     * A recorded [stopReason] (another VPN took over, the packet path kept failing) is also
+     * unexpected, although that stop cleared [shouldBeActive] on its way out.
      */
-    fun protectionState(service: PrivacyVpnService.State, shouldBeActive: Boolean): ProtectionState = when (service) {
+    fun protectionState(
+        service: PrivacyVpnService.State,
+        shouldBeActive: Boolean,
+        stopReason: UnexpectedStop.Reason? = null,
+    ): ProtectionState = when (service) {
         PrivacyVpnService.State.RUNNING -> ProtectionState.ON
         PrivacyVpnService.State.STARTING -> ProtectionState.STARTING
-        PrivacyVpnService.State.STOPPED -> if (shouldBeActive) ProtectionState.STOPPED_UNEXPECTEDLY else ProtectionState.OFF
+        PrivacyVpnService.State.STOPPED ->
+            if (shouldBeActive || stopReason != null) ProtectionState.STOPPED_UNEXPECTEDLY else ProtectionState.OFF
     }
 
     /**
@@ -54,7 +62,7 @@ object HomeLogic {
     }
 
     @StringRes
-    fun heroSubtitle(state: ProtectionState, level: String): Int = when (state) {
+    fun heroSubtitle(state: ProtectionState, level: String, stopReason: UnexpectedStop.Reason? = null): Int = when (state) {
         ProtectionState.ON -> when (level) {
             LEVEL_MINIMAL -> R.string.ui_hero_sub_minimal
             LEVEL_STRICT -> R.string.ui_hero_sub_strict
@@ -62,7 +70,12 @@ object HomeLogic {
         }
         ProtectionState.OFF -> R.string.ui_hero_off_sub
         ProtectionState.STARTING -> R.string.ui_hero_starting_sub
-        ProtectionState.STOPPED_UNEXPECTEDLY -> R.string.ui_home_stopped_sub
+        // Only what happened, in plain words; no reason recorded means a crash or a killed process.
+        ProtectionState.STOPPED_UNEXPECTEDLY -> when (stopReason) {
+            UnexpectedStop.Reason.OTHER_VPN -> R.string.ui_home_stopped_other_vpn
+            UnexpectedStop.Reason.PACKET_PATH_FAILED -> R.string.ui_home_stopped_failed
+            null -> R.string.ui_home_stopped_sub
+        }
     }
 
     @StringRes

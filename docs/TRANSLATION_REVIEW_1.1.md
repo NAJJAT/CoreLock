@@ -93,7 +93,7 @@ screens of Phases 3 to 6 (Home, Activity, Apps, Settings).
 | `ui_what_corelock_cant_body` | CoreLock blocks ads, trackers and malware for the apps on this phone. It can't block ads inside YouTube, Instagram, Snapchat, TikTok or Facebook, because they come from the same servers as the videos and posts. | يحظر CoreLock الإعلانات وأدوات التتبع والبرامج الضارة للتطبيقات على هذا الهاتف. لا يستطيع حظر الإعلانات داخل YouTube وInstagram وSnapchat وTikTok وFacebook، لأنها تأتي من الخوادم نفسها التي تأتي منها المقاطع والمنشورات. | CoreLock bloque les pubs, les traqueurs et les logiciels malveillants pour les applis de ce téléphone. Il ne peut pas bloquer les pubs dans YouTube, Instagram, Snapchat, TikTok ou Facebook, car elles viennent des mêmes serveurs que les vidéos et les publications. | CoreLock blokkeert advertenties, trackers en malware voor de apps op deze telefoon. Het kan geen advertenties blokkeren in YouTube, Instagram, Snapchat, TikTok of Facebook, omdat die van dezelfde servers komen als de video's en berichten. |
 | `ui_blocked_today_n` | one: %d blocked today<br>other: %d blocked today | zero: لم يُحظر شيء اليوم<br>one: حُظر اتصال واحد اليوم<br>two: حُظر اتصالان اليوم<br>few: حُظرت %d اتصالات اليوم<br>many: حُظر %d اتصالًا اليوم<br>other: حُظر %d اتصال اليوم | one: %d bloqué aujourd'hui<br>many: %d bloqués aujourd'hui<br>other: %d bloqués aujourd'hui | one: %d vandaag geblokkeerd<br>other: %d vandaag geblokkeerd |
 
-## Phase 3: Home (`res/values*/strings_ui.xml`, 12 new strings, 1 changed)
+## Phase 3: Home (`res/values*/strings_ui.xml`, 14 new strings, 1 changed)
 
 - **Changed:** `ui_attention_private_dns` (row in the Phase 2 table above). Phase 2 said
   "Apps can skip CoreLock". That is not what happens: CoreLock drops DNS over TLS, and
@@ -107,6 +107,8 @@ screens of Phases 3 to 6 (Home, Activity, Apps, Settings).
 | String | English | Arabic | French | Dutch |
 |---|---|---|---|---|
 | `ui_home_stopped_sub` | It stopped without you turning it off. Turn it on again. | توقفت الحماية دون أن توقفها أنت. شغّلها مرة أخرى. | Elle s'est arrêtée sans que vous l'ayez désactivée. Réactivez-la. | De bescherming stopte zonder dat je die uitzette. Zet haar weer aan. |
+| `ui_home_stopped_other_vpn` | Another VPN app took over. Turn CoreLock on to block again. | تولّى تطبيق VPN آخر الاتصال. شغّل CoreLock ليعود الحظر. | Une autre appli VPN a pris le relais. Réactivez CoreLock pour bloquer à nouveau. | Een andere VPN-app heeft het overgenomen. Zet CoreLock aan om weer te blokkeren. |
+| `ui_home_stopped_failed` | CoreLock hit a problem and stopped. Turn it on again. | واجه CoreLock مشكلة فتوقّف. شغّله مرة أخرى. | CoreLock a rencontré un problème et s'est arrêté. Réactivez-le. | CoreLock liep tegen een probleem aan en stopte. Zet het weer aan. |
 | `ui_couldnt_load` | Couldn't load | تعذّر التحميل | Chargement impossible | Kon niet laden |
 | `ui_attention_usage_access` | Blocking apps in the background needs Usage Access. | حظر التطبيقات في الخلفية يحتاج إلى إذن الوصول إلى بيانات الاستخدام. | Bloquer des applis en arrière-plan nécessite l'accès aux données d'utilisation. | Apps op de achtergrond blokkeren heeft toegang tot gebruiksgegevens nodig. |
 | `ui_attention_battery_restricted` | Battery use is restricted, so Android can stop CoreLock. | استخدام البطارية مقيّد، لذلك قد يوقف Android تطبيق CoreLock. | L'utilisation de la batterie est limitée : Android peut arrêter CoreLock. | Batterijgebruik is beperkt, dus Android kan CoreLock stoppen. |

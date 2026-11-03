@@ -9,6 +9,7 @@ import com.privacyguard.app.data.db.DnsQueryEntity
 import com.privacyguard.app.data.repository.BlockStats
 import com.privacyguard.app.ui.components.ProtectionState
 import com.privacyguard.app.vpn.BootReceiver
+import com.privacyguard.app.vpn.UnexpectedStop
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -30,6 +31,7 @@ class HomeStateTest {
 
     @After
     fun tearDown() {
+        UnexpectedStop.clear(app)
         BootReceiver.markVpnStopped(app)
         app.getSharedPreferences("corelock_home", Context.MODE_PRIVATE).edit().clear().commit()
         resetHomePreferences()
@@ -43,6 +45,15 @@ class HomeStateTest {
         // Protection should be on but no service runs (a crash): red at once, not "off" first.
         BootReceiver.markVpnActive(app)
         assertEquals(ProtectionState.STOPPED_UNEXPECTEDLY, HomeViewModel(app).uiState.value.protection)
+    }
+
+    @Test
+    fun another_vpn_taking_over_is_red_with_its_reason_at_the_first_frame() {
+        BootReceiver.markVpnStopped(app) // stopVpn cleared it, as onRevoke does
+        UnexpectedStop.record(app, UnexpectedStop.Reason.OTHER_VPN)
+        val state = HomeViewModel(app).uiState.value
+        assertEquals(ProtectionState.STOPPED_UNEXPECTEDLY, state.protection)
+        assertEquals(UnexpectedStop.Reason.OTHER_VPN, state.stopReason)
     }
 
     @Test

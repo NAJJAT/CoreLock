@@ -40,6 +40,8 @@
 
     <!-- Home, Phase 3 (DESIGN_SPEC_1.1.md §6.1) -->
     <string name="ui_home_stopped_sub">De bescherming stopte zonder dat je die uitzette. Zet haar weer aan.</string>
+    <string name="ui_home_stopped_other_vpn">Een andere VPN-app heeft het overgenomen. Zet CoreLock aan om weer te blokkeren.</string>
+    <string name="ui_home_stopped_failed">CoreLock liep tegen een probleem aan en stopte. Zet het weer aan.</string>
     <string name="ui_couldnt_load">Kon niet laden</string>
     <string name="ui_attention_usage_access">Apps op de achtergrond blokkeren heeft toegang tot gebruiksgegevens nodig.</string>
     <string name="ui_attention_battery_restricted">Batterijgebruik is beperkt, dus Android kan CoreLock stoppen.</string>

@@ -40,6 +40,8 @@
 
     <!-- Home, Phase 3 (DESIGN_SPEC_1.1.md §6.1) -->
     <string name="ui_home_stopped_sub">Elle s\'est arrêtée sans que vous l\'ayez désactivée. Réactivez-la.</string>
+    <string name="ui_home_stopped_other_vpn">Une autre appli VPN a pris le relais. Réactivez CoreLock pour bloquer à nouveau.</string>
+    <string name="ui_home_stopped_failed">CoreLock a rencontré un problème et s\'est arrêté. Réactivez-le.</string>
     <string name="ui_couldnt_load">Chargement impossible</string>
     <string name="ui_attention_usage_access">Bloquer des applis en arrière-plan nécessite l\'accès aux données d\'utilisation.</string>
     <string name="ui_attention_battery_restricted">L\'utilisation de la batterie est limitée : Android peut arrêter CoreLock.</string>

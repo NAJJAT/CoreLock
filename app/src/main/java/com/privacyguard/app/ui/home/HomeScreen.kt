@@ -177,7 +177,7 @@ fun HomeContent(state: HomeUiState, inspection: InspectionStatus, actions: HomeA
         StatusHeroCard(
             state = state.protection,
             title = stringResource(HomeLogic.heroTitle(state.protection)),
-            subtitle = stringResource(HomeLogic.heroSubtitle(state.protection, state.level)),
+            subtitle = stringResource(HomeLogic.heroSubtitle(state.protection, state.level, state.stopReason)),
             onToggle = actions.onToggle,
             modifier = Modifier.testTag(TAG_HERO),
         )

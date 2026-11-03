@@ -4,6 +4,7 @@ import com.privacyguard.app.R
 import com.privacyguard.app.core.power.BatteryCheck
 import com.privacyguard.app.ui.components.ProtectionState
 import com.privacyguard.app.ui.dashboard.StrictSuggestion
+import com.privacyguard.app.vpn.UnexpectedStop
 import com.privacyguard.platform.android.PrivacyVpnService
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -21,6 +22,21 @@ class HomeLogicTest {
         assertEquals(ProtectionState.OFF, HomeLogic.protectionState(PrivacyVpnService.State.STOPPED, shouldBeActive = false))
         // Should be on, but nothing runs: crashed or killed.
         assertEquals(ProtectionState.STOPPED_UNEXPECTEDLY, HomeLogic.protectionState(PrivacyVpnService.State.STOPPED, shouldBeActive = true))
+    }
+
+    @Test
+    fun a_recorded_reason_makes_a_stop_unexpected_and_says_why() {
+        // stopVpn cleared "should be on", but the reason says nobody asked for this stop.
+        for (reason in UnexpectedStop.Reason.entries) {
+            assertEquals(ProtectionState.STOPPED_UNEXPECTEDLY, HomeLogic.protectionState(PrivacyVpnService.State.STOPPED, false, reason))
+        }
+        // Running or starting again: the old reason no longer describes anything.
+        assertEquals(ProtectionState.ON, HomeLogic.protectionState(PrivacyVpnService.State.RUNNING, false, UnexpectedStop.Reason.OTHER_VPN))
+        assertEquals(ProtectionState.STARTING, HomeLogic.protectionState(PrivacyVpnService.State.STARTING, false, UnexpectedStop.Reason.PACKET_PATH_FAILED))
+        val stopped = ProtectionState.STOPPED_UNEXPECTEDLY
+        assertEquals(R.string.ui_home_stopped_other_vpn, HomeLogic.heroSubtitle(stopped, "STANDARD", UnexpectedStop.Reason.OTHER_VPN))
+        assertEquals(R.string.ui_home_stopped_failed, HomeLogic.heroSubtitle(stopped, "STANDARD", UnexpectedStop.Reason.PACKET_PATH_FAILED))
+        assertEquals(R.string.ui_home_stopped_sub, HomeLogic.heroSubtitle(stopped, "STANDARD", null))
     }
 
     @Test

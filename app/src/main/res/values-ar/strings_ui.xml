@@ -40,6 +40,8 @@
 
     <!-- Home, Phase 3 (DESIGN_SPEC_1.1.md §6.1) -->
     <string name="ui_home_stopped_sub">توقفت الحماية دون أن توقفها أنت. شغّلها مرة أخرى.</string>
+    <string name="ui_home_stopped_other_vpn">تولّى تطبيق VPN آخر الاتصال. شغّل CoreLock ليعود الحظر.</string>
+    <string name="ui_home_stopped_failed">واجه CoreLock مشكلة فتوقّف. شغّله مرة أخرى.</string>
     <string name="ui_couldnt_load">تعذّر التحميل</string>
     <string name="ui_attention_usage_access">حظر التطبيقات في الخلفية يحتاج إلى إذن الوصول إلى بيانات الاستخدام.</string>
     <string name="ui_attention_battery_restricted">استخدام البطارية مقيّد، لذلك قد يوقف Android تطبيق CoreLock.</string>

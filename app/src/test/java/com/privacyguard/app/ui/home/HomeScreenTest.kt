@@ -37,7 +37,7 @@ class HomeScreenTest {
     @get:Rule
     val rule = createComposeRule()
 
-    private val on = HomeUiState(ProtectionState.ON, "STANDARD", BlockedToday.Count(128))
+    private val on = HomeUiState(protection = ProtectionState.ON, level = "STANDARD", blockedToday = BlockedToday.Count(128))
 
     private fun show(
         state: HomeUiState,
@@ -72,8 +72,16 @@ class HomeScreenTest {
         val toggles = mutableListOf<Boolean>()
         show(on.copy(protection = ProtectionState.STOPPED_UNEXPECTEDLY), HomeActions(onToggle = { toggles += it }))
         rule.onNodeWithText("Protection stopped").assertExists()
+        rule.onNodeWithText("It stopped without you turning it off. Turn it on again.").assertExists()
         rule.onNodeWithTag(TAG_HERO).performClick()
         assertEquals(listOf(true), toggles)
+    }
+
+    @Test
+    fun another_vpn_taking_over_says_so_in_plain_words() {
+        show(on.copy(protection = ProtectionState.STOPPED_UNEXPECTEDLY, stopReason = com.privacyguard.app.vpn.UnexpectedStop.Reason.OTHER_VPN))
+        rule.onNodeWithText("Protection stopped").assertExists()
+        rule.onNodeWithText("Another VPN app took over. Turn CoreLock on to block again.").assertExists()
     }
 
     @Test
