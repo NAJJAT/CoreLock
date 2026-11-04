@@ -3,14 +3,11 @@ package com.privacyguard.ui
 import android.net.Uri
 import com.privacyguard.app.ui.theme.CoreLockTheme
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ManageSearch
-import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.automirrored.rounded.ListAlt
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
@@ -32,9 +29,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -56,13 +51,25 @@ import com.privacyguard.app.ui.security.SecurityAnalysisScreen
 import com.privacyguard.app.ui.settings.LicenseText
 import com.privacyguard.app.ui.settings.LicenseTextScreen
 import com.privacyguard.app.ui.settings.OpenSourceLicensesScreen
-import com.privacyguard.app.ui.settings.SettingsScreen
 import com.privacyguard.app.ui.sleep.SleepReportScreen
 import com.privacyguard.app.ui.statistics.StatisticsScreen
 import com.privacyguard.ui.flavor.PayloadInspectorUi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 internal data class NavTab(val route: String, @androidx.annotation.StringRes val labelRes: Int, val icon: ImageVector)
+
+/**
+ * The four tabs of 1.1 (DESIGN_SPEC_1.1.md §4.1). Stats and Payload left the bar: they are
+ * Settings › Advanced › Analysis › Statistics and Settings › Advanced › HTTPS inspection,
+ * and their 1.0 routes still work. Activity keeps the 1.0 route name "connections" because
+ * notifications posted by 1.0 open it (§4.3).
+ */
+internal val APP_TABS = listOf(
+    NavTab("dashboard", com.privacyguard.app.R.string.nav_home, Icons.Rounded.Shield),
+    NavTab("apps", com.privacyguard.app.R.string.nav_apps, Icons.Rounded.Apps),
+    NavTab("connections", com.privacyguard.app.R.string.nav_traffic, Icons.AutoMirrored.Rounded.ListAlt),
+    NavTab("settings", com.privacyguard.app.R.string.nav_settings, Icons.Rounded.Settings),
+)
 
 @Composable
 fun AppNavHost(
@@ -72,16 +79,7 @@ fun AppNavHost(
     val context = LocalContext.current
     val settingsPreferences = remember(context) { SettingsPreferences.getInstance(context) }
 
-    val tabs = remember {
-        buildList {
-            add(NavTab("dashboard", com.privacyguard.app.R.string.nav_home,    Icons.Default.Home))
-            add(NavTab("apps",      com.privacyguard.app.R.string.nav_apps,    Icons.Default.Apps))
-            add(NavTab("connections",com.privacyguard.app.R.string.nav_traffic, Icons.AutoMirrored.Filled.ListAlt))
-            add(NavTab("statistics",com.privacyguard.app.R.string.nav_stats,   Icons.Default.BarChart))
-            add(NavTab("payloads",  com.privacyguard.app.R.string.nav_payload, Icons.AutoMirrored.Filled.ManageSearch))
-            add(NavTab("settings",  com.privacyguard.app.R.string.nav_settings,Icons.Default.Settings))
-        }
-    }
+    val tabs = APP_TABS
 
     val topLevelRoutes = remember(tabs) { tabs.map { it.route }.toSet() }
     val onboardingCompleted by settingsPreferences.onboardingCompleted.collectAsStateWithLifecycle()
@@ -184,7 +182,6 @@ fun AppNavHost(
                     onOpenAlerts = { navController.navigate("alerts") },
                     onOpenStatistics = { navController.navigate("statistics") { launchSingleTop = true } },
                     onOpenPayloads = { navController.navigate("payloads") { launchSingleTop = true } },
-                    onOpenSecurityDetails = { navController.navigate("securityOverview") },
                     onOpenFix = { navController.navigate("fix") },
                 )
             }
@@ -192,7 +189,7 @@ fun AppNavHost(
             // TEMPORARY (Phase 3 → 6): the 1.0 Home, whole, until its cards move to
             // Settings › Advanced › Analysis (DESIGN_SPEC_1.1.md §5.2).
             composable("securityOverview") {
-                DashboardScreen(
+                Pushed(navController) { DashboardScreen(
                     onRequestVpn = onRequestVpn,
                     onOpenSettings = { navController.navigate("settings") },
                     onOpenAlerts = { navController.navigate("alerts") },
@@ -202,7 +199,7 @@ fun AppNavHost(
                     onOpenEvidence = { kind, at -> navController.navigate("evidence/${kind.name}?at=$at") },
                     onOpenStatistics = { navController.navigate("statistics") },
                     onOpenPayloads = { navController.navigate("payloads") },
-                )
+                ) }
             }
 
             // Drill-downs behind Home numbers: same window as the number, so the counts match.
@@ -321,34 +318,35 @@ fun AppNavHost(
             }
 
             composable("ads") {
-                AdsScreen()
+                Pushed(navController) { AdsScreen() }
             }
 
             composable("adPrivacy") {
-                com.privacyguard.app.adprivacy.AdPrivacyScreen()
+                Pushed(navController) { com.privacyguard.app.adprivacy.AdPrivacyScreen() }
             }
 
             composable("rules") {
                 com.privacyguard.app.ui.rules.RulesScreen(onBack = { navController.popBackStack() })
             }
 
+            // Advanced › Analysis › Statistics (parity R8; was the Stats tab).
             composable("statistics") {
-                StatisticsScreen(
-                    onOpenEvidence = { kind, at -> navController.navigate("evidence/${kind.name}?at=$at") },
-                    onOpenDomain = { host -> navController.navigate("domain/${Uri.encode(host)}") },
-                    onOpenApp = { pkg -> navController.navigate(appTrafficRoute(pkg)) },
-                )
+                Pushed(navController) {
+                    StatisticsScreen(
+                        onOpenEvidence = { kind, at -> navController.navigate("evidence/${kind.name}?at=$at") },
+                        onOpenDomain = { host -> navController.navigate("domain/${Uri.encode(host)}") },
+                        onOpenApp = { pkg -> navController.navigate(appTrafficRoute(pkg)) },
+                    )
+                }
             }
 
             composable("crypto") {
-                SecurityAnalysisScreen(onOpenAlerts = { navController.navigate("alerts") })
+                Pushed(navController) { SecurityAnalysisScreen(onOpenAlerts = { navController.navigate("alerts") }) }
             }
 
+            // Advanced › HTTPS inspection (parity R9; was the Payload tab).
             composable("payloads") {
-                // A back arrow when opened from Advanced; none when opened from its tab.
-                val fromTab = navController.previousBackStackEntry?.destination?.route == null ||
-                    navController.previousBackStackEntry?.destination?.route in topLevelRoutes
-                PayloadInspectorUi.Screen(onBack = if (fromTab) null else { { navController.popBackStack() } })
+                PayloadInspectorUi.Screen(onBack = { navController.backOrHome() })
             }
 
             composable("settings") {
@@ -415,12 +413,12 @@ fun AppNavHost(
             }
 
             composable("licenses") {
-                OpenSourceLicensesScreen(onOpenText = { text -> navController.navigate("licenseText/${text.name}") })
+                Pushed(navController) { OpenSourceLicensesScreen(onOpenText = { text -> navController.navigate("licenseText/${text.name}") }) }
             }
 
             composable("licenseText/{key}") { backStack ->
                 val key = backStack.arguments?.getString("key")
-                LicenseTextScreen(LicenseText.entries.firstOrNull { it.name == key })
+                Pushed(navController) { LicenseTextScreen(LicenseText.entries.firstOrNull { it.name == key }) }
             }
 
             composable("appDetail/{packageName}?appName={appName}") { backStack ->
@@ -436,6 +434,20 @@ fun AppNavHost(
             }
         }
     }
+}
+
+/** A 1.0 screen pushed from a 1.1 one: its title row gets a back arrow (see LocalScreenBack). */
+@Composable
+private fun Pushed(navController: androidx.navigation.NavHostController, content: @Composable () -> Unit) {
+    androidx.compose.runtime.CompositionLocalProvider(
+        com.privacyguard.app.ui.components.LocalScreenBack provides { navController.backOrHome() },
+        content = content,
+    )
+}
+
+/** Back, or Home when this screen is the only one (opened from a notification). */
+private fun androidx.navigation.NavHostController.backOrHome() {
+    if (!popBackStack()) navigate("dashboard") { launchSingleTop = true }
 }
 
 /** Route to an app's traffic; a blank package (unattributed lookups) uses DnsHandler's "Unknown". */
@@ -484,12 +496,22 @@ internal fun PgBottomBar(
                     }
                 },
                 label = {
+                    // Four tabs leave room for the label at the user's font size; where a long
+                    // word still doesn't fit (200 %, "Instellingen"), it shrinks, but never below
+                    // its 100 % size, instead of being cut ("Réglag" in 1.0).
+                    val style = androidx.compose.material3.MaterialTheme.typography.labelMedium
+                    val fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale
                     Text(
                         text = stringResource(tab.labelRes),
+                        style = style,
                         maxLines = 1,
-                        overflow = TextOverflow.Clip,
                         softWrap = false,
-                        fontSize = 11.sp,
+                        // A small gap so neighbouring long labels never touch each other or the screen edge.
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                        autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(
+                            minFontSize = style.fontSize / fontScale.coerceAtLeast(1f),
+                            maxFontSize = style.fontSize,
+                        ),
                     )
                 },
                 alwaysShowLabel = true,

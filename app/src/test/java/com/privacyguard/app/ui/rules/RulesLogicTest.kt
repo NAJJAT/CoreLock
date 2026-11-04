@@ -90,4 +90,16 @@ class RulesLogicTest {
         assertTrue(RulesLogic.matches(r, "  ", appName = null))
         assertFalse(RulesLogic.matches(r, "telegram", appName = "WhatsApp"))
     }
+
+    @Test
+    fun a_rule_title_is_its_site_address_or_app_and_the_label_only_as_a_fallback() {
+        val base = FilterRule(id = "t", label = "Bloquer", action = FilterRule.Action.DENY, source = FilterRule.Source.USER)
+        assertEquals(RulesLogic.Title(RulesLogic.TitleFrom.SITE, "a.example"),
+            RulesLogic.titleOf(base.copy(matchDomain = "a.example", matchPackage = "com.x"), appName = "X"))
+        assertEquals(RulesLogic.Title(RulesLogic.TitleFrom.ADDRESS, "10.0.0.1"), RulesLogic.titleOf(base.copy(matchIp = "10.0.0.1"), null))
+        assertEquals(RulesLogic.Title(RulesLogic.TitleFrom.APP, "X"), RulesLogic.titleOf(base.copy(matchPackage = "com.x"), "X"))
+        // An app that is no longer installed: its package, never an empty title.
+        assertEquals(RulesLogic.Title(RulesLogic.TitleFrom.APP, "com.x"), RulesLogic.titleOf(base.copy(matchPackage = "com.x"), null))
+        assertEquals(RulesLogic.Title(RulesLogic.TitleFrom.LABEL, "Bloquer"), RulesLogic.titleOf(base.copy(matchPort = 80), null))
+    }
 }

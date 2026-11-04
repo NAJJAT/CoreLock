@@ -275,15 +275,17 @@ internal fun RuleRow(rule: FilterRule, appName: String?, onToggle: (Boolean) -> 
         },
     )
     val off = stringResource(R.string.ui_rules_off)
+    val title = RulesLogic.titleOf(rule, appName)
+    // The value in the title is not repeated below it.
     val details = listOfNotNull(
-        rule.matchDomain?.let { stringResource(R.string.ui_rules_d_site, it) },
-        rule.matchPackage?.let { stringResource(R.string.ui_rules_d_app, appName ?: it) },
-        rule.matchIp?.let { stringResource(R.string.ui_rules_d_address, it) },
+        rule.matchDomain?.takeIf { title.from != RulesLogic.TitleFrom.SITE }?.let { stringResource(R.string.ui_rules_d_site, it) },
+        rule.matchPackage?.takeIf { title.from != RulesLogic.TitleFrom.APP }?.let { stringResource(R.string.ui_rules_d_app, appName ?: it) },
+        rule.matchIp?.takeIf { title.from != RulesLogic.TitleFrom.ADDRESS }?.let { stringResource(R.string.ui_rules_d_address, it) },
         rule.matchPort?.let { stringResource(R.string.ui_rules_d_port, it) },
         rule.matchProtocol?.takeIf { it != FilterRule.Protocol.ANY }?.name,
         if (rule.matchEncryption == EncryptionStatus.CLEARTEXT) stringResource(R.string.ui_rules_d_unencrypted) else null,
     ).joinToString(" · ")
-    val switchLabel = stringResource(R.string.ui_rules_use, rule.label)
+    val switchLabel = stringResource(R.string.ui_rules_use, title.text)
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -294,7 +296,7 @@ internal fun RuleRow(rule: FilterRule, appName: String?, onToggle: (Boolean) -> 
             .padding(start = CoreLockTheme.spacing.l, end = CoreLockTheme.spacing.xs, top = CoreLockTheme.spacing.m, bottom = CoreLockTheme.spacing.m),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(rule.label, style = MaterialTheme.typography.titleMedium, color = if (rule.isEnabled) colors.onSurface else colors.onSurfaceMuted)
+            Text(title.text, style = MaterialTheme.typography.titleMedium, color = if (rule.isEnabled) colors.onSurface else colors.onSurfaceMuted)
             // Top-aligned: when the words wrap (Arabic, 200 %), the icon stays on the first line.
             Row(verticalAlignment = Alignment.Top) {
                 Icon(icon, contentDescription = null, tint = if (rule.isEnabled) tint else colors.onSurfaceMuted, modifier = Modifier.padding(top = 2.dp).size(16.dp))
@@ -319,7 +321,7 @@ internal fun RuleRow(rule: FilterRule, appName: String?, onToggle: (Boolean) -> 
         )
         // 48 dp (the 1.0 delete was 32 dp, DESIGN_SPEC_1.1.md §2.6). Undo follows, so no confirmation.
         IconButton(onClick = onDelete, modifier = Modifier.size(CoreLockTheme.spacing.minTouchTarget).testTag(TAG_RULE_DELETE + rule.id)) {
-            Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.ui_rules_delete, rule.label), tint = colors.onSurfaceMuted)
+            Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.ui_rules_delete, title.text), tint = colors.onSurfaceMuted)
         }
     }
 }

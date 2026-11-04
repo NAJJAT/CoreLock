@@ -90,6 +90,18 @@ class ActivityLogicTest {
     private val userBlock = FilterRule("r1", "Block ads", FilterRule.Action.DENY, FilterRule.Source.USER, matchDomain = "ads.example.com")
 
     @Test
+    fun a_name_on_no_list_is_never_shown_as_listed() {
+        // Blocked by a rule deleted since: lookups store no source, so only a list that
+        // still has the name may be named (found on the emulator: "iana.org · Ads list").
+        assertEquals(ActivityReason.SETTING, ActivityLogic.reasonFor(true, true, BlockSource.DNS, null, false, onBlockList = false))
+        assertEquals(ActivityReason.SETTING, ActivityLogic.reasonFor(true, false, BlockSource.SNI, null, false, onBlockList = false))
+        assertEquals(ActivityReason.ADS_LIST, ActivityLogic.reasonFor(true, true, BlockSource.DNS, null, false, onBlockList = true))
+        // Malware and the user's rule keep their order.
+        assertEquals(ActivityReason.MALWARE_LIST, ActivityLogic.reasonFor(true, true, BlockSource.DNS, null, true, onBlockList = false))
+        assertEquals(ActivityReason.USER_RULE, ActivityLogic.reasonFor(true, true, BlockSource.DNS, userBlock, false, onBlockList = false))
+    }
+
+    @Test
     fun reason_follows_the_decision_order() {
         assertEquals(ActivityReason.ALLOWED, ActivityLogic.reasonFor(false, false, null, userBlock, true))
         // The user's Block first, even for a name on a malware list.

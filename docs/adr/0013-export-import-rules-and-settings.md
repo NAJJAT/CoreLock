@@ -1,8 +1,8 @@
 # 0013. Export and import of rules and settings
 
-- **Status:** Proposed (needs the owner's decision before any code)
-- **Date:** 2026-11-03
-- **Commits:** none
+- **Status:** Accepted (owner, 2026-11-04: "D2 as planned, with ADR 0013")
+- **Date:** 2026-11-03, accepted 2026-11-04
+- **Commits:** the 1.1 redesign, D2 commit (see `docs/ux/REDESIGN_PROGRESS.md`)
 
 ## Context
 
@@ -27,9 +27,9 @@ input (CLAUDE.md §3.3) and a way to change protection silently: an imported All
 with `overridesSecurity` would open a phishing site without the warning the app
 normally shows (§5.3).
 
-## Decision (proposed)
+## Decision
 
-Nothing is built in 1.1. When the owner decides, this is the proposed design:
+Built in 1.1 as below (sections "As built" and "Consequences" record the details):
 
 1. **Export** writes one JSON file through the system file picker
    (`ACTION_CREATE_DOCUMENT`): format version, the user's rules (`source = USER` only),
@@ -59,9 +59,30 @@ Nothing is built in 1.1. When the owner decides, this is the proposed design:
 - **Plain text, one rule per line**: easy to edit by hand, but needs its own parser and
   escaping, which is what the JSON plan avoids.
 
+## As built (2026-11-04)
+
+- Code: `ui/settings/ConfigTransfer.kt` (format, limits, validation, plan),
+  `SettingsHomeViewModel` (picker, preview, confirm), Settings › Data rows "Export rules and
+  settings" and "Import rules and settings". `RulesRepo.addRules` writes an import in one go.
+- Limits: 1 MiB (the stream is not read past it), 5,000 rules, nesting depth 4 checked
+  before the parser runs, strings up to 255 characters, format name and version 1.
+- Every rule needs a site, an app or an address (an empty rule would match everything);
+  "in background" needs an app. A rule with one invalid field is skipped whole.
+- Labels and ids are never read from the file: the app writes the label, and app rules get
+  the ids the Apps screen uses. Existing rules are never replaced; duplicates are counted.
+- Settings carried: protection level, Block QUIC (on, off, level default), encrypted DNS,
+  the DNS server **only if it is one of the three built-in ones** (a typed server is neither
+  exported nor imported, so a file can't send all lookups elsewhere), block unencrypted,
+  block outdated encryption, certificate checks, public IP check, notifications, details,
+  weekly summary, history days, theme. Not carried: screenshots, auto-restart, proxies and
+  their passwords, HTTPS inspection, language.
+- Import is refused while the phone has any managed configuration, checked at the preview
+  and again at Import.
+- Tests: `ConfigTransferTest` (15), `SettingsScreenTest` (+4). Emulator round trip verified.
+
 ## Consequences
 
-- 1.1.0 ships without export or import. The Settings › Data section has no row for it,
-  so nothing promises it.
-- If accepted, the work is about 2–3 days with tests and needs a security review
-  (input parsing, rule precedence, MDM).
+- The file holds the user's rules: the export sheet says to keep it private before the
+  picker opens.
+- Moving to a new phone keeps rules and most settings; a typed DNS server and the proxy
+  servers must be entered again.

@@ -170,13 +170,6 @@ object HomeLogic {
     /** A high alert is "new" on Home for this long, unless opened or dismissed first. */
     const val HIGH_ALERT_WINDOW_MS = 24L * 60L * 60L * 1000L
 
-    /**
-     * The "Some things moved" card (D12) says Statistics and HTTPS inspection are in
-     * Settings › Advanced. That is true only once Phase 6 moves them, so the card stays
-     * hidden until then; the update-or-fresh-install decision is already recorded.
-     */
-    const val WHATS_NEW_ENABLED = false
-
     const val LEVEL_MINIMAL = "MINIMAL"
     const val LEVEL_STANDARD = "STANDARD"
     const val LEVEL_STRICT = "STRICT"

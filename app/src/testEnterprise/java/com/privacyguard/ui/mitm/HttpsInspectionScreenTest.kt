@@ -11,6 +11,10 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import android.view.InputDevice
+import android.view.MotionEvent
+import android.view.View
+import org.robolectric.shadows.ShadowDialog
 import androidx.test.core.app.ApplicationProvider
 import com.privacyguard.app.R
 import com.privacyguard.app.ui.theme.Appearance
@@ -128,6 +132,48 @@ class HttpsInspectionScreenTest {
         rule.onNodeWithTag(TAG_HTTPS_CONFIRM).assertDoesNotExist()
         rule.onNodeWithTag(TAG_HTTPS_CONSENT).assertDoesNotExist()
         rule.onNodeWithTag(TAG_HTTPS_SWITCH).assertIsOff()
+    }
+
+    /** Down and up at the centre of [text] in the open dialog, as if through an overlay or not. */
+    private fun tapInDialog(text: String, obscured: Boolean) {
+        val bounds = rule.onNodeWithText(text).fetchSemanticsNode().boundsInWindow
+        val root: View = ShadowDialog.getLatestDialog().window!!.decorView
+        val flags = if (obscured) MotionEvent.FLAG_WINDOW_IS_OBSCURED else 0
+        for ((action, time) in listOf(MotionEvent.ACTION_DOWN to 0L, MotionEvent.ACTION_UP to 40L)) {
+            val props = arrayOf(MotionEvent.PointerProperties().apply { id = 0; toolType = MotionEvent.TOOL_TYPE_FINGER })
+            val coords = arrayOf(MotionEvent.PointerCoords().apply { x = bounds.center.x; y = bounds.center.y; pressure = 1f; size = 1f })
+            val event = MotionEvent.obtain(0L, time, action, 1, props, coords, 0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, flags)
+            rule.runOnUiThread { root.dispatchTouchEvent(event) }
+            event.recycle()
+        }
+        rule.waitForIdle()
+    }
+
+    @Test
+    fun a_tap_through_an_overlay_does_not_confirm_switching_on() {
+        val calls = show(enabled = false, consentValid = true)
+        rule.onNodeWithTag(TAG_HTTPS_SWITCH).performClick()
+
+        tapInDialog(str(R.string.ui_https_confirm_on), obscured = true)
+        assertEquals("an obscured tap must not turn inspection on", 0, calls.confirmed)
+        rule.onNodeWithTag(TAG_HTTPS_CONFIRM).assertExists()
+
+        // Control: the same tap, not obscured, works (so the position was right).
+        tapInDialog(str(R.string.ui_https_confirm_on), obscured = false)
+        assertEquals(1, calls.confirmed)
+    }
+
+    @Test
+    fun a_tap_through_an_overlay_does_not_give_consent() {
+        val calls = show(enabled = false, consentValid = false)
+        rule.onNodeWithTag(TAG_HTTPS_SWITCH).performClick()
+
+        tapInDialog(str(R.string.mitm_consent_confirm), obscured = true)
+        assertEquals("an obscured tap must not record consent", 0, calls.consented)
+        rule.onNodeWithTag(TAG_HTTPS_CONSENT).assertExists()
+
+        tapInDialog(str(R.string.mitm_consent_confirm), obscured = false)
+        assertEquals(1, calls.consented)
     }
 
     private val palette = JsonPalette(key = Color(1), string = Color(2), number = Color(3), literal = Color(4))

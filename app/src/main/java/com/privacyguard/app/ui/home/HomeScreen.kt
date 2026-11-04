@@ -69,8 +69,8 @@ import com.privacyguard.vpn.interception.TlsInterceptionFactory
 
 /**
  * Home: "am I protected?" (DESIGN_SPEC_1.1.md §6.1). The status hero, the level, today's
- * count and at most one attention card. Everything else of the 1.0 Home is one tap away
- * under "Security details" until Phase 6 moves it to Settings › Advanced.
+ * count and at most one attention card. Everything else of the 1.0 Home is in
+ * Settings › Advanced › Analysis (parity table §5.2).
  */
 @Composable
 fun HomeScreen(
@@ -80,7 +80,6 @@ fun HomeScreen(
     onOpenStatistics: () -> Unit,
     /** Null in builds without HTTPS inspection. */
     onOpenPayloads: (() -> Unit)?,
-    onOpenSecurityDetails: () -> Unit,
     /** "Something not working?" (§6.2). */
     onOpenFix: () -> Unit = {},
     viewModel: HomeViewModel = viewModel(),
@@ -125,7 +124,6 @@ fun HomeScreen(
             onOpenBlocked = onOpenBlocked,
             onRetryBlocked = viewModel::retryBlockedToday,
             onOpenPayloads = onOpenPayloads,
-            onOpenSecurityDetails = onOpenSecurityDetails,
             onOpenFix = onOpenFix,
             onAttentionAction = { attention ->
                 when (attention) {
@@ -161,7 +159,6 @@ class HomeActions(
     val onOpenBlocked: () -> Unit = {},
     val onRetryBlocked: () -> Unit = {},
     val onOpenPayloads: (() -> Unit)? = null,
-    val onOpenSecurityDetails: () -> Unit = {},
     val onOpenFix: () -> Unit = {},
     val onAttentionAction: (HomeLogic.Attention) -> Unit = {},
     val onAttentionSecondary: (HomeLogic.Attention) -> Unit = {},
@@ -225,17 +222,6 @@ fun HomeContent(state: HomeUiState, inspection: InspectionStatus, actions: HomeA
         )
 
         state.attention?.let { HomeAttention(it, hasPayloads = actions.onOpenPayloads != null, actions = actions) }
-
-        // TEMPORARY (Phase 3 → 6): the 1.0 Home cards (score, security systems, alerts,
-        // reports, packet capture) live behind this row until Settings › Advanced exists.
-        Surface(shape = CoreLockTheme.shapes.card, color = CoreLockTheme.colors.surface, modifier = Modifier.fillMaxWidth()) {
-            SettingRow(
-                title = stringResource(R.string.ui_home_security_details),
-                subtitle = stringResource(R.string.ui_home_security_details_sub),
-                leadingIcon = Icons.Rounded.Insights,
-                onClick = actions.onOpenSecurityDetails,
-            )
-        }
     }
 
     if (showLevels) {

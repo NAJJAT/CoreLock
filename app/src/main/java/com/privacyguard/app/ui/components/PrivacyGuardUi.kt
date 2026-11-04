@@ -54,6 +54,15 @@ import com.privacyguard.app.ui.theme.PgTextMuted
 import java.text.DecimalFormat
 import java.util.concurrent.TimeUnit
 import androidx.compose.material3.Icon as M3Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+
+/**
+ * Back for the 1.0 screens that are pushed in 1.1 (Statistics, Security analysis, Ads,
+ * Ad privacy, licenses, …): they were tabs or had none. The nav graph provides it, so
+ * the screens keep one title and gain a labelled back arrow (mirrored in RTL).
+ */
+val LocalScreenBack = androidx.compose.runtime.staticCompositionLocalOf<(() -> Unit)?> { null }
 
 @Composable
 fun ScreenScaffold(
@@ -74,7 +83,16 @@ fun ScreenScaffold(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
         ) {
-            Column {
+            LocalScreenBack.current?.let { back ->
+                androidx.compose.material3.IconButton(onClick = back, modifier = Modifier.padding(end = 4.dp)) {
+                    M3Icon(
+                        Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = stringResource(R.string.ui_back),
+                        tint = PgText,
+                    )
+                }
+            }
+            Column(Modifier.weight(1f)) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.headlineMedium,

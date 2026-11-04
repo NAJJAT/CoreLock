@@ -16,16 +16,48 @@ Nothing here is committed by the agent; the owner commits.
 | 5 | Apps, App detail, App traffic, Domain detail | **Done** (2026-11-03) |
 | 6 | Settings sections, Appearance, Rules, Language, Blocklists, Kill switch, Data (D2), About | **Done** (2026-11-04; D2 waits for the owner, ADR 0013) |
 | 7 | Advanced (Network, HTTPS inspection D5, Analysis, Diagnostics, …) | **Done** (2026-11-04; 7a and 7b, emulator checked) |
-| 8 | Navigation: 4 tabs, old routes, What's new (D12), 200 % | To do |
+| 8 | Navigation: 4 tabs, old routes, What's new (D12), 200 % | **Done** (2026-11-04, emulator checked) |
+| D2 | Export and import of rules and settings (ADR 0013) | **Done** (2026-11-04, emulator checked) |
 | 9 | Onboarding, splash, vector icon | To do |
 | 10 | Polish: polling loops → Flow, one count source, tokens, audit findings | To do |
-| — | Release prep 1.1.0 | To do |
+| — | Final regression, idle CPU, checks | **Done** (2026-11-04, see the end of this log) |
+| — | Release prep 1.1.0 | **Done** (2026-11-04; signed APK and checksum by the owner) |
 
 ## Next
 
-Phase 7 is done. Next is Phase 8 (navigation: 4 tabs, old routes, What's new; delete the 1.0
-`SettingsScreen.kt` once the emulator shows nothing links to it). Still open for the owner: D2
-(ADR 0013, a separate task after Phase 8) and the rule-name language question (Phase 6 › Open).
+Owner's order (2026-11-04, after committing Phases 6–7 as `0db2431`), done without stopping:
+
+1. **Phase 8** (navigation), including:
+   - 4 tabs (Home, Apps, Activity, Settings); Payload and Stats tabs removed; every old route
+     and notification deep link still works; "What's new: some things moved" card on (D12);
+     bottom bar not clipped at 200 % in en/ar/fr/nl; temporary "Security details" row off Home.
+   - Rule names (owner said yes): row title from the rule itself (site, app or address); the
+     stored label only as a fallback.
+   - Overlay taps: the HTTPS inspection consent dialog and the D5 confirmation ignore taps
+     that come through an overlay, with a test.
+   - Delete the unused 1.0 screens (incl. `SettingsScreen.kt`) only after the parity test and
+     the emulator show nothing links to them.
+2. **D2** export/import (ADR 0013 first; warn that the file is private; reuse the parser limits).
+3. **AT THE END** (original task):
+   1. Full emulator regression (debug): top tasks with tap counts; parity table screen by
+      screen; notifications, deep links, Quick Settings tile; protection on/off; level change;
+      rule change applied live; pause + auto-resume (also after killing the app); D2 round
+      trip; language switch; 200 % font; light and dark.
+   2. Idle CPU on Home and Activity, before/after (android-profiler). Above 10 % of a core is
+      a blocker: fix it.
+   3. /health; unit tests, lint, `:app:minifyEnterpriseReleaseWithR8` green. (/cso: skipped by
+      the owner on 2026-11-04; do not install anything.)
+   4. Release prep 1.1.0 (no signed APK): versionName 1.1.0 / versionCode 2;
+      `RELEASE_NOTES_1.1.0.md` (1.0.1 notes + redesign, user words, fingerprint,
+      `<APK_SHA256>` placeholder, `CoreLock-1.1.0.apk`), `git rm RELEASE_NOTES_1.0.1.md` and fix
+      links; `RELEASE_NOTES_1.0.md` restored from `v1.0.0` (+ fingerprint and published checksum
+      23752350...94dd if missing, + "Superseded by 1.1.0. See RELEASE_NOTES_1.1.0.md." on top);
+      README (version, APK name, notes link, screens); phone test doc → `docs/PHONE_TEST_1.1.0.md`
+      (git mv; update from 1.0.0 + new screens; fix links).
+   5. Last: `git rm -r --cached .skills` + `.skills/` in `.gitignore` (files stay on disk);
+      listed as the last commit.
+4. Final report (9 parts: built per screen; skills; own decisions; behaviour changes not made;
+   test/lint/R8/CPU numbers; audit findings; screenshot folders; known bugs; commits in order).
 
 ---
 
@@ -376,7 +408,7 @@ delete → Undo → rule back, still off; Allow on a malware-seed name → warni
   and recommendations) until those cards get their own screen (Phase 10).
 - "Unencrypted connections" is the blocking switch only; the list of recent unencrypted
   connections (parity R6 Cleartext filter) stays in Live connections until Phase 8 retires it.
-- The 1.0 `SettingsScreen` composable has no caller now. Not deleted (CLAUDE.md §14.2): proposed.
+- The 1.0 `SettingsScreen` composable has no caller now. Deleted in Phase 8 (owner's go-ahead), after the parity test and the emulator.
 
 ### Tests
 
@@ -427,3 +459,182 @@ true; the CA card and QUIC switch appear. Switch off: false, remove-CA dialog. C
 by hand: the switch shows the consent dialog, not the confirmation; Cancel leaves it off.
 Accepting consent on the emulator was not run (the command was declined); the unit test covers
 it. Screenshots en, ar, fr, nl, and ar and fr at 200 %, in `CoreLock-redesign\https\`.
+
+## Phase 8: Navigation (done 2026-11-04)
+
+### What was built
+
+- **Four tabs:** Home, Apps, Activity, Settings (`APP_TABS` in `AppNavHost.kt`; rounded
+  icons). Stats and Payload left the bar; their routes `statistics` and `payloads` stay, opened
+  from Settings › Advanced (and the What's new card).
+- **Every 1.0 route still works.** The 1.0 screens opened from Advanced (Statistics, Security
+  analysis, Security systems, Ads, Ad privacy, licenses, license text) get a back arrow in
+  their title row (`LocalScreenBack` in `PrivacyGuardUi.kt`, set by `Pushed` in the nav host).
+  Opened alone, from a notification, Back goes Home.
+- **What's new (D12) on:** shown once after an update from 1.0; either link or the close button
+  ends it.
+- **Bottom bar at 200 %:** the label shrinks only when a word doesn't fit, never below its
+  100 % size, with a 4 dp side gap (`TextAutoSize.StepBased`); "Instellingen", "Réglages" and
+  "الإعدادات" fit.
+- The temporary "Security details" row is off Home (Advanced exists).
+- **Rule names (owner's decision):** a rule row's title is its site, address or app
+  (`RulesLogic.titleOf`); the stored label only when the rule matches none of these. Search
+  still finds the label.
+- **Overlay taps (owner's decision):** the HTTPS inspection consent dialog and the D5
+  confirmation ignore taps that come through another app's window
+  (`IgnoreObscuredTouches()` in `ui/components/ObscuredTouches.kt`:
+  `filterTouchesWhenObscured` on the dialog's view and its parents).
+- **Deleted:** `ui/settings/SettingsScreen.kt` (1.0 Settings, 882 lines). Every action on it is
+  reachable in 1.1 (checked call by call: level, rules, lists, kill switch, notifications,
+  details, weekly report, screenshots, auto-restart, retention, export, clear data, language,
+  DNS, DoH, QUIC, cleartext, weak TLS, CT, external IP, proxies, diagnostics, integrity,
+  battery, licenses, releases page). `KillSwitchTest` now checks the 1.1 Kill switch screen.
+  Its ~70 `set_*` strings are now unused (lint ignores unused resources here); left in place,
+  listed for Phase 10 cleanup. Only text lost: the TLS-fingerprint paragraph under the 1.0
+  Analysis links; Security analysis has its own TLS-fingerprint section.
+
+### Tests
+
+- `NavigationParityTest` 6: every 1.0 route of the parity table and every new 1.1 route is
+  declared; `NOTIFICATION_ROUTES` are exactly alerts, crypto, connections, apps and all
+  declared; the bar is the four tabs in order; every route has a way in and nothing navigates
+  to an undeclared route. Mutation: renaming `crypto` → 3 of 6 fail.
+- `HttpsInspectionScreenTest` +2 (an obscured tap neither confirms nor consents; the same tap
+  unobscured does). Mutation: without the guard → 2 of 11 fail.
+- `RulesLogicTest` +1, `RulesScreenTest` +1 (title from the rule, not a label in another
+  language).
+- Full suite **1033 tests, 0 failures**; lint 0 errors, 26 warnings (unchanged).
+
+### Emulator (emulator-5554, API 37), 2026-11-04 — verified
+
+Four tabs. What's new card shown; "Open Statistics" and "Open HTTPS inspection" open them with
+a back arrow; Back returns Home; the card is gone afterwards. Deep links (`pg_nav_route`):
+alerts → Alert inbox, crypto → Security analysis, connections → Activity, apps → Apps; Back
+from alerts/crypto → Home; `statistics` and an unknown route → Home (not in the allow-list,
+unchanged). Back arrows on all five Analysis screens, licenses and license text. Bar at 200 % in
+en, ar, fr, nl (dark) and en (light): no label cut or touching. Screenshots in
+`CoreLock-redesign\navigation\`.
+
+### Skills used for Phase 8
+
+senior-android-engineer (navigation parity, tapjacking guard), android-cli/adb on emulator-5554
+(walkthrough, screenshots). No other skill; nothing installed.
+
+## D2: export and import of rules and settings (done 2026-11-04)
+
+ADR 0013 accepted by the owner ("D2 as planned, with ADR 0013") and updated with what was built.
+
+### What was built
+
+- Settings › Data: "Export rules and settings" and "Import rules and settings".
+- Export: a sheet first says the file is private and what is not in it; then the device lock
+  (as other exports); then Android's file picker (`corelock-rules-and-settings.json`).
+- Import: device lock, file picker, then a question that says what changes ("2 new rules,
+  1 block · 1 allow, 1 setting will change", rules already there and invalid entries counted).
+  Nothing changes before Import. Refused with a reason for: too large, not ours / damaged,
+  newer version, more than 5,000 rules, nothing new, organisation-managed phone (checked at the
+  preview and again at Import).
+- `ConfigTransfer.kt`: format, limits (1 MiB, 5,000 rules, nesting depth 4 checked before
+  parsing, 255-character strings), per-field validation with the add-rule checks, plan
+  (duplicates never added, existing rules never replaced), labels and ids written by the app.
+  An imported rule never has `overridesSecurity`; a typed DNS server is never carried.
+- `RulesRepo.addRules` (one write, one change notice); `SettingsViewModel.blockCleartextRule`
+  / `blockWeakTlsRule` shared by the switches and the import.
+
+### Tests
+
+`ConfigTransferTest` 15 (round trip; only the user's rules; override dropped; not ours; newer
+version; oversized file and endless stream; deep nesting; rule limit; 16 kinds of invalid rule;
+formula-like labels; settings one by one and the typed DNS server; duplicates; app ids; changed
+count; JSON null). Mutation: without the nesting check or the "background needs an app" check →
+2 of 15 fail. `SettingsScreenTest` +4 (private warning before the picker; import row; the
+question and that only Import applies; a refusal says why).
+
+### Emulator (emulator-5554), 2026-11-04 — verified
+
+Round trip, before the device-lock step was added: exported 2 rules (one Allow with the malware
+override, one disabled Block) and the settings; the file holds no label, override or history.
+Deleted both rules and changed the theme; import asked "2 new rules · 1 block · 1 allow · 1
+setting will change"; after Import both rules were back, the Block still off, the Allow
+**without** the override, the theme back to Light. Importing again: "Everything in this file is
+already on this phone". A version-9 file: "made by a newer version". Arabic at 200 %: export
+sheet fits. Screenshots in `CoreLock-redesign\transfer\`.
+
+After adding the device-lock step, the debug build shows "Sensitive actions are disabled
+because app integrity could not be verified" (a debug build is not signed with the release key;
+"Clear all data" behaves the same, unchanged). The signed build must be checked on the phone:
+added to `docs/PHONE_TEST_1.1.0.md`.
+
+### Skills used for D2
+
+senior-android-engineer (untrusted-input design, threat check: file from a chat, MDM, the
+malware override), android-cli/adb on emulator-5554. Nothing installed.
+
+## Release preparation 1.1.0 (done 2026-11-04; no signed APK built)
+
+- `app/build.gradle.kts`: versionName 1.1.0, versionCode 2 (1.0.1 was never published, so
+  2 is still the next code after 1.0.0's 1).
+- `RELEASE_NOTES_1.1.0.md`: everything from the 1.0.1 notes plus the redesign in user words
+  ("What's new", "Where things moved"), the signing fingerprint, `<APK_SHA256>`, file name
+  `CoreLock-1.1.0.apk`, known limitations kept (two added: a DNS answer Android already holds,
+  and Pause's conditions).
+- `RELEASE_NOTES_1.0.1.md` removed with `git rm` (staged). `RELEASE_NOTES_1.0.md` restored to
+  the published `v1.0.0` text, which already has the fingerprint and checksum `23752350…94dd`,
+  plus one first line "Superseded by 1.1.0".
+- README: version, APK name, release-notes link, the Screens table for 1.1, "Security systems"
+  for the 1.0 Home section, export/import under privacy.
+- `docs/PHONE_TEST_1.0.md` → `docs/PHONE_TEST_1.1.0.md` (`git mv`, staged): update from the
+  published 1.0.0 to 1.1.0, the four tabs, What's new, fix flow and pause, export/import with
+  the device lock (signed build only), HTTPS confirmation, CPU on Home and Activity.
+- `.skills` removed from the index (`git rm -r --cached`, 444 files, staged; the files stay on
+  disk) and `.skills/` added to `.gitignore`.
+
+## Final regression on the emulator (2026-11-04, debug build, API 37 emulator)
+
+| Check | Result |
+|---|---|
+| Protection off / on | 1 tap each on Home; the tunnel follows (`dumpsys connectivity`). |
+| Level change | Home › Protection level › Strict: 2 taps; stored and shown on Home. |
+| Rule applied live | Settings › Rules › + › name › Block › Add (about 6 taps): a fresh name is blocked at once; delete reopens it. |
+| Block an app | Apps › app › Blocked: 3 taps; listed under the Blocked filter; Allowed again in 2 taps. |
+| Allow a blocked ad name | Activity › row › Allow everywhere: 3 taps; the row leaves the Blocked list. |
+| Fix flow / pause (D1) | Home › Something not working? › Pause: 2 taps; tunnel down, exact alarm set. App process killed (`am kill`); at the alarm protection came back by itself (new process, tunnel up, countdown notification gone). |
+| D2 round trip | Export › import on the same phone: override dropped, disabled state kept, theme restored; re-import says nothing changes; a newer-format file is refused. With the device lock added afterwards, the debug build refuses export/import (integrity check, as for Clear data); the signed build is phone-test step 11. |
+| Quick Settings tile | Tap: protection off; tap again: on. |
+| Notifications | The status notification opens the app; alert deep links (alerts, crypto, connections, apps) open the right screen; the retired statistics and unknown routes open Home. |
+| Language | Settings › Language › Nederlands and back to English: 3 taps each, the whole UI switches. |
+| Theme | Settings › Theme › Dark: Home, Settings checked. Light checked in Phase 8. |
+| 200 % font | Bottom bar and screens checked in en/ar/fr/nl in Phase 8; D2 sheets in Arabic at 200 %. |
+| Parity | `NavigationParityTest` (every 1.0 route and notification route reachable); walked screen by screen in Phases 6–8. |
+
+**Found and fixed during the regression:** Activity said "Blocked · Ads and trackers list" for a
+name that had been blocked by a user rule deleted since (lookups store no source). The reason
+now names a list only when an ad, tracker or telemetry list still has the name (or a parent);
+otherwise it says "A rule or setting", whose text already says the rule may have been removed.
+`ActivityLogic.reasonFor(onBlockList)`, `BlocklistRepo.isOnBlockList`, `BlocklistDao.anyInCategories`
+(parameterized query, no schema change), `ActivityRepository`; test
+`ActivityLogicTest.a_name_on_no_list_is_never_shown_as_listed` (fails without the fix: 1 of 26).
+Checked on the emulator: iana.org now reads "A rule or setting", Google ads still names the list.
+
+Left on the emulator: level Strict, theme Dark, a test Allow rule for doubleclick.net (the last
+emulator command was denied, so it was not removed).
+
+## Idle CPU (2026-11-04, debug build on the emulator, screen on and untouched)
+
+`utime+stime` of the app process over 60 s (`/proc/<pid>/stat`), percent of one core.
+
+| Screen | Before (audit, 2026-10-25, release build) | After |
+|---|---|---|
+| Home | 42 % | 2.8 % and 2.2 % (first minute after a cold start: 28 %, list loading) |
+| Activity | – (Stats: 68 %) | 2.0 %, 1.3 %, 1.5 %, 1.4 % |
+
+Well under the 10 % limit. The emulator runs SQLCipher translated, so the phone figure
+(phone-test step) decides.
+
+## Checks
+
+- Unit tests 1,053 / 0 failures, lint 0 errors / 26 warnings, `:app:minifyEnterpriseReleaseWithR8`
+  successful (rerun after the Activity fix, 2026-11-04).
+- /health: the detector found no Gradle tools, so it was scored by hand from the Gradle run:
+  type check (Kotlin compile) clean, lint 0 errors / 26 warnings, tests all passing; dead code,
+  shell and gbrain not available.

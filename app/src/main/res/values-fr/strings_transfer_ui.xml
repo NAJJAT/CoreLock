@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Réglages › Données : export et import des règles et réglages (D2, ADR 0013). Traduction automatique, à relire. -->
+<resources>
+    <string name="ui_cfg_export">Exporter les règles et réglages</string>
+    <string name="ui_cfg_export_sub">Pour les transférer sur un autre téléphone</string>
+    <string name="ui_cfg_import">Importer des règles et réglages</string>
+    <string name="ui_cfg_import_sub">Depuis un fichier que vous avez exporté</string>
+    <string name="ui_cfg_export_body">Le fichier contient vos règles et réglages : les sites et apps que vous avez bloqués ou autorisés. Gardez-le privé : toute personne qui l\'a peut les lire. Votre historique, vos mots de passe et vos clés n\'y sont pas.</string>
+    <string name="ui_cfg_export_action">Choisir où enregistrer</string>
+    <string name="ui_cfg_import_title">Importer ces règles et réglages ?</string>
+    <plurals name="ui_cfg_new_rules">
+        <item quantity="one">%d nouvelle règle</item>
+        <item quantity="many">%d nouvelles règles</item>
+        <item quantity="other">%d nouvelles règles</item>
+    </plurals>
+    <string name="ui_cfg_rules_split">%1$d bloquer · %2$d autoriser</string>
+    <plurals name="ui_cfg_settings_changed">
+        <item quantity="one">%d réglage va changer</item>
+        <item quantity="many">%d réglages vont changer</item>
+        <item quantity="other">%d réglages vont changer</item>
+    </plurals>
+    <plurals name="ui_cfg_already">
+        <item quantity="one">%d règle est déjà sur ce téléphone</item>
+        <item quantity="many">%d règles sont déjà sur ce téléphone</item>
+        <item quantity="other">%d règles sont déjà sur ce téléphone</item>
+    </plurals>
+    <plurals name="ui_cfg_skipped">
+        <item quantity="one">%d entrée n\'est pas valide et est ignorée</item>
+        <item quantity="many">%d entrées ne sont pas valides et sont ignorées</item>
+        <item quantity="other">%d entrées ne sont pas valides et sont ignorées</item>
+    </plurals>
+    <string name="ui_cfg_import_note">Vos règles restent. Une règle Autoriser importée ne laisse jamais passer un site malveillant ou d\'hameçonnage.</string>
+    <string name="ui_cfg_import_action">Importer</string>
+    <string name="ui_cfg_problem_title">Impossible d\'importer ce fichier</string>
+    <string name="ui_cfg_err_managed">Votre organisation gère les réglages de ce téléphone : l\'import est désactivé.</string>
+    <string name="ui_cfg_err_read">Le fichier n\'a pas pu être lu.</string>
+    <string name="ui_cfg_err_too_big">Ce fichier est trop volumineux pour être un fichier de règles CoreLock.</string>
+    <string name="ui_cfg_err_invalid">Ce n\'est pas un fichier de règles CoreLock, ou il est endommagé.</string>
+    <string name="ui_cfg_err_newer">Ce fichier a été créé par une version plus récente de CoreLock. Mettez d\'abord l\'app à jour.</string>
+    <string name="ui_cfg_err_too_many">Ce fichier contient plus de 5 000 règles.</string>
+    <string name="ui_cfg_nothing">Tout le contenu de ce fichier est déjà sur ce téléphone.</string>
+    <string name="ui_cfg_saved">Règles et réglages enregistrés</string>
+    <string name="ui_cfg_save_failed">Le fichier n\'a pas pu être enregistré</string>
+    <string name="ui_cfg_imported">Règles et réglages importés</string>
+</resources>

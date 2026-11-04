@@ -208,7 +208,7 @@ class HomeViewModel internal constructor(
                 batteryDismissed = batteryDismissed,
                 stoppedBySystem = bySystem,
                 newHighAlert = alert,
-                whatsNew = whatsNew && HomeLogic.WHATS_NEW_ENABLED,
+                whatsNew = whatsNew,
                 strictSuggestion = strict,
             )
         )

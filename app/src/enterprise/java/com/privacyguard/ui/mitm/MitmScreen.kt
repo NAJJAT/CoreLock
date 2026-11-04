@@ -227,6 +227,7 @@ internal fun ConsentDialog(onAccept: () -> Unit, onDecline: () -> Unit) {
         onConfirm = onAccept,
         onDismiss = onDecline,
         modifier = Modifier.testTag(TAG_HTTPS_CONSENT),
+        ignoreObscuredTouches = true,
     )
 }
 
@@ -241,6 +242,7 @@ private fun SwitchOnConfirmDialog(onConfirm: () -> Unit, onCancel: () -> Unit) {
         onDismiss = onCancel,
         icon = Icons.Rounded.Warning,
         modifier = Modifier.testTag(TAG_HTTPS_CONFIRM),
+        ignoreObscuredTouches = true,
     )
 }
 
@@ -255,6 +257,8 @@ private fun TokenDialog(
     modifier: Modifier = Modifier,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     iconTint: Color = CoreLockTheme.colors.attention,
+    /** The two questions that turn inspection on: a tap through another app's overlay must not answer them. */
+    ignoreObscuredTouches: Boolean = false,
 ) {
     val colors = CoreLockTheme.colors
     AlertDialog(
@@ -264,7 +268,10 @@ private fun TokenDialog(
         titleContentColor = colors.onSurface,
         textContentColor = colors.onSurfaceMuted,
         icon = icon?.let { { Icon(it, contentDescription = null, tint = iconTint) } },
-        title = { Text(title, style = MaterialTheme.typography.titleLarge) },
+        title = {
+            if (ignoreObscuredTouches) com.privacyguard.app.ui.components.IgnoreObscuredTouches()
+            Text(title, style = MaterialTheme.typography.titleLarge)
+        },
         text = { Text(body, style = MaterialTheme.typography.bodyMedium) },
         confirmButton = {
             if (confirm != null) TextButton(onClick = onConfirm) {

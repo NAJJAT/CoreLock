@@ -24,6 +24,24 @@ object RulesLogic {
         else -> Effect.ALLOW
     }
 
+    /** Which matched value a row's title shows; that value is then not repeated below it. */
+    enum class TitleFrom { SITE, ADDRESS, APP, LABEL }
+
+    data class Title(val from: TitleFrom, val text: String)
+
+    /**
+     * A rule row's title comes from the rule itself, so it is right in every language: the
+     * stored label was written once, in the language of the day (owner's decision,
+     * 2026-11-04). Site first, then address, then app ([appName] when installed); the
+     * label only for rules that match none of these (for example "unencrypted on port 80").
+     */
+    fun titleOf(rule: FilterRule, appName: String?): Title = when {
+        !rule.matchDomain.isNullOrBlank() -> Title(TitleFrom.SITE, rule.matchDomain)
+        !rule.matchIp.isNullOrBlank() -> Title(TitleFrom.ADDRESS, rule.matchIp)
+        !rule.matchPackage.isNullOrBlank() -> Title(TitleFrom.APP, appName?.takeIf { it.isNotBlank() } ?: rule.matchPackage)
+        else -> Title(TitleFrom.LABEL, rule.label)
+    }
+
     /**
      * The site name a rule should match, or null when [input] is not one. People paste
      * addresses from the browser, so a scheme, a path, a port and a user part are cut

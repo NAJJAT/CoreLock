@@ -86,6 +86,12 @@ class SettingsActions(
     val onScreenshots: (Boolean) -> Unit = {},
     val onClear: () -> Unit = {},
     val onOpenUrl: (String) -> Unit = {},
+    /** After the "keep it private" sheet: opens Android's picker to choose where to save. */
+    val onExportConfig: () -> Unit = {},
+    /** Opens Android's picker to choose a file; the confirmation follows. */
+    val onImportConfig: () -> Unit = {},
+    val onConfirmImport: () -> Unit = {},
+    val onCancelImport: () -> Unit = {},
 )
 
 /**
@@ -101,6 +107,14 @@ fun SettingsHomeScreen(nav: SettingsNav, viewModel: SettingsHomeViewModel = view
     var showLanguage by rememberSaveable { mutableStateOf(false) }
     var askAlarms by rememberSaveable { mutableStateOf(false) }
     val runProtected = rememberProtectedActionRunner()
+    val importUi by viewModel.import.collectAsStateWithLifecycle()
+    // Android's own file picker: the user chooses the place; the app gets access to that one file only.
+    val saveConfig = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri -> if (uri != null) viewModel.exportConfig(uri) }
+    val openConfig = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+    ) { uri -> if (uri != null) viewModel.previewImport(uri) }
 
     LifecycleResumeEffect(Unit) {
         viewModel.refresh()
@@ -114,6 +128,9 @@ fun SettingsHomeScreen(nav: SettingsNav, viewModel: SettingsHomeViewModel = view
             SettingsEvent.ExportFailed -> Toast.makeText(context, resources.getString(R.string.ui_set_export_failed), Toast.LENGTH_SHORT).show()
             SettingsEvent.Cleared -> Toast.makeText(context, resources.getString(R.string.ui_set_cleared), Toast.LENGTH_SHORT).show()
             SettingsEvent.NeedsAlarmAccess -> askAlarms = true
+            SettingsEvent.ConfigSaved -> Toast.makeText(context, resources.getString(R.string.ui_cfg_saved), Toast.LENGTH_SHORT).show()
+            SettingsEvent.ConfigSaveFailed -> Toast.makeText(context, resources.getString(R.string.ui_cfg_save_failed), Toast.LENGTH_SHORT).show()
+            SettingsEvent.ConfigImported -> Toast.makeText(context, resources.getString(R.string.ui_cfg_imported), Toast.LENGTH_SHORT).show()
             null -> Unit
         }
         if (event != null) viewModel.eventHandled()
@@ -134,6 +151,7 @@ fun SettingsHomeScreen(nav: SettingsNav, viewModel: SettingsHomeViewModel = view
     SettingsHomeContent(
         state = state,
         language = languageDisplayName(currentAppLanguageTag()),
+        importUi = importUi,
         actions = SettingsActions(
             nav = nav,
             onLevel = viewModel::setLevel,
@@ -153,9 +171,28 @@ fun SettingsHomeScreen(nav: SettingsNav, viewModel: SettingsHomeViewModel = view
                 }
             },
             onOpenUrl = { openInBrowser(context, it) },
+            // Both ask for the device lock first, as other exports do (README "Sensitive actions"):
+            // the file holds the user's rules, and an import changes what is blocked.
+            onExportConfig = {
+                runProtected(resources.getString(R.string.ui_cfg_export), resources.getString(R.string.ui_cfg_export_sub)) {
+                    runCatching { saveConfig.launch(CONFIG_FILE_NAME) }
+                        .onFailure { Toast.makeText(context, resources.getString(R.string.ui_cfg_save_failed), Toast.LENGTH_SHORT).show() }
+                }
+            },
+            onImportConfig = {
+                runProtected(resources.getString(R.string.ui_cfg_import), resources.getString(R.string.ui_cfg_import_sub)) {
+                    // Some file managers report a .json file as plain text or as unknown binary.
+                    runCatching { openConfig.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }
+                        .onFailure { Toast.makeText(context, resources.getString(R.string.ui_cfg_err_read), Toast.LENGTH_SHORT).show() }
+                }
+            },
+            onConfirmImport = viewModel::confirmImport,
+            onCancelImport = viewModel::cancelImport,
         ),
     )
 }
+
+private const val CONFIG_FILE_NAME = "corelock-rules-and-settings.json"
 
 /** The links are pages the user opens; CoreLock itself makes no request (README network table). */
 private fun openInBrowser(context: Context, url: String) {
@@ -166,10 +203,16 @@ private fun openInBrowser(context: Context, url: String) {
     }
 }
 
-private enum class SettingsSheet { LEVEL, THEME, RETENTION, EXPORT, CLEAR, LIMITS }
+private enum class SettingsSheet { LEVEL, THEME, RETENTION, EXPORT, CONFIG_EXPORT, CLEAR, LIMITS }
 
 @Composable
-fun SettingsHomeContent(state: SettingsHomeState, language: String, actions: SettingsActions, now: Long = System.currentTimeMillis()) {
+fun SettingsHomeContent(
+    state: SettingsHomeState,
+    language: String,
+    actions: SettingsActions,
+    now: Long = System.currentTimeMillis(),
+    importUi: ImportUi? = null,
+) {
     val spacing = CoreLockTheme.spacing
     var sheet by rememberSaveable { mutableStateOf<SettingsSheet?>(null) }
     val close = { sheet = null }
@@ -236,6 +279,16 @@ fun SettingsHomeContent(state: SettingsHomeState, language: String, actions: Set
             SettingsDivider()
             SettingRow(stringResource(R.string.ui_set_export), { sheet = SettingsSheet.EXPORT }, subtitle = stringResource(R.string.ui_set_export_sub))
             SettingsDivider()
+            SettingRow(
+                stringResource(R.string.ui_cfg_export), { sheet = SettingsSheet.CONFIG_EXPORT },
+                subtitle = stringResource(R.string.ui_cfg_export_sub), modifier = Modifier.testTag(TAG_CFG_EXPORT_ROW),
+            )
+            SettingsDivider()
+            SettingRow(
+                stringResource(R.string.ui_cfg_import), actions.onImportConfig,
+                subtitle = stringResource(R.string.ui_cfg_import_sub), modifier = Modifier.testTag(TAG_CFG_IMPORT_ROW),
+            )
+            SettingsDivider()
             PrimaryToggleRow(stringResource(R.string.ui_set_screenshots), state.allowScreenshots, actions.onScreenshots, subtitle = stringResource(R.string.ui_set_screenshots_sub))
             SettingsDivider()
             SettingRow(
@@ -292,8 +345,47 @@ fun SettingsHomeContent(state: SettingsHomeState, language: String, actions: Set
             DestructiveButton(stringResource(R.string.ui_clear_all_data), { close(); actions.onClear() }, Modifier.fillMaxWidth().testTag(TAG_CLEAR_CONFIRM))
             SecondaryButton(stringResource(R.string.cancel), close, Modifier.fillMaxWidth())
         }
+        SettingsSheet.CONFIG_EXPORT -> CoreLockBottomSheet(stringResource(R.string.ui_cfg_export), close) {
+            // ADR 0013: the file is private, said before it is written.
+            Text(stringResource(R.string.ui_cfg_export_body), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.testTag(TAG_CFG_PRIVATE))
+            PrimaryButton(stringResource(R.string.ui_cfg_export_action), { close(); actions.onExportConfig() }, Modifier.fillMaxWidth().testTag(TAG_CFG_SAVE))
+            SecondaryButton(stringResource(R.string.cancel), close, Modifier.fillMaxWidth())
+        }
         SettingsSheet.LIMITS -> InfoSheet(stringResource(R.string.ui_what_corelock_cant), stringResource(R.string.ui_what_corelock_cant_body), close)
         null -> Unit
+    }
+
+    when (importUi) {
+        is ImportUi.Confirm -> ImportConfirmSheet(importUi, actions.onConfirmImport, actions.onCancelImport)
+        is ImportUi.Problem -> InfoSheet(stringResource(R.string.ui_cfg_problem_title), stringResource(importUi.message), actions.onCancelImport)
+        null -> Unit
+    }
+}
+
+/** Nothing changes before Import: what is added and changed, and what was left out, in words. */
+@Composable
+private fun ImportConfirmSheet(confirm: ImportUi.Confirm, onImport: () -> Unit, onCancel: () -> Unit) {
+    val plan = confirm.plan
+    val muted = CoreLockTheme.colors.onSurfaceMuted
+    CoreLockBottomSheet(stringResource(R.string.ui_cfg_import_title), onCancel) {
+        Column(Modifier.testTag(TAG_CFG_CONFIRM), verticalArrangement = Arrangement.spacedBy(CoreLockTheme.spacing.s)) {
+            if (plan.newRules.isNotEmpty()) {
+                Text(pluralStringResource(R.plurals.ui_cfg_new_rules, plan.newRules.size, plan.newRules.size), style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.ui_cfg_rules_split, plan.blocks, plan.allows), style = MaterialTheme.typography.bodyMedium, color = muted)
+            }
+            if (confirm.settingsChanged > 0) {
+                Text(pluralStringResource(R.plurals.ui_cfg_settings_changed, confirm.settingsChanged, confirm.settingsChanged), style = MaterialTheme.typography.bodyLarge)
+            }
+            if (plan.alreadyThere > 0) {
+                Text(pluralStringResource(R.plurals.ui_cfg_already, plan.alreadyThere, plan.alreadyThere), style = MaterialTheme.typography.bodyMedium, color = muted)
+            }
+            if (confirm.skipped > 0) {
+                Text(pluralStringResource(R.plurals.ui_cfg_skipped, confirm.skipped, confirm.skipped), style = MaterialTheme.typography.bodyMedium, color = muted)
+            }
+            Text(stringResource(R.string.ui_cfg_import_note), style = MaterialTheme.typography.bodyMedium, color = muted)
+        }
+        PrimaryButton(stringResource(R.string.ui_cfg_import_action), onImport, Modifier.fillMaxWidth().testTag(TAG_CFG_IMPORT))
+        SecondaryButton(stringResource(R.string.cancel), onCancel, Modifier.fillMaxWidth())
     }
 }
 
@@ -379,5 +471,11 @@ internal const val TAG_SETTINGS_LIST = "settings_list"
 internal const val TAG_LISTS_ROW = "settings_lists"
 internal const val TAG_THEME_ROW = "settings_theme"
 internal const val TAG_CLEAR_ROW = "settings_clear"
+internal const val TAG_CFG_EXPORT_ROW = "settings_cfg_export"
+internal const val TAG_CFG_IMPORT_ROW = "settings_cfg_import"
+internal const val TAG_CFG_PRIVATE = "settings_cfg_private"
+internal const val TAG_CFG_SAVE = "settings_cfg_save"
+internal const val TAG_CFG_CONFIRM = "settings_cfg_confirm"
+internal const val TAG_CFG_IMPORT = "settings_cfg_do_import"
 internal const val TAG_CLEAR_CONFIRM = "settings_clear_confirm"
 internal const val TAG_ADVANCED_ROW = "settings_advanced"

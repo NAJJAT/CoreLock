@@ -174,4 +174,63 @@ class SettingsScreenTest {
         rule.onNodeWithTag(TAG_LISTS_REFRESH).assertIsEnabled().performClick()
         assertTrue(refreshed)
     }
+
+    // ── D2: export and import of rules and settings ─────────────────────────
+
+    private fun showImport(importUi: ImportUi?, actions: SettingsActions = SettingsActions()) = rule.setContent {
+        CoreLockTheme(Appearance.DARK) { SettingsHomeContent(SettingsHomeState(), "System default", actions, now, importUi) }
+    }
+
+    @Test
+    fun exporting_rules_says_the_file_is_private_before_the_picker_opens() {
+        var picked = false
+        show(actions = SettingsActions(onExportConfig = { picked = true }))
+        rule.onNodeWithTag(TAG_SETTINGS_LIST).performScrollToNode(hasTestTag(TAG_CFG_EXPORT_ROW))
+        rule.onNodeWithTag(TAG_CFG_EXPORT_ROW).performClick()
+        assertFalse("the row alone must not open the picker", picked)
+        rule.onNodeWithTag(TAG_CFG_PRIVATE).assertIsDisplayed()
+        assertTrue(rule.onAllNodesWithText("Keep it private", substring = true).fetchSemanticsNodes().isNotEmpty())
+        rule.onNodeWithTag(TAG_CFG_SAVE).performClick()
+        assertTrue(picked)
+    }
+
+    @Test
+    fun import_row_opens_the_picker() {
+        var opened = false
+        show(actions = SettingsActions(onImportConfig = { opened = true }))
+        rule.onNodeWithTag(TAG_SETTINGS_LIST).performScrollToNode(hasTestTag(TAG_CFG_IMPORT_ROW))
+        rule.onNodeWithTag(TAG_CFG_IMPORT_ROW).performClick()
+        assertTrue(opened)
+    }
+
+    @Test
+    fun the_import_question_says_what_changes_and_only_import_applies_it() {
+        var imported = 0
+        var cancelled = 0
+        val plan = ConfigTransfer.Plan(
+            newRules = listOf(
+                ConfigTransfer.RuleEntry(com.privacyguard.core.filter.FilterRule.Action.DENY, site = "a.example"),
+                ConfigTransfer.RuleEntry(com.privacyguard.core.filter.FilterRule.Action.DENY, site = "b.example"),
+                ConfigTransfer.RuleEntry(com.privacyguard.core.filter.FilterRule.Action.ALLOW, site = "c.example"),
+            ),
+            alreadyThere = 1,
+        )
+        showImport(ImportUi.Confirm(plan, settingsChanged = 4, skipped = 2),
+            SettingsActions(onConfirmImport = { imported++ }, onCancelImport = { cancelled++ }))
+        rule.onNodeWithTag(TAG_CFG_CONFIRM).assertIsDisplayed()
+        listOf("3 new rules", "2 block · 1 allow", "4 settings will change", "1 rule is already on this phone",
+            "2 entries are not valid and are left out").forEach { rule.onNodeWithText(it).assertExists() }
+        assertTrue(rule.onAllNodesWithText("never lets a malware", substring = true).fetchSemanticsNodes().isNotEmpty())
+        assertEquals("nothing applied before the answer", 0, imported)
+        rule.onNodeWithTag(TAG_CFG_IMPORT).performClick()
+        assertEquals(1, imported)
+        assertEquals(0, cancelled)
+    }
+
+    @Test
+    fun a_refused_file_says_why() {
+        showImport(ImportUi.Problem(com.privacyguard.app.R.string.ui_cfg_err_newer))
+        rule.onNodeWithText("Can't import this file").assertExists()
+        rule.onNodeWithText("This file was made by a newer version of CoreLock. Update the app first.").assertExists()
+    }
 }

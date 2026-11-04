@@ -51,8 +51,6 @@
     <string name="ui_whats_new">Certaines choses ont changé de place. Les statistiques et l\'inspection HTTPS sont maintenant dans Paramètres › Avancé.</string>
     <string name="ui_open_statistics">Ouvrir les statistiques</string>
     <string name="ui_open_https_inspection">Ouvrir l\'inspection HTTPS</string>
-    <string name="ui_home_security_details">Détails de sécurité</string>
-    <string name="ui_home_security_details_sub">Alertes, contrôles de sécurité et rapports</string>
 
     <!-- Activity -->
     <string name="ui_filter_blocked">Bloqués</string>

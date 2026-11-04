@@ -50,7 +50,7 @@ class KillSwitchTest {
 
     @Test
     fun the_drop_alert_switch_and_its_notification_are_gone() {
-        assertFalse(src("app/ui/settings/SettingsScreen.kt").contains("set_vpn_drop_alert"))
+        assertFalse(src("app/ui/settings/SettingsSubScreens.kt").contains("set_vpn_drop_alert"))
         assertFalse(src("platform/android/NotificationHelper.kt").contains("postKillSwitchAlert"))
         assertFalse(src("app/ui/dashboard/DashboardViewModel.kt").contains("killSwitchEnabled"))
         assertFalse(src("app/ui/dashboard/DashboardViewModel.kt").contains("dash_rec_kill_switch"))
@@ -84,14 +84,14 @@ class KillSwitchTest {
         val card = blockAfter(dashboard, "if (card.kind == CardKind.KILL_SWITCH)")
         assertFalse("Kill Switch card draws a switch: $card", card.contains("Switch(") || card.contains("Toggle"))
 
-        val settings = src("app/ui/settings/SettingsScreen.kt")
-        val row = blockAfter(settings, "KillSwitch.lockdownStatus.let")
-        assert(row.contains("showsToggle = false")) { "Kill Switch row shows an On/Off toggle chip: $row" }
+        // Settings › Kill switch (1.1): a status card and a button to Android, no switch.
+        val screen = blockAfter(src("app/ui/settings/SettingsSubScreens.kt"), "fun KillSwitchContent(")
+        assertFalse("Kill switch screen draws a switch: $screen", screen.contains("Switch(") || screen.contains("Toggle"))
     }
 
     @Test
     fun screens_use_the_three_state_status() {
-        for (path in listOf("app/ui/dashboard/DashboardViewModel.kt", "app/ui/settings/SettingsScreen.kt", "app/ui/settings/SettingsViewModel.kt")) {
+        for (path in listOf("app/ui/dashboard/DashboardViewModel.kt", "app/ui/settings/SettingsSubScreens.kt", "app/ui/settings/SettingsHomeViewModel.kt", "app/ui/settings/SettingsViewModel.kt")) {
             assertFalse("$path still reads the two-state lockdownActive", src(path).contains("lockdownActive"))
         }
     }

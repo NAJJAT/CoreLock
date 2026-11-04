@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- الإعدادات › البيانات: تصدير القواعد والإعدادات واستيرادها (D2، ADR 0013). ترجمة آلية، للمراجعة. -->
+<resources>
+    <string name="ui_cfg_export">تصدير القواعد والإعدادات</string>
+    <string name="ui_cfg_export_sub">لنقلها إلى هاتف آخر</string>
+    <string name="ui_cfg_import">استيراد القواعد والإعدادات</string>
+    <string name="ui_cfg_import_sub">من ملف صدّرته سابقًا</string>
+    <string name="ui_cfg_export_body">يحتوي الملف على قواعدك وإعداداتك: المواقع والتطبيقات التي حظرتها أو سمحت بها. احتفظ به خاصًا: يستطيع كل من يملكه قراءتها. لا يحتوي على سجلّك ولا كلمات المرور ولا المفاتيح.</string>
+    <string name="ui_cfg_export_action">اختر مكان الحفظ</string>
+    <string name="ui_cfg_import_title">استيراد هذه القواعد والإعدادات؟</string>
+    <plurals name="ui_cfg_new_rules">
+        <item quantity="zero">لا قواعد جديدة</item>
+        <item quantity="one">قاعدة جديدة واحدة</item>
+        <item quantity="two">قاعدتان جديدتان</item>
+        <item quantity="few">%d قواعد جديدة</item>
+        <item quantity="many">%d قاعدة جديدة</item>
+        <item quantity="other">%d قاعدة جديدة</item>
+    </plurals>
+    <string name="ui_cfg_rules_split">%1$d حظر · %2$d سماح</string>
+    <plurals name="ui_cfg_settings_changed">
+        <item quantity="zero">لن يتغيّر أي إعداد</item>
+        <item quantity="one">سيتغيّر إعداد واحد</item>
+        <item quantity="two">سيتغيّر إعدادان</item>
+        <item quantity="few">ستتغيّر %d إعدادات</item>
+        <item quantity="many">سيتغيّر %d إعدادًا</item>
+        <item quantity="other">سيتغيّر %d إعداد</item>
+    </plurals>
+    <plurals name="ui_cfg_already">
+        <item quantity="zero">لا قواعد موجودة مسبقًا على هذا الهاتف</item>
+        <item quantity="one">قاعدة واحدة موجودة مسبقًا على هذا الهاتف</item>
+        <item quantity="two">قاعدتان موجودتان مسبقًا على هذا الهاتف</item>
+        <item quantity="few">%d قواعد موجودة مسبقًا على هذا الهاتف</item>
+        <item quantity="many">%d قاعدة موجودة مسبقًا على هذا الهاتف</item>
+        <item quantity="other">%d قاعدة موجودة مسبقًا على هذا الهاتف</item>
+    </plurals>
+    <plurals name="ui_cfg_skipped">
+        <item quantity="zero">لا عناصر غير صالحة</item>
+        <item quantity="one">عنصر واحد غير صالح ولن يُستورد</item>
+        <item quantity="two">عنصران غير صالحين ولن يُستوردا</item>
+        <item quantity="few">%d عناصر غير صالحة ولن تُستورد</item>
+        <item quantity="many">%d عنصرًا غير صالح ولن يُستورد</item>
+        <item quantity="other">%d عنصر غير صالح ولن يُستورد</item>
+    </plurals>
+    <string name="ui_cfg_import_note">تبقى قواعدك كما هي. قاعدة السماح المستوردة لا تسمح أبدًا بموقع برمجيات خبيثة أو تصيّد.</string>
+    <string name="ui_cfg_import_action">استيراد</string>
+    <string name="ui_cfg_problem_title">تعذّر استيراد هذا الملف</string>
+    <string name="ui_cfg_err_managed">تدير مؤسستك إعدادات هذا الهاتف، لذلك الاستيراد متوقف.</string>
+    <string name="ui_cfg_err_read">تعذّرت قراءة الملف.</string>
+    <string name="ui_cfg_err_too_big">هذا الملف أكبر من أن يكون ملف قواعد CoreLock.</string>
+    <string name="ui_cfg_err_invalid">هذا ليس ملف قواعد CoreLock، أو أنه تالف.</string>
+    <string name="ui_cfg_err_newer">أُنشئ هذا الملف بإصدار أحدث من CoreLock. حدّث التطبيق أولًا.</string>
+    <string name="ui_cfg_err_too_many">يحتوي هذا الملف على أكثر من 5000 قاعدة.</string>
+    <string name="ui_cfg_nothing">كل ما في هذا الملف موجود مسبقًا على هذا الهاتف.</string>
+    <string name="ui_cfg_saved">حُفظت القواعد والإعدادات</string>
+    <string name="ui_cfg_save_failed">تعذّر حفظ الملف</string>
+    <string name="ui_cfg_imported">استُوردت القواعد والإعدادات</string>
+</resources>

@@ -160,6 +160,9 @@ interface BlocklistDao {
     @Query("SELECT EXISTS(SELECT 1 FROM blocklist WHERE isEnabled = 1 AND category = :category AND domain IN (:candidates))")
     suspend fun anyInCategory(category: String, candidates: List<String>): Boolean
 
+    @Query("SELECT EXISTS(SELECT 1 FROM blocklist WHERE isEnabled = 1 AND category IN (:categories) AND domain IN (:candidates))")
+    suspend fun anyInCategories(categories: List<String>, candidates: List<String>): Boolean
+
     @Query("SELECT COUNT(*) FROM blocklist")
     suspend fun count(): Int
     

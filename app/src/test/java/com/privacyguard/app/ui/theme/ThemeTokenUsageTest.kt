@@ -30,7 +30,6 @@ class ThemeTokenUsageTest {
         "src/main/java/com/privacyguard/app/ui/components/TemporalHeatmap.kt",
         "src/main/java/com/privacyguard/app/ui/dashboard/DashboardScreen.kt",
         "src/main/java/com/privacyguard/app/ui/statistics/StatisticsScreen.kt",
-        "src/main/java/com/privacyguard/ui/AppNavHost.kt",
     )
 
     /** UI files: everything under a `ui` package (and the debug catalog), except the theme itself. */

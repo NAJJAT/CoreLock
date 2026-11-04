@@ -79,13 +79,30 @@ class RulesScreenTest {
     fun each_rule_says_in_words_what_it_does_to_what() {
         show(loaded(block, app))
         rule.onNodeWithText("Blocks").assertIsDisplayed()
-        rule.onNodeWithText("Site: ads.example.com").assertIsDisplayed()
+        rule.onNodeWithText("ads.example.com").assertIsDisplayed()
         rule.onNodeWithText("Triggered 3 times", substring = true, ignoreCase = true).assertIsDisplayed()
         // The app's name, not the package; and a switched-off rule says Off in words.
-        rule.onNodeWithText("App: WhatsApp").assertIsDisplayed()
+        rule.onNodeWithText("WhatsApp").assertIsDisplayed()
         rule.onNodeWithText("Blocks · Off").assertIsDisplayed()
         rule.onNodeWithTag(TAG_RULE_SWITCH + "b").assertIsOn()
         rule.onNodeWithTag(TAG_RULE_SWITCH + "a").assertIsOff()
+    }
+
+    @Test
+    fun the_title_comes_from_the_rule_not_from_the_label_written_in_another_language() {
+        // Made while the app was in Arabic: the stored label stays Arabic, the title does not.
+        val arabic = block.copy(id = "x", label = "حظر ads.example.com")
+        val forApp = block.copy(id = "y", label = "Bloquer ads.example.com pour WhatsApp", matchDomain = "t.example", matchPackage = "com.whatsapp")
+        val portOnly = block.copy(id = "z", label = "Block unencrypted web", matchDomain = null, matchPort = 80)
+        show(loaded(arabic, forApp, portOnly))
+        rule.onNodeWithText("ads.example.com").assertIsDisplayed()
+        assertEquals(0, rule.onAllNodesWithText("حظر", substring = true).fetchSemanticsNodes().size)
+        // A site rule for one app: the site is the title, the app is said below it.
+        rule.onNodeWithText("t.example").assertIsDisplayed()
+        rule.onNodeWithText("App: WhatsApp", substring = true).assertIsDisplayed()
+        assertEquals(0, rule.onAllNodesWithText("Site: t.example", substring = true).fetchSemanticsNodes().size)
+        // Nothing to name it after: the stored label is the fallback.
+        rule.onNodeWithText("Block unencrypted web").assertIsDisplayed()
     }
 
     @Test
@@ -100,7 +117,7 @@ class RulesScreenTest {
         var deleted: FilterRule? = null
         var toggled: Pair<String, Boolean>? = null
         show(loaded(block), RulesActions(onDelete = { deleted = it }, onToggle = { r, on -> toggled = r.id to on }))
-        rule.onNodeWithContentDescription("Delete rule: Block ads.example.com").performClick()
+        rule.onNodeWithContentDescription("Delete rule: ads.example.com").performClick()
         // The whole rule, so Undo can write it back with its id, priority and override flag.
         assertEquals(block, deleted)
         rule.onNodeWithTag(TAG_RULE_SWITCH + "b").performClick()

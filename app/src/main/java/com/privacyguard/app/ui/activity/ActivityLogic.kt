@@ -133,6 +133,9 @@ object ActivityLogic {
      *
      * @param userRule the first user rule that matches the row now, if any
      * @param onMalwareList the name or a parent of it is on a malware or phishing list
+     * @param onBlockList the name or a parent of it is on an ad, tracker or telemetry list now.
+     *   Lookups store no source, so without it a name blocked by a rule deleted since
+     *   would be shown as listed; only a list we can find is named.
      * @param port the destination port of a connection: plain lookups on port 53 that
      *   skip CoreLock's resolver (over TCP or IPv6) are dropped with no source recorded
      */
@@ -143,6 +146,7 @@ object ActivityLogic {
         userRule: FilterRule?,
         onMalwareList: Boolean,
         port: Int? = null,
+        onBlockList: Boolean = true,
     ): ActivityReason {
         if (!blocked) return ActivityReason.ALLOWED
         // Ports closed before any rule runs (PrivacyVpnService): no rule can open them, so
@@ -156,7 +160,11 @@ object ActivityLogic {
         return when {
             blockSource == BlockSource.DOH -> ActivityReason.LOOKUP_BYPASS
             isLookup || blockSource == BlockSource.SNI || blockSource == BlockSource.QUIC || blockSource == BlockSource.DNS ->
-                if (onMalwareList) ActivityReason.MALWARE_LIST else ActivityReason.ADS_LIST
+                when {
+                    onMalwareList -> ActivityReason.MALWARE_LIST
+                    onBlockList -> ActivityReason.ADS_LIST
+                    else -> ActivityReason.SETTING
+                }
             // A connection without a recorded source: a port or security policy, or a rule
             // that was removed since. Never claim a list we can't name.
             else -> ActivityReason.SETTING

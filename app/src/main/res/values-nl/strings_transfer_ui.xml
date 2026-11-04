@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Instellingen › Gegevens: regels en instellingen exporteren en importeren (D2, ADR 0013). Machinevertaling, na te kijken. -->
+<resources>
+    <string name="ui_cfg_export">Regels en instellingen exporteren</string>
+    <string name="ui_cfg_export_sub">Om ze naar een andere telefoon te zetten</string>
+    <string name="ui_cfg_import">Regels en instellingen importeren</string>
+    <string name="ui_cfg_import_sub">Uit een bestand dat je hebt geëxporteerd</string>
+    <string name="ui_cfg_export_body">Het bestand bevat je regels en instellingen: de sites en apps die je hebt geblokkeerd of toegestaan. Houd het privé: wie het heeft, kan ze lezen. Je geschiedenis, wachtwoorden en sleutels staan er niet in.</string>
+    <string name="ui_cfg_export_action">Kies waar je het opslaat</string>
+    <string name="ui_cfg_import_title">Deze regels en instellingen importeren?</string>
+    <plurals name="ui_cfg_new_rules">
+        <item quantity="one">%d nieuwe regel</item>
+        <item quantity="other">%d nieuwe regels</item>
+    </plurals>
+    <string name="ui_cfg_rules_split">%1$d blokkeren · %2$d toestaan</string>
+    <plurals name="ui_cfg_settings_changed">
+        <item quantity="one">%d instelling verandert</item>
+        <item quantity="other">%d instellingen veranderen</item>
+    </plurals>
+    <plurals name="ui_cfg_already">
+        <item quantity="one">%d regel staat al op deze telefoon</item>
+        <item quantity="other">%d regels staan al op deze telefoon</item>
+    </plurals>
+    <plurals name="ui_cfg_skipped">
+        <item quantity="one">%d item is ongeldig en wordt overgeslagen</item>
+        <item quantity="other">%d items zijn ongeldig en worden overgeslagen</item>
+    </plurals>
+    <string name="ui_cfg_import_note">Je eigen regels blijven. Een geïmporteerde Toestaan-regel laat nooit een malware- of phishingsite door.</string>
+    <string name="ui_cfg_import_action">Importeren</string>
+    <string name="ui_cfg_problem_title">Dit bestand kan niet worden geïmporteerd</string>
+    <string name="ui_cfg_err_managed">Je organisatie beheert de instellingen van deze telefoon, dus importeren staat uit.</string>
+    <string name="ui_cfg_err_read">Het bestand kon niet worden gelezen.</string>
+    <string name="ui_cfg_err_too_big">Dit bestand is te groot voor een CoreLock-regelbestand.</string>
+    <string name="ui_cfg_err_invalid">Dit is geen CoreLock-regelbestand, of het is beschadigd.</string>
+    <string name="ui_cfg_err_newer">Dit bestand is gemaakt door een nieuwere versie van CoreLock. Werk eerst de app bij.</string>
+    <string name="ui_cfg_err_too_many">Dit bestand bevat meer dan 5.000 regels.</string>
+    <string name="ui_cfg_nothing">Alles in dit bestand staat al op deze telefoon.</string>
+    <string name="ui_cfg_saved">Regels en instellingen opgeslagen</string>
+    <string name="ui_cfg_save_failed">Het bestand kon niet worden opgeslagen</string>
+    <string name="ui_cfg_imported">Regels en instellingen geïmporteerd</string>
+</resources>

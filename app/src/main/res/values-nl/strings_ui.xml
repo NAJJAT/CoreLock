@@ -51,8 +51,6 @@
     <string name="ui_whats_new">Sommige dingen zijn verplaatst. Statistieken en HTTPS-inspectie staan nu in Instellingen › Geavanceerd.</string>
     <string name="ui_open_statistics">Statistieken openen</string>
     <string name="ui_open_https_inspection">HTTPS-inspectie openen</string>
-    <string name="ui_home_security_details">Beveiligingsdetails</string>
-    <string name="ui_home_security_details_sub">Meldingen, beveiligingscontroles en rapporten</string>
 
     <!-- Activity -->
     <string name="ui_filter_blocked">Geblokkeerd</string>

@@ -46,6 +46,7 @@ class ActivityRepository(private val context: Context) : RuleStore {
 
     /** Malware answers per name, kept until [rulesChanged] (rules or lists changed). */
     private val malwareCache = LinkedHashMap<String, Boolean>()
+    private val listedCache = LinkedHashMap<String, Boolean>()
 
     /**
      * The newest rows for [filter], newest first, at most [ActivityLogic.LIST_LIMIT].
@@ -148,6 +149,7 @@ class ActivityRepository(private val context: Context) : RuleStore {
     fun rulesChanged() {
         cachedEngine = null
         synchronized(malwareCache) { malwareCache.clear() }
+        synchronized(listedCache) { listedCache.clear() }
     }
 
     // Kept between reloads, rebuilt by [rulesChanged]: building it reads every user rule.
@@ -165,13 +167,17 @@ class ActivityRepository(private val context: Context) : RuleStore {
                 val pkg = q.appPackage.takeUnless { AppNames.isUnattributed(it) }.orEmpty()
                 val host = NameBlockPolicy.normalize(q.domain)
                 val rule = engine.domainRuleFor(host, pkg.ifBlank { null })
+                val malware = q.wasBlocked && isMalware(host)
                 describe(
                     ActivityItem(
                         id = "d${q.id}", isLookup = true, timestamp = q.timestamp,
                         packageName = pkg, appName = appName(pkg, q.appName),
                         host = host, ip = null, port = null, protocol = null,
                         blocked = q.wasBlocked, blockSource = if (q.wasBlocked) BlockSource.DNS else null,
-                        reason = ActivityLogic.reasonFor(q.wasBlocked, true, BlockSource.DNS, rule, q.wasBlocked && isMalware(host)),
+                        reason = ActivityLogic.reasonFor(
+                            q.wasBlocked, true, BlockSource.DNS, rule, malware,
+                            onBlockList = q.wasBlocked && !malware && isListed(host),
+                        ),
                         ruleId = rule?.takeIf { it.action == FilterRule.Action.DENY }?.id,
                         ruleLabel = rule?.takeIf { it.action == FilterRule.Action.DENY }?.label,
                     ),
@@ -200,7 +206,10 @@ class ActivityRepository(private val context: Context) : RuleStore {
                         host = host, ip = c.destinationIp.ifBlank { null },
                         port = c.destinationPort.takeIf { it > 0 }, protocol = c.protocol,
                         blocked = c.wasBlocked, blockSource = source,
-                        reason = ActivityLogic.reasonFor(c.wasBlocked, false, source, decision, malware, port = c.destinationPort),
+                        reason = ActivityLogic.reasonFor(
+                            c.wasBlocked, false, source, decision, malware, port = c.destinationPort,
+                            onBlockList = c.wasBlocked && !malware && host != null && isListed(host),
+                        ),
                         ruleId = decision?.takeIf { it.action == FilterRule.Action.DENY }?.id,
                         ruleLabel = decision?.takeIf { it.action == FilterRule.Action.DENY }?.label,
                         encryption = c.encryptionStatus, bytesSent = c.bytesSent, bytesReceived = c.bytesReceived,
@@ -231,13 +240,17 @@ class ActivityRepository(private val context: Context) : RuleStore {
         return item.copy(title = title, purpose = cls.purpose, company = company)
     }
 
-    private suspend fun isMalware(host: String): Boolean {
-        synchronized(malwareCache) { malwareCache[host] }?.let { return it }
-        val answer = blocklists.isSecurityThreat(host)
-        synchronized(malwareCache) {
+    private suspend fun isMalware(host: String): Boolean = cached(malwareCache, host) { blocklists.isSecurityThreat(it) }
+
+    private suspend fun isListed(host: String): Boolean = cached(listedCache, host) { blocklists.isOnBlockList(it) }
+
+    private suspend fun cached(cache: LinkedHashMap<String, Boolean>, host: String, ask: suspend (String) -> Boolean): Boolean {
+        synchronized(cache) { cache[host] }?.let { return it }
+        val answer = ask(host)
+        synchronized(cache) {
             // Bounded: a long history has thousands of names; the newest matter.
-            if (malwareCache.size >= MALWARE_CACHE_MAX) malwareCache.remove(malwareCache.keys.first())
-            malwareCache[host] = answer
+            if (cache.size >= MALWARE_CACHE_MAX) cache.remove(cache.keys.first())
+            cache[host] = answer
         }
         return answer
     }

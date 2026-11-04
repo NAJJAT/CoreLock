@@ -1,13 +1,24 @@
 package com.privacyguard.app.ui.settings
 
 import android.app.Application
+import android.content.Context
+import android.content.RestrictionsManager
+import android.net.Uri
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.privacyguard.app.R
 import com.privacyguard.app.core.blocklist.BlocklistManager
 import com.privacyguard.app.core.blocklist.PrefsBlocklistUpdateTimes
+import com.privacyguard.app.data.db.ConfigDatabase
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
 import com.privacyguard.app.data.repository.LocalDataEraser
+import com.privacyguard.app.data.repository.RulesRepo
+import com.privacyguard.core.filter.FilterEngine
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.util.UUID
 import com.privacyguard.app.ui.statistics.HistoryExport
 import com.privacyguard.app.ui.theme.Appearance
 import com.privacyguard.app.vpn.KillSwitch
@@ -50,6 +61,17 @@ sealed interface SettingsEvent {
     data object Cleared : SettingsEvent
     /** Auto-restart was turned on but Android has not allowed exact alarms yet. */
     data object NeedsAlarmAccess : SettingsEvent
+    data object ConfigSaved : SettingsEvent
+    data object ConfigSaveFailed : SettingsEvent
+    data object ConfigImported : SettingsEvent
+}
+
+/** The import between choosing a file and the user's answer (D2): nothing has changed yet. */
+sealed interface ImportUi {
+    /** What Import would add and change; [skipped]: entries of the file that were not valid. */
+    data class Confirm(val plan: ConfigTransfer.Plan, val settingsChanged: Int, val skipped: Int) : ImportUi
+    /** Why nothing can be imported from this file. */
+    data class Problem(@StringRes val message: Int) : ImportUi
 }
 
 /**
@@ -69,6 +91,14 @@ class SettingsHomeViewModel(app: Application) : AndroidViewModel(app) {
         val exactAlarms: Boolean = true,
         val lists: SettingsLogic.ListsUpdated? = null,
     )
+
+    private val rulesRepo by lazy { RulesRepo(ConfigDatabase.getInstance(app).rulesDao(), FilterEngine()) }
+
+    private val _import = MutableStateFlow<ImportUi?>(null)
+    val import: StateFlow<ImportUi?> = _import.asStateFlow()
+
+    /** The file's settings, kept between the preview and the user's answer. */
+    private var pendingSettings: ConfigTransfer.Settings? = null
 
     private val _events = MutableStateFlow<SettingsEvent?>(null)
     val events: StateFlow<SettingsEvent?> = _events.asStateFlow()
@@ -162,5 +192,178 @@ class SettingsHomeViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private companion object { const val TAG = "SettingsHome" }
+    // ── Export and import of rules and settings (D2, ADR 0013) ──────────────
+
+    /** Writes the file to [uri], a place the user picked in Android's file picker. */
+    fun exportConfig(uri: Uri) {
+        viewModelScope.launch {
+            _events.value = try {
+                val app = getApplication<Application>()
+                val rules = rulesRepo.userRules()
+                val json = ConfigTransfer.write(ConfigTransfer.exportable(rules), currentSettings(rules.map { it.id }.toSet()))
+                withContext(Dispatchers.IO) {
+                    val out = app.contentResolver.openOutputStream(uri, "wt") ?: error("no stream")
+                    out.use { it.write(json.toByteArray(Charsets.UTF_8)) }
+                }
+                SettingsEvent.ConfigSaved
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Settings export failed: ${e.javaClass.simpleName}")
+                SettingsEvent.ConfigSaveFailed
+            }
+        }
+    }
+
+    /** Reads [uri] and shows what an import would do. Nothing changes until [confirmImport]. */
+    fun previewImport(uri: Uri) {
+        viewModelScope.launch {
+            pendingSettings = null
+            if (isManagedByOrganisation()) { _import.value = ImportUi.Problem(R.string.ui_cfg_err_managed); return@launch }
+            val bytes = try {
+                withContext(Dispatchers.IO) {
+                    getApplication<Application>().contentResolver.openInputStream(uri)?.use { readAtMost(it, ConfigTransfer.MAX_BYTES) }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Settings file not read: ${e.javaClass.simpleName}")
+                null
+            }
+            _import.value = when {
+                bytes == null -> ImportUi.Problem(R.string.ui_cfg_err_read)
+                bytes === TOO_BIG -> ImportUi.Problem(R.string.ui_cfg_err_too_big)
+                else -> when (val result = withContext(Dispatchers.Default) { ConfigTransfer.read(bytes) }) {
+                    is ConfigTransfer.ReadResult.Refused -> ImportUi.Problem(problemOf(result.reason))
+                    is ConfigTransfer.ReadResult.Ok -> {
+                        val existing = rulesRepo.userRules()
+                        val plan = ConfigTransfer.plan(result.rules, existing)
+                        val changed = ConfigTransfer.changedSettings(result.settings, currentSettings(existing.map { it.id }.toSet()))
+                        if (plan.newRules.isEmpty() && changed == 0) {
+                            ImportUi.Problem(R.string.ui_cfg_nothing)
+                        } else {
+                            pendingSettings = result.settings
+                            ImportUi.Confirm(plan, changed, result.skipped)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun cancelImport() {
+        _import.value = null
+        pendingSettings = null
+    }
+
+    /** The user said Import: rules are added (never replaced), then the settings applied. */
+    fun confirmImport() {
+        val confirm = _import.value as? ImportUi.Confirm ?: return
+        val settings = pendingSettings ?: return
+        _import.value = null
+        pendingSettings = null
+        viewModelScope.launch {
+            // Asked again: the phone may have been enrolled while the question was open.
+            if (isManagedByOrganisation()) { _import.value = ImportUi.Problem(R.string.ui_cfg_err_managed); return@launch }
+            val app = getApplication<Application>()
+            val rules = withContext(Dispatchers.IO) {
+                confirm.plan.newRules.map { e ->
+                    val (labelRes, isApp) = ConfigTransfer.labelOf(e)
+                    val pkg = e.app
+                    val subject = if (isApp && pkg != null) com.privacyguard.app.ui.traffic.AppNames.label(app, pkg, null)
+                        else e.site ?: e.address ?: pkg.orEmpty()
+                    ConfigTransfer.toFilterRule(e, ConfigTransfer.idOf(e) { UUID.randomUUID().toString() }, app.getString(labelRes, subject))
+                }
+            }
+            rulesRepo.addRules(rules)
+            applySettings(settings)
+            _events.value = SettingsEvent.ConfigImported
+        }
+    }
+
+    /** Each setting through the same call its own screen makes. */
+    private suspend fun applySettings(s: ConfigTransfer.Settings) {
+        val app = getApplication<Application>()
+        s.level?.let(prefs::setProtectionLevel)
+        s.blockQuic?.let {
+            prefs.setBlockQuic(when (it) { ConfigTransfer.Quic.ON -> true; ConfigTransfer.Quic.OFF -> false; ConfigTransfer.Quic.LEVEL_DEFAULT -> null })
+        }
+        s.encryptedDns?.let(prefs::setDohEnabled)
+        s.dnsServer?.let { prefs.setUpstreamDns(it.ip); prefs.setDohProvider(it.dohProvider) }
+        s.blockUnencrypted?.let {
+            if (it) rulesRepo.upsertRule(SettingsViewModel.blockCleartextRule(app.getString(R.string.diag_rule_block_http)))
+            else rulesRepo.deleteRule(SettingsViewModel.RULE_ID_BLOCK_CLEARTEXT)
+        }
+        s.blockWeakTls?.let {
+            if (it) rulesRepo.upsertRule(SettingsViewModel.blockWeakTlsRule(app.getString(R.string.diag_rule_block_weak_tls)))
+            else rulesRepo.deleteRule(SettingsViewModel.RULE_ID_BLOCK_WEAK_TLS)
+        }
+        s.certificateChecks?.let(prefs::setCtMonitoringEnabled)
+        s.publicIpCheck?.let(prefs::setExternalIpCheckEnabled)
+        s.notifications?.let(prefs::setNotificationsEnabled)
+        s.notificationDetails?.let(prefs::setNotificationDetails)
+        s.weeklyReport?.let(::setWeeklyReport)
+        s.keepHistoryDays?.let(::setRetentionDays)
+        s.theme?.let(prefs::setAppearance)
+    }
+
+    /** The settings as they are now, in the file's terms. [ruleIds]: to see the two global rules. */
+    private fun currentSettings(ruleIds: Set<String>) = ConfigTransfer.Settings(
+        level = prefs.protectionLevel.value,
+        blockQuic = when (prefs.blockQuicChoice.value) {
+            true -> ConfigTransfer.Quic.ON
+            false -> ConfigTransfer.Quic.OFF
+            null -> ConfigTransfer.Quic.LEVEL_DEFAULT
+        },
+        encryptedDns = prefs.dohEnabled.value,
+        // A server the user typed is not exported: an import accepts only the built-in three.
+        dnsServer = AdvancedLogic.presetOf(prefs.upstreamDns.value),
+        blockUnencrypted = SettingsViewModel.RULE_ID_BLOCK_CLEARTEXT in ruleIds,
+        blockWeakTls = SettingsViewModel.RULE_ID_BLOCK_WEAK_TLS in ruleIds,
+        certificateChecks = prefs.ctMonitoringEnabled.value,
+        publicIpCheck = prefs.externalIpCheckEnabled.value,
+        notifications = prefs.notificationsEnabled.value,
+        notificationDetails = prefs.notificationDetails.value,
+        weeklyReport = prefs.weeklyReport.value,
+        keepHistoryDays = prefs.retentionDays.value.takeIf { it in SettingsLogic.RETENTION_DAYS },
+        theme = prefs.appearance.value,
+    )
+
+    /** ADR 0013 §5: while an organisation manages the phone, a file must not change its settings. */
+    private fun isManagedByOrganisation(): Boolean {
+        val rm = getApplication<Application>().getSystemService(Context.RESTRICTIONS_SERVICE) as? RestrictionsManager ?: return false
+        return runCatching { !rm.applicationRestrictions.isEmpty }.getOrDefault(false)
+    }
+
+    private fun problemOf(reason: ConfigTransfer.Refusal) = when (reason) {
+        ConfigTransfer.Refusal.TOO_BIG -> R.string.ui_cfg_err_too_big
+        ConfigTransfer.Refusal.NOT_OURS -> R.string.ui_cfg_err_invalid
+        ConfigTransfer.Refusal.NEWER_VERSION -> R.string.ui_cfg_err_newer
+        ConfigTransfer.Refusal.TOO_MANY_RULES -> R.string.ui_cfg_err_too_many
+    }
+
+    internal companion object {
+        private const val TAG = "SettingsHome"
+
+        /** Marks a file over the limit; compared by identity. */
+        private val TOO_BIG = ByteArray(0)
+
+        /** Reads at most [max] bytes; a longer stream is not read further (returns [TOO_BIG]). */
+        fun readAtMost(input: InputStream, max: Int): ByteArray {
+            val out = ByteArrayOutputStream()
+            val buf = ByteArray(8 * 1024)
+            var total = 0
+            while (true) {
+                val n = input.read(buf)
+                if (n < 0) break
+                total += n
+                if (total > max) return TOO_BIG
+                out.write(buf, 0, n)
+            }
+            return out.toByteArray()
+        }
+
+        /** True when [bytes] is the marker [readAtMost] returns for a stream over the limit. */
+        fun isTooBig(bytes: ByteArray) = bytes === TOO_BIG
+    }
 }
