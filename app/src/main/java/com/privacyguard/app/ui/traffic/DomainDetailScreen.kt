@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -25,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -80,10 +82,37 @@ data class DomainDetailState(
 
 class DomainDetailViewModel(app: Application, saved: SavedStateHandle) : AndroidViewModel(app) {
     private val host: String = saved["host"] ?: ""
+    /** The app this screen was opened for (App traffic); null from anywhere else. */
+    private val forApp: String? = saved.get<String>("app")?.takeIf { it.isNotBlank() }
     private val _state = MutableStateFlow(DomainDetailState(host = host))
     val state: StateFlow<DomainDetailState> = _state
 
+    private val activity = com.privacyguard.app.ui.activity.ActivityRepository(app)
+
+    /** Allow and Block for this name: the same helper as Activity (D8), malware warning and Undo included. */
+    val ruleActions = com.privacyguard.app.ui.activity.RuleActionController(app, viewModelScope, activity)
+
+    private val _name = MutableStateFlow<com.privacyguard.app.ui.activity.ActivityItem?>(null)
+    /** What CoreLock does with the name now; read again after every rule change. */
+    val name: StateFlow<com.privacyguard.app.ui.activity.ActivityItem?> = _name
+
+    fun perform(action: com.privacyguard.app.ui.activity.ActivityAction, item: com.privacyguard.app.ui.activity.ActivityItem, confirmedMalware: Boolean = false) =
+        ruleActions.perform(action, item, confirmedMalware)
+
     init {
+        viewModelScope.launch {
+            // RuleSyncBus: every rule write publishes; its current value loads the first time.
+            com.privacyguard.app.data.repository.RuleSyncBus.version.collect {
+                try {
+                    _name.value = activity.nameNow(host, forApp)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    android.util.Log.w("DomainDetail", "Name state failed: ${e.javaClass.simpleName}")
+                }
+            }
+        }
+
         viewModelScope.launch {
             val ctx: Context = getApplication()
             _state.value = withContext(Dispatchers.IO) {
@@ -139,11 +168,35 @@ fun DomainDetailScreen(
 ) {
     val context = LocalContext.current
     val s by viewModel.state.collectAsStateWithLifecycle()
+    val name by viewModel.name.collectAsStateWithLifecycle()
+    val warning by viewModel.ruleActions.malwareWarning.collectAsStateWithLifecycle()
+    val message by viewModel.ruleActions.message.collectAsStateWithLifecycle()
+    val snackbar = androidx.compose.runtime.remember { androidx.compose.material3.SnackbarHostState() }
+    val undoLabel = stringResource(R.string.ui_undo)
     val nf = NumberFormat.getIntegerInstance()
     val cls = s.classification
 
+    androidx.compose.runtime.LaunchedEffect(message?.id) {
+        val m = message ?: return@LaunchedEffect
+        val r = snackbar.showSnackbar(
+            m.text,
+            actionLabel = m.undo?.let { undoLabel },
+            duration = if (m.undo != null) androidx.compose.material3.SnackbarDuration.Long else androidx.compose.material3.SnackbarDuration.Short,
+        )
+        if (r == androidx.compose.material3.SnackbarResult.ActionPerformed) m.undo?.invoke()
+        viewModel.ruleActions.messageShown(m.id)
+    }
+    warning?.let { pending ->
+        com.privacyguard.app.ui.rules.SecurityAllowWarningDialog(
+            domain = pending.item.host.orEmpty(),
+            onConfirm = { viewModel.perform(pending.action, pending.item, confirmedMalware = true) },
+            onDismiss = viewModel.ruleActions::dismissMalwareWarning,
+        )
+    }
+
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
     LazyColumn(
-        modifier = Modifier.background(MaterialTheme.colorScheme.background),
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
@@ -153,6 +206,9 @@ fun DomainDetailScreen(
                 }
                 Text(s.host, style = MaterialTheme.typography.titleLarge, color = PgText, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
+        }
+        name?.let { now ->
+            item(key = "name_now") { NameNow(now, onAction = { viewModel.perform(it, now) }) }
         }
         if (s.loading || cls == null) return@LazyColumn
 
@@ -202,7 +258,11 @@ fun DomainDetailScreen(
                     )
                     Text(
                         // One unit: a lookup usually precedes a connection, so adding both double counts.
-                        stringResource(R.string.trf_per_day, nf.format((if (s.lookups > 0) s.lookups else s.connections) / s.daysCovered)),
+                        // Under one a day the integer format would read "about 0 per day".
+                        ((if (s.lookups > 0) s.lookups else s.connections) / s.daysCovered).let { rate ->
+                            if (rate < 1.0) stringResource(R.string.trf_per_day_under_one)
+                            else stringResource(R.string.trf_per_day, nf.format(rate))
+                        },
                         style = MaterialTheme.typography.bodySmall, color = PgTextMuted,
                     )
                     if (s.blockedLookups > 0) {
@@ -274,4 +334,39 @@ fun DomainDetailScreen(
         }
         item { Spacer(Modifier.height(12.dp)) }
     }
+    androidx.compose.material3.SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(16.dp))
+    }
 }
+
+/**
+ * What CoreLock does with the name now, and the choices for it (the same as Activity's
+ * sheet; "Keep blocked" is left out: on this screen it would do nothing).
+ */
+@Composable
+internal fun NameNow(item: com.privacyguard.app.ui.activity.ActivityItem, onAction: (com.privacyguard.app.ui.activity.ActivityAction) -> Unit) {
+    val colors = com.privacyguard.app.ui.theme.CoreLockTheme.colors
+    val spacing = com.privacyguard.app.ui.theme.CoreLockTheme.spacing
+    Column(
+        verticalArrangement = Arrangement.spacedBy(spacing.s),
+        modifier = Modifier
+            .padding(horizontal = spacing.screen)
+            .fillMaxWidth()
+            .background(colors.surface, com.privacyguard.app.ui.theme.CoreLockTheme.shapes.card)
+            .padding(spacing.l)
+            .testTag(TAG_NAME_NOW),
+    ) {
+        Text(
+            stringResource(com.privacyguard.app.ui.activity.reasonLabel(item.reason)),
+            style = MaterialTheme.typography.titleMedium,
+            color = if (item.reason == com.privacyguard.app.ui.activity.ActivityReason.MALWARE_LIST) colors.danger else colors.onSurface,
+        )
+        if (item.reason == com.privacyguard.app.ui.activity.ActivityReason.ADS_LIST && com.privacyguard.app.ui.activity.ActivityLogic.everywhereOnly(item)) {
+            Text(stringResource(R.string.ui_dns_allow_everywhere_only), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceMuted)
+        }
+        val actions = com.privacyguard.app.ui.activity.ActivityLogic.actionsFor(item)
+            .filterNot { it == com.privacyguard.app.ui.activity.ActivityAction.KEEP_BLOCKED }
+        com.privacyguard.app.ui.activity.ActionButtons(actions, onAction)
+    }
+}
+
+internal const val TAG_NAME_NOW = "name_now"

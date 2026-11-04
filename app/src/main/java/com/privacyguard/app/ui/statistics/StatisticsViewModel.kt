@@ -274,17 +274,14 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun exportConnectionsCsv() {
         viewModelScope.launch {
-            val now = System.currentTimeMillis()
-            val since = now - 7L * 24L * 60L * 60L * 1000L
-            val connections = db.connectionDao().allSince(since)
-            val stamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date(now))
-            val exportDir = java.io.File(getApplication<android.app.Application>().filesDir, "exports/csv").apply { mkdirs() }
-            val file = java.io.File(exportDir, "connections_$stamp.csv")
-            file.bufferedWriter().use { w ->
-                w.write(ConnectionsCsv.HEADER)
-                connections.forEach { c -> w.write(ConnectionsCsv.row(c)) }
+            // One export for Statistics and Settings (HistoryExport); a failure is logged, not swallowed.
+            try {
+                _csvExportPath.value = HistoryExport.writeCsv(getApplication()).absolutePath
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("StatisticsViewModel", "CSV export failed: ${e.javaClass.simpleName}")
             }
-            _csvExportPath.value = file.absolutePath
         }
     }
 

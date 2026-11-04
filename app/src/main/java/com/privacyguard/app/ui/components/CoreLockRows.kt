@@ -81,35 +81,41 @@ fun PrimaryToggleRow(
 @Composable
 fun SettingRow(
     title: String,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     value: String? = null,
     leadingIcon: ImageVector? = null,
+    // A destructive action ("Clear all data"): the title in the danger colour. It still
+    // only opens a confirmation; nothing is deleted by the row itself.
+    danger: Boolean = false,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = CoreLockTheme.spacing.minTouchTarget)
-            .clickable(role = Role.Button, onClick = onClick)
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
             .padding(horizontal = CoreLockTheme.spacing.l, vertical = CoreLockTheme.spacing.m),
     ) {
         if (leadingIcon != null) {
             Icon(leadingIcon, contentDescription = null, tint = CoreLockTheme.colors.onSurfaceMuted, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(CoreLockTheme.spacing.l))
         }
-        RowTexts(title, subtitle, Modifier.weight(1f))
+        RowTexts(title, subtitle, Modifier.weight(1f), titleColor = if (danger) CoreLockTheme.colors.danger else CoreLockTheme.colors.onSurface)
         if (value != null) {
             Spacer(Modifier.width(CoreLockTheme.spacing.s))
             Text(value, style = MaterialTheme.typography.bodyMedium, color = CoreLockTheme.colors.onSurfaceMuted)
         }
-        Spacer(Modifier.width(CoreLockTheme.spacing.s))
-        Icon(
-            Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-            contentDescription = null,
-            tint = CoreLockTheme.colors.onSurfaceMuted,
-        )
+        // No chevron on a row that shows a value only (Version): it would promise a screen.
+        if (onClick != null) {
+            Spacer(Modifier.width(CoreLockTheme.spacing.s))
+            Icon(
+                Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                contentDescription = null,
+                tint = CoreLockTheme.colors.onSurfaceMuted,
+            )
+        }
     }
 }
 
@@ -133,9 +139,14 @@ fun SectionHeader(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun RowTexts(title: String, subtitle: String?, modifier: Modifier) {
+private fun RowTexts(
+    title: String,
+    subtitle: String?,
+    modifier: Modifier,
+    titleColor: androidx.compose.ui.graphics.Color = CoreLockTheme.colors.onSurface,
+) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium, color = CoreLockTheme.colors.onSurface)
+        Text(title, style = MaterialTheme.typography.titleMedium, color = titleColor)
         if (subtitle != null) {
             Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = CoreLockTheme.colors.onSurfaceMuted)
         }

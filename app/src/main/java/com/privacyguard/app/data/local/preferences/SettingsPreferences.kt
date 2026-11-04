@@ -33,6 +33,7 @@ class SettingsPreferences private constructor(context: Context) {
         private const val KEY_AD_CHECKLIST_DONE          = "ad_checklist_done"
         private const val KEY_STRICT_DISMISSED           = "strict_suggestion_dismissed"
         private const val KEY_RULE_SUGGESTIONS_DISMISSED = "rule_suggestions_dismissed"
+        private const val KEY_APPEARANCE = "ui_appearance"
         private const val KEY_EXTERNAL_IP_CHECK_ENABLED  = "external_ip_check_enabled"
         private const val KEY_DOH_PROVIDER               = "doh_provider"
         private const val KEY_RETENTION_DAYS             = "retention_days"
@@ -163,6 +164,18 @@ class SettingsPreferences private constructor(context: Context) {
         val next = _strictSuggestionDismissed.value + networkKey
         prefs.edit().putStringSet(KEY_STRICT_DISMISSED, next).apply()
         _strictSuggestionDismissed.value = next
+    }
+
+    /**
+     * Settings › Appearance (D4): "SYSTEM", "LIGHT" or "DARK"; null until the user
+     * chooses. A UI-only preference: nothing about protection depends on it.
+     */
+    private val _appearance = MutableStateFlow(prefs.getString(KEY_APPEARANCE, null))
+    val appearance: StateFlow<String?> = _appearance.asStateFlow()
+
+    fun setAppearance(value: String) {
+        prefs.edit().putString(KEY_APPEARANCE, value).apply()
+        _appearance.value = value
     }
 
     /** Diagnostics asks api.ipify.org for the public IP. */

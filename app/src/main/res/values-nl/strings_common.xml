@@ -21,7 +21,7 @@
     <string name="common_all">Alle</string>
     <string name="nav_home">Start</string>
     <string name="nav_apps">Apps</string>
-    <string name="nav_traffic">Verkeer</string>
+    <string name="nav_traffic">Activiteit</string>
     <string name="nav_stats">Statistiek</string>
     <string name="nav_payload">Payload</string>
     <string name="nav_settings">Instellingen</string>

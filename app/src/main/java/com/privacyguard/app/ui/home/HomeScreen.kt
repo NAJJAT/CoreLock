@@ -18,6 +18,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Visibility
@@ -57,6 +58,7 @@ import com.privacyguard.app.ui.components.AttentionBanner
 import com.privacyguard.app.ui.components.BannerTone
 import com.privacyguard.app.ui.components.CoreLockBottomSheet
 import com.privacyguard.app.ui.components.ProtectionState
+import com.privacyguard.app.ui.components.SecondaryButton
 import com.privacyguard.app.ui.components.SettingRow
 import com.privacyguard.app.ui.components.StatusHeroCard
 import com.privacyguard.app.ui.dashboard.PrivateDnsStartDialog
@@ -79,6 +81,8 @@ fun HomeScreen(
     /** Null in builds without HTTPS inspection. */
     onOpenPayloads: (() -> Unit)?,
     onOpenSecurityDetails: () -> Unit,
+    /** "Something not working?" (§6.2). */
+    onOpenFix: () -> Unit = {},
     viewModel: HomeViewModel = viewModel(),
 ) {
     val context = LocalContext.current
@@ -122,6 +126,7 @@ fun HomeScreen(
             onRetryBlocked = viewModel::retryBlockedToday,
             onOpenPayloads = onOpenPayloads,
             onOpenSecurityDetails = onOpenSecurityDetails,
+            onOpenFix = onOpenFix,
             onAttentionAction = { attention ->
                 when (attention) {
                     is HomeLogic.Attention.PrivateDns -> PrivateDnsCheck.openSettings(context)
@@ -157,6 +162,7 @@ class HomeActions(
     val onRetryBlocked: () -> Unit = {},
     val onOpenPayloads: (() -> Unit)? = null,
     val onOpenSecurityDetails: () -> Unit = {},
+    val onOpenFix: () -> Unit = {},
     val onAttentionAction: (HomeLogic.Attention) -> Unit = {},
     val onAttentionSecondary: (HomeLogic.Attention) -> Unit = {},
     val onAttentionDismiss: (HomeLogic.Attention) -> Unit = {},
@@ -177,7 +183,9 @@ fun HomeContent(state: HomeUiState, inspection: InspectionStatus, actions: HomeA
         StatusHeroCard(
             state = state.protection,
             title = stringResource(HomeLogic.heroTitle(state.protection)),
-            subtitle = stringResource(HomeLogic.heroSubtitle(state.protection, state.level, state.stopReason)),
+            subtitle = state.pausedUntil?.let { until ->
+                stringResource(R.string.ui_hero_paused_sub, android.text.format.DateFormat.getTimeFormat(LocalContext.current).format(java.util.Date(until)))
+            } ?: stringResource(HomeLogic.heroSubtitle(state.protection, state.level, state.stopReason)),
             onToggle = actions.onToggle,
             modifier = Modifier.testTag(TAG_HERO),
         )
@@ -207,6 +215,14 @@ fun HomeContent(state: HomeUiState, inspection: InspectionStatus, actions: HomeA
                 )
             }
         }
+
+        // §6.1: right under the numbers, so a broken app is two taps from a fix.
+        SecondaryButton(
+            stringResource(R.string.ui_something_not_working),
+            onClick = actions.onOpenFix,
+            leadingIcon = Icons.Rounded.Build,
+            modifier = Modifier.fillMaxWidth().testTag(TAG_HOME_FIX),
+        )
 
         state.attention?.let { HomeAttention(it, hasPayloads = actions.onOpenPayloads != null, actions = actions) }
 
@@ -397,6 +413,7 @@ private fun HomeAttention(attention: HomeLogic.Attention, hasPayloads: Boolean, 
 }
 
 const val TAG_HERO = "home_hero"
+const val TAG_HOME_FIX = "home_fix"
 const val TAG_LEVEL_ROW = "home_level_row"
 const val TAG_LEVEL_PREFIX = "home_level_"
 const val TAG_BLOCKED_ROW = "home_blocked_row"

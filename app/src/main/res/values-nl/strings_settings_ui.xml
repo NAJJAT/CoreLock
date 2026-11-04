@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ui_settings">Instellingen</string>
+    <string name="ui_set_rules">Regels en toegestane sites</string>
+    <string name="ui_set_rules_sub">Sites en apps die je hebt toegestaan of geblokkeerd</string>
+    <string name="ui_set_blocklists">Blokkeerlijsten</string>
+    <string name="ui_set_lists_updated">Bijgewerkt %1$s</string>
+    <string name="ui_set_lists_some_missing">Bijgewerkt %1$s. Sommige lijsten zijn nog niet gedownload.</string>
+    <string name="ui_set_lists_never">Nog niet gedownload. De ingebouwde lijsten worden gebruikt.</string>
+    <string name="ui_set_kill_switch">Noodstop</string>
+    <string name="ui_set_ks_on">Aan: geen internet zonder CoreLock</string>
+    <string name="ui_set_ks_off">Uit</string>
+    <string name="ui_set_ks_not_running">Zet de bescherming aan om dit te controleren</string>
+    <string name="ui_set_ks_unsupported">Android kan dit niet melden vóór Android 10</string>
+    <string name="ui_set_notifications">Meldingen</string>
+    <string name="ui_set_notifications_sub">Status en belangrijke waarschuwingen</string>
+    <string name="ui_set_show_details">Details tonen</string>
+    <string name="ui_set_show_details_sub">Appnamen in meldingen tonen</string>
+    <string name="ui_set_weekly">Wekelijks overzicht</string>
+    <string name="ui_set_weekly_sub">Elke week een kort rapport</string>
+    <string name="ui_set_language">Taal</string>
+    <string name="ui_set_appearance">Weergave</string>
+    <string name="ui_set_theme">Thema</string>
+    <string name="ui_theme_system">Systeem</string>
+    <string name="ui_theme_light">Licht</string>
+    <string name="ui_theme_dark">Donker</string>
+    <string name="ui_set_data">Gegevens</string>
+    <string name="ui_set_keep_history">Geschiedenis bewaren</string>
+    <string name="ui_set_keep_history_sub">Oudere geschiedenis wordt automatisch verwijderd.</string>
+    <string name="ui_set_export">Geschiedenis exporteren</string>
+    <string name="ui_set_export_sub">Een bestand opslaan dat je in een spreadsheet kunt openen</string>
+    <string name="ui_set_export_title">Geschiedenis exporteren?</string>
+    <string name="ui_set_export_body">Het bestand toont met welke sites je apps de afgelopen 7 dagen verbinding maakten. Iedereen met wie je het deelt, kan het lezen. Houd het privé.</string>
+    <string name="ui_set_export_action">Exporteren</string>
+    <string name="ui_set_export_failed">Het bestand kon niet worden gemaakt. Probeer het opnieuw.</string>
+    <string name="ui_set_screenshots">Screenshots toestaan</string>
+    <string name="ui_set_screenshots_sub">Uit beschermt je geschiedenis</string>
+    <string name="ui_set_clear_sub">Verwijdert geschiedenis en statistieken. Instellingen, regels en lijsten blijven.</string>
+    <string name="ui_set_cleared">Geschiedenis en statistieken verwijderd.</string>
+    <string name="ui_set_about">Over</string>
+    <string name="ui_set_version">Versie</string>
+    <string name="ui_set_policy">Blokkeerbeleid</string>
+    <string name="ui_set_policy_sub">Wat elk niveau blokkeert, en waarom</string>
+    <string name="ui_set_licenses">Opensourcelicenties</string>
+    <string name="ui_set_new_versions">Nieuwe versies bekijken</string>
+    <string name="ui_set_new_versions_sub">Opent de releasepagina op GitHub</string>
+    <string name="ui_set_report">Een probleem melden</string>
+    <string name="ui_set_report_sub">Opent GitHub in je browser</string>
+    <string name="ui_set_no_browser">Geen enkele app kan deze link openen.</string>
+
+    <string name="ui_ks_body">Alleen Android kan internet blokkeren als CoreLock niet draait. Zet ‘Altijd-aan VPN’ en ‘Verbindingen zonder VPN blokkeren’ aan voor CoreLock in de VPN-instellingen van Android.</string>
+    <string name="ui_ks_tradeoff">Met beide aan gaat er niets onbeschermd naar buiten. Als CoreLock stopt, blijft de telefoon offline tot CoreLock weer start.</string>
+    <string name="ui_ks_open">Android-instellingen openen</string>
+
+    <string name="ui_lists_names">Geblokkeerde namen</string>
+    <string name="ui_lists_refresh">Nu vernieuwen</string>
+    <string name="ui_lists_refreshing">De nieuwste lijsten worden gedownload…</string>
+    <string name="ui_lists_auto">CoreLock werkt de lijsten elke week zelf bij via wifi.</string>
+    <string name="ui_lists_details">Details per lijst staan in Geavanceerd › Diagnose.</string>
+</resources>

@@ -24,14 +24,11 @@ class ThemeTokenUsageTest {
     )
 
     private val LEGACY = setOf(
-        "src/enterprise/java/com/privacyguard/ui/mitm/MitmScreen.kt",
         "src/main/java/com/privacyguard/app/ui/ads/AdsScreen.kt",
-        "src/main/java/com/privacyguard/app/ui/apps/AppDetailScreen.kt",
         "src/main/java/com/privacyguard/app/ui/components/NetworkMapCanvas.kt",
         "src/main/java/com/privacyguard/app/ui/components/PrivacyGuardUi.kt",
         "src/main/java/com/privacyguard/app/ui/components/TemporalHeatmap.kt",
         "src/main/java/com/privacyguard/app/ui/dashboard/DashboardScreen.kt",
-        "src/main/java/com/privacyguard/app/ui/rules/RulesScreen.kt",
         "src/main/java/com/privacyguard/app/ui/statistics/StatisticsScreen.kt",
         "src/main/java/com/privacyguard/ui/AppNavHost.kt",
     )

@@ -1,327 +1,133 @@
 package com.privacyguard.app.ui.apps
 
-import com.privacyguard.app.data.db.host
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.privacyguard.app.core.apps.InstalledAppsCache
-import com.privacyguard.app.core.detection.StalkerwareAssessment
-import com.privacyguard.app.core.detection.StalkerwareDetector
 import com.privacyguard.app.core.stats.StatsManager
-import com.privacyguard.app.data.db.AppDatabase
-import com.privacyguard.app.data.db.ConfigDatabase
-import com.privacyguard.app.data.db.ConnectionEntity
-import com.privacyguard.app.data.repository.MetadataRepo
-import com.privacyguard.app.data.repository.RulesRepo
-import com.privacyguard.core.filter.FilterEngine
-import com.privacyguard.core.metadata.ConnectionProfile
-import com.privacyguard.core.filter.FilterRule
+import com.privacyguard.app.data.repository.RuleSyncBus
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
 
-enum class AppSortBy { RISK, DATA, CONNECTIONS, BACKGROUND }
-
-data class AppRiskItem(
-    val appName: String,
-    val packageName: String,
-    val totalDestinations: Int,
-    val suspiciousCount: Int,
-    val cleartextCount: Int,
-    val totalBytesOut: Long,
-    val maxRiskScore: Int,
-    val isBlocked: Boolean,
-    val stalkerwareScore: Int = 0,
-    val stalkerwareReasons: List<String> = emptyList(),
-    val backgroundCount: Int = 0,
-) {
-    val riskLevel: String
-        get() = when {
-            maxRiskScore >= 70 -> "HIGH"
-            maxRiskScore >= 40 -> "MED"
-            else -> "LOW"
-        }
-
-    val privacyGrade: String
-        get() {
-            var score = 100
-            score -= (maxRiskScore * 0.4f).toInt().coerceAtMost(40)
-            score -= (cleartextCount * 5).coerceAtMost(20)
-            score -= (backgroundCount * 2).coerceAtMost(10)
-            score -= (stalkerwareScore * 0.3f).toInt().coerceAtMost(30)
-            return when (score.coerceAtLeast(0)) {
-                in 80..100 -> "A"
-                in 60..79  -> "B"
-                in 40..59  -> "C"
-                in 20..39  -> "D"
-                else       -> "F"
-            }
-        }
+/** The list: unknown until the encrypted database answers, never a made-up empty list. */
+sealed interface AppsList {
+    data object Loading : AppsList
+    data class Loaded(val items: List<AppRiskItem>) : AppsList
+    data object Error : AppsList
 }
 
-class AppsViewModel(app: Application) : AndroidViewModel(app) {
-    private val db = AppDatabase.getInstance(app)
-    private val configDb = ConfigDatabase.getInstance(app)
-    private val metadataRepo = MetadataRepo(db.connectionProfileDao())
-    private val rulesRepo = RulesRepo(configDb.rulesDao(), FilterEngine())
+data class AppsUiState(
+    val list: AppsList = AppsList.Loading,
+    val query: String = "",
+    val filter: AppsFilter = AppsFilter.ALL,
+    val sort: AppSort = AppSort.MOST_BLOCKED,
+) {
+    /** What the list shows; empty while loading. */
+    val shown: List<AppRiskItem>
+        get() = (list as? AppsList.Loaded)?.items?.let { AppsLogic.shown(it, query, filter, sort) }.orEmpty()
 
-    private val _apps = MutableStateFlow<List<AppRiskItem>>(emptyList())
-    val apps: StateFlow<List<AppRiskItem>> = _apps.asStateFlow()
+    /** Apps the stalkerware check flags (1.0's banner), counted over every app. */
+    val couldWatch: Int
+        get() = (list as? AppsList.Loaded)?.items?.count { AppsLogic.riskWord(it) == RiskWord.COULD_WATCH } ?: 0
+}
 
-    private val _searchQuery = MutableStateFlow("")
-    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+/**
+ * Apps (DESIGN_SPEC_1.1.md §6.3). Pushed, not polled: the list is built again when Room
+ * reports a write to the history tables, rules change, an app is installed or removed,
+ * or the set of apps with an open connection changes, at most every [RELOAD_MIN_MS]
+ * and only while the screen is shown. 1.0 rebuilt it every 3 s and dropped every error
+ * in an empty catch (CLAUDE.md §16.2 item 4).
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+class AppsViewModel internal constructor(
+    app: Application,
+    private val repo: AppsRepository,
+) : AndroidViewModel(app) {
 
-    private val _highRiskOnly = MutableStateFlow(false)
-    val highRiskOnly: StateFlow<Boolean> = _highRiskOnly.asStateFlow()
+    constructor(app: Application) : this(app, AppsRepository(app))
 
-    private val _blockedOnly = MutableStateFlow(false)
-    val blockedOnly: StateFlow<Boolean> = _blockedOnly.asStateFlow()
+    private val query = MutableStateFlow("")
+    private val filter = MutableStateFlow(AppsFilter.ALL)
+    private val sort = MutableStateFlow(AppSort.MOST_BLOCKED)
+    private val retry = MutableStateFlow(0)
 
-    private val _sortBy = MutableStateFlow(AppSortBy.RISK)
-    val sortBy: StateFlow<AppSortBy> = _sortBy.asStateFlow()
-
-    init {
-        // Refresh live traffic only while the Apps screen is collecting, and reload
-        // right away when an app is installed or removed. The installed-app list
-        // itself comes from InstalledAppsCache, not from PackageManager each time.
-        viewModelScope.launch {
-            _apps.subscriptionCount
-                .map { it > 0 }
-                .distinctUntilChanged()
-                .combine(InstalledAppsCache.version) { visible, _ -> visible }
-                .collectLatest { visible ->
-                    while (visible) {
-                        try { refresh() }
-                        catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                        catch (_: Exception) { }
-                        delay(LIVE_REFRESH_MS)
-                    }
-                }
-        }
-    }
-
-    fun setSearchQuery(query: String) {
-        _searchQuery.value = query
-    }
-
-    fun setHighRiskOnly(enabled: Boolean) {
-        _highRiskOnly.value = enabled
-    }
-
-    fun setBlockedOnly(enabled: Boolean) {
-        _blockedOnly.value = enabled
-    }
-
-    fun setSortBy(s: AppSortBy) {
-        _sortBy.value = s
-    }
-
-    private suspend fun refresh() = withContext(Dispatchers.Default) {
-        val profiles   = metadataRepo.recent()
-        // Sessions open right now: App detail merges the same ones into its counts.
-        val liveSessions = StatsManager.snapshot.value.activeConnections
-        val since = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
-        val recentConnections = runCatching {
-            db.connectionDao().between(since, System.currentTimeMillis())
-        }.getOrElse { emptyList() }
-        val blockedPackages = configDb.rulesDao()
-            .getAllRules()
-            .filter {
-                it.enabled &&
-                    it.action == FilterRule.Action.DENY.name &&
-                    it.type == FilterRule.Source.USER.name &&
-                    !it.matchPackage.isNullOrBlank()
+    private val list: Flow<AppsList> = retry.flatMapLatest {
+        flow<AppsList> {
+            emit(AppsList.Loading)
+            changes().collect {
+                emit(AppsList.Loaded(repo.load()))
+                // Rows arrive in bursts while apps are busy: one rebuild per pause.
+                delay(RELOAD_MIN_MS)
             }
-            .mapNotNull { it.matchPackage }
-            .toSet()
-
-        val installedApps = InstalledAppsCache.networkApps(getApplication())
-        val permissionsByPackage = installedApps.associate { it.packageName to it.requestedPermissions }
-        val installed = installedNetworkApps(installedApps, blockedPackages)
-        val installedPackages = installed.map { it.packageName }.toSet()
-        val installedNames = installed.associate { it.packageName to it.appName }
-        val profileBuckets = profiles.groupBy { canonicalPackageForObserved(it.packageName, installedPackages) }
-        val liveBuckets = liveSessions.groupBy { canonicalPackageForObserved(it.packageName, installedPackages) }
-        val connectionBuckets = recentConnections.groupBy { canonicalPackageForObserved(it.packageName, installedPackages) }
-        // Traffic numbers are the last 24 h plus open sessions, exactly what App detail
-        // shows for the app. Risk uses the same 24 h, or a row could say HIGH next to
-        // "0 destinations"; the stalkerware check still looks at all behaviour.
-        val observed = installed
-            .mapNotNull { installedApp ->
-                val pkg = installedApp.packageName
-                val rows = profileBuckets[pkg].orEmpty()
-                val liveRows = liveBuckets[pkg].orEmpty()
-                val connectionRows = connectionBuckets[pkg].orEmpty()
-                if (rows.isEmpty() && liveRows.isEmpty() && connectionRows.isEmpty()) return@mapNotNull null
-                val stalkerware = assessStalkerware(pkg, permissionsByPackage[pkg].orEmpty(), rows)
-                val fallbackMetrics = connectionMetrics(connectionRows)
-                val hosts = (connectionRows.map { it.host ?: it.destinationIp } + liveRows.map { it.hostName ?: it.destinationIp })
-                    .filter { it.isNotBlank() }.toSet()
-                AppRiskItem(
-                    appName           = installedNames[pkg].orEmpty().ifBlank { com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), pkg) },
-                    packageName       = pkg,
-                    totalDestinations = hosts.size,
-                    suspiciousCount   = rows.count { it.lastSeen >= since && it.riskScore >= 40 },
-                    cleartextCount    = connectionRows.count { com.privacyguard.app.ui.traffic.HomeEvidence.isInternetCleartext(it) } +
-                        liveRows.count {
-                            it.securityInfo == "CLEARTEXT" && !com.privacyguard.app.core.network.LocalNetwork.isLocalAddress(it.destinationIp) &&
-                                !com.privacyguard.app.core.network.ConnectivityProbes.isProbe(it.packageName, it.hostName)
-                        },
-                    totalBytesOut     = connectionRows.sumOf { it.bytesSent + it.bytesReceived } + liveRows.sumOf { it.bytesTransferred },
-                    maxRiskScore      = windowRisk(
-                        rows, since,
-                        connectionRisk = if (connectionRows.isEmpty() && liveRows.isEmpty()) null else fallbackMetrics.maxRiskScore,
-                    ),
-                    isBlocked         = pkg in blockedPackages,
-                    stalkerwareScore  = stalkerware.score,
-                    stalkerwareReasons = stalkerware.reasons,
-                    // Same test as App detail: the app was not on screen (unknown is not counted).
-                    backgroundCount   = connectionRows.count { it.foreground == false },
-                )
-            }
-
-        val observedByPackage = observed.associateBy { it.packageName }
-        _apps.value = (observed + installed.filterNot { observedByPackage.containsKey(it.packageName) })
-            .filter { it.packageName.isNotBlank() }
-            .distinctBy { it.packageName }
-            .sortedWith(compareByDescending<AppRiskItem> { it.maxRiskScore }.thenBy { it.appName.lowercase() })
-    }
-
-    private fun installedNetworkApps(
-        installedApps: List<InstalledAppsCache.InstalledApp>,
-        blockedPackages: Set<String>,
-    ): List<AppRiskItem> = installedApps.map { app ->
-        AppRiskItem(
-            appName = app.appName,
-            packageName = app.packageName,
-            totalDestinations = 0,
-            suspiciousCount = 0,
-            cleartextCount = 0,
-            totalBytesOut = 0L,
-            maxRiskScore = NO_TRAFFIC_RISK,
-            isBlocked = app.packageName in blockedPackages,
-            stalkerwareScore = 0,
-        )
-    }
-
-    private fun connectionMetrics(rows: List<ConnectionEntity>): ConnectionMetrics {
-        if (rows.isEmpty()) return ConnectionMetrics()
-        val destinations = rows
-            .map { (it.sniHostname ?: it.domain ?: it.destinationIp).ifBlank { it.destinationIp } }
-            .distinct()
-            .size
-        val suspicious = rows.count { it.wasBlocked }
-        val cleartext = rows.count { com.privacyguard.app.ui.traffic.HomeEvidence.isInternetCleartext(it) }
-        val totalBytes = rows.sumOf { it.bytesSent + it.bytesReceived }
-        val risk = when {
-            suspicious > 0 -> 40
-            cleartext > 0 -> 25
-            else -> 12
+        }.catch { e ->
+            if (e is CancellationException) throw e
+            Log.w(TAG, "Apps failed: ${e.javaClass.simpleName}")
+            emit(AppsList.Error)
         }
-        return ConnectionMetrics(
-            totalDestinations = destinations,
-            suspiciousCount = suspicious,
-            cleartextCount = cleartext,
-            totalBytes = totalBytes,
-            maxRiskScore = risk,
-        )
+    }.flowOn(Dispatchers.IO)
+
+    val uiState: StateFlow<AppsUiState> = combine(list, query, filter, sort) { l, q, f, s -> AppsUiState(l, q, f, s) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), AppsUiState())
+
+    fun setQuery(q: String) { query.value = q }
+    fun setFilter(f: AppsFilter) { filter.value = f }
+    fun setSort(s: AppSort) { sort.value = s }
+    fun retry() { retry.value++ }
+
+    /** One signal per change that can alter the list; the first one loads it. */
+    private fun changes(): Flow<Unit> = flow {
+        emit(Unit)
+        val db = repo.database()
+        merge(
+            db.invalidationTracker.createFlow(*repo.historyTables(), emitInitialState = false).map { },
+            repo.configDatabase().invalidationTracker.createFlow("rules", emitInitialState = false).map { },
+            RuleSyncBus.version.drop(1).map { },
+            InstalledAppsCache.version.drop(1).map { repo.installedAppsChanged() },
+            // Open connections change every second; only who has one matters here.
+            StatsManager.snapshot
+                .map { s -> s.activeConnections.mapTo(HashSet()) { it.packageName } }
+                .distinctUntilChanged().drop(1).map { },
+            ticks(),
+        ).conflate().collect { emit(Unit) }
     }
 
-    private data class ConnectionMetrics(
-        val totalDestinations: Int = 0,
-        val suspiciousCount: Int = 0,
-        val cleartextCount: Int = 0,
-        val totalBytes: Long = 0L,
-        val maxRiskScore: Int = 0,
-    )
-
-    private fun canonicalPackageForObserved(
-        observedPackage: String,
-        installedPackages: Set<String>,
-    ): String {
-        if (observedPackage in installedPackages) return observedPackage
-        val preferred = preferredFamilyPackage(observedPackage, installedPackages)
-        return preferred ?: observedPackage
-    }
-
-    private fun preferredFamilyPackage(
-        observedPackage: String,
-        installedPackages: Set<String>,
-    ): String? = when {
-        observedPackage.startsWith("com.facebook.") -> when {
-            "com.facebook.katana" in installedPackages -> "com.facebook.katana"
-            else -> installedPackages.firstOrNull { it.startsWith("com.facebook.") }
-        }
-        observedPackage.startsWith("com.instagram.") -> when {
-            "com.instagram.android" in installedPackages -> "com.instagram.android"
-            else -> installedPackages.firstOrNull { it.startsWith("com.instagram.") }
-        }
-        observedPackage == "com.whatsapp" -> observedPackage.takeIf { it in installedPackages }
-        else -> null
-    }
-
-    private fun assessStalkerware(
-        packageName: String,
-        requestedPermissions: Set<String>,
-        rows: List<ConnectionProfile>,
-    ): StalkerwareAssessment {
-        return runCatching {
-            val details = InstalledAppsCache.details(getApplication(), packageName)
-            StalkerwareDetector.assess(
-                requestedPermissions = requestedPermissions,
-                profiles = rows,
-                hasLauncherIcon = details.hasLauncherIcon,
-                installerPackage = details.installerPackage,
-                isSystemApp = details.isSystemApp,
-            )
-        }.getOrDefault(StalkerwareAssessment(0, emptyList()))
-    }
-
-    fun togglePackageBlocked(packageName: String, blocked: Boolean) {
-        viewModelScope.launch {
-            if (blocked) {
-                rulesRepo.upsertRule(
-                    FilterRule(
-                        id = packageBlockRuleId(packageName),
-                        label = getApplication<android.app.Application>().getString(com.privacyguard.app.R.string.rule_block_app, getApplication<android.app.Application>().packageManager.let { pm -> runCatching { pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString() }.getOrDefault(packageName) }),
-                        action = FilterRule.Action.DENY,
-                        source = FilterRule.Source.USER,
-                        priority = FilterRule.HIGH_PRIORITY,
-                        matchPackage = packageName,
-                    )
-                )
-            } else {
-                // Delete any DENY rule matching this package, regardless of how it was created
-                configDb.rulesDao().getAllRules()
-                    .filter { it.matchPackage == packageName && it.action == FilterRule.Action.DENY.name }
-                    .forEach { rulesRepo.deleteRule(it.id) }
-            }
-            refresh()
+    /** "Active now" and "today" move with time alone: one rebuild a minute, nothing more. */
+    private fun ticks(): Flow<Unit> = flow {
+        while (currentCoroutineContext().isActive) {
+            delay(MINUTE_MS)
+            emit(Unit)
         }
     }
 
     companion object {
-        /** Live traffic refresh while the screen is visible; installed apps are cached. */
-        private const val LIVE_REFRESH_MS = 3_000L
+        private const val TAG = "AppsViewModel"
+        /** A summary of every app: one rebuild per 5 s is plenty. */
+        const val RELOAD_MIN_MS = 5_000L
+        private const val STOP_TIMEOUT_MS = 5_000L
+        private const val MINUTE_MS = 60_000L
 
-        /** Risk of an app with no traffic in the window: LOW, sorted after apps with traffic. */
-        internal const val NO_TRAFFIC_RISK = 5
-
-        /**
-         * Highest risk among profiles seen since [since]; without one, the risk from the
-         * window's connections, or [NO_TRAFFIC_RISK] when the app had none.
-         */
-        internal fun windowRisk(profiles: List<ConnectionProfile>, since: Long, connectionRisk: Int?): Int =
-            profiles.filter { it.lastSeen >= since }.maxOfOrNull { it.riskScore } ?: connectionRisk ?: NO_TRAFFIC_RISK
-
-        fun packageBlockRuleId(packageName: String) = "pkg:block:$packageName"
+        /** Kept for the callers 1.0 had (Traffic, Rules). */
+        fun packageBlockRuleId(packageName: String) = AppsLogic.packageBlockRuleId(packageName)
     }
 }

@@ -145,3 +145,338 @@ screens of Phases 3 to 6 (Home, Activity, Apps, Settings).
   description `restriction_ca_install_automatic_desc`), and the `X-PrivacyGuard-Sig` header
   in `restriction_mitm_siem_signing_key_desc`. Renaming the certificate is a change to the
   inspection code and is not part of this step.
+
+## Phase 4: Activity and "Something not working?" (`res/values*/strings_activity.xml`, 66 strings)
+
+The Activity tab (blocked and all connections, the detail sheet with Allow and Block),
+the 3-step fix flow, and the texts for pausing protection (used in the next step, D1).
+
+Changed in `strings_common.xml`: `nav_traffic` is now the tab name Activity / النشاط /
+Activité / Activiteit (was Traffic).
+
+Points to check in particular:
+- `ui_reason_*` are short row labels next to an icon. They must fit on one line at normal
+  text size ("Blocked · Skips CoreLock", "Blocked · Never allowed"); longer ones wrap.
+- `ui_why_lookup_bypass_port` says this can't be allowed. That is true: those lookups are
+  closed in every case. Keep the meaning.
+- `ui_times` and `ui_fix_attempts`: the Arabic zero form is never shown (a row always has
+  at least one); `few` is for 3 to 10.
+
+| String | English | Arabic | French | Dutch |
+|---|---|---|---|---|
+| `ui_group_just_now` | Just now | الآن | À l'instant | Zojuist |
+| `ui_group_today` | Today | اليوم | Aujourd'hui | Vandaag |
+| `ui_group_yesterday` | Yesterday | أمس | Hier | Gisteren |
+| `ui_group_earlier` | Earlier | في وقت سابق | Plus tôt | Eerder |
+| `ui_reason_lookup_bypass` | Blocked · Skips CoreLock | محظور · يتجاوز CoreLock | Bloqué · Contourne CoreLock | Geblokkeerd · Omzeilt CoreLock |
+| `ui_reason_lookup_bypass_port` | Blocked · Never allowed | محظور · لا يُسمح به أبدًا | Bloqué · Jamais autorisé | Geblokkeerd · Nooit toegestaan |
+| `ui_title_lookup_service` | Private lookup service | خدمة بحث خاصة | Service de recherche privé | Eigen opzoekdienst |
+| `ui_reason_setting` | Blocked · A rule or setting | محظور · قاعدة أو إعداد | Bloqué · Une règle ou un réglage | Geblokkeerd · Een regel of instelling |
+| `ui_what_named` | %1$s (%2$s) from %3$s | %1$s (%2$s) من %3$s | %1$s (%2$s) depuis %3$s | %1$s (%2$s) van %3$s |
+| `ui_what_plain` | %1$s from %2$s | %1$s من %2$s | %1$s depuis %2$s | %1$s van %2$s |
+| `ui_why_ads` | It's on the Ads and trackers list. | إنه في قائمة الإعلانات وأدوات التتبع. | Il figure sur la liste pubs et traqueurs. | Het staat op de lijst met advertenties en trackers. |
+| `ui_why_malware` | It's on the malware list. Sites like this can steal passwords or install harmful apps. | إنه في قائمة البرامج الضارة. مواقع كهذه قد تسرق كلمات المرور أو تثبّت تطبيقات ضارة. | Il figure sur la liste des logiciels malveillants. Ce genre de site peut voler des mots de passe ou installer des applis dangereuses. | Het staat op de malwarelijst. Zulke sites kunnen wachtwoorden stelen of schadelijke apps installeren. |
+| `ui_why_rule` | You blocked it. | أنت حظرته. | Vous l'avez bloqué. | Je hebt het geblokkeerd. |
+| `ui_why_rule_named` | You blocked it with your rule “%1$s”. | أنت حظرته بقاعدتك «%1$s». | Vous l'avez bloqué avec votre règle « %1$s ». | Je hebt het geblokkeerd met je regel ‘%1$s’. |
+| `ui_why_lookup_bypass` | It's a private lookup service. Apps that use it would skip CoreLock's lists, so it stays blocked. If you run your own, allow it in Rules and allowed sites. | هذه خدمة خاصة للبحث عن عناوين المواقع. التطبيقات التي تستخدمها تتجاوز قوائم CoreLock، لذلك تبقى محظورة. إن كانت لديك خدمتك الخاصة، فاسمح بها في «القواعد والمواقع المسموح بها». | C'est un service de recherche privé. Les applis qui l'utilisent contourneraient les listes de CoreLock, il reste donc bloqué. Si vous avez votre propre service, autorisez-le dans Règles et sites autorisés. | Dit is een eigen opzoekdienst. Apps die hem gebruiken, zouden de lijsten van CoreLock omzeilen, dus hij blijft geblokkeerd. Heb je je eigen dienst, sta hem dan toe bij Regels en toegestane sites. |
+| `ui_why_lookup_bypass_port` | The app tried to look up sites in a way that skips CoreLock's lists. This can't be allowed. | حاول التطبيق البحث عن المواقع بطريقة تتجاوز قوائم CoreLock. لا يمكن السماح بذلك. | L'appli a essayé de chercher des sites d'une façon qui contourne les listes de CoreLock. Ce n'est pas possible de l'autoriser. | De app probeerde sites op te zoeken op een manier die de lijsten van CoreLock omzeilt. Dit kan niet worden toegestaan. |
+| `ui_why_setting` | A rule or one of your settings stopped it at the time, for example an app block or blocking unencrypted connections. If you removed that rule since, it no longer applies. | أوقفته قاعدة أو أحد إعداداتك في ذلك الوقت، مثل حظر تطبيق أو حظر الاتصالات غير المشفّرة. إذا حذفت تلك القاعدة بعد ذلك، فلم تعد تُطبَّق. | Une règle ou un de vos réglages l’a arrêté à ce moment-là, par exemple le blocage d’une app ou des connexions non chiffrées. Si vous avez supprimé cette règle depuis, elle ne s’applique plus. | Een regel of een van je instellingen heeft het toen tegengehouden, bijvoorbeeld een app-blokkade of het blokkeren van onversleutelde verbindingen. Als je die regel sindsdien hebt verwijderd, geldt hij niet meer. |
+| `ui_why_allowed` | Nothing on your lists or rules stopped it. | لم توقفه أي قائمة أو قاعدة. | Aucune liste ni règle ne l'a arrêté. | Geen lijst of regel heeft het tegengehouden. |
+| `ui_reason_now_note` | Based on your lists and rules as they are now. | حسب قوائمك وقواعدك الحالية. | D'après vos listes et vos règles actuelles. | Volgens je lijsten en regels zoals ze nu zijn. |
+| `ui_allow_anyway` | Allow anyway | اسمح به رغم ذلك | Autoriser quand même | Toch toestaan |
+| `ui_block_for_app` | Block for this app | احظره لهذا التطبيق | Bloquer pour cette appli | Blokkeren voor deze app |
+| `ui_block_everywhere` | Block everywhere | احظره لكل التطبيقات | Bloquer partout | Overal blokkeren |
+| `ui_about_this_app` | About %1$s | عن %1$s | À propos de %1$s | Over %1$s |
+| `ui_more_about_name` | More about this name | المزيد عن هذا الاسم | En savoir plus sur ce nom | Meer over deze naam |
+| `ui_tech_name` | Name | الاسم | Nom | Naam |
+| `ui_tech_ip` | IP address | عنوان IP | Adresse IP | IP-adres |
+| `ui_tech_port` | Port | المنفذ | Port | Poort |
+| `ui_tech_protocol` | Protocol | البروتوكول | Protocole | Protocol |
+| `ui_tech_rule` | Rule | القاعدة | Règle | Regel |
+| `ui_tech_time` | Time | الوقت | Heure | Tijd |
+| `ui_allowed_try_again` | Allowed. Try the app again. | تم السماح. جرّب التطبيق مرة أخرى. | Autorisé. Réessayez l'appli. | Toegestaan. Probeer de app opnieuw. |
+| `ui_undo` | Undo | تراجع | Annuler | Ongedaan maken |
+| `ui_blocked_done` | Blocked. | تم الحظر. | Bloqué. | Geblokkeerd. |
+| `ui_rule_removed` | Your rule was removed. | حُذفت قاعدتك. | Votre règle a été supprimée. | Je regel is verwijderd. |
+| `ui_action_failed` | That didn't work. Try again. | لم ينجح ذلك. حاول مرة أخرى. | Ça n'a pas marché. Réessayez. | Dat is niet gelukt. Probeer het opnieuw. |
+| `ui_empty_activity_all` | Nothing here yet. Connections show up here as apps use the internet. | لا شيء هنا بعد. تظهر الاتصالات هنا عندما تستخدم التطبيقات الإنترنت. | Rien pour l'instant. Les connexions s'affichent ici quand les applis utilisent Internet. | Hier staat nog niets. Verbindingen verschijnen hier zodra apps internet gebruiken. |
+| `ui_empty_activity_off` | Protection is off, so nothing is being blocked. | الحماية متوقفة، لذلك لا يُحظر أي شيء. | La protection est désactivée, rien n'est donc bloqué. | De bescherming staat uit, dus er wordt niets geblokkeerd. |
+| `ui_activity_limit` | Showing the newest %1$d. | يُعرض أحدث %1$d. | Les %1$d plus récents sont affichés. | De nieuwste %1$d worden getoond. |
+| `ui_back` | Back | رجوع | Retour | Terug |
+| `ui_more_options` | More options | خيارات أخرى | Plus d'options | Meer opties |
+| `ui_live_connections` | Live connections | الاتصالات الجارية | Connexions en cours | Huidige verbindingen |
+| `rule_allow_domain_for_app` | Allow %1$s for %2$s | السماح بـ %1$s في %2$s | Autoriser %1$s pour %2$s | %1$s toestaan voor %2$s |
+| `rule_block_domain_for_app` | Block %1$s for %2$s | حظر %1$s في %2$s | Bloquer %1$s pour %2$s | %1$s blokkeren voor %2$s |
+| `ui_fix_step_n` | Step %1$d of %2$d | الخطوة %1$d من %2$d | Étape %1$d sur %2$d | Stap %1$d van %2$d |
+| `ui_fix_which_app` | Which app isn't working? | أي تطبيق لا يعمل؟ | Quelle appli ne marche pas ? | Welke app werkt niet? |
+| `ui_fix_which_app_sub` | Apps with something blocked in the last hour, newest first. | تطبيقات حُظر لها شيء خلال الساعة الأخيرة، الأحدث أولًا. | Les applis pour lesquelles quelque chose a été bloqué depuis une heure, les plus récentes d'abord. | Apps waarvoor het afgelopen uur iets is geblokkeerd, nieuwste eerst. |
+| `ui_fix_not_sure` | Not listed or not sure | غير موجود أو لست متأكدًا | Pas dans la liste ou pas sûr | Staat er niet bij of weet ik niet |
+| `ui_fix_not_sure_sub` | See everything blocked in the last hour | اعرض كل ما حُظر خلال الساعة الأخيرة | Voir tout ce qui a été bloqué depuis une heure | Alles zien wat het afgelopen uur is geblokkeerd |
+| `ui_fix_blocked_hour` | This was blocked in the last hour | هذا ما حُظر خلال الساعة الأخيرة | Ceci a été bloqué depuis une heure | Dit is het afgelopen uur geblokkeerd |
+| `ui_fix_blocked_hour_sub` | The most likely cause is at the top. | السبب الأرجح في الأعلى. | La cause la plus probable est en haut. | De meest waarschijnlijke oorzaak staat bovenaan. |
+| `ui_fix_unknown_app_names` | Also blocked, app not known | حُظر أيضًا، والتطبيق غير معروف | Aussi bloqué, appli inconnue | Ook geblokkeerd, app onbekend |
+| `ui_fix_none_hour` | Nothing was blocked in the last hour, so CoreLock is probably not the cause. | لم يُحظر شيء خلال الساعة الأخيرة، لذلك على الأرجح ليس CoreLock هو السبب. | Rien n'a été bloqué depuis une heure, CoreLock n'est donc probablement pas en cause. | Het afgelopen uur is niets geblokkeerd, dus CoreLock is waarschijnlijk niet de oorzaak. |
+| `ui_fix_none_app` | Nothing was blocked for this app in the last hour. CoreLock is probably not the cause. | لم يُحظر شيء لهذا التطبيق خلال الساعة الأخيرة. على الأرجح ليس CoreLock هو السبب. | Rien n'a été bloqué pour cette appli depuis une heure. CoreLock n'est probablement pas en cause. | Het afgelopen uur is voor deze app niets geblokkeerd. CoreLock is waarschijnlijk niet de oorzaak. |
+| `ui_fix_all_handled` | Done. Try the app again. If it still doesn't work, go back and pick another app. | تم. جرّب التطبيق مرة أخرى. إذا لم يعمل بعد، ارجع واختر تطبيقًا آخر. | C'est fait. Réessayez l'appli. Si elle ne marche toujours pas, revenez en arrière et choisissez une autre appli. | Klaar. Probeer de app opnieuw. Werkt hij nog steeds niet, ga dan terug en kies een andere app. |
+| `ui_fix_try_pause` | Still not sure? Pause protection for 5 minutes and try the app again. | ما زلت غير متأكد؟ أوقف الحماية مؤقتًا 5 دقائق ثم جرّب التطبيق مرة أخرى. | Toujours pas sûr ? Mettez la protection en pause 5 minutes et réessayez l'appli. | Nog steeds niet zeker? Pauzeer de bescherming 5 minuten en probeer de app opnieuw. |
+| `ui_pause_5` | Pause protection for 5 minutes | إيقاف الحماية مؤقتًا 5 دقائق | Mettre la protection en pause 5 minutes | Bescherming 5 minuten pauzeren |
+| `ui_pause_needs_alarms` | To pause, CoreLock needs “Alarms &amp; reminders” access, so it can turn itself back on. | للإيقاف المؤقت، يحتاج CoreLock إلى إذن «المنبهات والتذكيرات» ليعود للعمل من تلقاء نفسه. | Pour mettre en pause, CoreLock a besoin de l’accès « Alarmes et rappels », pour se rallumer tout seul. | Om te pauzeren heeft CoreLock toegang tot ‘Wekkers en herinneringen’ nodig, zodat het vanzelf weer aangaat. |
+| `ui_pause_always_on` | Pausing is not available while Always-on VPN is on: Android would turn CoreLock back on at once. | الإيقاف المؤقت غير متاح أثناء تشغيل «شبكة VPN الدائمة»: سيعيد Android تشغيل CoreLock فورًا. | La pause n’est pas disponible quand le VPN permanent est activé : Android rallumerait CoreLock aussitôt. | Pauzeren kan niet als ‘Altijd-aan VPN’ aanstaat: Android zet CoreLock dan meteen weer aan. |
+| `ui_paused_toast` | Paused for 5 minutes. Try the app now. | أُوقفت الحماية مؤقتًا 5 دقائق. جرّب التطبيق الآن. | En pause pour 5 minutes. Essayez l'appli maintenant. | 5 minuten gepauzeerd. Probeer de app nu. |
+| `ui_hero_paused` | Protection is paused | الحماية متوقفة مؤقتًا | La protection est en pause | De bescherming is gepauzeerd |
+| `ui_hero_paused_sub` | Back on at %1$s. | تعود في %1$s. | Reprise à %1$s. | Weer aan om %1$s. |
+| `ui_resume_now` | Resume now | استأنف الآن | Reprendre maintenant | Nu hervatten |
+| `pause_notif_title` | Protection paused | الحماية متوقفة مؤقتًا | Protection en pause | Bescherming gepauzeerd |
+| `pause_notif_text` | CoreLock turns back on at %1$s. | يعود CoreLock للعمل في %1$s. | CoreLock se réactive à %1$s. | CoreLock gaat om %1$s weer aan. |
+| `ui_times` | one: %d time; other: %d times | zero: لا مرات; one: مرة واحدة; two: مرتان; few: %d مرات; many: %d مرة; other: %d مرة | one: %d fois; many: %d fois; other: %d fois | one: %d keer; other: %d keer |
+| `ui_fix_attempts` | one: %d attempt; other: %d attempts | zero: لا محاولات; one: محاولة واحدة; two: محاولتان; few: %d محاولات; many: %d محاولة; other: %d محاولة | one: %d tentative; many: %d tentatives; other: %d tentatives | one: %d poging; other: %d pogingen |
+
+## Phase 5: Apps and App detail (`res/values*/strings_apps_ui.xml`, 39 strings; 1 new and 2 changed elsewhere)
+
+Machine translations; Arabic for the owner, French and Dutch for native speakers.
+
+| Key | English | Arabic | French | Dutch |
+|---|---|---|---|---|
+| `ui_apps_search` | Search apps | ابحث في التطبيقات | Rechercher des applis | Apps zoeken |
+| `ui_apps_active_now` | Active now | نشط الآن | Actives maintenant | Nu actief |
+| `ui_sort_by` | Sort by | الترتيب حسب | Trier par | Sorteren op |
+| `ui_sort_most_blocked` | Most blocked | الأكثر حظرًا | Plus bloquées | Meest geblokkeerd |
+| `ui_sort_name` | Name | الاسم | Nom | Naam |
+| `ui_sort_most_data` | Most data | الأكثر بيانات | Plus de données | Meeste data |
+| `ui_sort_background` | Background activity | النشاط في الخلفية | Activité en arrière-plan | Activiteit op de achtergrond |
+| `ui_sort_risk` | Highest risk | الأعلى خطورة | Risque le plus élevé | Hoogste risico |
+| `ui_sort_destinations` | Most destinations | الأكثر وجهات | Plus de destinations | Meeste bestemmingen |
+| `ui_apps_empty_search` | No app called “%1$s”. | لا يوجد تطبيق باسم «%1$s». | Aucune appli nommée « %1$s ». | Geen app met de naam ‘%1$s’. |
+| `ui_apps_empty_blocked` | No apps blocked. Open an app to block it. | لا توجد تطبيقات محظورة. افتح تطبيقًا لحظره. | Aucune appli bloquée. Ouvrez une appli pour la bloquer. | Geen apps geblokkeerd. Open een app om die te blokkeren. |
+| `ui_apps_empty_active` | No app used the internet in the last 5 minutes. | لم يستخدم أي تطبيق الإنترنت في آخر 5 دقائق. | Aucune appli n’a utilisé Internet ces 5 dernières minutes. | Geen app heeft de afgelopen 5 minuten internet gebruikt. |
+| `ui_apps_empty` | No apps that use the internet were found. | لم يُعثر على تطبيقات تستخدم الإنترنت. | Aucune appli utilisant Internet n’a été trouvée. | Geen apps gevonden die internet gebruiken. |
+| `ui_error_apps` | Couldn’t load your apps. | تعذّر تحميل تطبيقاتك. | Impossible de charger vos applis. | Je apps kunnen niet worden geladen. |
+| `ui_show_them` | Show them | اعرضها | Les afficher | Toon ze |
+| `ui_clear_search` | Clear search | امسح البحث | Effacer la recherche | Zoekopdracht wissen |
+| `ui_risk_word_hint` | Explain | اشرح | Expliquer | Uitleggen |
+| `ui_app_status` | Internet access | الوصول إلى الإنترنت | Accès à Internet | Internettoegang |
+| `ui_connected_recently` | Connected recently | اتصل مؤخرًا | Connexions récentes | Recent verbonden |
+| `ui_connected_recently_sub` | Last 24 hours. Tap a name to allow or block it for this app. | آخر 24 ساعة. المس اسمًا للسماح به أو حظره لهذا التطبيق. | Dernières 24 heures. Touchez un nom pour l’autoriser ou le bloquer pour cette appli. | Afgelopen 24 uur. Tik op een naam om die voor deze app toe te staan of te blokkeren. |
+| `ui_other_names` | Other | أخرى | Autres | Overig |
+| `ui_built_in_trackers` | Built-in trackers | أدوات تتبّع مدمجة | Traqueurs intégrés | Ingebouwde trackers |
+| `ui_built_in_trackers_sub` | Found in the app’s code. CoreLock blocks their connections when they are on its lists. | عُثر عليها في كود التطبيق. يحظر CoreLock اتصالاتها عندما تكون في قوائمه. | Trouvés dans le code de l’appli. CoreLock bloque leurs connexions quand ils figurent sur ses listes. | Gevonden in de code van de app. CoreLock blokkeert hun verbindingen als ze op de lijsten staan. |
+| `ui_no_trackers_found` | No built-in trackers found. | لم يُعثر على أدوات تتبّع مدمجة. | Aucun traqueur intégré trouvé. | Geen ingebouwde trackers gevonden. |
+| `ui_checking_app` | Checking the app’s code… | جارٍ فحص كود التطبيق… | Vérification du code de l’appli… | De code van de app wordt gecontroleerd… |
+| `ui_empty_app_connections` | No connections in the last 24 hours. | لا اتصالات في آخر 24 ساعة. | Aucune connexion ces dernières 24 heures. | Geen verbindingen in de afgelopen 24 uur. |
+| `ui_error_app` | Couldn’t load this app’s connections. | تعذّر تحميل اتصالات هذا التطبيق. | Impossible de charger les connexions de cette appli. | De verbindingen van deze app kunnen niet worden geladen. |
+| `ui_usage_access_needed` | CoreLock needs Usage Access to know when an app is in the background. | يحتاج CoreLock إلى إذن الوصول إلى بيانات الاستخدام ليعرف متى يعمل التطبيق في الخلفية. | CoreLock a besoin de l’accès aux données d’utilisation pour savoir quand une appli est en arrière-plan. | CoreLock heeft toegang tot gebruiksgegevens nodig om te weten wanneer een app op de achtergrond is. |
+| `ui_app_now_allowed` | %1$s is allowed. | %1$s مسموح الآن. | %1$s est autorisée. | %1$s is toegestaan. |
+| `ui_app_now_blocked` | %1$s is blocked. | %1$s محظور الآن. | %1$s est bloquée. | %1$s is geblokkeerd. |
+| `ui_app_now_blocked_background` | %1$s is blocked in the background. | %1$s محظور الآن في الخلفية. | %1$s est bloquée en arrière-plan. | %1$s is op de achtergrond geblokkeerd. |
+| `ui_share_report` | Share report | مشاركة التقرير | Partager le rapport | Rapport delen |
+| `ui_tech_risk_grade` | Risk grade | درجة الخطورة | Note de risque | Risicocijfer |
+| `ui_tech_permissions` | Permissions | الأذونات | Autorisations | Rechten |
+| `ui_tech_behaviour` | Behaviour, last 24 hours | السلوك، آخر 24 ساعة | Comportement, dernières 24 heures | Gedrag, afgelopen 24 uur |
+| `ui_tech_inspected` | Inspected content | المحتوى المفحوص | Contenu inspecté | Geïnspecteerde inhoud |
+| `ui_tech_names` | Every name | كل الأسماء | Tous les noms | Alle namen |
+| `ui_apps_could_watch` | one: %d app could be watching you. Check that you installed it yourself.; other: %d apps could be watching you. Check that you installed them yourself. | zero: لا توجد تطبيقات قد تراقبك.; one: تطبيق واحد قد يراقبك. تأكد أنك ثبّته بنفسك.; two: تطبيقان قد يراقبانك. تأكد أنك ثبّتهما بنفسك.; few: %d تطبيقات قد تراقبك. تأكد أنك ثبّتها بنفسك.; many: %d تطبيقًا قد يراقبك. تأكد أنك ثبّتها بنفسك.; other: %d تطبيق قد يراقبك. تأكد أنك ثبّتها بنفسك. | one: %d appli pourrait vous surveiller. Vérifiez que vous l’avez installée vous-même.; many: %d applis pourraient vous surveiller. Vérifiez que vous les avez installées vous-même.; other: %d applis pourraient vous surveiller. Vérifiez que vous les avez installées vous-même. | one: %d app kan je misschien volgen. Controleer of je die zelf hebt geïnstalleerd.; other: %d apps kunnen je misschien volgen. Controleer of je die zelf hebt geïnstalleerd. |
+| `ui_tech_permissions_n` | one: %d permission; other: %d permissions | zero: لا أذونات; one: إذن واحد; two: إذنان; few: %d أذونات; many: %d إذنًا; other: %d إذن | one: %d autorisation; many: %d autorisations; other: %d autorisations | one: %d recht; other: %d rechten |
+| `trf_per_day_under_one` | less than once a day | أقل من مرة واحدة يوميًا | moins d’une fois par jour | minder dan één keer per dag |
+
+Changed in Phase 5 (rows updated above in Phase 4): `ui_reason_setting`, `ui_why_setting`.
+
+## Phase 6: Settings (`res/values*/strings_settings_ui.xml`, 55 strings)
+
+The new Settings list, Blocklists, Kill switch, Theme, Data and About. Links (`url_*`) are not
+translated and are left out.
+
+| String | English | Arabic | French | Dutch |
+|---|---|---|---|---|
+| `ui_settings` | Settings | الإعدادات | Réglages | Instellingen |
+| `ui_set_rules` | Rules and allowed sites | القواعد والمواقع المسموح بها | Règles et sites autorisés | Regels en toegestane sites |
+| `ui_set_rules_sub` | Sites and apps you allowed or blocked | المواقع والتطبيقات التي سمحت بها أو حظرتها | Sites et applis que vous avez autorisés ou bloqués | Sites en apps die je hebt toegestaan of geblokkeerd |
+| `ui_set_blocklists` | Blocklists | قوائم الحظر | Listes de blocage | Blokkeerlijsten |
+| `ui_set_lists_updated` | Updated %1$s | حُدّثت %1$s | Mises à jour %1$s | Bijgewerkt %1$s |
+| `ui_set_lists_some_missing` | Updated %1$s. Some lists haven’t downloaded yet. | حُدّثت %1$s. بعض القوائم لم تُنزَّل بعد. | Mises à jour %1$s. Certaines listes ne sont pas encore téléchargées. | Bijgewerkt %1$s. Sommige lijsten zijn nog niet gedownload. |
+| `ui_set_lists_never` | Not downloaded yet. Built-in lists are used. | لم تُنزَّل بعد. تُستخدم القوائم المدمجة. | Pas encore téléchargées. Les listes intégrées sont utilisées. | Nog niet gedownload. De ingebouwde lijsten worden gebruikt. |
+| `ui_set_kill_switch` | Kill switch | مفتاح الإيقاف | Coupure d’urgence | Noodstop |
+| `ui_set_ks_on` | On: no internet without CoreLock | مفعّل: لا إنترنت بدون CoreLock | Activée : pas d’internet sans CoreLock | Aan: geen internet zonder CoreLock |
+| `ui_set_ks_off` | Off | متوقف | Désactivée | Uit |
+| `ui_set_ks_not_running` | Turn protection on to check | شغّل الحماية للتحقق | Activez la protection pour vérifier | Zet de bescherming aan om dit te controleren |
+| `ui_set_ks_unsupported` | Android can’t report this before Android 10 | لا يستطيع Android معرفة ذلك قبل Android 10 | Android ne peut pas l’indiquer avant Android 10 | Android kan dit niet melden vóór Android 10 |
+| `ui_set_notifications` | Notifications | الإشعارات | Notifications | Meldingen |
+| `ui_set_notifications_sub` | Status and important warnings | الحالة والتحذيرات المهمة | État et avertissements importants | Status en belangrijke waarschuwingen |
+| `ui_set_show_details` | Show details | عرض التفاصيل | Afficher les détails | Details tonen |
+| `ui_set_show_details_sub` | Show app names in notifications | عرض أسماء التطبيقات في الإشعارات | Afficher le nom des applis dans les notifications | Appnamen in meldingen tonen |
+| `ui_set_weekly` | Weekly summary | الملخص الأسبوعي | Résumé hebdomadaire | Wekelijks overzicht |
+| `ui_set_weekly_sub` | A short report every week | تقرير قصير كل أسبوع | Un court rapport chaque semaine | Elke week een kort rapport |
+| `ui_set_language` | Language | اللغة | Langue | Taal |
+| `ui_set_appearance` | Appearance | المظهر | Apparence | Weergave |
+| `ui_set_theme` | Theme | السمة | Thème | Thema |
+| `ui_theme_system` | System | النظام | Système | Systeem |
+| `ui_theme_light` | Light | فاتح | Clair | Licht |
+| `ui_theme_dark` | Dark | داكن | Sombre | Donker |
+| `ui_set_data` | Data | البيانات | Données | Gegevens |
+| `ui_set_keep_history` | Keep history for | الاحتفاظ بالسجل لمدة | Conserver l’historique | Geschiedenis bewaren |
+| `ui_set_keep_history_sub` | Older history is deleted automatically. | يُحذف السجل الأقدم تلقائيًا. | L’historique plus ancien est supprimé automatiquement. | Oudere geschiedenis wordt automatisch verwijderd. |
+| `ui_set_export` | Export history | تصدير السجل | Exporter l’historique | Geschiedenis exporteren |
+| `ui_set_export_sub` | Save a file you can open in a spreadsheet | احفظ ملفًا يمكنك فتحه في جدول بيانات | Enregistrer un fichier lisible dans un tableur | Een bestand opslaan dat je in een spreadsheet kunt openen |
+| `ui_set_export_title` | Export history? | تصدير السجل؟ | Exporter l’historique ? | Geschiedenis exporteren? |
+| `ui_set_export_body` | The file lists which sites your apps connected to in the last 7 days. Anyone you share it with can read it. Keep it private. | يحتوي الملف على المواقع التي اتصلت بها تطبيقاتك خلال آخر 7 أيام. يستطيع قراءته كل من تشاركه معه. احتفظ به لنفسك. | Le fichier indique les sites auxquels vos applis se sont connectées ces 7 derniers jours. Toute personne à qui vous l’envoyez peut le lire. Gardez-le pour vous. | Het bestand toont met welke sites je apps de afgelopen 7 dagen verbinding maakten. Iedereen met wie je het deelt, kan het lezen. Houd het privé. |
+| `ui_set_export_action` | Export | تصدير | Exporter | Exporteren |
+| `ui_set_export_failed` | Couldn’t create the file. Try again. | تعذّر إنشاء الملف. حاول مرة أخرى. | Impossible de créer le fichier. Réessayez. | Het bestand kon niet worden gemaakt. Probeer het opnieuw. |
+| `ui_set_screenshots` | Allow screenshots | السماح بلقطات الشاشة | Autoriser les captures d’écran | Screenshots toestaan |
+| `ui_set_screenshots_sub` | Off protects your history | إيقافه يحمي سجلك | Désactivé, votre historique est protégé | Uit beschermt je geschiedenis |
+| `ui_set_clear_sub` | Deletes history and statistics. Settings, rules and blocklists stay. | يحذف السجل والإحصاءات. تبقى الإعدادات والقواعد وقوائم الحظر. | Supprime l’historique et les statistiques. Les réglages, les règles et les listes restent. | Verwijdert geschiedenis en statistieken. Instellingen, regels en lijsten blijven. |
+| `ui_set_cleared` | History and statistics deleted. | حُذف السجل والإحصاءات. | Historique et statistiques supprimés. | Geschiedenis en statistieken verwijderd. |
+| `ui_set_about` | About | حول | À propos | Over |
+| `ui_set_version` | Version | الإصدار | Version | Versie |
+| `ui_set_policy` | Blocking policy | سياسة الحظر | Politique de blocage | Blokkeerbeleid |
+| `ui_set_policy_sub` | What each level blocks, and why | ما يحظره كل مستوى، ولماذا | Ce que bloque chaque niveau, et pourquoi | Wat elk niveau blokkeert, en waarom |
+| `ui_set_licenses` | Open-source licenses | تراخيص المصادر المفتوحة | Licences open source | Opensourcelicenties |
+| `ui_set_new_versions` | See new versions | عرض الإصدارات الجديدة | Voir les nouvelles versions | Nieuwe versies bekijken |
+| `ui_set_new_versions_sub` | Opens the GitHub releases page | يفتح صفحة الإصدارات على GitHub | Ouvre la page des versions sur GitHub | Opent de releasepagina op GitHub |
+| `ui_set_report` | Report a problem | الإبلاغ عن مشكلة | Signaler un problème | Een probleem melden |
+| `ui_set_report_sub` | Opens GitHub in your browser | يفتح GitHub في متصفحك | Ouvre GitHub dans votre navigateur | Opent GitHub in je browser |
+| `ui_set_no_browser` | No app can open this link. | لا يوجد تطبيق يستطيع فتح هذا الرابط. | Aucune appli ne peut ouvrir ce lien. | Geen enkele app kan deze link openen. |
+| `ui_ks_body` | Only Android can block the internet when CoreLock isn’t running. Turn on “Always-on VPN” and “Block connections without VPN” for CoreLock in Android’s VPN settings. | وحده Android يستطيع حظر الإنترنت عندما لا يعمل CoreLock. فعّل «شبكة VPN قيد التشغيل دائمًا» و«حظر الاتصالات بدون VPN» لـ CoreLock في إعدادات VPN في Android. | Seul Android peut bloquer internet quand CoreLock ne fonctionne pas. Activez « VPN permanent » et « Bloquer les connexions sans VPN » pour CoreLock dans les réglages VPN d’Android. | Alleen Android kan internet blokkeren als CoreLock niet draait. Zet ‘Altijd-aan VPN’ en ‘Verbindingen zonder VPN blokkeren’ aan voor CoreLock in de VPN-instellingen van Android. |
+| `ui_ks_tradeoff` | With both on, nothing goes out unprotected. If CoreLock stops, the phone stays offline until CoreLock starts again. | عند تفعيل الخيارين لا يخرج شيء دون حماية. وإذا توقف CoreLock يبقى الهاتف بلا إنترنت حتى يعمل CoreLock من جديد. | Avec les deux activés, rien ne sort sans protection. Si CoreLock s’arrête, le téléphone reste hors ligne jusqu’au redémarrage de CoreLock. | Met beide aan gaat er niets onbeschermd naar buiten. Als CoreLock stopt, blijft de telefoon offline tot CoreLock weer start. |
+| `ui_ks_open` | Open Android settings | فتح إعدادات Android | Ouvrir les réglages d’Android | Android-instellingen openen |
+| `ui_lists_names` | Names blocked | الأسماء المحظورة | Noms bloqués | Geblokkeerde namen |
+| `ui_lists_refresh` | Refresh now | التحديث الآن | Actualiser maintenant | Nu vernieuwen |
+| `ui_lists_refreshing` | Downloading the newest lists… | جارٍ تنزيل أحدث القوائم… | Téléchargement des listes les plus récentes… | De nieuwste lijsten worden gedownload… |
+| `ui_lists_auto` | CoreLock updates the lists by itself every week on Wi-Fi. | يحدّث CoreLock القوائم بنفسه كل أسبوع عبر Wi-Fi. | CoreLock met les listes à jour tout seul chaque semaine en Wi-Fi. | CoreLock werkt de lijsten elke week zelf bij via wifi. |
+| `ui_lists_details` | Details for each list are in Advanced › Diagnostics. | تفاصيل كل قائمة في «متقدم › التشخيص». | Les détails de chaque liste sont dans Avancé › Diagnostic. | Details per lijst staan in Geavanceerd › Diagnose. |
+
+
+### Rules and allowed sites (`res/values*/strings_rules_ui.xml`, 32 strings)
+
+The restyled Rules screen and its add sheet. French uses "appli", as the other 1.1 screens.
+The empty state names the Activity tab and the hint names the Apps tab: check they match the
+tab names (`nav_traffic`, `nav_apps`). Reused from 1.0 without change: `rules_suggested`,
+`rules_skip`, `rules_add_button`, `rules_triggered`, `rules_domain_exact`, `rules_ip_invalid`.
+
+| String | English | Arabic | French | Dutch |
+|---|---|---|---|---|
+| `ui_rules_add` | Add rule | إضافة قاعدة | Ajouter une règle | Regel toevoegen |
+| `ui_rules_empty` | No rules yet. Allow or block a site from Activity, or add a rule here. | لا توجد قواعد بعد. اسمح بموقع أو احظره من النشاط، أو أضف قاعدة هنا. | Aucune règle pour l’instant. Autorisez ou bloquez un site depuis Activité, ou ajoutez une règle ici. | Nog geen regels. Sta een site toe of blokkeer hem vanuit Activiteit, of voeg hier een regel toe. |
+| `ui_rules_error` | Your rules couldn’t be loaded. | تعذّر تحميل قواعدك. | Impossible de charger vos règles. | Je regels konden niet worden geladen. |
+| `ui_rules_save_failed` | The change couldn’t be saved. Try again. | تعذّر حفظ التغيير. حاول مرة أخرى. | La modification n’a pas pu être enregistrée. Réessayez. | De wijziging kon niet worden opgeslagen. Probeer het opnieuw. |
+| `ui_rules_added` | Rule added | أُضيفت القاعدة | Règle ajoutée | Regel toegevoegd |
+| `ui_rules_deleted` | Rule deleted | حُذفت القاعدة | Règle supprimée | Regel verwijderd |
+| `ui_rules_search` | Search sites, apps or addresses | ابحث عن مواقع أو تطبيقات أو عناوين | Rechercher des sites, applis ou adresses | Zoek sites, apps of adressen |
+| `ui_rules_no_match` | No rule matches “%1$s”. | لا توجد قاعدة تطابق «%1$s». | Aucune règle ne correspond à « %1$s ». | Geen regel past bij ‘%1$s’. |
+| `ui_rules_effect_block` | Blocks | تحظر | Bloque | Blokkeert |
+| `ui_rules_effect_block_bg` | Blocks in the background | تحظر في الخلفية | Bloque en arrière-plan | Blokkeert op de achtergrond |
+| `ui_rules_effect_allow` | Allows | تسمح | Autorise | Staat toe |
+| `ui_rules_effect_allow_risky` | Allows, despite the malware warning | تسمح رغم تحذير البرمجيات الخبيثة | Autorise, malgré l’alerte logiciel malveillant | Staat toe, ondanks de malwarewaarschuwing |
+| `ui_rules_off` | Off | متوقفة | Désactivée | Uit |
+| `ui_rules_d_site` | Site: %1$s | الموقع: %1$s | Site : %1$s | Site: %1$s |
+| `ui_rules_d_app` | App: %1$s | التطبيق: %1$s | Appli : %1$s | App: %1$s |
+| `ui_rules_d_address` | Address: %1$s | العنوان: %1$s | Adresse : %1$s | Adres: %1$s |
+| `ui_rules_d_port` | Port %1$d | المنفذ %1$d | Port %1$d | Poort %1$d |
+| `ui_rules_d_unencrypted` | Unencrypted connections only | الاتصالات غير المشفّرة فقط | Connexions non chiffrées uniquement | Alleen onversleutelde verbindingen |
+| `ui_rules_use` | Use rule: %1$s | استخدام القاعدة: %1$s | Utiliser la règle : %1$s | Regel gebruiken: %1$s |
+| `ui_rules_delete` | Delete rule: %1$s | حذف القاعدة: %1$s | Supprimer la règle : %1$s | Regel verwijderen: %1$s |
+| `ui_rules_kind_site` | Site | موقع | Site | Site |
+| `ui_rules_kind_app` | App | تطبيق | Appli | App |
+| `ui_rules_kind_address` | Address | عنوان | Adresse | Adres |
+| `ui_rules_site_label` | Site name, like example.com | اسم الموقع، مثل example.com | Nom du site, comme example.com | Sitenaam, zoals example.com |
+| `ui_rules_site_invalid` | That isn’t a site name. Write it like example.com. | هذا ليس اسم موقع. اكتبه مثل example.com. | Ce n’est pas un nom de site. Écrivez-le comme example.com. | Dat is geen sitenaam. Schrijf hem zoals example.com. |
+| `ui_rules_app_label` | App package name | اسم حزمة التطبيق | Nom du paquet de l’appli | Pakketnaam van de app |
+| `ui_rules_app_hint` | Like com.example.app. To block an installed app, it is easier to open it in Apps. | مثل com.example.app. لحظر تطبيق مثبّت، الأسهل أن تفتحه في التطبيقات. | Comme com.example.app. Pour bloquer une appli installée, il est plus simple de l’ouvrir dans Apps. | Zoals com.example.app. Een geïnstalleerde app blokkeer je makkelijker door hem in Apps te openen. |
+| `ui_rules_app_invalid` | That isn’t a package name. It looks like com.example.app. | هذا ليس اسم حزمة. يبدو مثل com.example.app. | Ce n’est pas un nom de paquet. Il ressemble à com.example.app. | Dat is geen pakketnaam. Die ziet eruit als com.example.app. |
+| `ui_rules_address_label` | IPv4 address or range | عنوان IPv4 أو نطاق عناوين | Adresse IPv4 ou plage | IPv4-adres of -bereik |
+| `ui_rules_address_hint` | Like 1.2.3.4 or 10.0.0.0/8. | مثل 1.2.3.4 أو 10.0.0.0/8. | Comme 1.2.3.4 ou 10.0.0.0/8. | Zoals 1.2.3.4 of 10.0.0.0/8. |
+| `ui_rules_allow_note` | Allow wins over the ads and trackers lists. For a site on a malware list, CoreLock warns you first. | السماح يتقدّم على قوائم الإعلانات والمتتبّعات. وإذا كان الموقع في قائمة برمجيات خبيثة، ينبّهك CoreLock أولًا. | Autoriser l’emporte sur les listes de publicités et de traqueurs. Pour un site sur une liste de logiciels malveillants, CoreLock vous avertit d’abord. | Toestaan gaat voor de lijsten met advertenties en trackers. Voor een site op een malwarelijst waarschuwt CoreLock je eerst. |
+| `ui_rules_yours` | one: Your rules · %1$d; other: Your rules · %1$d | zero: قواعدك · %1$d; one: قواعدك · %1$d; two: قواعدك · %1$d; few: قواعدك · %1$d; many: قواعدك · %1$d; other: قواعدك · %1$d | one: Vos règles · %1$d; many: Vos règles · %1$d; other: Vos règles · %1$d | one: Je regels · %1$d; other: Je regels · %1$d |
+
+## Phase 7a: Advanced (`res/values*/strings_advanced_ui.xml`, 70 strings)
+
+Advanced, Network, Use two proxy servers, Analysis and Diagnostics. Titles follow DESIGN_SPEC_1.1.md §7.
+List names (HaGeZi, OISD) and server names (Cloudflare, Google, Quad9) are proper names and are
+not translated. Reused from 1.0 without change: `set_dual_desc`, `set_dual_flow`, `set_host`,
+`set_port`, `set_username_opt`, `set_password_opt`, the `set_status_*` words, the App integrity
+rows (`set_runtime_posture` … `set_keystore_sw`), `diag_battery_*`, `set_refresh_now`.
+
+| String | English | Arabic | French | Dutch |
+|---|---|---|---|---|
+| `ui_adv_network` | Network | الشبكة | Réseau | Netwerk |
+| `ui_adv_network_sub` | Encrypted DNS, DNS server, proxies and blocking options | DNS المشفّر، وخادم DNS، والخوادم الوسيطة، وخيارات الحظر | DNS chiffré, serveur DNS, proxys et options de blocage | Versleutelde DNS, DNS-server, proxy’s en blokkeeropties |
+| `ui_adv_https` | HTTPS inspection | فحص HTTPS | Inspection HTTPS | HTTPS-inspectie |
+| `ui_adv_https_sub` | See inside some encrypted connections | رؤية محتوى بعض الاتصالات المشفّرة | Voir le contenu de certaines connexions chiffrées | In sommige versleutelde verbindingen kijken |
+| `ui_adv_analysis` | Analysis | التحليل | Analyse | Analyse |
+| `ui_adv_analysis_sub` | Statistics, alerts and reports | الإحصاءات والتنبيهات والتقارير | Statistiques, alertes et rapports | Statistieken, meldingen en rapporten |
+| `ui_adv_diagnostics` | Diagnostics | التشخيص | Diagnostic | Diagnose |
+| `ui_adv_diagnostics_sub` | Network checks, app integrity and blocklist details | فحوص الشبكة، وسلامة التطبيق، وتفاصيل قوائم الحظر | Vérifications réseau, intégrité de l’appli et détails des listes de blocage | Netwerkcontroles, app-integriteit en details van blokkeerlijsten |
+| `ui_net_group_lookups` | Lookups | البحث عن العناوين | Recherches de noms | Naamopzoekingen |
+| `ui_net_group_blocking` | Blocking | الحظر | Blocage | Blokkeren |
+| `ui_net_group_more` | More | المزيد | Plus | Meer |
+| `ui_net_doh` | Encrypted DNS | DNS المشفّر | DNS chiffré | Versleutelde DNS |
+| `ui_net_doh_sub` | Hide which sites you look up from your network | أخفِ عن شبكتك المواقع التي تبحث عنها | Masquer à votre réseau les sites que vous recherchez | Verberg voor je netwerk welke sites je opzoekt |
+| `ui_net_doh_note` | Lookups go to %1$s, encrypted. If it can’t be reached (some hotel or work Wi-Fi blocks it), sites stop loading until you turn this off. | يُرسل البحث إلى %1$s مشفّرًا. إذا تعذّر الوصول إليه (بعض شبكات Wi-Fi في الفنادق أو العمل تحظره)، تتوقف المواقع عن التحميل حتى توقف هذا الخيار. | Les recherches vont à %1$s, chiffrées. S’il est injoignable (certains Wi-Fi d’hôtel ou de bureau le bloquent), les sites ne se chargent plus tant que vous ne désactivez pas cette option. | Opzoekingen gaan versleuteld naar %1$s. Als die niet bereikbaar is (sommige wifi in hotels of op het werk blokkeert hem), laden sites niet meer tot je dit uitzet. |
+| `ui_net_dns` | DNS server | خادم DNS | Serveur DNS | DNS-server |
+| `ui_net_dns_sub` | Which server answers lookups | الخادم الذي يجيب عن البحث | Le serveur qui répond aux recherches | Welke server opzoekingen beantwoordt |
+| `ui_net_dns_other` | Other server | خادم آخر | Autre serveur | Andere server |
+| `ui_net_dns_field` | Server address, like 1.1.1.1 | عنوان الخادم، مثل 1.1.1.1 | Adresse du serveur, comme 1.1.1.1 | Serveradres, zoals 1.1.1.1 |
+| `ui_net_dns_invalid` | Enter an IP address, like 1.1.1.1 or 2606:4700::1111. | أدخل عنوان IP، مثل 1.1.1.1 أو 2606:4700::1111. | Saisissez une adresse IP, comme 1.1.1.1 ou 2606:4700::1111. | Voer een IP-adres in, zoals 1.1.1.1 of 2606:4700::1111. |
+| `ui_net_dns_use` | Use this server | استخدم هذا الخادم | Utiliser ce serveur | Deze server gebruiken |
+| `ui_net_dns_doh_note` | With Encrypted DNS on, picking Cloudflare, Google or Quad9 also picks it for encrypted lookups. | عند تشغيل DNS المشفّر، يؤدي اختيار Cloudflare أو Google أو Quad9 إلى اختياره للبحث المشفّر أيضًا. | Avec le DNS chiffré activé, choisir Cloudflare, Google ou Quad9 le choisit aussi pour les recherches chiffrées. | Met versleutelde DNS aan kies je met Cloudflare, Google of Quad9 ook de server voor versleutelde opzoekingen. |
+| `ui_net_quic` | Fast web protocol (QUIC) | بروتوكول الويب السريع (QUIC) | Protocole web rapide (QUIC) | Snel webprotocol (QUIC) |
+| `ui_net_quic_sub` | Block it so CoreLock can see more connections | احظره ليرى CoreLock مزيدًا من الاتصالات | Le bloquer pour que CoreLock voie plus de connexions | Blokkeer het zodat CoreLock meer verbindingen ziet |
+| `ui_net_weak_tls` | Old encryption | التشفير القديم | Ancien chiffrement | Oude versleuteling |
+| `ui_net_weak_tls_sub` | Block connections with outdated security | احظر الاتصالات ذات الحماية القديمة | Bloquer les connexions à la sécurité dépassée | Blokkeer verbindingen met verouderde beveiliging |
+| `ui_net_cleartext` | Unencrypted connections | الاتصالات غير المشفّرة | Connexions non chiffrées | Onversleutelde verbindingen |
+| `ui_net_cleartext_sub` | Block connections anyone on the network can read | احظر الاتصالات التي يستطيع أي شخص على الشبكة قراءتها | Bloquer les connexions que tout le monde sur le réseau peut lire | Blokkeer verbindingen die iedereen op het netwerk kan lezen |
+| `ui_net_public_ip` | Public IP check | فحص عنوان IP العام | Vérification de l’IP publique | Controle van openbaar IP |
+| `ui_net_public_ip_sub` | Ask a server for your public address | اسأل خادمًا عن عنوانك العام | Demander votre adresse publique à un serveur | Vraag een server naar je openbare adres |
+| `ui_net_proxy` | Use two proxy servers | استخدام خادمين وسيطين | Utiliser deux serveurs proxy | Twee proxyservers gebruiken |
+| `ui_net_proxy_sub` | Not encrypted. The first server can see where you connect. | غير مشفّر. يستطيع الخادم الأول رؤية الوجهات التي تتصل بها. | Non chiffré. Le premier serveur voit où vous vous connectez. | Niet versleuteld. De eerste server ziet waarmee je verbinding maakt. |
+| `ui_on` | On | مفعّل | Activé | Aan |
+| `ui_off` | Off | متوقف | Désactivé | Uit |
+| `ui_proxy_first` | First server | الخادم الأول | Premier serveur | Eerste server |
+| `ui_proxy_second` | Second server | الخادم الثاني | Second serveur | Tweede server |
+| `ui_proxy_host_invalid` | Enter a server name or address, without http://. | أدخل اسم خادم أو عنوانه، بدون http://. | Saisissez un nom ou une adresse de serveur, sans http://. | Voer een servernaam of -adres in, zonder http://. |
+| `ui_proxy_port_invalid` | Enter a port from 1 to 65535. | أدخل منفذًا من 1 إلى 65535. | Saisissez un port de 1 à 65535. | Voer een poort van 1 tot 65535 in. |
+| `ui_proxy_incomplete` | Fill in both servers for the chain to work. | املأ بيانات الخادمين كي تعمل السلسلة. | Remplissez les deux serveurs pour que la chaîne fonctionne. | Vul beide servers in, anders werkt de keten niet. |
+| `ui_proxy_block` | Block other traffic | احظر باقي حركة البيانات | Bloquer le reste du trafic | Ander verkeer blokkeren |
+| `ui_proxy_block_sub` | Stop traffic that can’t go through the servers | أوقف حركة البيانات التي لا يمكنها المرور عبر الخادمين | Arrêter le trafic qui ne peut pas passer par les serveurs | Stop verkeer dat niet via de servers kan |
+| `ui_an_security` | Security analysis | التحليل الأمني | Analyse de sécurité | Beveiligingsanalyse |
+| `ui_an_stats` | Statistics | الإحصاءات | Statistiques | Statistieken |
+| `ui_an_stats_sub` | Privacy score, data use, IT report and packet capture | درجة الخصوصية، واستهلاك البيانات، وتقرير تقنية المعلومات، والتقاط الحزم | Score de confidentialité, données utilisées, rapport informatique et capture de paquets | Privacyscore, dataverbruik, IT-rapport en pakketopname |
+| `ui_an_alerts` | Alerts | التنبيهات | Alertes | Meldingen |
+| `ui_an_alerts_sub` | Warnings CoreLock raised | التحذيرات التي أطلقها CoreLock | Les avertissements émis par CoreLock | Waarschuwingen van CoreLock |
+| `ui_an_systems` | Security systems | أنظمة الأمان | Systèmes de sécurité | Beveiligingssystemen |
+| `ui_an_systems_sub` | Checks that watch for unusual behaviour, and the night report | فحوص تراقب السلوك غير المعتاد، وتقرير الليل | Des vérifications qui repèrent les comportements inhabituels, et le rapport de nuit | Controles die letten op ongewoon gedrag, en het nachtrapport |
+| `ui_an_ad_privacy` | Ad privacy | خصوصية الإعلانات | Confidentialité publicitaire | Advertentieprivacy |
+| `ui_an_ads` | Ads and trackers detail | تفاصيل الإعلانات والمتتبّعات | Détail des publicités et traqueurs | Details van advertenties en trackers |
+| `ui_an_ct` | Certificate checks | فحص الشهادات | Vérification des certificats | Certificaatcontroles |
+| `ui_an_ct_sub` | Warn about suspicious site certificates | نبّهني إلى شهادات المواقع المريبة | Avertir en cas de certificats de site suspects | Waarschuw bij verdachte sitecertificaten |
+| `ui_an_report` | Make a report now | أنشئ تقريرًا الآن | Créer un rapport maintenant | Nu een rapport maken |
+| `ui_an_report_sub` | The weekly summary, now, as a notification | الملخص الأسبوعي، الآن، كإشعار | Le résumé hebdomadaire, maintenant, en notification | De weekelijkse samenvatting, nu, als melding |
+| `ui_an_report_started` | Making the report. It arrives as a notification. | يجري إعداد التقرير. سيصلك كإشعار. | Rapport en cours. Il arrivera en notification. | Rapport wordt gemaakt. Het komt als melding. |
+| `ui_diag_network` | Network diagnostics | تشخيص الشبكة | Diagnostic réseau | Netwerkdiagnose |
+| `ui_diag_network_sub` | Check what may stop protection | افحص ما قد يوقف الحماية | Vérifier ce qui pourrait arrêter la protection | Controleer wat de bescherming kan stoppen |
+| `ui_diag_run` | Run checks | ابدأ الفحص | Lancer les vérifications | Controles uitvoeren |
+| `ui_diag_running` | Checking… | جارٍ الفحص… | Vérification… | Bezig met controleren… |
+| `ui_diag_not_run` | Not checked yet. | لم يُفحص بعد. | Pas encore vérifié. | Nog niet gecontroleerd. |
+| `ui_diag_integrity` | App integrity | سلامة التطبيق | Intégrité de l’appli | App-integriteit |
+| `ui_diag_integrity_sub` | Check that CoreLock hasn’t been changed | تحقّق من أن CoreLock لم يُعدَّل | Vérifier que CoreLock n’a pas été modifiée | Controleer of CoreLock niet is gewijzigd |
+| `ui_diag_lists` | Blocklist details | تفاصيل قوائم الحظر | Détails des listes de blocage | Details van blokkeerlijsten |
+| `ui_diag_list_updated` | Downloaded %1$s | نُزّلت %1$s | Téléchargée %1$s | Gedownload %1$s |
+| `ui_diag_list_never` | Not downloaded yet | لم تُنزَّل بعد | Pas encore téléchargée | Nog niet gedownload |
+| `ui_diag_names` | Names per list | عدد الأسماء في كل قائمة | Noms par liste | Namen per lijst |
+| `ui_diag_battery` | Battery | البطارية | Batterie | Batterij |
+| `ui_diag_battery_ok` | Unrestricted: Android won’t stop protection to save battery. | غير مقيّد: لن يوقف Android الحماية لتوفير البطارية. | Sans restriction : Android n’arrêtera pas la protection pour économiser la batterie. | Onbeperkt: Android stopt de bescherming niet om batterij te sparen. |
+| `ui_diag_builtin` | Built-in: %1$s | مدمجة: %1$s | Intégrée : %1$s | Ingebouwd: %1$s |
+| `ui_diag_list_count` | %1$s: %2$s | %1$s: %2$s | %1$s : %2$s | %1$s: %2$s |
+| `ui_diag_names_n` | one: %1$s name; other: %1$s names | zero: %1$s اسم; one: اسم واحد; two: اسمان; few: %1$s أسماء; many: %1$s اسمًا; other: %1$s اسم | one: %1$s nom; many: %1$s noms; other: %1$s noms | one: %1$s naam; other: %1$s namen |
+
+## Phase 7b: HTTPS inspection (`app/src/enterprise/res/values*/strings_https_ui.xml`, 4 strings)
+
+The D5 confirmation shown every time HTTPS inspection is switched on, and the label TalkBack
+reads for the certificate button. Everything else on the screen reuses the 1.0 `mitm_*`
+strings unchanged; the consent dialog text is deliberately not changed. Arabic, French and
+Dutch are machine-made and need review.
+
+| String | English | Arabic | French | Dutch |
+|---|---|---|---|---|
+| `ui_https_confirm_title` | Turn on HTTPS inspection? | تشغيل فحص HTTPS؟ | Activer l’inspection HTTPS ? | HTTPS-inspectie aanzetten? |
+| `ui_https_confirm_body` | CoreLock will decrypt the connections of apps that trust its certificate and keep what they send on this phone. Most apps don’t trust it, so for them you’ll only see site names. Turn it off when you’re done. | سيفكّ CoreLock تشفير اتصالات التطبيقات التي تثق بشهادته، ويحفظ ما ترسله على هذا الهاتف. معظم التطبيقات لا تثق بها، فلن ترى منها إلا أسماء المواقع. أوقفه عندما تنتهي. | CoreLock déchiffrera les connexions des applis qui font confiance à son certificat et gardera ce qu’elles envoient sur ce téléphone. La plupart des applis ne lui font pas confiance : pour elles, vous ne verrez que les noms des sites. Désactivez-la quand vous avez terminé. | CoreLock ontsleutelt de verbindingen van apps die zijn certificaat vertrouwen en bewaart wat ze versturen op deze telefoon. De meeste apps vertrouwen het niet; van die apps zie je alleen sitenamen. Zet het uit als je klaar bent. |
+| `ui_https_confirm_on` | Turn on | تشغيل | Activer | Aanzetten |
+| `ui_https_install_cd` | Install the inspection certificate | ثبّت شهادة الفحص | Installer le certificat d’inspection | Het inspectiecertificaat installeren |

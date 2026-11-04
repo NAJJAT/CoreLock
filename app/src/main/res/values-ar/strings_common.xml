@@ -21,7 +21,7 @@
     <string name="common_all">الكل</string>
     <string name="nav_home">الرئيسية</string>
     <string name="nav_apps">التطبيقات</string>
-    <string name="nav_traffic">الحركة</string>
+    <string name="nav_traffic">النشاط</string>
     <string name="nav_stats">الإحصاءات</string>
     <string name="nav_payload">المحتوى</string>
     <string name="nav_settings">الإعدادات</string>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ui_apps_search">ابحث في التطبيقات</string>
+    <string name="ui_apps_active_now">نشط الآن</string>
+    <string name="ui_sort_by">الترتيب حسب</string>
+    <string name="ui_sort_most_blocked">الأكثر حظرًا</string>
+    <string name="ui_sort_name">الاسم</string>
+    <string name="ui_sort_most_data">الأكثر بيانات</string>
+    <string name="ui_sort_background">النشاط في الخلفية</string>
+    <string name="ui_sort_risk">الأعلى خطورة</string>
+    <string name="ui_sort_destinations">الأكثر وجهات</string>
+    <string name="ui_apps_empty_search">لا يوجد تطبيق باسم «%1$s».</string>
+    <string name="ui_apps_empty_blocked">لا توجد تطبيقات محظورة. افتح تطبيقًا لحظره.</string>
+    <string name="ui_apps_empty_active">لم يستخدم أي تطبيق الإنترنت في آخر 5 دقائق.</string>
+    <string name="ui_apps_empty">لم يُعثر على تطبيقات تستخدم الإنترنت.</string>
+    <string name="ui_error_apps">تعذّر تحميل تطبيقاتك.</string>
+    <plurals name="ui_apps_could_watch">
+        <item quantity="zero">لا توجد تطبيقات قد تراقبك.</item>
+        <item quantity="one">تطبيق واحد قد يراقبك. تأكد أنك ثبّته بنفسك.</item>
+        <item quantity="two">تطبيقان قد يراقبانك. تأكد أنك ثبّتهما بنفسك.</item>
+        <item quantity="few">%d تطبيقات قد تراقبك. تأكد أنك ثبّتها بنفسك.</item>
+        <item quantity="many">%d تطبيقًا قد يراقبك. تأكد أنك ثبّتها بنفسك.</item>
+        <item quantity="other">%d تطبيق قد يراقبك. تأكد أنك ثبّتها بنفسك.</item>
+    </plurals>
+    <string name="ui_show_them">اعرضها</string>
+    <string name="ui_clear_search">امسح البحث</string>
+    <string name="ui_risk_word_hint">اشرح</string>
+
+    <string name="ui_app_status">الوصول إلى الإنترنت</string>
+    <string name="ui_connected_recently">اتصل مؤخرًا</string>
+    <string name="ui_connected_recently_sub">آخر 24 ساعة. المس اسمًا للسماح به أو حظره لهذا التطبيق.</string>
+    <string name="ui_other_names">أخرى</string>
+    <string name="ui_built_in_trackers">أدوات تتبّع مدمجة</string>
+    <string name="ui_built_in_trackers_sub">عُثر عليها في كود التطبيق. يحظر CoreLock اتصالاتها عندما تكون في قوائمه.</string>
+    <string name="ui_no_trackers_found">لم يُعثر على أدوات تتبّع مدمجة.</string>
+    <string name="ui_checking_app">جارٍ فحص كود التطبيق…</string>
+    <string name="ui_empty_app_connections">لا اتصالات في آخر 24 ساعة.</string>
+    <string name="ui_error_app">تعذّر تحميل اتصالات هذا التطبيق.</string>
+    <string name="ui_usage_access_needed">يحتاج CoreLock إلى إذن الوصول إلى بيانات الاستخدام ليعرف متى يعمل التطبيق في الخلفية.</string>
+    <string name="ui_app_now_allowed">%1$s مسموح الآن.</string>
+    <string name="ui_app_now_blocked">%1$s محظور الآن.</string>
+    <string name="ui_app_now_blocked_background">%1$s محظور الآن في الخلفية.</string>
+    <string name="ui_share_report">مشاركة التقرير</string>
+
+    <string name="ui_tech_risk_grade">درجة الخطورة</string>
+    <string name="ui_tech_permissions">الأذونات</string>
+    <plurals name="ui_tech_permissions_n">
+        <item quantity="zero">لا أذونات</item>
+        <item quantity="one">إذن واحد</item>
+        <item quantity="two">إذنان</item>
+        <item quantity="few">%d أذونات</item>
+        <item quantity="many">%d إذنًا</item>
+        <item quantity="other">%d إذن</item>
+    </plurals>
+    <string name="ui_tech_behaviour">السلوك، آخر 24 ساعة</string>
+    <string name="ui_tech_inspected">المحتوى المفحوص</string>
+    <string name="ui_tech_names">كل الأسماء</string>
+</resources>

@@ -90,6 +90,7 @@
     <string name="trf_not_tracker">Niet in de trackerdatabase.</string>
     <string name="trf_frequency">Laatste 7 dagen</string>
     <string name="trf_per_day">ongeveer %1$s per dag</string>
+    <string name="trf_per_day_under_one">minder dan één keer per dag</string>
     <string name="trf_apps_used">Apps die het gebruikten</string>
     <string name="trf_first_seen">Eerst gezien</string>
     <string name="trf_last_seen">Laatst gezien</string>

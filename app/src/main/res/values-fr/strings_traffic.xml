@@ -94,6 +94,7 @@
     <string name="trf_not_tracker">Absent de la base de traqueurs.</string>
     <string name="trf_frequency">7 derniers jours</string>
     <string name="trf_per_day">environ %1$s par jour</string>
+    <string name="trf_per_day_under_one">moins d’une fois par jour</string>
     <string name="trf_apps_used">Apps qui l’ont utilisé</string>
     <string name="trf_first_seen">Vu la première fois</string>
     <string name="trf_last_seen">Vu la dernière fois</string>

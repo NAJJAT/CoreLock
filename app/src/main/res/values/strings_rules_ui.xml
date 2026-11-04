@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings › Rules and allowed sites (1.1, DESIGN_SPEC_1.1.md R16) -->
+    <string name="ui_rules_add">Add rule</string>
+    <string name="ui_rules_empty">No rules yet. Allow or block a site from Activity, or add a rule here.</string>
+    <string name="ui_rules_error">Your rules couldn’t be loaded.</string>
+    <string name="ui_rules_save_failed">The change couldn’t be saved. Try again.</string>
+    <string name="ui_rules_added">Rule added</string>
+    <string name="ui_rules_deleted">Rule deleted</string>
+    <string name="ui_rules_search">Search sites, apps or addresses</string>
+    <string name="ui_rules_no_match">No rule matches “%1$s”.</string>
+    <plurals name="ui_rules_yours">
+        <item quantity="one">Your rules · %1$d</item>
+        <item quantity="other">Your rules · %1$d</item>
+    </plurals>
+    <string name="ui_rules_effect_block">Blocks</string>
+    <string name="ui_rules_effect_block_bg">Blocks in the background</string>
+    <string name="ui_rules_effect_allow">Allows</string>
+    <string name="ui_rules_effect_allow_risky">Allows, despite the malware warning</string>
+    <string name="ui_rules_off">Off</string>
+    <string name="ui_rules_d_site">Site: %1$s</string>
+    <string name="ui_rules_d_app">App: %1$s</string>
+    <string name="ui_rules_d_address">Address: %1$s</string>
+    <string name="ui_rules_d_port">Port %1$d</string>
+    <string name="ui_rules_d_unencrypted">Unencrypted connections only</string>
+    <string name="ui_rules_use">Use rule: %1$s</string>
+    <string name="ui_rules_delete">Delete rule: %1$s</string>
+    <string name="ui_rules_kind_site">Site</string>
+    <string name="ui_rules_kind_app">App</string>
+    <string name="ui_rules_kind_address">Address</string>
+    <string name="ui_rules_site_label">Site name, like example.com</string>
+    <string name="ui_rules_site_invalid">That isn’t a site name. Write it like example.com.</string>
+    <string name="ui_rules_app_label">App package name</string>
+    <string name="ui_rules_app_hint">Like com.example.app. To block an installed app, it is easier to open it in Apps.</string>
+    <string name="ui_rules_app_invalid">That isn’t a package name. It looks like com.example.app.</string>
+    <string name="ui_rules_address_label">IPv4 address or range</string>
+    <string name="ui_rules_address_hint">Like 1.2.3.4 or 10.0.0.0/8.</string>
+    <string name="ui_rules_allow_note">Allow wins over the ads and trackers lists. For a site on a malware list, CoreLock warns you first.</string>
+</resources>

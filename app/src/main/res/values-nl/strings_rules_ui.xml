@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Instellingen › Regels en toegestane sites (1.1) -->
+    <string name="ui_rules_add">Regel toevoegen</string>
+    <string name="ui_rules_empty">Nog geen regels. Sta een site toe of blokkeer hem vanuit Activiteit, of voeg hier een regel toe.</string>
+    <string name="ui_rules_error">Je regels konden niet worden geladen.</string>
+    <string name="ui_rules_save_failed">De wijziging kon niet worden opgeslagen. Probeer het opnieuw.</string>
+    <string name="ui_rules_added">Regel toegevoegd</string>
+    <string name="ui_rules_deleted">Regel verwijderd</string>
+    <string name="ui_rules_search">Zoek sites, apps of adressen</string>
+    <string name="ui_rules_no_match">Geen regel past bij ‘%1$s’.</string>
+    <plurals name="ui_rules_yours">
+        <item quantity="one">Je regels · %1$d</item>
+        <item quantity="other">Je regels · %1$d</item>
+    </plurals>
+    <string name="ui_rules_effect_block">Blokkeert</string>
+    <string name="ui_rules_effect_block_bg">Blokkeert op de achtergrond</string>
+    <string name="ui_rules_effect_allow">Staat toe</string>
+    <string name="ui_rules_effect_allow_risky">Staat toe, ondanks de malwarewaarschuwing</string>
+    <string name="ui_rules_off">Uit</string>
+    <string name="ui_rules_d_site">Site: %1$s</string>
+    <string name="ui_rules_d_app">App: %1$s</string>
+    <string name="ui_rules_d_address">Adres: %1$s</string>
+    <string name="ui_rules_d_port">Poort %1$d</string>
+    <string name="ui_rules_d_unencrypted">Alleen onversleutelde verbindingen</string>
+    <string name="ui_rules_use">Regel gebruiken: %1$s</string>
+    <string name="ui_rules_delete">Regel verwijderen: %1$s</string>
+    <string name="ui_rules_kind_site">Site</string>
+    <string name="ui_rules_kind_app">App</string>
+    <string name="ui_rules_kind_address">Adres</string>
+    <string name="ui_rules_site_label">Sitenaam, zoals example.com</string>
+    <string name="ui_rules_site_invalid">Dat is geen sitenaam. Schrijf hem zoals example.com.</string>
+    <string name="ui_rules_app_label">Pakketnaam van de app</string>
+    <string name="ui_rules_app_hint">Zoals com.example.app. Een geïnstalleerde app blokkeer je makkelijker door hem in Apps te openen.</string>
+    <string name="ui_rules_app_invalid">Dat is geen pakketnaam. Die ziet eruit als com.example.app.</string>
+    <string name="ui_rules_address_label">IPv4-adres of -bereik</string>
+    <string name="ui_rules_address_hint">Zoals 1.2.3.4 of 10.0.0.0/8.</string>
+    <string name="ui_rules_allow_note">Toestaan gaat voor de lijsten met advertenties en trackers. Voor een site op een malwarelijst waarschuwt CoreLock je eerst.</string>
+</resources>

@@ -18,6 +18,14 @@ import java.time.ZoneId
 class HomeLogicTest {
 
     @Test
+    fun a_pause_is_paused_not_off_and_not_stopped_unexpectedly() {
+        assertEquals(ProtectionState.PAUSED, HomeLogic.protectionState(PrivacyVpnService.State.STOPPED, shouldBeActive = false, paused = true))
+        // Running again wins at once, even before the stored pause is cleared.
+        assertEquals(ProtectionState.ON, HomeLogic.protectionState(PrivacyVpnService.State.RUNNING, shouldBeActive = true, paused = true))
+        assertEquals(R.string.ui_hero_paused, HomeLogic.heroTitle(ProtectionState.PAUSED))
+    }
+
+    @Test
     fun hero_state_comes_from_the_service_and_the_last_stop() {
         assertEquals(ProtectionState.ON, HomeLogic.protectionState(PrivacyVpnService.State.RUNNING, shouldBeActive = true))
         assertEquals(ProtectionState.STARTING, HomeLogic.protectionState(PrivacyVpnService.State.STARTING, shouldBeActive = false))

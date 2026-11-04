@@ -309,7 +309,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun externalIpCheck(): DiagnosticCheck {
         if (!settingsPreferences.externalIpCheckEnabled.value) {
-            return DiagnosticCheck(str(R.string.diag_external_ip), DiagnosticStatus.PASS, str(R.string.diag_external_ip_skipped, str(R.string.set_external_ip)))
+            return DiagnosticCheck(str(R.string.diag_external_ip), DiagnosticStatus.PASS, str(R.string.diag_external_ip_skipped, str(R.string.ui_net_public_ip)))
         }
         return runCatching {
             val url = java.net.URL("https://api.ipify.org?format=text")

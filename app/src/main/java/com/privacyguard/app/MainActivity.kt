@@ -5,17 +5,20 @@ import android.content.pm.PackageManager
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
+import androidx.compose.runtime.SideEffect
+import androidx.core.view.WindowCompat
+import com.privacyguard.app.ui.theme.CoreLockTheme
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.privacyguard.app.data.local.preferences.SettingsPreferences
 import com.privacyguard.app.ui.home.HomePreferences
-import com.privacyguard.app.ui.theme.Appearance
-import com.privacyguard.app.ui.theme.CoreLockTheme
 import com.privacyguard.app.vpn.VpnManager
 import com.privacyguard.app.workers.WeeklyReportWorker
 import com.privacyguard.platform.android.NotificationHelper
 import com.privacyguard.ui.AppNavHost
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 class MainActivity : com.privacyguard.BaseActivity() {
 
@@ -46,9 +49,18 @@ class MainActivity : com.privacyguard.BaseActivity() {
         val initialRoute = intent.getStringExtra(NotificationHelper.EXTRA_NAV_ROUTE)
             ?.takeIf { it in NOTIFICATION_ROUTES }
         setContent {
-            // Dark until every 1.0 screen is migrated: they still use fixed dark colours and
-            // would break in light mode. Settings › Appearance (D4) comes in Phase 6.
-            CoreLockTheme(Appearance.DARK) {
+            // D4: the user's choice; the default while none was made is in SettingsLogic.
+            val appearance by settings.appearance.collectAsStateWithLifecycle()
+            CoreLockTheme(com.privacyguard.app.ui.settings.SettingsLogic.appearanceOf(appearance)) {
+                // Dark icons on a light theme: the window theme is dark, so without this the
+                // status-bar clock and battery are white on white in Light.
+                val lightBars = !CoreLockTheme.colors.isDark
+                SideEffect {
+                    WindowCompat.getInsetsController(window, window.decorView).apply {
+                        isAppearanceLightStatusBars = lightBars
+                        isAppearanceLightNavigationBars = lightBars
+                    }
+                }
                 AppNavHost(
                     onRequestVpn = { requestVpnPermission() },
                     initialRoute = initialRoute,

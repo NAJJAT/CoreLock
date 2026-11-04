@@ -39,7 +39,8 @@ class BrandNameTest {
         val vpn = source("src/main/java/com/privacyguard/platform/android/PrivacyVpnService.kt")
         assertTrue(vpn.contains(".setSession(getString(com.privacyguard.app.R.string.app_name))"))
         val payload = source("src/enterprise/java/com/privacyguard/ui/mitm/MitmScreen.kt")
-        assertTrue(payload.contains("Text(stringResource(R.string.app_name).uppercase(java.util.Locale.ROOT)"))
+        // 1.1 (DESIGN_SPEC_1.1.md §5.7): the "CORELOCK PAYLOAD" header became the screen title.
+        assertTrue(payload.contains("title = stringResource(R.string.ui_adv_https)"))
         val report = source("src/main/java/com/privacyguard/app/core/report/ItReportExporter.kt")
         assertTrue(report.contains("pdfTitle(context.getString(com.privacyguard.app.R.string.app_name))"))
         for ((file, text) in listOf("PrivacyVpnService" to vpn, "MitmScreen" to payload, "ItReportExporter" to report)) {

@@ -161,6 +161,29 @@ interface ConnectionDao {
     @Query("SELECT COUNT(*) FROM connections WHERE timestamp > :from AND timestamp <= :to AND wasBlocked = 1")
     suspend fun countBlockedBetween(from: Long, to: Long): Int
 
+    /** [countBlockedBetween] per app, for the Apps list ("N blocked today"). */
+    @Query("SELECT packageName AS packageName, COUNT(*) AS count FROM connections WHERE timestamp > :from AND timestamp <= :to AND wasBlocked = 1 GROUP BY packageName")
+    suspend fun countBlockedByPackageBetween(from: Long, to: Long): List<PackageCount>
+
+    /** Apps with a connection row since [from], for "Active now" on Apps. */
+    @Query("SELECT packageName AS packageName, COUNT(*) AS count FROM connections WHERE timestamp >= :from GROUP BY packageName")
+    suspend fun countByPackageSince(from: Long): List<PackageCount>
+
+    /** The newest blocked attempts, for Activity: a limit, not the whole history (up to 90 days). */
+    @Query("SELECT * FROM connections WHERE timestamp <= :to AND wasBlocked = 1 ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun newestBlocked(to: Long, limit: Int): List<ConnectionEntity>
+
+    /** Newest blocked row, for Activity to tell whether a reload can change anything. Rows are only inserted. */
+    @Query("SELECT id FROM connections WHERE wasBlocked = 1 ORDER BY id DESC LIMIT 1")
+    suspend fun newestBlockedId(): Long?
+
+    @Query("SELECT MAX(id) FROM connections")
+    suspend fun newestId(): Long?
+
+    /** The newest connections, blocked or not, for Activity › All. */
+    @Query("SELECT * FROM connections WHERE timestamp <= :to ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun newest(to: Long, limit: Int): List<ConnectionEntity>
+
     /** Distinct destinations of blocked attempts: SNI, else DNS name, else address. */
     @Query("SELECT DISTINCT COALESCE(sniHostname, domain, destinationIp) FROM connections WHERE timestamp > :from AND timestamp <= :to AND wasBlocked = 1")
     suspend fun blockedHostsBetween(from: Long, to: Long): List<String>

@@ -188,6 +188,9 @@ class DebugHooksReceiver : BroadcastReceiver() {
         when (intent.getStringExtra("name")) {
             "ct" -> s.setCtMonitoringEnabled(value)
             "notifications" -> s.setNotificationsEnabled(value)
+            // Screenshots in light and dark before the Settings row exists:
+            //   adb shell am broadcast -a com.privacyguard.debug.SET_SETTING --es name appearance --es mode LIGHT -p PKG
+            "appearance" -> s.setAppearance(intent.getStringExtra("mode") ?: "SYSTEM")
             else -> { Log.w(TAG, "SETTING unknown name"); return }
         }
         Log.i(TAG, "SETTING ${intent.getStringExtra("name")}=$value")

@@ -21,6 +21,7 @@ import com.privacyguard.app.ui.theme.Appearance
 import com.privacyguard.app.ui.theme.CoreLockTheme
 import com.privacyguard.vpn.interception.InspectionStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -45,6 +46,23 @@ class HomeScreenTest {
         inspection: InspectionStatus = InspectionStatus.OFF,
     ) = rule.setContent {
         CoreLockTheme(Appearance.DARK) { HomeContent(state, inspection, actions) }
+    }
+
+    @Test
+    fun something_not_working_is_one_tap_from_home() {
+        var opened = false
+        show(on, HomeActions(onOpenFix = { opened = true }))
+        rule.onNodeWithTag(TAG_HOME_FIX).performClick()
+        assertTrue(opened)
+    }
+
+    @Test
+    fun a_pause_shows_when_protection_comes_back() {
+        val until = System.currentTimeMillis() + 300_000
+        show(on.copy(protection = ProtectionState.PAUSED, pausedUntil = until))
+        rule.onNodeWithText("Protection is paused").assertExists()
+        val at = android.text.format.DateFormat.getTimeFormat(org.robolectric.RuntimeEnvironment.getApplication()).format(java.util.Date(until))
+        rule.onNodeWithText("Back on at $at.").assertExists()
     }
 
     @Test

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ui_group_just_now">الآن</string>
+    <string name="ui_group_today">اليوم</string>
+    <string name="ui_group_yesterday">أمس</string>
+    <string name="ui_group_earlier">في وقت سابق</string>
+
+    <string name="ui_reason_lookup_bypass">محظور · يتجاوز CoreLock</string>
+    <string name="ui_reason_lookup_bypass_port">محظور · لا يُسمح به أبدًا</string>
+    <string name="ui_title_lookup_service">خدمة بحث خاصة</string>
+    <plurals name="ui_times">
+        <item quantity="zero">لا مرات</item>
+        <item quantity="one">مرة واحدة</item>
+        <item quantity="two">مرتان</item>
+        <item quantity="few">%d مرات</item>
+        <item quantity="many">%d مرة</item>
+        <item quantity="other">%d مرة</item>
+    </plurals>
+    <string name="ui_reason_setting">محظور · قاعدة أو إعداد</string>
+
+    <string name="ui_what_named">%1$s (%2$s) من %3$s</string>
+    <string name="ui_what_plain">%1$s من %2$s</string>
+    <string name="ui_why_ads">إنه في قائمة الإعلانات وأدوات التتبع.</string>
+    <string name="ui_why_malware">إنه في قائمة البرامج الضارة. مواقع كهذه قد تسرق كلمات المرور أو تثبّت تطبيقات ضارة.</string>
+    <string name="ui_why_rule">أنت حظرته.</string>
+    <string name="ui_why_rule_named">أنت حظرته بقاعدتك «%1$s».</string>
+    <string name="ui_why_lookup_bypass">هذه خدمة خاصة للبحث عن عناوين المواقع. التطبيقات التي تستخدمها تتجاوز قوائم CoreLock، لذلك تبقى محظورة. إن كانت لديك خدمتك الخاصة، فاسمح بها في «القواعد والمواقع المسموح بها».</string>
+    <string name="ui_why_lookup_bypass_port">حاول التطبيق البحث عن المواقع بطريقة تتجاوز قوائم CoreLock. لا يمكن السماح بذلك.</string>
+    <string name="ui_why_setting">أوقفته قاعدة أو أحد إعداداتك في ذلك الوقت، مثل حظر تطبيق أو حظر الاتصالات غير المشفّرة. إذا حذفت تلك القاعدة بعد ذلك، فلم تعد تُطبَّق.</string>
+    <string name="ui_why_allowed">لم توقفه أي قائمة أو قاعدة.</string>
+    <string name="ui_reason_now_note">حسب قوائمك وقواعدك الحالية.</string>
+    <string name="ui_allow_anyway">اسمح به رغم ذلك</string>
+    <string name="ui_block_for_app">احظره لهذا التطبيق</string>
+    <string name="ui_block_everywhere">احظره لكل التطبيقات</string>
+    <string name="ui_about_this_app">عن %1$s</string>
+    <string name="ui_more_about_name">المزيد عن هذا الاسم</string>
+    <string name="ui_tech_name">الاسم</string>
+    <string name="ui_tech_ip">عنوان IP</string>
+    <string name="ui_tech_port">المنفذ</string>
+    <string name="ui_tech_protocol">البروتوكول</string>
+    <string name="ui_tech_rule">القاعدة</string>
+    <string name="ui_tech_time">الوقت</string>
+
+    <string name="ui_allowed_try_again">تم السماح. جرّب التطبيق مرة أخرى.</string>
+    <string name="ui_undo">تراجع</string>
+    <string name="ui_blocked_done">تم الحظر.</string>
+    <string name="ui_rule_removed">حُذفت قاعدتك.</string>
+    <string name="ui_action_failed">لم ينجح ذلك. حاول مرة أخرى.</string>
+
+    <string name="ui_empty_activity_all">لا شيء هنا بعد. تظهر الاتصالات هنا عندما تستخدم التطبيقات الإنترنت.</string>
+    <string name="ui_empty_activity_off">الحماية متوقفة، لذلك لا يُحظر أي شيء.</string>
+    <string name="ui_activity_limit">يُعرض أحدث %1$d.</string>
+    <string name="ui_back">رجوع</string>
+    <string name="ui_more_options">خيارات أخرى</string>
+    <string name="ui_live_connections">الاتصالات الجارية</string>
+
+    <string name="rule_allow_domain_for_app">السماح بـ %1$s في %2$s</string>
+    <string name="rule_block_domain_for_app">حظر %1$s في %2$s</string>
+
+    <string name="ui_fix_step_n">الخطوة %1$d من %2$d</string>
+    <string name="ui_fix_which_app">أي تطبيق لا يعمل؟</string>
+    <string name="ui_fix_which_app_sub">تطبيقات حُظر لها شيء خلال الساعة الأخيرة، الأحدث أولًا.</string>
+    <string name="ui_fix_not_sure">غير موجود أو لست متأكدًا</string>
+    <string name="ui_fix_not_sure_sub">اعرض كل ما حُظر خلال الساعة الأخيرة</string>
+    <string name="ui_fix_blocked_hour">هذا ما حُظر خلال الساعة الأخيرة</string>
+    <string name="ui_fix_blocked_hour_sub">السبب الأرجح في الأعلى.</string>
+    <string name="ui_fix_unknown_app_names">حُظر أيضًا، والتطبيق غير معروف</string>
+    <string name="ui_fix_none_hour">لم يُحظر شيء خلال الساعة الأخيرة، لذلك على الأرجح ليس CoreLock هو السبب.</string>
+    <string name="ui_fix_none_app">لم يُحظر شيء لهذا التطبيق خلال الساعة الأخيرة. على الأرجح ليس CoreLock هو السبب.</string>
+    <string name="ui_fix_all_handled">تم. جرّب التطبيق مرة أخرى. إذا لم يعمل بعد، ارجع واختر تطبيقًا آخر.</string>
+    <plurals name="ui_fix_attempts">
+        <item quantity="zero">لا محاولات</item>
+        <item quantity="one">محاولة واحدة</item>
+        <item quantity="two">محاولتان</item>
+        <item quantity="few">%d محاولات</item>
+        <item quantity="many">%d محاولة</item>
+        <item quantity="other">%d محاولة</item>
+    </plurals>
+    <string name="ui_fix_try_pause">ما زلت غير متأكد؟ أوقف الحماية مؤقتًا 5 دقائق ثم جرّب التطبيق مرة أخرى.</string>
+
+    <string name="ui_pause_5">إيقاف الحماية مؤقتًا 5 دقائق</string>
+    <string name="ui_pause_needs_alarms">للإيقاف المؤقت، يحتاج CoreLock إلى إذن «المنبهات والتذكيرات» ليعود للعمل من تلقاء نفسه.</string>
+    <string name="ui_pause_always_on">الإيقاف المؤقت غير متاح أثناء تشغيل «شبكة VPN الدائمة»: سيعيد Android تشغيل CoreLock فورًا.</string>
+    <string name="ui_paused_toast">أُوقفت الحماية مؤقتًا 5 دقائق. جرّب التطبيق الآن.</string>
+    <string name="ui_hero_paused">الحماية متوقفة مؤقتًا</string>
+    <string name="ui_hero_paused_sub">تعود في %1$s.</string>
+    <string name="ui_resume_now">استأنف الآن</string>
+    <string name="pause_notif_title">الحماية متوقفة مؤقتًا</string>
+    <string name="pause_notif_text">يعود CoreLock للعمل في %1$s.</string>
+</resources>

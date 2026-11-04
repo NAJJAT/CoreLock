@@ -26,11 +26,14 @@ object HomeLogic {
         service: PrivacyVpnService.State,
         shouldBeActive: Boolean,
         stopReason: UnexpectedStop.Reason? = null,
+        paused: Boolean = false,
     ): ProtectionState = when (service) {
         PrivacyVpnService.State.RUNNING -> ProtectionState.ON
         PrivacyVpnService.State.STARTING -> ProtectionState.STARTING
         PrivacyVpnService.State.STOPPED ->
-            if (shouldBeActive || stopReason != null) ProtectionState.STOPPED_UNEXPECTEDLY else ProtectionState.OFF
+            // A pause is a stop the user asked for, with a way back already set (D1).
+            if (paused) ProtectionState.PAUSED
+            else if (shouldBeActive || stopReason != null) ProtectionState.STOPPED_UNEXPECTEDLY else ProtectionState.OFF
     }
 
     /**
@@ -59,6 +62,7 @@ object HomeLogic {
         ProtectionState.OFF -> R.string.ui_hero_off
         ProtectionState.STARTING -> R.string.ui_hero_starting
         ProtectionState.STOPPED_UNEXPECTEDLY -> R.string.ui_hero_stopped
+        ProtectionState.PAUSED -> R.string.ui_hero_paused
     }
 
     @StringRes
@@ -70,6 +74,8 @@ object HomeLogic {
         }
         ProtectionState.OFF -> R.string.ui_hero_off_sub
         ProtectionState.STARTING -> R.string.ui_hero_starting_sub
+        // Takes the end time as its argument (HomeScreen formats it).
+        ProtectionState.PAUSED -> R.string.ui_hero_paused_sub
         // Only what happened, in plain words; no reason recorded means a crash or a killed process.
         ProtectionState.STOPPED_UNEXPECTEDLY -> when (stopReason) {
             UnexpectedStop.Reason.OTHER_VPN -> R.string.ui_home_stopped_other_vpn

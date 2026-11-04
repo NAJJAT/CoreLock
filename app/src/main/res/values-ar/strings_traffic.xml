@@ -106,6 +106,7 @@
     <string name="trf_not_tracker">ليس في قاعدة بيانات المتتبّعات.</string>
     <string name="trf_frequency">آخر 7 أيام</string>
     <string name="trf_per_day">نحو %1$s يوميًا</string>
+    <string name="trf_per_day_under_one">أقل من مرة واحدة يوميًا</string>
     <string name="trf_apps_used">التطبيقات التي استخدمته</string>
     <string name="trf_first_seen">أول ظهور</string>
     <string name="trf_last_seen">آخر ظهور</string>

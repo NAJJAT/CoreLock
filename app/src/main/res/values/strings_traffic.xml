@@ -103,6 +103,7 @@
     <string name="trf_not_tracker">Not in the tracker database.</string>
     <string name="trf_frequency">Last 7 days</string>
     <string name="trf_per_day">about %1$s per day</string>
+    <string name="trf_per_day_under_one">less than once a day</string>
     <string name="trf_apps_used">Apps that used it</string>
     <string name="trf_first_seen">First seen</string>
     <string name="trf_last_seen">Last seen</string>

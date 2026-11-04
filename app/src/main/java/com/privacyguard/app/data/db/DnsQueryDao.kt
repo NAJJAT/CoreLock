@@ -171,6 +171,22 @@ interface DnsQueryDao {
     @Query("SELECT COUNT(*) FROM dns_queries WHERE timestamp > :from AND timestamp <= :to AND was_blocked = 1")
     suspend fun countBlockedBetween(from: Long, to: Long): Int
 
+    /** One app's blocked lookups, for App detail's "Connected recently". */
+    @Query("SELECT * FROM dns_queries WHERE app_package = :packageName AND timestamp > :from AND timestamp <= :to AND was_blocked = 1 ORDER BY timestamp DESC")
+    suspend fun blockedForAppBetween(packageName: String, from: Long, to: Long): List<DnsQueryEntity>
+
+    /** [countBlockedBetween] per app, for the Apps list ("N blocked today"). */
+    @Query("SELECT app_package AS packageName, COUNT(*) AS count FROM dns_queries WHERE timestamp > :from AND timestamp <= :to AND was_blocked = 1 GROUP BY app_package")
+    suspend fun countBlockedByPackageBetween(from: Long, to: Long): List<PackageCount>
+
+    /** Newest blocked lookup, for Activity to tell whether a reload can change anything. */
+    @Query("SELECT id FROM dns_queries WHERE was_blocked = 1 ORDER BY id DESC LIMIT 1")
+    suspend fun newestBlockedId(): Long?
+
+    /** The newest blocked lookups, for Activity: a limit, not the whole history. */
+    @Query("SELECT * FROM dns_queries WHERE timestamp <= :to AND was_blocked = 1 ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun newestBlocked(to: Long, limit: Int): List<DnsQueryEntity>
+
     @Query("SELECT COUNT(*) FROM dns_queries WHERE timestamp > :from AND timestamp <= :to")
     suspend fun countBetween(from: Long, to: Long): Int
 

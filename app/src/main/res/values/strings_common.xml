@@ -21,7 +21,7 @@
     <string name="common_all">All</string>
     <string name="nav_home">Home</string>
     <string name="nav_apps">Apps</string>
-    <string name="nav_traffic">Traffic</string>
+    <string name="nav_traffic">Activity</string>
     <string name="nav_stats">Stats</string>
     <string name="nav_payload">Payload</string>
     <string name="nav_settings">Settings</string>

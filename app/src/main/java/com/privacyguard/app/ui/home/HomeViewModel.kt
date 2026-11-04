@@ -20,6 +20,7 @@ import com.privacyguard.app.ui.components.ProtectionState
 import com.privacyguard.app.ui.dashboard.StrictSuggestion
 import com.privacyguard.app.ui.traffic.HomeEvidence
 import com.privacyguard.app.vpn.BootReceiver
+import com.privacyguard.app.vpn.ProtectionPause
 import com.privacyguard.app.vpn.UnexpectedStop
 import com.privacyguard.platform.android.ForegroundAppDetector
 import com.privacyguard.platform.android.PrivacyVpnService
@@ -60,6 +61,8 @@ data class HomeUiState(
     val protection: ProtectionState,
     /** Why it stopped, only while [protection] is STOPPED_UNEXPECTEDLY; null after a crash. */
     val stopReason: UnexpectedStop.Reason? = null,
+    /** When a pause ends, only while [protection] is PAUSED (D1). */
+    val pausedUntil: Long? = null,
     val level: String,
     val blockedToday: BlockedToday = BlockedToday.Loading,
     val attention: HomeLogic.Attention? = null,
@@ -96,18 +99,21 @@ class HomeViewModel internal constructor(
 
     private val stopReason = UnexpectedStop.reason(app)
 
-    private data class Hero(val state: ProtectionState, val reason: UnexpectedStop.Reason?)
+    private val pausedUntil = ProtectionPause.pausedUntil(app)
+
+    private data class Hero(val state: ProtectionState, val reason: UnexpectedStop.Reason?, val pausedUntil: Long? = null)
 
     private fun readHero(
         service: PrivacyVpnService.State = PrivacyVpnService.state.value,
         reason: UnexpectedStop.Reason? = stopReason.value,
+        until: Long? = pausedUntil.value,
     ): Hero {
-        val state = HomeLogic.protectionState(service, BootReceiver.shouldBeActive(getApplication()), reason)
-        return Hero(state, reason.takeIf { state == ProtectionState.STOPPED_UNEXPECTEDLY })
+        val state = HomeLogic.protectionState(service, BootReceiver.shouldBeActive(getApplication()), reason, paused = until != null)
+        return Hero(state, reason.takeIf { state == ProtectionState.STOPPED_UNEXPECTEDLY }, until.takeIf { state == ProtectionState.PAUSED })
     }
 
     private val protection: Flow<Hero> =
-        combine(PrivacyVpnService.state, stopReason, resumed) { service, reason, _ -> readHero(service, reason) }
+        combine(PrivacyVpnService.state, stopReason, pausedUntil, resumed) { service, reason, until, _ -> readHero(service, reason, until) }
 
     private val blockedToday: Flow<BlockedToday> = retryCount.flatMapLatest {
         db.flatMapLatest { database ->
@@ -209,12 +215,12 @@ class HomeViewModel internal constructor(
     }
 
     val uiState: StateFlow<HomeUiState> = combine(protection, prefs.protectionLevel, blockedToday, attention) { p, level, blocked, att ->
-        HomeUiState(protection = p.state, stopReason = p.reason, level = level, blockedToday = blocked, attention = att)
+        HomeUiState(protection = p.state, stopReason = p.reason, pausedUntil = p.pausedUntil, level = level, blockedToday = blocked, attention = att)
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
         // Read synchronously, so the first frame already shows the real state (no false "off").
-        readHero().let { HomeUiState(protection = it.state, stopReason = it.reason, level = prefs.protectionLevel.value) },
+        readHero().let { HomeUiState(protection = it.state, stopReason = it.reason, pausedUntil = it.pausedUntil, level = prefs.protectionLevel.value) },
     )
 
     fun onResume() { resumed.value++ }

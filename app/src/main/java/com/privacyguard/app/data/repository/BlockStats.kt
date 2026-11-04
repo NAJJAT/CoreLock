@@ -36,6 +36,17 @@ class BlockStats(private val db: AppDatabase) {
     suspend fun totalBetween(from: Long, to: Long): Int =
         db.dnsQueryDao().countBlockedBetween(from, to) + db.connectionDao().countBlockedBetween(from, to)
 
+    /**
+     * [Counts.total] per app, from the same rows: the Apps list's "N blocked today" adds
+     * up to Home's number (apart from rows no app is known for).
+     */
+    suspend fun perAppBetween(from: Long, to: Long): Map<String, Int> {
+        val out = HashMap<String, Int>()
+        (db.dnsQueryDao().countBlockedByPackageBetween(from, to) + db.connectionDao().countBlockedByPackageBetween(from, to))
+            .forEach { out.merge(it.packageName, it.count, Int::plus) }
+        return out
+    }
+
     suspend fun between(from: Long, to: Long): Counts = Counts(
         blockedLookups = db.dnsQueryDao().countBlockedBetween(from, to),
         blockedConnections = db.connectionDao().countBlockedBetween(from, to),

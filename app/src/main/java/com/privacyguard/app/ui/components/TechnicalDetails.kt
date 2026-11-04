@@ -46,6 +46,28 @@ fun TechnicalDetails(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     var expanded by rememberSaveable { mutableStateOf(initiallyExpanded) }
+    Column(modifier.fillMaxWidth()) {
+        TechnicalDetailsHeader(expanded, onToggle = { expanded = !expanded })
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(rememberCoreLockTween()),
+            exit = shrinkVertically(rememberCoreLockTween()),
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(CoreLockTheme.spacing.s),
+                modifier = Modifier.padding(bottom = CoreLockTheme.spacing.m),
+                content = content,
+            )
+        }
+    }
+}
+
+/**
+ * The "Technical details" header alone, for a screen that shows the details as items of
+ * a lazy list (App detail: hundreds of rows would be composed at once inside a Column).
+ */
+@Composable
+fun TechnicalDetailsHeader(expanded: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
     val state = stringResource(if (expanded) R.string.ui_expanded else R.string.ui_collapsed)
     Column(modifier.fillMaxWidth()) {
         HorizontalDivider(color = CoreLockTheme.colors.surfaceVariant)
@@ -54,7 +76,7 @@ fun TechnicalDetails(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = CoreLockTheme.spacing.minTouchTarget)
-                .clickable(role = Role.Button) { expanded = !expanded }
+                .clickable(role = Role.Button, onClick = onToggle)
                 .semantics { stateDescription = state }
                 .padding(vertical = CoreLockTheme.spacing.s),
         ) {
@@ -68,17 +90,6 @@ fun TechnicalDetails(
                 if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
                 contentDescription = null,
                 tint = CoreLockTheme.colors.onSurfaceMuted,
-            )
-        }
-        AnimatedVisibility(
-            visible = expanded,
-            enter = expandVertically(rememberCoreLockTween()),
-            exit = shrinkVertically(rememberCoreLockTween()),
-        ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(CoreLockTheme.spacing.s),
-                modifier = Modifier.padding(bottom = CoreLockTheme.spacing.m),
-                content = content,
             )
         }
     }

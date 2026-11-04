@@ -18,26 +18,26 @@ class AppsRiskWindowTest {
 
     @Test
     fun old_high_risk_without_traffic_in_the_window_is_not_high() {
-        val risk = AppsViewModel.windowRisk(listOf(profile(90, since - 1)), since, connectionRisk = null)
-        assertEquals(AppsViewModel.NO_TRAFFIC_RISK, risk)
+        val risk = AppsLogic.windowRisk(listOf(profile(90, since - 1)), since, connectionRisk = null)
+        assertEquals(AppsLogic.NO_TRAFFIC_RISK, risk)
         assertEquals("LOW", item(risk).riskLevel)
     }
 
     @Test
     fun high_risk_seen_in_the_window_stays_high() {
-        val risk = AppsViewModel.windowRisk(listOf(profile(90, since), profile(20, now)), since, connectionRisk = 12)
+        val risk = AppsLogic.windowRisk(listOf(profile(90, since), profile(20, now)), since, connectionRisk = 12)
         assertEquals(90, risk)
         assertEquals("HIGH", item(risk).riskLevel)
     }
 
     @Test
     fun old_profiles_do_not_override_the_windows_connections() {
-        val risk = AppsViewModel.windowRisk(listOf(profile(90, since - 1)), since, connectionRisk = 25)
+        val risk = AppsLogic.windowRisk(listOf(profile(90, since - 1)), since, connectionRisk = 25)
         assertEquals(25, risk)
     }
 
     private fun item(risk: Int) = AppRiskItem(
         appName = "Chrome", packageName = "com.android.chrome", totalDestinations = 0, suspiciousCount = 0,
-        cleartextCount = 0, totalBytesOut = 0, maxRiskScore = risk, isBlocked = false,
+        cleartextCount = 0, totalBytesOut = 0, maxRiskScore = risk,
     )
 }

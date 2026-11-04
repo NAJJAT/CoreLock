@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Advanced › HTTPS inspection (1.1, DESIGN_SPEC_1.1.md §5.7). D5: asked every time it is switched on. -->
+    <string name="ui_https_confirm_title">Turn on HTTPS inspection?</string>
+    <string name="ui_https_confirm_body">CoreLock will decrypt the connections of apps that trust its certificate and keep what they send on this phone. Most apps don’t trust it, so for them you’ll only see site names. Turn it off when you’re done.</string>
+    <string name="ui_https_confirm_on">Turn on</string>
+    <string name="ui_https_install_cd">Install the inspection certificate</string>
+</resources>

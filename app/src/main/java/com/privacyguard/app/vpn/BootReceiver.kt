@@ -22,6 +22,11 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED &&
             intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
+        // A pause never outlives a reboot or an update (both delete alarms): resume now.
+        if (ProtectionPause.pausedUntil(context).value != null) {
+            ProtectionPause.resume(context)
+            return
+        }
         if (!prefs(context).getBoolean(KEY_VPN_WAS_ACTIVE, false)) return
 
         // Another VPN app took the permission since: starting would only fail.

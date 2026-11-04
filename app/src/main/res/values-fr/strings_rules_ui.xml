@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Réglages › Règles et sites autorisés (1.1) -->
+    <string name="ui_rules_add">Ajouter une règle</string>
+    <string name="ui_rules_empty">Aucune règle pour l’instant. Autorisez ou bloquez un site depuis Activité, ou ajoutez une règle ici.</string>
+    <string name="ui_rules_error">Impossible de charger vos règles.</string>
+    <string name="ui_rules_save_failed">La modification n’a pas pu être enregistrée. Réessayez.</string>
+    <string name="ui_rules_added">Règle ajoutée</string>
+    <string name="ui_rules_deleted">Règle supprimée</string>
+    <string name="ui_rules_search">Rechercher des sites, applis ou adresses</string>
+    <string name="ui_rules_no_match">Aucune règle ne correspond à « %1$s ».</string>
+    <plurals name="ui_rules_yours">
+        <item quantity="one">Vos règles · %1$d</item>
+        <item quantity="many">Vos règles · %1$d</item>
+        <item quantity="other">Vos règles · %1$d</item>
+    </plurals>
+    <string name="ui_rules_effect_block">Bloque</string>
+    <string name="ui_rules_effect_block_bg">Bloque en arrière-plan</string>
+    <string name="ui_rules_effect_allow">Autorise</string>
+    <string name="ui_rules_effect_allow_risky">Autorise, malgré l’alerte logiciel malveillant</string>
+    <string name="ui_rules_off">Désactivée</string>
+    <string name="ui_rules_d_site">Site : %1$s</string>
+    <string name="ui_rules_d_app">Appli : %1$s</string>
+    <string name="ui_rules_d_address">Adresse : %1$s</string>
+    <string name="ui_rules_d_port">Port %1$d</string>
+    <string name="ui_rules_d_unencrypted">Connexions non chiffrées uniquement</string>
+    <string name="ui_rules_use">Utiliser la règle : %1$s</string>
+    <string name="ui_rules_delete">Supprimer la règle : %1$s</string>
+    <string name="ui_rules_kind_site">Site</string>
+    <string name="ui_rules_kind_app">Appli</string>
+    <string name="ui_rules_kind_address">Adresse</string>
+    <string name="ui_rules_site_label">Nom du site, comme example.com</string>
+    <string name="ui_rules_site_invalid">Ce n’est pas un nom de site. Écrivez-le comme example.com.</string>
+    <string name="ui_rules_app_label">Nom du paquet de l’appli</string>
+    <string name="ui_rules_app_hint">Comme com.example.app. Pour bloquer une appli installée, il est plus simple de l’ouvrir dans Apps.</string>
+    <string name="ui_rules_app_invalid">Ce n’est pas un nom de paquet. Il ressemble à com.example.app.</string>
+    <string name="ui_rules_address_label">Adresse IPv4 ou plage</string>
+    <string name="ui_rules_address_hint">Comme 1.2.3.4 ou 10.0.0.0/8.</string>
+    <string name="ui_rules_allow_note">Autoriser l’emporte sur les listes de publicités et de traqueurs. Pour un site sur une liste de logiciels malveillants, CoreLock vous avertit d’abord.</string>
+</resources>

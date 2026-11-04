@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ui_settings">Réglages</string>
+    <string name="ui_set_rules">Règles et sites autorisés</string>
+    <string name="ui_set_rules_sub">Sites et applis que vous avez autorisés ou bloqués</string>
+    <string name="ui_set_blocklists">Listes de blocage</string>
+    <string name="ui_set_lists_updated">Mises à jour %1$s</string>
+    <string name="ui_set_lists_some_missing">Mises à jour %1$s. Certaines listes ne sont pas encore téléchargées.</string>
+    <string name="ui_set_lists_never">Pas encore téléchargées. Les listes intégrées sont utilisées.</string>
+    <string name="ui_set_kill_switch">Coupure d’urgence</string>
+    <string name="ui_set_ks_on">Activée : pas d’internet sans CoreLock</string>
+    <string name="ui_set_ks_off">Désactivée</string>
+    <string name="ui_set_ks_not_running">Activez la protection pour vérifier</string>
+    <string name="ui_set_ks_unsupported">Android ne peut pas l’indiquer avant Android 10</string>
+    <string name="ui_set_notifications">Notifications</string>
+    <string name="ui_set_notifications_sub">État et avertissements importants</string>
+    <string name="ui_set_show_details">Afficher les détails</string>
+    <string name="ui_set_show_details_sub">Afficher le nom des applis dans les notifications</string>
+    <string name="ui_set_weekly">Résumé hebdomadaire</string>
+    <string name="ui_set_weekly_sub">Un court rapport chaque semaine</string>
+    <string name="ui_set_language">Langue</string>
+    <string name="ui_set_appearance">Apparence</string>
+    <string name="ui_set_theme">Thème</string>
+    <string name="ui_theme_system">Système</string>
+    <string name="ui_theme_light">Clair</string>
+    <string name="ui_theme_dark">Sombre</string>
+    <string name="ui_set_data">Données</string>
+    <string name="ui_set_keep_history">Conserver l’historique</string>
+    <string name="ui_set_keep_history_sub">L’historique plus ancien est supprimé automatiquement.</string>
+    <string name="ui_set_export">Exporter l’historique</string>
+    <string name="ui_set_export_sub">Enregistrer un fichier lisible dans un tableur</string>
+    <string name="ui_set_export_title">Exporter l’historique ?</string>
+    <string name="ui_set_export_body">Le fichier indique les sites auxquels vos applis se sont connectées ces 7 derniers jours. Toute personne à qui vous l’envoyez peut le lire. Gardez-le pour vous.</string>
+    <string name="ui_set_export_action">Exporter</string>
+    <string name="ui_set_export_failed">Impossible de créer le fichier. Réessayez.</string>
+    <string name="ui_set_screenshots">Autoriser les captures d’écran</string>
+    <string name="ui_set_screenshots_sub">Désactivé, votre historique est protégé</string>
+    <string name="ui_set_clear_sub">Supprime l’historique et les statistiques. Les réglages, les règles et les listes restent.</string>
+    <string name="ui_set_cleared">Historique et statistiques supprimés.</string>
+    <string name="ui_set_about">À propos</string>
+    <string name="ui_set_version">Version</string>
+    <string name="ui_set_policy">Politique de blocage</string>
+    <string name="ui_set_policy_sub">Ce que bloque chaque niveau, et pourquoi</string>
+    <string name="ui_set_licenses">Licences open source</string>
+    <string name="ui_set_new_versions">Voir les nouvelles versions</string>
+    <string name="ui_set_new_versions_sub">Ouvre la page des versions sur GitHub</string>
+    <string name="ui_set_report">Signaler un problème</string>
+    <string name="ui_set_report_sub">Ouvre GitHub dans votre navigateur</string>
+    <string name="ui_set_no_browser">Aucune appli ne peut ouvrir ce lien.</string>
+
+    <string name="ui_ks_body">Seul Android peut bloquer internet quand CoreLock ne fonctionne pas. Activez « VPN permanent » et « Bloquer les connexions sans VPN » pour CoreLock dans les réglages VPN d’Android.</string>
+    <string name="ui_ks_tradeoff">Avec les deux activés, rien ne sort sans protection. Si CoreLock s’arrête, le téléphone reste hors ligne jusqu’au redémarrage de CoreLock.</string>
+    <string name="ui_ks_open">Ouvrir les réglages d’Android</string>
+
+    <string name="ui_lists_names">Noms bloqués</string>
+    <string name="ui_lists_refresh">Actualiser maintenant</string>
+    <string name="ui_lists_refreshing">Téléchargement des listes les plus récentes…</string>
+    <string name="ui_lists_auto">CoreLock met les listes à jour tout seul chaque semaine en Wi-Fi.</string>
+    <string name="ui_lists_details">Les détails de chaque liste sont dans Avancé › Diagnostic.</string>
+</resources>

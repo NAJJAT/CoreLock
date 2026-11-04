@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Avancé › Inspection HTTPS (1.1) -->
+    <string name="ui_https_confirm_title">Activer l’inspection HTTPS ?</string>
+    <string name="ui_https_confirm_body">CoreLock déchiffrera les connexions des applis qui font confiance à son certificat et gardera ce qu’elles envoient sur ce téléphone. La plupart des applis ne lui font pas confiance : pour elles, vous ne verrez que les noms des sites. Désactivez-la quand vous avez terminé.</string>
+    <string name="ui_https_confirm_on">Activer</string>
+    <string name="ui_https_install_cd">Installer le certificat d’inspection</string>
+</resources>

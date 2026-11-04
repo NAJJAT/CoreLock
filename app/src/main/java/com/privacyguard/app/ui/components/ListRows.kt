@@ -96,6 +96,8 @@ fun ActivityRow(
     modifier: Modifier = Modifier,
     appIcon: @Composable () -> Unit = { PlaceholderAppIcon() },
     time: String? = null,
+    /** Which app it came from; shown under the destination. */
+    subtitle: String? = null,
 ) {
     val colors = CoreLockTheme.colors
     val (statusIcon, tint) = when (kind) {
@@ -115,6 +117,7 @@ fun ActivityRow(
         Spacer(Modifier.width(CoreLockTheme.spacing.l))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(destination, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
+            if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceMuted)
             // Top-aligned: when the reason wraps (Arabic, 200 %), the icon stays on the first line.
             Row(verticalAlignment = Alignment.Top) {
                 Icon(statusIcon, contentDescription = null, tint = tint, modifier = Modifier.padding(top = 2.dp).size(16.dp))

@@ -441,6 +441,8 @@ class PrivacyVpnService : VpnService() {
         // Blocks from before a restart still fall in the last 24 h.
         scheduleBlockCountRefresh()
         com.privacyguard.app.vpn.BootReceiver.markVpnActive(this)
+        // Up again by any path (alarm, Resume now, the switch, boot): a pause is over (D1).
+        com.privacyguard.app.vpn.ProtectionPause.onProtectionStarted(this)
         com.privacyguard.vpn.WorkerGuard.onWorkerDied = ::onWorkerDied
         watchSettings(settings)
         com.privacyguard.app.data.repository.LocalDataEraser.register(dataClearListener)
