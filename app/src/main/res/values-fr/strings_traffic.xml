@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="trf_unattributed">Impossible à attribuer à une app</string>
     <string name="trf_removed_app">App supprimée</string>
     <string name="trf_source_sni">TLS SNI</string>
     <string name="trf_source_dns">DNS</string>
@@ -132,7 +131,6 @@
     <string name="ev_data_7d_def">%1$s au total. Connexions avec le plus de données en premier.</string>
     <string name="ev_beacon_row">%1$s fois · environ toutes les %2$s</string>
     <string name="ev_at">Compté à %1$s</string>
-    <string name="dash_blocked_24h">Bloqués (24 h)</string>
     <string name="dash_cleartext_24h">Non chiffrées (24 h)</string>
     <string name="sleep_definition">« Inactif » signifie écran éteint. Les apps sont classées selon les requêtes DNS faites écran éteint sur la période choisie. Touchez une app pour voir toutes ses connexions.</string>
     <string name="ev_connections_24h">Connexions · dernières 24 h</string>

@@ -127,7 +127,7 @@ class AppsRepository(private val context: Context) {
         // Allowed connections only (`between`): 1.0's numbers; blocked ones are in blockedToday.
         val recentConnections = db.connectionDao().between(since, now)
         val rules = rulesRepo.userRules()
-        val blockedToday = blockStats.perAppBetween(HomeLogic.startOfDay(now), now)
+        val blockedToday = blockStats.perAppToday(now)
         val active = db.connectionDao().countByPackageSince(now - AppsLogic.ACTIVE_WINDOW_MS).map { it.packageName }
 
         val installedApps = InstalledAppsCache.networkApps(context)

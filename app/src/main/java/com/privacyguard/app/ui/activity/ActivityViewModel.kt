@@ -34,7 +34,8 @@ import kotlinx.coroutines.Dispatchers
 sealed interface ActivityList {
     data object Loading : ActivityList
     /** [filter]: what [items] were loaded for; shown only under that filter. */
-    data class Loaded(val items: List<ActivityItem>, val now: Long, val filter: ActivityFilter = ActivityFilter.BLOCKED) : ActivityList
+    /** [blockedToday]: BlockStats.today, the number Home and the notification show (Blocked only). */
+    data class Loaded(val items: List<ActivityItem>, val now: Long, val filter: ActivityFilter = ActivityFilter.BLOCKED, val blockedToday: Int? = null) : ActivityList
     data object Error : ActivityList
 }
 
@@ -79,7 +80,7 @@ class ActivityViewModel internal constructor(
                 val signature = repo.signature(f)
                 if (signature != shown) {
                     val now = System.currentTimeMillis()
-                    emit(ActivityList.Loaded(repo.load(f, now), now, f))
+                    emit(ActivityList.Loaded(repo.load(f, now), now, f, if (f == ActivityFilter.BLOCKED) repo.blockedToday(now) else null))
                     shown = signature
                 }
                 // Throttle: rows arrive in bursts while apps are busy; writes during the

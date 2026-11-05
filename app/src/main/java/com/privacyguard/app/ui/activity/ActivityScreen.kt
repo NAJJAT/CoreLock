@@ -72,6 +72,7 @@ import com.privacyguard.core.session.BlockSource
 
 internal const val TAG_ACTIVITY_LIST = "activity_list"
 internal const val TAG_FIX_BUTTON = "activity_fix"
+internal const val TAG_BLOCKED_TODAY = "activity_blocked_today"
 
 /** Everything Activity can do, so [ActivityContent] is a plain function of its state (tested on the JVM). */
 class ActivityActions(
@@ -163,6 +164,17 @@ fun ActivityContent(state: ActivityUiState, actions: ActivityActions) {
         modifier = Modifier.fillMaxSize().testTag(TAG_ACTIVITY_LIST),
     ) {
         item(key = "header") { ActivityHeader(state.filter, actions) }
+        // Above the rows only; the empty state already says nothing was blocked.
+        loaded?.takeIf { it.items.isNotEmpty() }?.blockedToday?.let { n ->
+            item(key = "today") {
+                Text(
+                    pluralStringResource(R.plurals.ui_blocked_today_n, n, n),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CoreLockTheme.colors.onSurfaceMuted,
+                    modifier = Modifier.padding(horizontal = spacing.screen, vertical = spacing.s).testTag(TAG_BLOCKED_TODAY),
+                )
+            }
+        }
 
         when (val list = state.list) {
             ActivityList.Loading -> item(key = "loading") { LoadingSkeleton(rows = 6) }
@@ -304,7 +316,7 @@ fun ColumnScope.ActivityDetail(
     if (item.blocked) {
         Text(stringResource(R.string.ui_reason_now_note), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceMuted)
     }
-    if (item.reason == ActivityReason.ADS_LIST && item.host != null && ActivityLogic.everywhereOnly(item)) {
+    if ((item.reason == ActivityReason.ADS_LIST || item.reason == ActivityReason.AD_SDK) && item.host != null && ActivityLogic.everywhereOnly(item)) {
         Text(stringResource(R.string.ui_dns_allow_everywhere_only), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceMuted)
     }
 
@@ -375,6 +387,7 @@ internal fun groupLabel(group: ActivityGroup): Int = when (group) {
 
 internal fun reasonLabel(reason: ActivityReason): Int = when (reason) {
     ActivityReason.ADS_LIST -> R.string.ui_reason_ads
+    ActivityReason.AD_SDK -> R.string.ui_reason_ad_sdk
     ActivityReason.MALWARE_LIST -> R.string.ui_reason_malware
     ActivityReason.USER_RULE -> R.string.ui_reason_rule
     ActivityReason.LOOKUP_BYPASS -> R.string.ui_reason_lookup_bypass
@@ -418,6 +431,7 @@ internal fun whatText(item: ActivityItem): String {
 @Composable
 internal fun whyText(item: ActivityItem): String = when (item.reason) {
     ActivityReason.ADS_LIST -> stringResource(R.string.ui_why_ads)
+    ActivityReason.AD_SDK -> stringResource(R.string.ui_why_ad_sdk)
     ActivityReason.MALWARE_LIST -> stringResource(R.string.ui_why_malware)
     ActivityReason.USER_RULE -> item.ruleLabel?.let { stringResource(R.string.ui_why_rule_named, it) } ?: stringResource(R.string.ui_why_rule)
     ActivityReason.LOOKUP_BYPASS -> stringResource(R.string.ui_why_lookup_bypass)

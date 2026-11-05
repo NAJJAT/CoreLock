@@ -79,4 +79,6 @@
     <string name="ui_resume_now">Nu hervatten</string>
     <string name="pause_notif_title">Bescherming gepauzeerd</string>
     <string name="pause_notif_text">CoreLock gaat om %1$s weer aan.</string>
+    <string name="ui_reason_ad_sdk">Geblokkeerd · Een advertentietracker ingebouwd in de app</string>
+    <string name="ui_why_ad_sdk">Het is een advertentietracker die apps inbouwen. CoreLock blokkeert hem in elke app, behalve in de app die hem maakt.</string>
 </resources>

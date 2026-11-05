@@ -304,11 +304,7 @@ private fun MasterBlockCard(
                 .fillMaxWidth()
                 .background(
                     Brush.linearGradient(
-                        listOf(
-                            Color(0x2200E5A0),
-                            Color(0x1200B1FF),
-                            Color(0x10111620),
-                        )
+                        com.privacyguard.app.ui.theme.PgAdsGradient
                     ),
                     RoundedCornerShape(16.dp),
                 )
@@ -391,6 +387,10 @@ private fun CategoryCard(
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(category.subtitle, style = MaterialTheme.typography.bodySmall, color = PgTextFaint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (category.isEnabled && !category.usedAtLevel) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(stringResource(R.string.ads_not_at_level), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+        }
         Spacer(modifier = Modifier.height(10.dp))
         Box(
             modifier = Modifier
@@ -457,10 +457,18 @@ private fun SourceRow(
             Text(stringResource(R.string.ads_source_counts, source.enabledCount, pluralStringResource(R.plurals.appd_domains, source.totalCount, source.totalCount)), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
         }
         Box(modifier = Modifier.clickable(onClick = onToggle)) {
+            // On only when this level uses the list; a Strict-only list at Standard says so.
+            val on = source.isEnabled && source.usedAtLevel
             StatusPill(
-                (if (source.isEnabled) stringResource(R.string.ads_on) else stringResource(R.string.diag_off)).uppercase(),
-                if (source.isEnabled) PgAccentDim else PgBackgroundAlt,
-                if (source.isEnabled) PgAccent else PgTextMuted,
+                stringResource(
+                    when {
+                        on -> R.string.ads_on
+                        source.isEnabled -> R.string.ads_pill_not_used
+                        else -> R.string.diag_off
+                    }
+                ).uppercase(),
+                if (on) PgAccentDim else PgBackgroundAlt,
+                if (on) PgAccent else PgTextMuted,
             )
         }
     }

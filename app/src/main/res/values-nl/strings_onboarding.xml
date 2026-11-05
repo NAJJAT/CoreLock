@@ -1,35 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="onb_1_title">Jouw toestel. Jouw regels.</string>
-    <string name="onb_1_body">De app draait een lokale VPN om elke verbinding van je apps te zien, zodat niets ongemerkt je toestel verlaat.</string>
-    <string name="onb_1_b1">Kijkt alleen naar verbindingsgegevens: er wordt geen inhoud ontsleuteld tenzij je HTTPS-inspectie aanzet</string>
-    <string name="onb_1_b2">Werkt op je toestel, zonder cloudaccount</string>
-    <string name="onb_1_b3">Android kan verkeer blokkeren als de bescherming wegvalt (Altijd-aan-VPN)</string>
-    <string name="onb_2_title">Wat het opspoort</string>
-    <string name="onb_2_body">Meerdere analyselagen tonen wat je telefoon normaal niet laat zien.</string>
-    <string name="onb_2_b1">Apps die plotseling op een nieuwe manier verbinden (TLS-vingerafdrukken)</string>
-    <string name="onb_2_b2">DNS-tunneling en willekeurig ogende (DGA-)domeinen</string>
-    <string name="onb_2_b3">Tracker-SDK’s die in je apps zijn ingebouwd</string>
-    <string name="onb_2_b4">Apps die op de achtergrond het netwerk gebruiken</string>
-    <string name="onb_2_b5">Onversleutelde verbindingen</string>
-    <string name="onb_3_title">Wat je zelf bepaalt</string>
-    <string name="onb_3_body">Blokkeer alles: per app, per domein, per IP of overal. Regels werken meteen.</string>
-    <string name="onb_3_b1">Specifieke apps, domeinen of IP-adressen blokkeren</string>
-    <string name="onb_3_b2">Alle onversleutelde of zwakke TLS blokkeren</string>
-    <string name="onb_3_b3">Voorgestelde regels op basis van wat je apps doen</string>
-    <string name="onb_3_b4">Logboeken exporteren als PCAP, CSV of IT-rapport</string>
-    <string name="onb_start">Begrepen: start de bewaking</string>
-    <string name="onb_continue">Doorgaan zonder de VPN aan te zetten</string>
-    <string name="onb_next">Volgende</string>
-    <string name="onb_consent_title">Wat deze app doet</string>
-    <string name="onb_consent_body">Lees en bevestig elk punt voordat je verdergaat.</string>
-    <string name="onb_c_net">Netwerkbewaking</string>
     <string name="onb_c_net_body">Er wordt een lokale VPN op dit toestel gemaakt. Al het netwerkverkeer gaat erdoor, zodat de app kan tonen welke apps met wie praten. Er wordt nooit iets naar de makers van CoreLock gestuurd.\nWat dit toestel wel verlaat:\n• Je DNS-opzoekingen, naar de resolver die je in Instellingen kiest (standaard Cloudflare 1.1.1.1; alleen versleuteld naar cloudflare-dns.com, dns.google of dns.quad9.net als je DoH aanzet).\n• Downloads van blokkeerlijsten, ongeveer eens per week: de HaGeZi-lijsten van raw.githubusercontent.com (of cdn.jsdelivr.net als GitHub niet bereikbaar is) en de OISD-lijst van small.oisd.nl.\n• De Exodus-trackerlijst, hoogstens eens per week: reports.exodus-privacy.eu.org.\nAlleen als je ze in Instellingen aanzet:\n• Certificate Transparency-controles: de domeinen die je bezoekt gaan naar crt.sh.\n• De controle van je publieke IP-adres in Diagnose: vraagt api.ipify.org.</string>
-    <string name="onb_c_https">Inspectie van HTTPS-verkeer (optioneel)</string>
-    <string name="onb_c_https_body">Om de inhoud van HTTPS-verkeer te lezen, werkt CoreLock als lokale proxy en installeer je zijn certificaat in de instellingen van Android. Met dit vinkje geef je toestemming; inspectie blijft uit tot je ze aanzet in het Payload-scherm.\nAndroid houdt dat certificaat na het verwijderen van CoreLock. Verwijder het zelf: open Instellingen, zoek op ‘Gebruikerscertificaten’ (meestal onder Beveiliging → Meer beveiligingsinstellingen → Versleuteling en inloggegevens), tik op ‘PrivacyGuard Enterprise CA’ en kies Verwijderen.</string>
-    <string name="onb_c_storage">Lokale opslag</string>
     <string name="onb_c_storage_body">Verkeerslogboeken worden versleuteld in de privéopslag van de app op dit toestel bewaard. Ze worden nooit geüpload. Ze verlaten het toestel alleen als je zelf een export deelt (PCAP, CSV of IT-rapport). Je kunt ze altijd wissen in Instellingen.</string>
-    <string name="onb_required_note">Vink de verplichte punten aan om verder te gaan.</string>
-    <string name="onb_required">Verplicht</string>
-    <string name="onb_optional">Optioneel</string>
+    <!-- 1.1 onboarding -->
+    <string name="onb11_step">Stap %1$d van %2$d</string>
+    <string name="onb11_what_title">CoreLock beschermt deze telefoon</string>
+    <string name="onb11_what_body">Het blokkeert advertenties, trackers en malware op deze telefoon.</string>
+    <string name="onb11_what_private">Er gaat niets van je telefoon naar ons: je geschiedenis blijft hier, versleuteld.</string>
+    <string name="onb11_what_limit">Het kan geen advertenties blokkeren in YouTube, Instagram, Snapchat, TikTok of Facebook.</string>
+    <string name="onb11_next">Volgende</string>
+    <string name="onb11_vpn_title">Waarom Android naar een VPN vraagt</string>
+    <string name="onb11_vpn_body">CoreLock gebruikt de VPN-functie van Android om verbindingen op je telefoon te controleren. Je verkeer wordt niet naar ons gestuurd: we hebben geen servers.</string>
+    <string name="onb11_vpn_ask">Android vraagt je één keer om dit toe te staan.</string>
+    <string name="onb11_leaves">Wat deze telefoon verlaat</string>
+    <string name="onb11_continue">Doorgaan</string>
+    <string name="onb11_level_title">Hoeveel moet CoreLock blokkeren?</string>
+    <string name="onb11_level_body">Je kunt dit altijd wijzigen op Start.</string>
+    <string name="onb11_battery">Android beperkt CoreLock op de achtergrond, dus de bescherming kan stoppen. Sta toe dat het op de achtergrond werkt.</string>
+    <string name="onb11_battery_action">Batterij-instellingen openen</string>
+    <string name="onb11_done">Klaar</string>
 </resources>

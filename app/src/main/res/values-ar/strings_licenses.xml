@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="set_open_source_licenses">تراخيص المصادر المفتوحة</string>
 
     <string name="lic_title">تراخيص المصادر المفتوحة</string>
     <string name="lic_subtitle">ترخيص هذا التطبيق، وتراخيص البرامج والبيانات التي يستخدمها</string>

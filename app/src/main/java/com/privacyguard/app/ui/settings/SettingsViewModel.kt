@@ -72,14 +72,10 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             RuleSyncBus.version.collect { refreshRules() }
         }
-        // Posture check is a system call; refresh every 30s rather than every 1s
+        // App integrity is a system call whose answer does not change while a screen is
+        // open: read once each time a screen starts showing it, not every 30 s.
         viewModelScope.launchWhileObserved(_securityState) {
-            while (true) {
-                try { refreshPosture() }
-                catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                catch (_: Exception) { }
-                delay(30_000)
-            }
+            com.privacyguard.app.ui.loadLogged("Settings") { refreshPosture() }
         }
     }
 

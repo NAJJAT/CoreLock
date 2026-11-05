@@ -19,8 +19,10 @@ enum class ActivityGroup { JUST_NOW, TODAY, YESTERDAY, EARLIER }
  * (ADR 0010, no schema change): from the user's rules and the lists as they are now.
  */
 enum class ActivityReason {
-    /** An ad, tracker or telemetry list (or the ad-SDK policy, which blocks the same kind of names). */
+    /** An ad, tracker or telemetry list. */
     ADS_LIST,
+    /** An ad tracker that apps build in, blocked in every app but its maker (AdSdkPolicy). */
+    AD_SDK,
     /** A malware or phishing list. Allowing it needs the security warning first. */
     MALWARE_LIST,
     /** One of the user's own Block rules. */
@@ -136,6 +138,7 @@ object ActivityLogic {
      * @param onBlockList the name or a parent of it is on an ad, tracker or telemetry list now.
      *   Lookups store no source, so without it a name blocked by a rule deleted since
      *   would be shown as listed; only a list we can find is named.
+     * @param adSdkBlocks the ad-SDK policy blocks this name in this app now (not a list)
      * @param port the destination port of a connection: plain lookups on port 53 that
      *   skip CoreLock's resolver (over TCP or IPv6) are dropped with no source recorded
      */
@@ -147,6 +150,7 @@ object ActivityLogic {
         onMalwareList: Boolean,
         port: Int? = null,
         onBlockList: Boolean = true,
+        adSdkBlocks: Boolean = false,
     ): ActivityReason {
         if (!blocked) return ActivityReason.ALLOWED
         // Ports closed before any rule runs (PrivacyVpnService): no rule can open them, so
@@ -163,6 +167,7 @@ object ActivityLogic {
                 when {
                     onMalwareList -> ActivityReason.MALWARE_LIST
                     onBlockList -> ActivityReason.ADS_LIST
+                    adSdkBlocks -> ActivityReason.AD_SDK
                     else -> ActivityReason.SETTING
                 }
             // A connection without a recorded source: a port or security policy, or a rule
@@ -208,7 +213,8 @@ object ActivityLogic {
             ActivityReason.MALWARE_LIST ->
                 if (item.host != null) listOf(ActivityAction.KEEP_BLOCKED, ActivityAction.ALLOW_ANYWAY)
                 else listOf(ActivityAction.KEEP_BLOCKED)
-            ActivityReason.ADS_LIST -> when {
+            // A user Allow rule wins over both (CLAUDE.md §5.3), so both offer the same choices.
+            ActivityReason.ADS_LIST, ActivityReason.AD_SDK -> when {
                 item.host == null -> listOf(ActivityAction.KEEP_BLOCKED)
                 everywhereOnly(item) -> listOf(ActivityAction.ALLOW_EVERYWHERE, ActivityAction.KEEP_BLOCKED)
                 else -> listOf(ActivityAction.ALLOW_FOR_APP, ActivityAction.ALLOW_EVERYWHERE, ActivityAction.KEEP_BLOCKED)

@@ -191,6 +191,9 @@ class DebugHooksReceiver : BroadcastReceiver() {
             // Screenshots in light and dark before the Settings row exists:
             //   adb shell am broadcast -a com.privacyguard.debug.SET_SETTING --es name appearance --es mode LIGHT -p PKG
             "appearance" -> s.setAppearance(intent.getStringExtra("mode") ?: "SYSTEM")
+            // Shows the first-start screens again without clearing data:
+            //   adb shell am broadcast -a com.privacyguard.debug.SET_SETTING --es name onboarding_done --ez value false -p PKG
+            "onboarding_done" -> s.setOnboardingCompleted(value)
             else -> { Log.w(TAG, "SETTING unknown name"); return }
         }
         Log.i(TAG, "SETTING ${intent.getStringExtra("name")}=$value")

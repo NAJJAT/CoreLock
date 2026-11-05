@@ -64,6 +64,11 @@ class ActivityRepository(private val context: Context) : RuleStore {
         build(lookups, connections).sortedByDescending { it.timestamp }.take(limit)
     }
 
+    /** The one "blocked today" count (BlockStats.today), so Activity says what Home says. */
+    suspend fun blockedToday(now: Long): Int = withContext(Dispatchers.IO) {
+        com.privacyguard.app.data.repository.BlockStats(db).today(now)
+    }
+
     /** Blocked rows of the last hour, for the fix flow. */
     suspend fun lastHourBlocked(now: Long = System.currentTimeMillis()): List<ActivityItem> = withContext(Dispatchers.IO) {
         val from = now - ActivityLogic.FIX_WINDOW_MS
@@ -177,6 +182,7 @@ class ActivityRepository(private val context: Context) : RuleStore {
                         reason = ActivityLogic.reasonFor(
                             q.wasBlocked, true, BlockSource.DNS, rule, malware,
                             onBlockList = q.wasBlocked && !malware && isListed(host),
+                            adSdkBlocks = q.wasBlocked && adSdkBlocks(pkg, host),
                         ),
                         ruleId = rule?.takeIf { it.action == FilterRule.Action.DENY }?.id,
                         ruleLabel = rule?.takeIf { it.action == FilterRule.Action.DENY }?.label,
@@ -209,6 +215,7 @@ class ActivityRepository(private val context: Context) : RuleStore {
                         reason = ActivityLogic.reasonFor(
                             c.wasBlocked, false, source, decision, malware, port = c.destinationPort,
                             onBlockList = c.wasBlocked && !malware && host != null && isListed(host),
+                            adSdkBlocks = c.wasBlocked && host != null && adSdkBlocks(pkg, host),
                         ),
                         ruleId = decision?.takeIf { it.action == FilterRule.Action.DENY }?.id,
                         ruleLabel = decision?.takeIf { it.action == FilterRule.Action.DENY }?.label,
@@ -241,6 +248,15 @@ class ActivityRepository(private val context: Context) : RuleStore {
     }
 
     private suspend fun isMalware(host: String): Boolean = cached(malwareCache, host) { blocklists.isSecurityThreat(it) }
+
+    // The same policy and setting the VPN uses (PrivacyVpnService): pure, no database.
+    private val adSdkPolicy by lazy {
+        val settings = com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(context)
+        com.privacyguard.app.adprivacy.AdSdkPolicy(enabled = { settings.adSdkBlockingEnabled.value })
+    }
+
+    private fun adSdkBlocks(pkg: String, host: String): Boolean =
+        adSdkPolicy.decide(pkg.ifBlank { null }, host) is com.privacyguard.app.adprivacy.AdSdkVerdict.Block
 
     private suspend fun isListed(host: String): Boolean = cached(listedCache, host) { blocklists.isOnBlockList(it) }
 

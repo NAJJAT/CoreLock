@@ -87,4 +87,6 @@
     <string name="ui_resume_now">استأنف الآن</string>
     <string name="pause_notif_title">الحماية متوقفة مؤقتًا</string>
     <string name="pause_notif_text">يعود CoreLock للعمل في %1$s.</string>
+    <string name="ui_reason_ad_sdk">محظور · متتبّع إعلانات مدمج في التطبيق</string>
+    <string name="ui_why_ad_sdk">إنه متتبّع إعلانات تدمجه التطبيقات في داخلها. يحظره CoreLock في كل التطبيقات ما عدا التطبيق الذي يصنعه.</string>
 </resources>

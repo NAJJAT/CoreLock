@@ -11,10 +11,8 @@
     <string name="stats_gen_it">Générer le rapport pour le service informatique</string>
     <string name="stats_gen_it_confirm">Confirmez votre identité avant d’exporter les données de sécurité</string>
     <string name="stats_share_it">Partager avec le service informatique</string>
-    <string name="stats_csv_ready">CSV prêt — touchez pour le partager</string>
     <string name="stats_csv_export">Exporter le CSV sur 7 jours</string>
     <string name="stats_share_log">Partager le journal des connexions</string>
-    <string name="stats_share_csv">Partager le CSV</string>
     <string name="stats_network_map">Carte du réseau</string>
     <string name="stats_map_legend">Arcs : vert = peu de connexions · orange = plus · rouge = le plus (24 h)</string>
     <string name="stats_by_org">Trafic par organisation</string>
@@ -39,29 +37,10 @@
     </plurals>
     <string name="stats_top_countries">Principaux pays de destination</string>
     <string name="stats_networks">Réseaux mémorisés</string>
-    <string name="stats_network_counts">%1$s · %2$s · %3$s</string>
-    <plurals name="stats_cleartext_n">
-        <item quantity="one">%d en clair</item>
-        <item quantity="many">%d en clair</item>
-        <item quantity="other">%d en clair</item>
-    </plurals>
-    <plurals name="stats_dns_anomaly_n">
-        <item quantity="one">%d anomalie DNS</item>
-        <item quantity="many">%d anomalies DNS</item>
-        <item quantity="other">%d anomalies DNS</item>
-    </plurals>
-    <plurals name="stats_weak_tls_n">
-        <item quantity="one">%d TLS faible</item>
-        <item quantity="many">%d TLS faibles</item>
-        <item quantity="other">%d TLS faibles</item>
-    </plurals>
     <string name="stats_trend">Évolution des connexions sur 7 jours</string>
     <string name="stats_total">Total</string>
     <string name="stats_top_apps">Apps les plus gourmandes en données (24 h)</string>
     <string name="stats_f_encryption">Chiffrement</string>
-    <string name="stats_f_encrypted">%1$s chiffré</string>
-    <string name="stats_f_blocked">%1$s des requêtes DNS bloquées</string>
-    <string name="stats_f_cleartext">En clair</string>
     <string name="stats_score_factors">Facteurs du score</string>
     <string name="stats_today">Aujourd’hui</string>
     <string name="stats_blocked_port">%1$s · port %2$d bloqué</string>
@@ -69,4 +48,5 @@
     <string name="stats_f_blocklist">Liste de blocage</string>
     <string name="stats_f_background">Arrière-plan</string>
     <string name="stats_f_points">%1$d/%2$d</string>
+    <string name="stats_blocked_today">Bloqués aujourd\'hui</string>
 </resources>

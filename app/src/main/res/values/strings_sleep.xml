@@ -25,10 +25,6 @@
         <item quantity="one">%d while off</item>
         <item quantity="other">%d while off</item>
     </plurals>
-    <plurals name="sleep_total_n">
-        <item quantity="one">%d total</item>
-        <item quantity="other">%d total</item>
-    </plurals>
     <plurals name="sleep_idle_queries">
         <item quantity="one">%d DNS lookup while the screen was off</item>
         <item quantity="other">%d DNS lookups while the screen was off</item>

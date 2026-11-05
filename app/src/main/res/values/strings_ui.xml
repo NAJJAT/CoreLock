@@ -11,7 +11,6 @@
     <string name="ui_dismiss">Dismiss</string>
     <string name="ui_close">Close</string>
     <string name="ui_loading">Loading</string>
-    <string name="ui_learn_more">Learn more</string>
     <string name="ui_warning">Warning</string>
     <string name="ui_open_settings">Open settings</string>
     <string name="ui_turn_on">Turn on</string>
@@ -103,4 +102,5 @@
     <string name="ui_clear_all_data">Clear all data</string>
     <string name="ui_what_corelock_cant">What CoreLock can and can\'t do</string>
     <string name="ui_what_corelock_cant_body">CoreLock blocks ads, trackers and malware for the apps on this phone. It can\'t block ads inside YouTube, Instagram, Snapchat, TikTok or Facebook, because they come from the same servers as the videos and posts.</string>
+    <string name="ui_error_load">Couldn\'t load the latest data. What you see may be out of date.</string>
 </resources>

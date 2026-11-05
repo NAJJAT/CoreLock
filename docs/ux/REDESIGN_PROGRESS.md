@@ -18,8 +18,8 @@ Nothing here is committed by the agent; the owner commits.
 | 7 | Advanced (Network, HTTPS inspection D5, Analysis, Diagnostics, …) | **Done** (2026-11-04; 7a and 7b, emulator checked) |
 | 8 | Navigation: 4 tabs, old routes, What's new (D12), 200 % | **Done** (2026-11-04, emulator checked) |
 | D2 | Export and import of rules and settings (ADR 0013) | **Done** (2026-11-04, emulator checked) |
-| 9 | Onboarding, splash, vector icon | To do |
-| 10 | Polish: polling loops → Flow, one count source, tokens, audit findings | To do |
+| 9 | Onboarding, splash, vector icon | **Done** (2026-11-04, emulator checked) |
+| 10 | Polish: polling loops → Flow, one count source, tokens, audit findings | **Done** (2026-11-05, emulator checked) |
 | — | Final regression, idle CPU, checks | **Done** (2026-11-04, see the end of this log) |
 | — | Release prep 1.1.0 | **Done** (2026-11-04; signed APK and checksum by the owner) |
 
@@ -569,6 +569,63 @@ added to `docs/PHONE_TEST_1.1.0.md`.
 
 senior-android-engineer (untrusted-input design, threat check: file from a chat, MDM, the
 malware override), android-cli/adb on emulator-5554. Nothing installed.
+
+## Phase 9: onboarding, splash, icon (done 2026-11-04)
+
+- **Onboarding** (`ui/onboarding/OnboardingScreen.kt`): three screens, "Step N of 3".
+  1. What CoreLock does, that history stays on the phone, and what it can't block.
+  2. Why Android asks about a VPN; "What leaves this phone" opens the network and storage
+     disclosure; the Private DNS warning comes before Android's VPN question.
+  3. Level (Standard preselected); battery advice only when Android restricts the app.
+  The HTTPS-inspection consent box was removed from onboarding (safer: consent only on the
+  HTTPS inspection screen, with D5). `OnboardingScreenTest` (7).
+- **Icon:** vector shield with a keyhole (`drawable/ic_launcher_*`), adaptive with a
+  monochrome layer (themed icons), a vector mipmap for API 24–25; the robot WebPs are gone.
+- **Splash:** `values-v31/themes.xml` (platform splash attributes), launch background in
+  `colors_launch.xml` (light) and `values-night` (dark).
+- Emulator: splash, launcher, the three steps, the disclosure sheet, Done → Home at
+  Standard with the VPN on; Arabic at 200 %. Screenshots: `phase9\`.
+
+## Phase 10: polish (done 2026-11-05)
+
+Owner's decisions of 2026-11-04 and the open audit items.
+
+| Item | What was done | Test |
+|---|---|---|
+| Exports and the device lock (decision 1) | History export and the Statistics CSV go through `runProtected`, like D2. The CSV export is one button that shares the file (the old "CSV ready" label exported again). | no unit test (the lock is the existing `runProtected`); emulator: debug builds stop at the integrity check, as designed |
+| One "blocked today" (decision 2) | `BlockStats.today` / `perAppToday` / `todayCounts` (local midnight to now) in the notification (also refreshed at midnight), Home, Activity ("N blocked today"), Apps, Statistics, Ads and Security systems. The Statistics and Security systems tiles open the Activity Blocked list. | `BlockCountAgreementTest` (5; found a midnight off-by-one); mutation: 24 h window back in Statistics and in Security systems → fails |
+| TLS explainer (decision 3) | "What is a TLS fingerprint?" in Security analysis' TLS section. | `TlsExplainerTest` |
+| Ad-SDK reason (decision 4) | `ActivityReason.AD_SDK`: "Blocked · An ad tracker built into the app". | `ActivityLogicTest` (+2) |
+| "1.0.1" wording (decision 5) | "a later release" in CLAUDE.md, ADR 0011, the security-test doc. | — |
+| Polling loops (audit) | 8 loops → `ui/DbChanges.kt` (`changesOf`, `Reloader`): reload when Room reports a change, at most every 2–15 s; a load error shows `LoadFailedBanner` with Try again. | full suite |
+| Theme tokens (audit) | `ThemeTokenUsageTest` LEGACY list emptied. | `ThemeTokenUsageTest` |
+| Light theme on the 1.0 screens (found 2026-11-05) | The `Pg…` colours were dark-only: Domain detail, App traffic, Alerts, Statistics, Security systems, Security analysis, Ads and others drew near-white text on the light background. They now follow the theme (`LegacyDark` = the 1.0 values, `LegacyLight` from the 1.1 light tokens). | `LegacyPaletteContrastTest` (3); mutation: light text back to near-white → fails |
+| Faint text contrast (audit §5) | `PgTextFaint` 2.4–3.3:1 → 4.5:1 or more on every panel. | `LegacyPaletteContrastTest` |
+| Plain words (spec §7.1) | Two everyday strings rewritten; App detail's stale "Payload Inspector" hint fixed. | `BannedWordsTest`; mutation: "packet captures" back → fails |
+| Ads lists "ON" at every level (audit) | Lists the level doesn't use say "Not used". | `AdsLevelUseTest` |
+| Titles (audit) | "Crypto analysis" → "Security analysis"; Security systems was titled "Dashboard", now "Security systems", subtitle "Protection is on". | emulator |
+| Unused strings | 158 names nothing used, deleted in all four languages. | build, lint |
+| Lint error | Onboarding read `protectionLevel.value` during composition → `collectAsStateWithLifecycle`. | lint 0 errors |
+
+Already solved earlier, checked again: Domain detail "about 0 per day" (now "less than once
+a day"); Rules delete button 48 dp; the 10 sp letter-spaced label style (the 1.1 type scale
+replaced it); Runtime posture now only under Advanced › Diagnostics.
+
+Not changed (rule 4, for the owner): the TLS-fingerprint alert severity (a Chrome update can
+still raise a HIGH alert); the HTTPS-inspection screen's 5 s status loop (MITM code).
+
+### Emulator (emulator-5554, API 37), 2026-11-05
+
+Light: Domain detail, Statistics, Security systems, Alerts, Security analysis, Ad privacy,
+Ads detail all readable. Dark: Security systems and Security analysis look as before.
+Notification "8 blocked today" = Home 8 = Activity "8 blocked today" (Statistics 5 = Home 5
+and Security systems 7 = Home 7 earlier the same morning). Screenshots: `regression2\`.
+Not seen on the emulator: the AD_SDK row (needs an app with a listed ad SDK; covered by unit
+tests); the device-lock prompt itself (debug builds stop at the integrity check).
+
+Idle CPU, 60 s each, screen on and untouched: Activity 1.2 %, Home 1.1 %, Statistics 1.1 %,
+Security systems 1.1 % of one core (audit, release build: Home 42 %, Stats 68 %).
+
 
 ## Release preparation 1.1.0 (done 2026-11-04; no signed APK built)
 

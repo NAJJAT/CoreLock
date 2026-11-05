@@ -27,10 +27,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.privacyguard.app.ui.launchWhileObserved
+import com.privacyguard.app.ui.changesOf
+import kotlinx.coroutines.flow.combine
 
 data class DashboardUiState(
     val isVpnActive: Boolean = false,
-    /** DNS lookups blocked in the 24 h before [evidenceAt]; opens [EvidenceKind.BLOCKED_24H]. */
+    /** Blocked today (BlockStats.todayCounts); opens the Activity tab, Blocked, like Home. */
     val trackersBlocked: Int = 0,
     /** Distinct destinations behind [trackersBlocked]. */
     val blockedDomains24h: Int = 0,
@@ -124,30 +126,25 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
     @Volatile private var slowCacheReady: Boolean = false
 
+    private val reloader = com.privacyguard.app.ui.Reloader("SecurityOverview")
+    /** True while the latest load failed; the last numbers stay on screen. */
+    val loadFailed: StateFlow<Boolean> = reloader.failed
+    fun retry() = reloader.retry()
+
     init {
-        // Fast path: live values only (VPN state, throughput, active sessions) — every 1 s.
+        // Live values (VPN state, speed, open connections) follow the engine's in-memory
+        // snapshot, published once a second while it runs; nothing is read from the database.
         viewModelScope.launchWhileObserved(_uiState) {
-            while (true) {
-                try {
-                    if (slowCacheReady) {
-                        refreshFast()
-                        delay(1_000)
-                    } else {
-                        delay(250)
-                    }
-                } catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                  catch (_: Exception) { delay(1_000) }
-            }
+            combine(StatsManager.snapshot, PrivacyVpnService.state) { _, _ -> }
+                .collect { if (slowCacheReady) refreshFast() }
         }
-        // Slow path: every number that opens a list is computed here from complete
-        // queries (no LIMIT), anchored at one timestamp.
+        // Every number that opens a list: complete queries (no LIMIT) at one timestamp,
+        // when the tables behind them change, at most every 15 s (they read a whole week).
         viewModelScope.launchWhileObserved(_uiState) {
-            while (true) {
-                try {
-                    refreshSlow()
-                } catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                  catch (_: Exception) { /* keep the last good numbers */ }
-                delay(15_000)
+            val tables = arrayOf("connections", "dns_queries", "dns_anomalies", "tls_alerts", "connection_profiles")
+            reloader.runOn(db.changesOf(*tables, minIntervalMs = 15_000)) {
+                refreshSlow()
+                refreshFast()
             }
         }
     }
@@ -198,7 +195,8 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
 
         val encryption = HomeEvidence.encryptionShare(day)
         // Same windows and definition as the lists they open (HomeEvidence BLOCKED_*).
-        val blocks24h = com.privacyguard.app.data.repository.BlockStats(db).between(at - EvidenceKind.BLOCKED_24H.windowMs, at)
+        // "Blocked today": the one count Home, Activity, Statistics and the notification show.
+        val blocksToday = com.privacyguard.app.data.repository.BlockStats(db).todayCounts(at)
         val blocks7d = com.privacyguard.app.data.repository.BlockStats(db).between(at - EvidenceKind.BLOCKED_7D.windowMs, at)
         val cards = buildSecurityCards(day, weekAnomalies, behaviorAlerts, trustSummary, inspectionActive)
         val levelDomains = PrivacyScoreCalculator.blockedDomainsForLevel(db, prefs.protectionLevel.value)
@@ -226,8 +224,8 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
         )
 
         _uiState.value = _uiState.value.copy(
-            trackersBlocked = blocks24h.total,
-            blockedDomains24h = blocks24h.domains,
+            trackersBlocked = blocksToday.total,
+            blockedDomains24h = blocksToday.domains,
             cleartextCount = HomeEvidence.select(EvidenceKind.CLEARTEXT_24H, day).size,
             blocklistDomains = levelDomains,
             // Same share as the privacy score and Stats: of connections we could identify.

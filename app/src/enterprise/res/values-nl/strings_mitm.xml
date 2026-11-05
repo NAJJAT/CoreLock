@@ -17,7 +17,6 @@
     <string name="mitm_later">Later</string>
     <string name="mitm_remove_ca_title">Het inspectiecertificaat verwijderen</string>
     <string name="mitm_remove_ca_body">Inspectie staat uit en de ondertekeningssleutel is verwijderd, maar Android vertrouwt de geïnstalleerde CA nog. Verwijder die via Instellingen → Beveiliging → Versleuteling en inloggegevens → Gebruikersgegevens.</string>
-    <string name="mitm_badge_payload">Payload</string>
     <string name="mitm_filter_all">Alle</string>
     <string name="mitm_filter_flagged">⚑ Gemarkeerd</string>
     <string name="mitm_filter_body">Met body</string>
@@ -62,7 +61,6 @@
     <string name="mitm_tab_headers">Headers</string>
     <string name="mitm_tab_risk">Risico</string>
     <string name="mitm_tab_fields">Velden</string>
-    <string name="mitm_captures">Vastleggingen</string>
     <string name="mitm_dir">Richting</string>
     <string name="mitm_proto">Protocol</string>
     <string name="mitm_size">Grootte</string>

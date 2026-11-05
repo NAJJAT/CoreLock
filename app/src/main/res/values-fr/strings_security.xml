@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="sec_title">Analyse du chiffrement</string>
     <string name="sec_subtitle">Empreintes TLS · suites de chiffrement · moniteur CT</string>
     <string name="sec_ja3_threats">Correspondances JA3</string>
     <string name="sec_weak_ciphers">Chiffrements faibles</string>

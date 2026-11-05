@@ -151,20 +151,13 @@ fun AppNavHost(
             modifier = Modifier.padding(innerPadding),
         ) {
             composable("onboarding") {
+                val level by settingsPreferences.protectionLevel.collectAsStateWithLifecycle()
                 OnboardingScreen(
-                    onEnableVpn = { tlsAccepted ->
-                        settingsPreferences.recordVpnConsent()
-                        if (tlsAccepted) com.privacyguard.vpn.interception.TlsInterceptionFactory.recordConsent(context)
-                        settingsPreferences.setOnboardingCompleted(true)
-                        navController.navigate("dashboard") {
-                            popUpTo("onboarding") { inclusive = true }
-                            launchSingleTop = true
-                        }
-                        onRequestVpn()
-                    },
-                    onGetStarted = { tlsAccepted ->
-                        settingsPreferences.recordVpnConsent()
-                        if (tlsAccepted) com.privacyguard.vpn.interception.TlsInterceptionFactory.recordConsent(context)
+                    initialLevel = level,
+                    onVpnConsent = settingsPreferences::recordVpnConsent,
+                    onRequestVpn = onRequestVpn,
+                    onFinish = { level ->
+                        settingsPreferences.setProtectionLevel(level)
                         settingsPreferences.setOnboardingCompleted(true)
                         navController.navigate("dashboard") {
                             popUpTo("onboarding") { inclusive = true }
@@ -336,6 +329,7 @@ fun AppNavHost(
                         onOpenEvidence = { kind, at -> navController.navigate("evidence/${kind.name}?at=$at") },
                         onOpenDomain = { host -> navController.navigate("domain/${Uri.encode(host)}") },
                         onOpenApp = { pkg -> navController.navigate(appTrafficRoute(pkg)) },
+                        onOpenBlocked = { navController.navigate("connections") { launchSingleTop = true } },
                     )
                 }
             }

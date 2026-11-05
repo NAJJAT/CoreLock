@@ -77,6 +77,17 @@ APK first, then 1.1.0 installed over it.
 4. Kill switch: Android Settings › Network › VPN › CoreLock › turn on
    **Always-on VPN** and **Block connections without VPN**.
    **Expected:** see step 6.
+5. Look at the launcher. **Expected:** the new CoreLock icon (a shield with a keyhole), not
+   the Android robot. With themed icons on (Android 13+, Wallpaper & style), it follows
+   the wallpaper colours. Opening the app shows the same icon on a plain background.
+6. Compare "blocked today" in the notification, on Home, at the top of Activity › Blocked,
+   in Statistics and in Settings › Advanced › Analysis › Security systems, within a minute.
+   **Expected:** the same number everywhere (a block that arrives in between can add one).
+7. Settings › Appearance › Light, then open Statistics, Security systems, Security analysis
+   and Alerts. **Expected:** dark text on light backgrounds; nothing unreadable. Set it back.
+8. Optional, on a spare phone or the emulator only (it deletes CoreLock's data): a fresh
+   install. **Expected:** three setup screens ("Step 1 of 3" to "Step 3 of 3"), Android's
+   VPN question once, Standard preselected, then Home.
 
 ### 3. Blocklists
 
@@ -216,7 +227,8 @@ to remove the certificate.
    **Expected:** numbers are non-zero after a day of use and no screen shows an error.
 2. Settings › Data › **Export history** (or Statistics › export CSV). Open the file on the
    computer. **Expected:** 7 days of connections; no cell starts with `=`, `+`, `-` or
-   `@` unless it is escaped with a leading `'`.
+   `@` unless it is escaped with a leading `'`. Both exports first ask for your
+   screen lock; cancelling it exports nothing.
 
 ### 14. Memory
 
@@ -278,7 +290,7 @@ Dates: ________
 | # | Check | Result (PASS / FAIL / SKIP) | Numbers and notes |
 |---|---|---|---|
 | 1 | Checksums and fingerprint; 1.0.0, then 1.1.0 over it, data kept; What's new card once | | |
-| 2 | Four tabs, Private DNS warning, battery screen | | |
+| 2 | Four tabs, Private DNS warning, battery screen; new icon; one blocked-today number; light mode on expert screens | | |
 | 3 | Blocklist counts (Standard / Strict total), refresh jobs | | Standard: ___ Strict: ___ |
 | 4 | Daily use at Standard (Chrome, YouTube, WhatsApp video call, bank) | | |
 | 5 | Daily use at Strict; Chrome Safe Browsing warning | | |
@@ -289,7 +301,7 @@ Dates: ________
 | 10 | Fix flow (≤ 3 taps, Undo); pause comes back after 5 min with the app swiped away | | |
 | 11 | Export (lock prompt, private warning) and import round trip | | |
 | 12 | HTTPS inspection asks before turning on | | |
-| 13 | Diagnostics counters, CSV export | | |
+| 13 | Diagnostics counters, CSV export (asks for the screen lock) | | |
 | 14 | Memory (TOTAL PSS at Strict) | | Morning: ___ MB Evening: ___ MB |
 | 15 | CPU, Home / Activity / Statistics / screen off (blocker above 10 %) | | Home: ___ % Activity: ___ % Stats: ___ % Off: ___ % |
 | 16 | Battery over one day | | ___ % |

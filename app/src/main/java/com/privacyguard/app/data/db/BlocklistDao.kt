@@ -208,7 +208,16 @@ interface BlocklistDao {
         ORDER BY totalCount DESC
     """)
     suspend fun getCategoryToggleStats(): List<CategoryToggleStats>
+
+    /** Which categories each list fills: the Ads screen says which lists the current level uses. */
+    @Query("SELECT DISTINCT source, category FROM blocklist")
+    suspend fun sourceCategories(): List<SourceCategory>
 }
+
+data class SourceCategory(
+    val source: String,
+    val category: String,
+)
 
 data class SourceStats(
     val source: String,

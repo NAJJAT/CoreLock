@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="sec_title">Crypto analysis</string>
     <string name="sec_subtitle">TLS fingerprints · cipher suites · CT monitor</string>
     <string name="sec_ja3_threats">JA3 matches</string>
     <string name="sec_weak_ciphers">Weak ciphers</string>

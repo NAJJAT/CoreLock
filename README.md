@@ -123,7 +123,9 @@ or Instagram.
   from the list it opens, for the same time window, anchored at the same moment
   (`HomeEvidence`). No `LIMIT` anywhere. The list count equals the number shown.
 - **What opens what:**
-  - *Blocked (24 h)*, *Unencrypted (24 h)* and *Encryption health* open their lists.
+  - *Blocked today* (since midnight, the same count as Home, Activity, Apps, Statistics and
+    the notification: `BlockStats.today`) opens the Activity tab's Blocked list;
+    *Unencrypted (24 h)* and *Encryption health* open their lists.
   - The security cards (behavior changes, random-looking domains, night activity,
     repeating patterns, uploads, background connections, IPv6 sessions) open their lists.
   - The weekly report (connections, blocked, behavior changes, data) opens its lists.
@@ -154,6 +156,7 @@ or Instagram.
   directions. Stops at 100 MB or when protection stops; not encrypted, deleted
   after 24 hours. Starting or sharing a capture requires device authentication.
 - **CSV export:** 7 days of connections (app, domain, IP, bytes, TLS, background, blocked).
+  Like every export, it asks for the phone's screen lock first.
 - **IT report:** PDF + JSON summary for IT staff (kept in English on purpose).
 - **Weekly report:** WorkManager summary notification.
 
@@ -187,14 +190,16 @@ Latest version: **1.1.0** ([release notes](RELEASE_NOTES_1.1.0.md)). Earlier: [1
 
 ## First setup
 
-1. **VPN permission.** Open CoreLock and follow the setup; Android asks once to
-   allow the VPN. Everything stays on the phone.
+1. **VPN permission.** Open CoreLock and follow the three setup screens; Android asks
+   once to allow the VPN. "What leaves this phone" on the second screen lists what the
+   app sends and stores. Everything else stays on the phone.
 2. **Protection level.** Standard is the default; see
    [Protection levels](#protection-levels).
 3. **Private DNS.** If Android's Private DNS is set to a hostname, lookups bypass the
    filter and fail while protection runs. The app warns you on Home and before
    starting; set Private DNS to Off or Automatic.
-4. **Battery.** Settings › Diagnostics › Battery use shows whether Android may stop
+4. **Battery.** Setup warns you when Android restricts CoreLock in the background.
+   Settings › Advanced › Diagnostics › Battery use shows whether Android may stop
    protection in the background, and opens the battery settings.
 5. **Kill switch.** In Android's VPN settings turn on **Always-on VPN** for
    CoreLock, and optionally **Block connections without VPN**. Only Android can
@@ -280,7 +285,7 @@ Settings › Advanced. Every 1.0 screen is still there; where each moved is in
 
 | Screen | Contents |
 |---|---|
-| **Onboarding** | First-run consent wizard: what the VPN does, required and optional consents (including the optional HTTPS-inspection consent). |
+| **Onboarding** | Three screens: what CoreLock does and can't do; why Android asks about a VPN, with what leaves the phone; the protection level (battery advice only when Android restricts the app). HTTPS inspection is not offered here: its consent is only on its own screen. |
 | **Home** | Whether you are protected, with one switch; protection level; blocked today; "Something not working?" (find and allow what an app needs in 3 taps, or pause protection for 5 minutes); a warning card when something needs attention. |
 | **Activity** | What was blocked or allowed, in plain words, grouped by time, repeats merged. A row opens why it happened, with Allow / Block for that app or everywhere and Undo; technical details folded away. ⋮ › Live connections shows the 1.0 live list. |
 | **Apps** | Apps with search, filters (All / Blocked / Active now) and sorting; status, blocked today and one plain risk word per app. |
@@ -355,7 +360,7 @@ app that connects to the answer within a minute; blocked or unused lookups stay
 | **Session → history** | `SessionTable` closes or reaps a session → snapshot (app, hostname, SNI, bytes, foreground, screen) → `ConnectionLogger` batches into Room |
 | **App state** | Recorded once when a session opens: foreground from `UsageStatsManager` (`ForegroundAppDetector`), screen from `PowerManager.isInteractive` |
 | **Rules** | UI → `RulesRepo` → `RuleSyncBus` → service reloads in place |
-| **Home numbers** | `DashboardViewModel` (15 s) → `HomeEvidence.select()` on one 24 h query; drill-downs re-run the same selection for the same anchor time |
+| **Home numbers** | `HomeViewModel` and Security systems (`DashboardViewModel`) reload when the database changes (at most every few seconds); "blocked today" is `BlockStats.today` everywhere; other drill-downs re-run `HomeEvidence.select()` for the same anchor time |
 | **Alerts** | Detector → notification with a deep link (`pg_nav_route`) → inbox / Security analysis |
 
 **Stack:** Kotlin, Jetpack Compose (Material 3), Navigation Compose, Room +

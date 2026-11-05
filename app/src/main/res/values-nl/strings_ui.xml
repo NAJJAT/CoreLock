@@ -10,7 +10,6 @@
     <string name="ui_dismiss">Verbergen</string>
     <string name="ui_close">Sluiten</string>
     <string name="ui_loading">Laden</string>
-    <string name="ui_learn_more">Meer informatie</string>
     <string name="ui_warning">Waarschuwing</string>
     <string name="ui_open_settings">Instellingen openen</string>
     <string name="ui_turn_on">Aanzetten</string>
@@ -102,4 +101,5 @@
     <string name="ui_clear_all_data">Alle gegevens wissen</string>
     <string name="ui_what_corelock_cant">Wat CoreLock wel en niet kan</string>
     <string name="ui_what_corelock_cant_body">CoreLock blokkeert advertenties, trackers en malware voor de apps op deze telefoon. Het kan geen advertenties blokkeren in YouTube, Instagram, Snapchat, TikTok of Facebook, omdat die van dezelfde servers komen als de video\'s en berichten.</string>
+    <string name="ui_error_load">De nieuwste gegevens konden niet worden geladen. Wat je ziet is misschien niet actueel.</string>
 </resources>

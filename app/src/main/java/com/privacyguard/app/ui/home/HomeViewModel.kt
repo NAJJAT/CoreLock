@@ -270,6 +270,6 @@ class HomeViewModel internal constructor(
 
         /** The one "Blocked today" number: [BlockStats] from local midnight, as Activity and Statistics count. */
         suspend fun blockedTodayCount(stats: BlockStats, now: Long, zone: java.util.TimeZone = java.util.TimeZone.getDefault()): Int =
-            stats.totalBetween(HomeLogic.startOfDay(now, zone), now)
+            stats.today(now, zone)
     }
 }

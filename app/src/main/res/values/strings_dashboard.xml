@@ -2,8 +2,6 @@
 <resources>
     <string name="dash_card_behavior">App Behavior DNA</string>
     <string name="dash_card_behavior_desc">Changes from each app’s learned pattern, last 7 days</string>
-    <string name="dash_status_anomalous">Anomalous</string>
-    <string name="dash_status_learning">Learning</string>
     <string name="dash_status_quiet">Quiet</string>
     <plurals name="dash_alerts_count">
         <item quantity="one">%d alert</item>
@@ -11,9 +9,6 @@
     </plurals>
     <string name="dash_card_ipv6">IPv6 traffic</string>
     <string name="dash_card_ipv6_desc">IPv6 sessions in the last 24 h, carried through the tunnel like IPv4</string>
-    <string name="dash_status_critical">Critical</string>
-    <string name="dash_status_blocked">Blocked</string>
-    <string name="dash_status_contained">Contained</string>
     <plurals name="dash_blocked_count">
         <item quantity="one">%d blocked</item>
         <item quantity="other">%d blocked</item>
@@ -26,15 +21,11 @@
     <string name="dash_kill_switch_off_desc">Turn on Always-on VPN and Block connections without VPN</string>
     <string name="dash_status_blocking">Blocking</string>
     <string name="dash_status_not_checked">Not checked</string>
-    <string name="dash_vpn_live">VPN live</string>
-    <string name="dash_vpn_off">VPN off</string>
     <string name="dash_card_no_decrypt">No payload decryption</string>
     <string name="dash_card_no_decrypt_desc">Metadata-only inspection; TLS contents stay private</string>
-    <string name="dash_status_verified">Verified</string>
     <string name="dash_headers_only">Headers only</string>
     <string name="dash_card_entropy">Random-looking names</string>
     <string name="dash_card_entropy_desc">Domain names that look machine-generated, last 7 days</string>
-    <string name="dash_status_high_value">High value</string>
     <string name="dash_status_normal">Normal</string>
     <plurals name="dash_signals_count">
         <item quantity="one">%d signal</item>
@@ -87,14 +78,12 @@
         <item quantity="one">Behavior DNA found %d app deviation. New destinations and odd-hour uploads deserve a review.</item>
         <item quantity="other">Behavior DNA found %d app deviations. New destinations and odd-hour uploads deserve a review.</item>
     </plurals>
-    <string name="dash_rec_ipv6">IPv6 traffic was seen while the VPN is active. Add IPv6 routing support or disable the IPv6 bypass.</string>
     <string name="dash_rec_entropy">Random-looking domain names were seen. Open the card to see which apps looked them up.</string>
     <string name="dash_rec_beacon">Timer-like contacts were found. Open the card to see which app and host.</string>
     <string name="dash_rec_strict">Strict mode is recommended on %1$s because trust fell to %2$d/100.</string>
     <string name="dash_rec_default">Standard blocking plus the kill switch gives most people the strongest default protection.</string>
     <string name="dash_rec_no_decrypt">Behavior analysis works without decrypting content, so what you send stays private.</string>
-    <string name="dash_title">Dashboard</string>
-    <string name="dash_subtitle_on">Protected tunnel running</string>
+    <string name="dash_subtitle_on">Protection is on</string>
     <string name="dash_subtitle_off">Protection is paused</string>
     <string name="dash_badge_live">Live</string>
     <string name="dash_badge_offline">Offline</string>
@@ -105,8 +94,6 @@
     <string name="dash_privacy_score_n">Privacy score %1$d</string>
     <string name="dash_encryption_health">Encryption health</string>
     <string name="dash_tls_percent">%1$d%% encrypted</string>
-    <string name="dash_trackers_blocked">Trackers blocked</string>
-    <string name="dash_cleartext_conns">Cleartext connections</string>
     <string name="dash_privacy_score">Privacy score</string>
     <string name="dash_throughput">Throughput</string>
     <string name="dash_active_conns">Active connections</string>
@@ -176,6 +163,6 @@
     <string name="dash_pcap_file_limit">%1$s · %2$s · stopped at the 100 MB limit</string>
     <!-- HTTPS inspection card on Home: shown whenever inspection is decrypting -->
     <string name="dash_inspection_title">HTTPS inspection is on</string>
-    <string name="dash_inspection_body">CoreLock decrypts HTTPS for apps that trust its certificate; most apps do not. You can turn it off in Payload.</string>
+    <string name="dash_inspection_body">CoreLock decrypts HTTPS for apps that trust its certificate; most apps do not. You can turn it off on the HTTPS inspection screen.</string>
     <string name="dash_inspection_org_body">Your organisation turned this on. CoreLock decrypts HTTPS for apps that trust its certificate; most apps do not.</string>
 </resources>

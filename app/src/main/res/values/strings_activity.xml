@@ -89,4 +89,6 @@
     <string name="ui_resume_now">Resume now</string>
     <string name="pause_notif_title">Protection paused</string>
     <string name="pause_notif_text">CoreLock turns back on at %1$s.</string>
+    <string name="ui_reason_ad_sdk">Blocked · An ad tracker built into the app</string>
+    <string name="ui_why_ad_sdk">It\'s an ad tracker that apps build in. CoreLock blocks it in every app except the one that makes it.</string>
 </resources>

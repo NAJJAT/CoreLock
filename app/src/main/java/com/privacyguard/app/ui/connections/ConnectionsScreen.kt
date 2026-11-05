@@ -81,6 +81,7 @@ fun ConnectionsScreen(
     val filterActive = filter.showBlockedOnly || filter.showCleartextOnly || filter.query.isNotBlank()
     val dnsLookup by viewModel.dnsLookup.collectAsStateWithLifecycle()
     val selectedConnection by viewModel.selectedConnection.collectAsStateWithLifecycle()
+    val loadFailed by viewModel.loadFailed.collectAsStateWithLifecycle()
 
     selectedConnection?.let {
         ConnectionDetailDialog(
@@ -98,6 +99,9 @@ fun ConnectionsScreen(
         modifier = Modifier.background(MaterialTheme.colorScheme.background),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        if (loadFailed) item {
+            com.privacyguard.app.ui.components.LoadFailedBanner(onRetry = viewModel::retry, modifier = Modifier.padding(horizontal = 16.dp))
+        }
         item {
             ScreenScaffold(
                 title = stringResource(R.string.conn_title),

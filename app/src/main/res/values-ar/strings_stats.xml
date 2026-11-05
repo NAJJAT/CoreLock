@@ -11,10 +11,8 @@
     <string name="stats_gen_it">إنشاء تقرير لقسم تقنية المعلومات</string>
     <string name="stats_gen_it_confirm">أكّد هويتك قبل تصدير بيانات الأمان</string>
     <string name="stats_share_it">مشاركة مع قسم تقنية المعلومات</string>
-    <string name="stats_csv_ready">ملف CSV جاهز — اضغط للمشاركة</string>
     <string name="stats_csv_export">تصدير CSV لآخر 7 أيام</string>
     <string name="stats_share_log">مشاركة سجل الاتصالات</string>
-    <string name="stats_share_csv">مشاركة CSV</string>
     <string name="stats_network_map">خريطة الشبكة</string>
     <string name="stats_map_legend">الأقواس: أخضر = اتصالات قليلة · برتقالي = أكثر · أحمر = الأكثر (24 ساعة)</string>
     <string name="stats_by_org">حركة البيانات حسب الجهة</string>
@@ -45,38 +43,10 @@
     </plurals>
     <string name="stats_top_countries">أهم بلدان الوجهة</string>
     <string name="stats_networks">الشبكات المحفوظة</string>
-    <string name="stats_network_counts">%1$s · %2$s · %3$s</string>
-    <plurals name="stats_cleartext_n">
-        <item quantity="zero">%d غير مشفّر</item>
-        <item quantity="one">%d غير مشفّر</item>
-        <item quantity="two">%d غير مشفّرين</item>
-        <item quantity="few">%d غير مشفّرة</item>
-        <item quantity="many">%d غير مشفّر</item>
-        <item quantity="other">%d غير مشفّر</item>
-    </plurals>
-    <plurals name="stats_dns_anomaly_n">
-        <item quantity="zero">لا حالات شاذة في DNS</item>
-        <item quantity="one">حالة شاذة واحدة في DNS</item>
-        <item quantity="two">حالتان شاذتان في DNS</item>
-        <item quantity="few">%d حالات شاذة في DNS</item>
-        <item quantity="many">%d حالةً شاذة في DNS</item>
-        <item quantity="other">%d حالة شاذة في DNS</item>
-    </plurals>
-    <plurals name="stats_weak_tls_n">
-        <item quantity="zero">%d TLS ضعيف</item>
-        <item quantity="one">%d TLS ضعيف</item>
-        <item quantity="two">%d TLS ضعيف</item>
-        <item quantity="few">%d TLS ضعيف</item>
-        <item quantity="many">%d TLS ضعيف</item>
-        <item quantity="other">%d TLS ضعيف</item>
-    </plurals>
     <string name="stats_trend">اتجاه الاتصالات خلال 7 أيام</string>
     <string name="stats_total">الإجمالي</string>
     <string name="stats_top_apps">أكثر التطبيقات استهلاكًا للبيانات (24 س)</string>
     <string name="stats_f_encryption">التشفير</string>
-    <string name="stats_f_encrypted">%1$s مشفّر</string>
-    <string name="stats_f_blocked">%1$s من طلبات DNS محظورة</string>
-    <string name="stats_f_cleartext">غير مشفّر</string>
     <string name="stats_score_factors">عوامل الدرجة</string>
     <string name="stats_today">اليوم</string>
     <string name="stats_blocked_port">%1$s · حُظر المنفذ %2$d</string>
@@ -84,4 +54,5 @@
     <string name="stats_f_blocklist">قائمة الحظر</string>
     <string name="stats_f_background">الخلفية</string>
     <string name="stats_f_points">%1$d/%2$d</string>
+    <string name="stats_blocked_today">حُظر اليوم</string>
 </resources>

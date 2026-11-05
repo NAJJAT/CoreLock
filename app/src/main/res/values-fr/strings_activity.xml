@@ -81,4 +81,6 @@
     <string name="ui_resume_now">Reprendre maintenant</string>
     <string name="pause_notif_title">Protection en pause</string>
     <string name="pause_notif_text">CoreLock se réactive à %1$s.</string>
+    <string name="ui_reason_ad_sdk">Bloqué · Un traqueur publicitaire intégré à l\'app</string>
+    <string name="ui_why_ad_sdk">C\'est un traqueur publicitaire que les apps intègrent. CoreLock le bloque dans toutes les apps, sauf celle qui le fabrique.</string>
 </resources>

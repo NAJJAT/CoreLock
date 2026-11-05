@@ -17,7 +17,6 @@
     <string name="mitm_later">لاحقًا</string>
     <string name="mitm_remove_ca_title">إزالة شهادة الفحص</string>
     <string name="mitm_remove_ca_body">الفحص متوقف وحُذف مفتاح التوقيع، لكن Android ما زال يثق بشهادة CA المثبّتة. أزلها من الإعدادات ← الأمان ← التشفير وبيانات الاعتماد ← بيانات اعتماد المستخدم.</string>
-    <string name="mitm_badge_payload">المحتوى</string>
     <string name="mitm_filter_all">الكل</string>
     <string name="mitm_filter_flagged">⚑ المُعلَّمة</string>
     <string name="mitm_filter_body">ذات محتوى</string>
@@ -66,7 +65,6 @@
     <string name="mitm_tab_headers">الترويسات</string>
     <string name="mitm_tab_risk">الخطورة</string>
     <string name="mitm_tab_fields">الحقول</string>
-    <string name="mitm_captures">الالتقاطات</string>
     <string name="mitm_dir">الاتجاه</string>
     <string name="mitm_proto">البروتوكول</string>
     <string name="mitm_size">الحجم</string>

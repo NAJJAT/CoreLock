@@ -73,6 +73,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import java.net.InetSocketAddress
@@ -160,9 +161,8 @@ class PrivacyVpnService : VpnService() {
         private const val TUNNEL_DNS_V4 = "10.0.0.1"
         // After a QUIC flow is blocked for its SNI, its later packets are dropped this long.
         private const val QUIC_BLOCK_MEMORY_MS = 120_000L
-        // The ongoing notification's block count: refreshed at most this often, over this window.
+        // The ongoing notification's block count (BlockStats.today): refreshed at most this often.
         private const val BLOCK_COUNT_REFRESH_MS = 10_000L
-        private const val BLOCK_COUNT_WINDOW_MS = 24 * 60 * 60_000L
         // No SNI mismatch findings right after start: apps still use DNS answers cached before.
         private const val SNI_MISMATCH_GRACE_MS = 5 * 60_000L
         const val ACTION_STOP = "com.privacyguard.action.STOP_VPN"
@@ -438,8 +438,9 @@ class PrivacyVpnService : VpnService() {
             _isRunningFlow.value = true
             _state.value = State.RUNNING
         }
-        // Blocks from before a restart still fall in the last 24 h.
+        // Blocks from earlier today, before a restart, still count.
         scheduleBlockCountRefresh()
+        refreshBlockCountAtMidnight()
         com.privacyguard.app.vpn.BootReceiver.markVpnActive(this)
         // Up again by any path (alarm, Resume now, the switch, boot): a pause is over (D1).
         com.privacyguard.app.vpn.ProtectionPause.onProtectionStarted(this)
@@ -1114,7 +1115,7 @@ class PrivacyVpnService : VpnService() {
     private val blockCountRefreshPending = java.util.concurrent.atomic.AtomicBoolean(false)
 
     /**
-     * Shows the dashboard's "Blocked (24 h)" number in the ongoing notification: the
+     * Shows Home's "Blocked today" in the ongoing notification (BlockStats.today): the
      * stored rows of BlockStats, not this service's raw counter, which also counted
      * retried lookups and SYNs and so never matched. At most one query per
      * [BLOCK_COUNT_REFRESH_MS]; the wait also lets ConnectionLogger write its batch.
@@ -1126,11 +1127,30 @@ class PrivacyVpnService : VpnService() {
             blockCountRefreshPending.set(false)
             val now = System.currentTimeMillis()
             val count = runCatching {
-                com.privacyguard.app.data.repository.BlockStats(buildDatabase()).totalBetween(now - BLOCK_COUNT_WINDOW_MS, now)
+                com.privacyguard.app.data.repository.BlockStats(buildDatabase()).today(now)
             }.getOrNull() ?: return@launch
             lastBlockCount = count.toLong()
             // Not after stop: notify() would post the notification again once it was removed.
             if (isRunning) notifHelper.updateVpnNotification(lastBlockCount, MainActivity::class.java)
+        }
+    }
+
+    /**
+     * "Today" starts again at midnight even when nothing is blocked then, so the
+     * notification never keeps showing yesterday's number. Ends with [scope].
+     */
+    private fun refreshBlockCountAtMidnight() {
+        scope.launch {
+            while (isActive) {
+                val now = System.currentTimeMillis()
+                val next = java.util.Calendar.getInstance().apply {
+                    timeInMillis = com.privacyguard.app.data.repository.BlockStats.startOfDay(now)
+                    add(java.util.Calendar.DAY_OF_MONTH, 1)  // right on days of 23 or 25 hours too
+                }.timeInMillis
+                // A minute late, so the new day has surely begun.
+                kotlinx.coroutines.delay((next - now).coerceAtLeast(0L) + 60_000L)
+                scheduleBlockCountRefresh()
+            }
         }
     }
 

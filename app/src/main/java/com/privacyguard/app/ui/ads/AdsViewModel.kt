@@ -26,6 +26,8 @@ data class AdCategoryUi(
     val totalCount: Int,
     val enabledCount: Int,
     val isEnabled: Boolean,
+    /** False: the current protection level does not use it (it shows "Not used"). */
+    val usedAtLevel: Boolean = true,
 )
 
 data class BlocklistSourceUi(
@@ -33,6 +35,7 @@ data class BlocklistSourceUi(
     val totalCount: Int,
     val enabledCount: Int,
     val isEnabled: Boolean,
+    val usedAtLevel: Boolean = true,
 )
 
 data class CustomDomainRuleUi(
@@ -86,11 +89,13 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
             val categoryStats = runCatching { blocklistDao.getCategoryToggleStats() }.getOrDefault(emptyList())
             val userRules = runCatching { rulesRepo.userRules() }.getOrDefault(emptyList())
             val since = System.currentTimeMillis() - 86_400_000L
-            // Same definition of "blocked" as Home and Stats (BlockStats), last 24 h.
+            // Same count and window as Home, Activity, Statistics and the notification:
+            // since midnight (BlockStats.today); the rate uses the same window.
+            val nowMs = System.currentTimeMillis()
             val blocks = runCatching {
-                com.privacyguard.app.data.repository.BlockStats(db).between(since, System.currentTimeMillis())
+                com.privacyguard.app.data.repository.BlockStats(db).between(com.privacyguard.app.data.repository.BlockStats.startOfDay(nowMs), nowMs)
             }.getOrNull()
-            val blockedToday = blocks?.total ?: 0
+            val blockedToday = runCatching { com.privacyguard.app.data.repository.BlockStats(db).today(nowMs) }.getOrDefault(0)
 
             val recentConns = runCatching {
                 connectionDao.between(since, System.currentTimeMillis())
@@ -118,8 +123,8 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
                 masterEnabled = sourceStats.any { it.enabledCount > 0 } || categoryStats.any { it.enabledCount > 0 },
                 blockedToday = blockedToday,
                 blockRate = ((blocks?.lookupBlockRate ?: 0f) * 100f).toInt(),
-                categories = categoryStats.toCategoryUi(),
-                sources = sourceStats.toSourceUi(),
+                categories = categoryStats.toCategoryUi(level),
+                sources = sourceStats.toSourceUi(level, runCatching { blocklistDao.sourceCategories() }.getOrDefault(emptyList()).groupBy({ it.source }, { it.category })),
                 customRules = userRules
                     .filter { !it.matchDomain.isNullOrBlank() }
                     .map { CustomDomainRuleUi(it.id, it.matchDomain.orEmpty(), it.action == FilterRule.Action.ALLOW) },
@@ -202,7 +207,7 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun List<CategoryToggleStats>.toCategoryUi(): List<AdCategoryUi> {
+    private fun List<CategoryToggleStats>.toCategoryUi(level: com.privacyguard.core.filter.FilterEngine.BlockLevel): List<AdCategoryUi> {
         val map = associateBy { it.category.lowercase() }
         val categoryMeta = listOf(
             Triple("ads", str(com.privacyguard.app.R.string.ads_cat_ads), str(com.privacyguard.app.R.string.ads_cat_ads_desc)),
@@ -219,17 +224,40 @@ class AdsViewModel(app: Application) : AndroidViewModel(app) {
                 totalCount = stat?.totalCount ?: 0,
                 enabledCount = stat?.enabledCount ?: 0,
                 isEnabled = (stat?.enabledCount ?: 0) > 0,
+                usedAtLevel = AdsLevelUse.categoryUsed(id, level),
             )
         }
     }
 
-    private fun List<SourceToggleStats>.toSourceUi(): List<BlocklistSourceUi> =
+    private fun List<SourceToggleStats>.toSourceUi(level: com.privacyguard.core.filter.FilterEngine.BlockLevel, categories: Map<String, List<String>>): List<BlocklistSourceUi> =
         map {
             BlocklistSourceUi(
                 source = it.source,
                 totalCount = it.totalCount,
                 enabledCount = it.enabledCount,
                 isEnabled = it.enabledCount > 0,
+                // Unknown categories (no names stored yet): not claimed as unused.
+                usedAtLevel = categories[it.source]?.let { c -> AdsLevelUse.sourceUsed(it.source, c, level) } ?: true,
             )
         }
+}
+
+/**
+ * Whether the current protection level uses a list or category: the Ads screen said "On"
+ * for every list with names in it, also Strict-only lists at Standard (UX audit). Reads
+ * [com.privacyguard.core.filter.ProtectionLevels], the rules the filter itself uses, and
+ * changes nothing; the DNS-bypass lists are used at every level (layer 2).
+ */
+internal object AdsLevelUse {
+    private val everyLevel = setOf(
+        com.privacyguard.app.data.repository.BlocklistRepo.CAT_DOH,
+        com.privacyguard.app.data.repository.BlocklistRepo.CAT_DOH_IP,
+    )
+
+    fun categoryUsed(category: String, level: com.privacyguard.core.filter.FilterEngine.BlockLevel): Boolean =
+        category.lowercase() in everyLevel || category.lowercase() in com.privacyguard.core.filter.ProtectionLevels.categoriesFor(level)
+
+    fun sourceUsed(source: String, categories: Collection<String>, level: com.privacyguard.core.filter.FilterEngine.BlockLevel): Boolean =
+        source !in com.privacyguard.core.filter.ProtectionLevels.excludedSourcesFor(level) &&
+            categories.any { categoryUsed(it, level) }
 }

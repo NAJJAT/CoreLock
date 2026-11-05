@@ -1,35 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="appd_tab_mismatch">Incohérences</string>
     <string name="appd_tab_connections">Connexions</string>
-    <string name="appd_tab_sdks">SDK</string>
-    <string name="appd_tab_activity">Activité</string>
-    <string name="appd_tab_payload">Contenu</string>
-    <string name="appd_badge_trackers">Traqueurs</string>
-    <string name="appd_badge_app">App</string>
     <string name="appd_back">Retour</string>
     <string name="appd_report_subject">Rapport de l’app : %1$s</string>
     <string name="appd_share_report">Partager le rapport de l’app</string>
-    <plurals name="appd_flags">
-        <item quantity="one">%d signal</item>
-        <item quantity="many">%d signaux</item>
-        <item quantity="other">%d signaux</item>
-    </plurals>
     <plurals name="appd_domains">
         <item quantity="one">%,d domaine</item>
         <item quantity="many">%,d domaines</item>
         <item quantity="other">%,d domaines</item>
     </plurals>
-    <plurals name="appd_sdks">
-        <item quantity="one">%d SDK</item>
-        <item quantity="many">%d SDK</item>
-        <item quantity="other">%d SDK</item>
-    </plurals>
-    <string name="appd_blocked_tap">App bloquée — touchez pour la débloquer</string>
-    <string name="appd_active_tap">App autorisée — touchez pour la bloquer</string>
-    <string name="appd_block_bg">Bloquer l’accès réseau en arrière-plan</string>
-    <string name="appd_bg_needs_usage">Cette règle ne s\'applique pas encore : sans l\'accès aux données d\'utilisation, CoreLock ne peut pas savoir quand %1$s est en arrière-plan.</string>
-    <string name="appd_activity_summary">Résumé de l’activité</string>
     <string name="appd_dns">DNS</string>
     <plurals name="appd_idle_count">
         <item quantity="one">%d au repos</item>
@@ -57,21 +36,10 @@
     <string name="appd_no_mismatch">Aucune incohérence d’autorisation</string>
     <string name="appd_no_mismatch_desc">Les autorisations Android déclarées et le trafic observé concordent jusqu’ici pour cette app.</string>
     <string name="appd_perm_vs_traffic">Autorisations et trafic</string>
-    <string name="appd_perm_vs_traffic_desc">Comparaison des autorisations déclarées avec les destinations réelles et les services de pistage.</string>
-    <string name="appd_sort_count">Nombre</string>
-    <string name="appd_sort_data">Données</string>
-    <string name="appd_sort_background">Arrière-plan</string>
-    <string name="appd_loading_connections">Chargement de l’historique des connexions…</string>
-    <string name="appd_no_connections">Aucune connexion enregistrée pour l’instant</string>
-    <string name="appd_no_connections_desc">Activez la protection et ouvrez cette app. Les destinations, les noms DNS et les entreprises de pistage s’afficheront ici.</string>
-    <string name="appd_scanning">Recherche de SDK de pistage intégrés à l’app…</string>
-    <string name="appd_no_sdks">Aucun SDK de pistage connu détecté</string>
-    <string name="appd_no_sdks_desc">Cette analyse vérifie le code et les métadonnées de l’app. Le comportement réseau est évalué séparément.</string>
-    <string name="appd_activity_by_hour">Activité par heure (24 h)</string>
     <string name="appd_tracker_company">%1$s – %2$s</string>
     <string name="appd_loading_payloads">Chargement du contenu intercepté…</string>
     <string name="appd_no_payloads">Aucun contenu capturé pour l’instant</string>
-    <string name="appd_no_payloads_desc">Activez l’inspection HTTPS dans Paramètres → Inspecteur de contenu et gardez la protection active pendant que vous utilisez cette app.</string>
+    <string name="appd_no_payloads_desc">Activez l’inspection HTTPS dans Paramètres › Avancé › Inspection HTTPS et gardez la protection active pendant que vous utilisez cette app.</string>
     <string name="appd_r_title">Rapport de confidentialité de l’app</string>
     <string name="appd_r_app">App : %1$s</string>
     <string name="appd_r_package">Paquet : %1$s</string>
@@ -87,34 +55,6 @@
     <string name="rule_block_app_bg">Bloquer %1$s (arrière-plan)</string>
     <string name="rule_block_app">Bloquer %1$s</string>
     <string name="apps_title">Apps</string>
-    <string name="apps_subtitle">Risque et trafic des dernières 24 h</string>
-    <plurals name="apps_high_risk_n">
-        <item quantity="one">%d à risque élevé</item>
-        <item quantity="many">%d à risque élevé</item>
-        <item quantity="other">%d à risque élevé</item>
-    </plurals>
-    <string name="apps_stalker_title">Signes possibles de logiciel espion</string>
-    <plurals name="apps_stalker_desc">
-        <item quantity="one">%d app correspond à des schémas d’installation cachée, d’activité nocturne ou de suivi en arrière-plan.</item>
-        <item quantity="many">%d apps correspondent à des schémas d’installation cachée, d’activité nocturne ou de suivi en arrière-plan.</item>
-        <item quantity="other">%d apps correspondent à des schémas d’installation cachée, d’activité nocturne ou de suivi en arrière-plan.</item>
-    </plurals>
-    <string name="apps_all">Toutes les apps</string>
-    <string name="apps_high_risk">Risque élevé</string>
-    <string name="apps_sort_risk">Risque</string>
-    <string name="apps_stalker">Espion</string>
-    <plurals name="apps_destinations">
-        <item quantity="one">%d destination</item>
-        <item quantity="many">%d destinations</item>
-        <item quantity="other">%d destinations</item>
-    </plurals>
-    <plurals name="apps_suspicious">
-        <item quantity="one">%d suspecte</item>
-        <item quantity="many">%d suspectes</item>
-        <item quantity="other">%d suspectes</item>
-    </plurals>
-    <string name="apps_stalker_score">score logiciel espion %1$d</string>
     <string name="apps_search">Rechercher une app ou un paquet…</string>
-    <string name="apps_sort_destinations">Destinations</string>
     <string name="rule_allow_app">Autoriser %1$s</string>
 </resources>

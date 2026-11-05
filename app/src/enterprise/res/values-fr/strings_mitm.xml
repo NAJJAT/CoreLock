@@ -17,7 +17,6 @@
     <string name="mitm_later">Plus tard</string>
     <string name="mitm_remove_ca_title">Supprimer le certificat d’inspection</string>
     <string name="mitm_remove_ca_body">L’inspection est désactivée et la clé de signature a été supprimée, mais Android fait toujours confiance au CA installé. Supprimez-le dans Paramètres → Sécurité → Chiffrement et identifiants → Identifiants de l’utilisateur.</string>
-    <string name="mitm_badge_payload">Contenu</string>
     <string name="mitm_filter_all">Tout</string>
     <string name="mitm_filter_flagged">⚑ Signalés</string>
     <string name="mitm_filter_body">Avec corps</string>
@@ -63,7 +62,6 @@
     <string name="mitm_tab_headers">En-têtes</string>
     <string name="mitm_tab_risk">Risque</string>
     <string name="mitm_tab_fields">Champs</string>
-    <string name="mitm_captures">Captures</string>
     <string name="mitm_dir">Sens</string>
     <string name="mitm_proto">Proto</string>
     <string name="mitm_size">Taille</string>

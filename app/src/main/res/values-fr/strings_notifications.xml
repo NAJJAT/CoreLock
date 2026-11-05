@@ -9,9 +9,9 @@
     <string name="notif_ch_weekly_desc">Résumé hebdomadaire de confidentialité</string>
     <string name="notif_monitoring">Surveillance de vos connexions…</string>
     <plurals name="notif_blocked_n">
-        <item quantity="one">%d bloqué ces dernières 24 h</item>
-        <item quantity="many">%d bloqués ces dernières 24 h</item>
-        <item quantity="other">%d bloqués ces dernières 24 h</item>
+        <item quantity="one">%d bloqué aujourd\'hui</item>
+        <item quantity="many">%d bloqués aujourd\'hui</item>
+        <item quantity="other">%d bloqués aujourd\'hui</item>
     </plurals>
     <string name="notif_active">Protection active</string>
     <string name="notif_public_text">Déverrouillez pour voir cette notification</string>

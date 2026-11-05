@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="sec_title">تحليل التشفير</string>
     <string name="sec_subtitle">بصمات TLS · مجموعات التشفير · مراقبة CT</string>
     <string name="sec_ja3_threats">تطابقات JA3</string>
     <string name="sec_weak_ciphers">تشفير ضعيف</string>

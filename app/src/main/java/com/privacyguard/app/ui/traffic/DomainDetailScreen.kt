@@ -360,7 +360,7 @@ internal fun NameNow(item: com.privacyguard.app.ui.activity.ActivityItem, onActi
             style = MaterialTheme.typography.titleMedium,
             color = if (item.reason == com.privacyguard.app.ui.activity.ActivityReason.MALWARE_LIST) colors.danger else colors.onSurface,
         )
-        if (item.reason == com.privacyguard.app.ui.activity.ActivityReason.ADS_LIST && com.privacyguard.app.ui.activity.ActivityLogic.everywhereOnly(item)) {
+        if ((item.reason == com.privacyguard.app.ui.activity.ActivityReason.ADS_LIST || item.reason == com.privacyguard.app.ui.activity.ActivityReason.AD_SDK) && com.privacyguard.app.ui.activity.ActivityLogic.everywhereOnly(item)) {
             Text(stringResource(R.string.ui_dns_allow_everywhere_only), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceMuted)
         }
         val actions = com.privacyguard.app.ui.activity.ActivityLogic.actionsFor(item)

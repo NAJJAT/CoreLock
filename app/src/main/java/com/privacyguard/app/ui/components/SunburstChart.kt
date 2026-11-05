@@ -20,6 +20,7 @@ fun SunburstChart(
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier) {
+        val centre = PgPanel
         Canvas(modifier = Modifier.fillMaxSize()) {
             val cx = size.width / 2f
             val cy = size.height / 2f
@@ -50,7 +51,7 @@ fun SunburstChart(
             }
 
             // Dark center
-            drawCircle(PgPanel, radius = ringW * 0.42f, center = Offset(cx, cy))
+            drawCircle(centre, radius = ringW * 0.42f, center = Offset(cx, cy))
         }
     }
 }

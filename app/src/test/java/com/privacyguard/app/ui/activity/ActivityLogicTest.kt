@@ -102,6 +102,27 @@ class ActivityLogicTest {
     }
 
     @Test
+    fun an_ad_tracker_built_into_apps_has_its_own_reason() {
+        // Not on a list, but the ad-SDK policy blocks it in this app: say so, not "a setting".
+        assertEquals(ActivityReason.AD_SDK, ActivityLogic.reasonFor(true, false, BlockSource.SNI, null, false, onBlockList = false, adSdkBlocks = true))
+        assertEquals(ActivityReason.AD_SDK, ActivityLogic.reasonFor(true, true, BlockSource.DNS, null, false, onBlockList = false, adSdkBlocks = true))
+        // A list that names it, malware, or the user's rule come first.
+        assertEquals(ActivityReason.ADS_LIST, ActivityLogic.reasonFor(true, true, BlockSource.DNS, null, false, onBlockList = true, adSdkBlocks = true))
+        assertEquals(ActivityReason.MALWARE_LIST, ActivityLogic.reasonFor(true, true, BlockSource.DNS, null, true, onBlockList = false, adSdkBlocks = true))
+        assertEquals(ActivityReason.USER_RULE, ActivityLogic.reasonFor(true, true, BlockSource.DNS, userBlock, false, adSdkBlocks = true))
+    }
+
+    @Test
+    fun an_ad_tracker_can_be_allowed_like_a_listed_name() {
+        val listed = ActivityItem(
+            id = "c1", isLookup = false, timestamp = 0, packageName = "com.example.app", appName = "Example",
+            host = "ads.example.com", ip = null, port = 443, protocol = "TCP", blocked = true,
+            blockSource = BlockSource.SNI, reason = ActivityReason.ADS_LIST,
+        )
+        assertEquals(ActivityLogic.actionsFor(listed), ActivityLogic.actionsFor(listed.copy(reason = ActivityReason.AD_SDK)))
+    }
+
+    @Test
     fun reason_follows_the_decision_order() {
         assertEquals(ActivityReason.ALLOWED, ActivityLogic.reasonFor(false, false, null, userBlock, true))
         // The user's Block first, even for a name on a malware list.

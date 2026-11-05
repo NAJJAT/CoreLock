@@ -66,6 +66,7 @@ fun AlertInboxScreen(
     vm: AlertInboxViewModel = viewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val loadFailed by vm.loadFailed.collectAsStateWithLifecycle()
 
     val visibleItems = when (state.filter) {
         AlertSeverityFilter.ALL      -> state.items
@@ -102,7 +103,12 @@ fun AlertInboxScreen(
             }
         }
 
+        if (loadFailed) item {
+            com.privacyguard.app.ui.components.LoadFailedBanner(onRetry = vm::retry, modifier = Modifier.padding(horizontal = 16.dp))
+        }
         when {
+            // Never "no alerts" when the alerts could not be read.
+            state.isLoading && loadFailed -> Unit
             state.isLoading -> item {
                 PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Text(stringResource(R.string.alerts_loading), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
@@ -200,6 +206,7 @@ private fun SeverityChip(label: String, selected: Boolean, onClick: () -> Unit) 
 
 private data class AlertAppearance(val bg: Color, val fg: Color, val icon: ImageVector)
 
+@Composable
 private fun alertAppearance(alert: AlertItem): AlertAppearance = when {
     alert.type == AlertType.JA3_THREAT  -> AlertAppearance(PgDangerDim, PgDanger, Icons.Default.Fingerprint)
     alert.type == AlertType.TLS_FP_CHANGE -> AlertAppearance(PgWarningDim, PgWarning, Icons.Default.Fingerprint)

@@ -11,7 +11,6 @@
     <string name="net_wifi">شبكة Wi-Fi</string>
     <string name="net_cellular">شبكة الهاتف المحمول</string>
     <string name="net_ethernet">شبكة إيثرنت</string>
-    <string name="net_vpn">شبكة VPN</string>
     <string name="net_wifi_named">Wi-Fi: %1$s</string>
     <string name="nd_mitm_off">فحص HTTPS متوقف أو انتهت صلاحية الموافقة عليه، لذلك مرّ هذا الاتصال دون تعديل.</string>
     <string name="nd_bypass">هذا المضيف ضمن قائمة عدم الاعتراض (DNS عبر HTTPS أو خدمات Google أو Samsung). فك تشفيره يعطّل تحليل الأسماء أو تسجيل الدخول، لذلك يُمرَّر كما هو.</string>

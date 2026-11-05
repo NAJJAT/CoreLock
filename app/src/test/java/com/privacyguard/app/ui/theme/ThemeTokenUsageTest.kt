@@ -23,14 +23,7 @@ class ThemeTokenUsageTest {
         Regex("""fontSize\s*=\s*[0-9.]+\.sp"""),
     )
 
-    private val LEGACY = setOf(
-        "src/main/java/com/privacyguard/app/ui/ads/AdsScreen.kt",
-        "src/main/java/com/privacyguard/app/ui/components/NetworkMapCanvas.kt",
-        "src/main/java/com/privacyguard/app/ui/components/PrivacyGuardUi.kt",
-        "src/main/java/com/privacyguard/app/ui/components/TemporalHeatmap.kt",
-        "src/main/java/com/privacyguard/app/ui/dashboard/DashboardScreen.kt",
-        "src/main/java/com/privacyguard/app/ui/statistics/StatisticsScreen.kt",
-    )
+    private val LEGACY = emptySet<String>()
 
     /** UI files: everything under a `ui` package (and the debug catalog), except the theme itself. */
     private fun uiFiles(): List<File> = roots.flatMap { root ->

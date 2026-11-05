@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="sec_title">Versleutelingsanalyse</string>
     <string name="sec_subtitle">TLS-vingerafdrukken · versleutelingsmethoden · CT-monitor</string>
     <string name="sec_ja3_threats">JA3-overeenkomsten</string>
     <string name="sec_weak_ciphers">Zwakke versleuteling</string>

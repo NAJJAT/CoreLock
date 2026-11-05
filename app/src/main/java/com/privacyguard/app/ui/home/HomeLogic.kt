@@ -43,10 +43,7 @@ object HomeLogic {
      * minute of the day (as java.time's atStartOfDay would give).
      */
     fun startOfDay(now: Long, zone: TimeZone = TimeZone.getDefault()): Long =
-        Calendar.getInstance(zone).apply {
-            timeInMillis = now
-            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
+        com.privacyguard.app.data.repository.BlockStats.startOfDay(now, zone)
 
     /** The next local midnight after [now], when "today" starts again. */
     fun nextMidnight(now: Long, zone: TimeZone = TimeZone.getDefault()): Long =

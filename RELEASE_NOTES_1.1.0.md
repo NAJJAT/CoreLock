@@ -54,6 +54,23 @@ The way CoreLock blocks did not change. What changed is how you see and control 
   organisation manages.
 - **HTTPS inspection asks first, every time** you switch it on, and its consent and
   confirmation ignore taps that come through another app's window.
+- **A shorter start.** A new install explains CoreLock in three screens: what it does and
+  can't do, why Android asks about a VPN (with what leaves the phone), and which level to
+  use. A battery warning appears only when Android restricts CoreLock.
+- **New app icon and start screen:** a shield with a keyhole, in the app's colours, also
+  as a themed icon on Android 13 and newer.
+- **One "blocked today" number.** The notification, Home, Activity, Apps, Statistics and
+  Security systems now count the same thing over the same time: since midnight. In 1.0
+  some showed the last 24 hours, so the numbers could differ.
+- **Clearer reasons.** A name blocked because it is an ad tracker built into apps now
+  says so ("Blocked · An ad tracker built into the app") instead of a general reason. The
+  Ads detail screen shows "Not used" for lists your level doesn't use.
+- **Exports ask for your screen lock.** Exporting your history, the Statistics CSV and
+  your rules and settings asks for your phone's PIN, pattern or fingerprint first, so
+  someone holding your unlocked phone can't copy your history in two taps.
+- **Light mode everywhere.** The expert screens (Statistics, Security systems, Security
+  analysis, Alerts, the domain page and others) now follow the light theme too, and their
+  greyest text is easier to read.
 - **Large text and right-to-left:** every screen was checked at 200 % text size and in
   Arabic, English, French and Dutch.
 

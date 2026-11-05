@@ -2,8 +2,6 @@
 <resources>
     <string name="dash_card_behavior">Gedrags-DNA van apps</string>
     <string name="dash_card_behavior_desc">Afwijkingen van het geleerde patroon van elke app, afgelopen 7 dagen</string>
-    <string name="dash_status_anomalous">Afwijkend</string>
-    <string name="dash_status_learning">Leert</string>
     <string name="dash_status_quiet">Rustig</string>
     <plurals name="dash_alerts_count">
         <item quantity="one">%d melding</item>
@@ -11,9 +9,6 @@
     </plurals>
     <string name="dash_card_ipv6">IPv6-verkeer</string>
     <string name="dash_card_ipv6_desc">IPv6-sessies in de afgelopen 24 u, via de tunnel net als IPv4</string>
-    <string name="dash_status_critical">Kritiek</string>
-    <string name="dash_status_blocked">Geblokkeerd</string>
-    <string name="dash_status_contained">Ingeperkt</string>
     <plurals name="dash_blocked_count">
         <item quantity="one">%d geblokkeerd</item>
         <item quantity="other">%d geblokkeerd</item>
@@ -26,15 +21,11 @@
     <string name="dash_kill_switch_off_desc">Zet ‘Altijd-aan-VPN’ en ‘Verbindingen zonder VPN blokkeren’ aan</string>
     <string name="dash_status_blocking">Blokkeert</string>
     <string name="dash_status_not_checked">Niet gecontroleerd</string>
-    <string name="dash_vpn_live">VPN actief</string>
-    <string name="dash_vpn_off">VPN uit</string>
     <string name="dash_card_no_decrypt">Geen ontsleuteling van inhoud</string>
     <string name="dash_card_no_decrypt_desc">Alleen metagegevens worden bekeken; TLS-inhoud blijft privé</string>
-    <string name="dash_status_verified">Geverifieerd</string>
     <string name="dash_headers_only">Alleen headers</string>
     <string name="dash_card_entropy">Willekeurig ogende namen</string>
     <string name="dash_card_entropy_desc">Domeinnamen die er machinaal gemaakt uitzien, afgelopen 7 dagen</string>
-    <string name="dash_status_high_value">Belangrijk</string>
     <string name="dash_status_normal">Normaal</string>
     <plurals name="dash_signals_count">
         <item quantity="one">%d signaal</item>
@@ -87,14 +78,12 @@
         <item quantity="one">Gedrags-DNA vond %d afwijking bij een app. Nieuwe bestemmingen en uploads op vreemde tijden verdienen een controle.</item>
         <item quantity="other">Gedrags-DNA vond %d afwijkingen bij apps. Nieuwe bestemmingen en uploads op vreemde tijden verdienen een controle.</item>
     </plurals>
-    <string name="dash_rec_ipv6">Er is IPv6-verkeer gezien terwijl de VPN actief is. Voeg IPv6-routering toe of zet de IPv6-omzeiling uit.</string>
     <string name="dash_rec_entropy">Er zijn willekeurig ogende domeinnamen gezien. Open de kaart om te zien welke apps ze opzochten.</string>
     <string name="dash_rec_beacon">Er is contact op een timer gevonden. Open de kaart om te zien welke app en host.</string>
     <string name="dash_rec_strict">De strenge modus wordt aangeraden op %1$s, omdat het vertrouwen daalde tot %2$d/100.</string>
     <string name="dash_rec_default">Standaardblokkering plus de kill switch geeft de meeste mensen de sterkste standaardbescherming.</string>
     <string name="dash_rec_no_decrypt">De gedragsanalyse werkt zonder inhoud te ontsleutelen, dus wat je verstuurt blijft privé.</string>
-    <string name="dash_title">Overzicht</string>
-    <string name="dash_subtitle_on">Beschermde tunnel actief</string>
+    <string name="dash_subtitle_on">Bescherming staat aan</string>
     <string name="dash_subtitle_off">Bescherming gepauzeerd</string>
     <string name="dash_badge_live">Actief</string>
     <string name="dash_badge_offline">Offline</string>
@@ -105,8 +94,6 @@
     <string name="dash_privacy_score_n">Privacyscore %1$d</string>
     <string name="dash_encryption_health">Versleuteling</string>
     <string name="dash_tls_percent">%1$d%% versleuteld</string>
-    <string name="dash_trackers_blocked">Trackers geblokkeerd</string>
-    <string name="dash_cleartext_conns">Onversleutelde verbindingen</string>
     <string name="dash_privacy_score">Privacyscore</string>
     <string name="dash_throughput">Doorvoer</string>
     <string name="dash_active_conns">Actieve verbindingen</string>
@@ -174,6 +161,6 @@
     <string name="dash_pcap_file">%1$s · %2$s</string>
     <string name="dash_pcap_file_limit">%1$s · %2$s · gestopt bij de limiet van 100 MB</string>
     <string name="dash_inspection_title">HTTPS-inspectie staat aan</string>
-    <string name="dash_inspection_body">CoreLock ontsleutelt HTTPS van apps die zijn certificaat vertrouwen; de meeste apps doen dat niet. Je kunt het uitzetten in Payload.</string>
+    <string name="dash_inspection_body">CoreLock ontsleutelt HTTPS van apps die zijn certificaat vertrouwen; de meeste apps doen dat niet. Je kunt het uitzetten op het scherm HTTPS-inspectie.</string>
     <string name="dash_inspection_org_body">Je organisatie heeft dit aangezet. CoreLock ontsleutelt HTTPS van apps die zijn certificaat vertrouwen; de meeste apps doen dat niet.</string>
 </resources>

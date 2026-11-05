@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Android 12+ splash through the platform theme: no splash library (decision D6).
+         The icon is the launcher foreground (shield and keyhole), inside the safe zone. -->
+    <style name="Theme.Privacyguard" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">@color/corelock_launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/corelock_launch_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+</resources>

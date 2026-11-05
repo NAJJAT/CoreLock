@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The window behind the first frame and the Android 12+ splash: the theme background,
+         so the start does not flash another colour. values-night has the dark one. -->
+    <color name="corelock_launch_background">#F6F8FB</color>
+</resources>

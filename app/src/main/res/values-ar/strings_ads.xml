@@ -55,4 +55,6 @@
     <string name="rule_security_warn_confirm">السماح رغم ذلك</string>
     <string name="rule_security_warn_cancel">إبقاؤه محظورًا</string>
     <string name="ads_blocked_at_level">%1$s محظورة في مستوى %2$s</string>
+    <string name="ads_pill_not_used">غير مستخدمة</string>
+    <string name="ads_not_at_level">لا تُستخدم في مستوى الحماية الحالي.</string>
 </resources>

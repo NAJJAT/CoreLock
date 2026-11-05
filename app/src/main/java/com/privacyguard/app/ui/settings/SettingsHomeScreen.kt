@@ -162,7 +162,12 @@ fun SettingsHomeScreen(nav: SettingsNav, viewModel: SettingsHomeViewModel = view
             onLanguage = { showLanguage = true },
             onAppearance = viewModel::setAppearance,
             onRetention = viewModel::setRetentionDays,
-            onExport = viewModel::exportHistory,
+            // The history is a full browsing record: device lock first, like every export (owner, 2026-11-04).
+            onExport = {
+                runProtected(resources.getString(R.string.ui_set_export), resources.getString(R.string.ui_set_export_sub)) {
+                    viewModel.exportHistory()
+                }
+            },
             onScreenshots = viewModel::setAllowScreenshots,
             // After the confirmation sheet: the device lock too, as in 1.0.
             onClear = {

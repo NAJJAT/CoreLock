@@ -268,7 +268,7 @@ fun ToggleChip(checked: Boolean, modifier: Modifier = Modifier) {
                 .align(if (checked) Alignment.CenterEnd else Alignment.CenterStart)
                 .size(16.dp)
                 .clip(CircleShape)
-                .background(Color.White)
+                .background(com.privacyguard.app.ui.theme.PgThumb)
         )
     }
 }

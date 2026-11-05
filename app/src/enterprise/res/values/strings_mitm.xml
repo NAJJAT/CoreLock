@@ -17,7 +17,6 @@
     <string name="mitm_later">Later</string>
     <string name="mitm_remove_ca_title">Remove the inspection certificate</string>
     <string name="mitm_remove_ca_body">Inspection is off and the signing key has been deleted, but Android still trusts the installed CA. Remove it in Settings → Security → Encryption &amp; credentials → User credentials.</string>
-    <string name="mitm_badge_payload">Payload</string>
     <string name="mitm_filter_all">All</string>
     <string name="mitm_filter_flagged">⚑ Flagged</string>
     <string name="mitm_filter_body">Has body</string>
@@ -62,7 +61,6 @@
     <string name="mitm_tab_headers">Headers</string>
     <string name="mitm_tab_risk">Risk</string>
     <string name="mitm_tab_fields">Fields</string>
-    <string name="mitm_captures">Captures</string>
     <string name="mitm_dir">Dir</string>
     <string name="mitm_proto">Proto</string>
     <string name="mitm_size">Size</string>
