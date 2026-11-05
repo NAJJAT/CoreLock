@@ -25,10 +25,6 @@
         <item quantity="one">%d met scherm uit</item>
         <item quantity="other">%d met scherm uit</item>
     </plurals>
-    <plurals name="sleep_total_n">
-        <item quantity="one">%d totaal</item>
-        <item quantity="other">%d totaal</item>
-    </plurals>
     <plurals name="sleep_idle_queries">
         <item quantity="one">%d DNS-opzoeking terwijl het scherm uit was</item>
         <item quantity="other">%d DNS-opzoekingen terwijl het scherm uit was</item>

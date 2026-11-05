@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App names -->
-    <string name="trf_unattributed">Not attributable to an app</string>
     <string name="trf_removed_app">Removed app</string>
     <!-- Traffic from adb shell (UID 2000); the same technical name in every language. -->
     <string name="trf_adb_shell" translatable="false">ADB / shell</string>
@@ -103,6 +102,7 @@
     <string name="trf_not_tracker">Not in the tracker database.</string>
     <string name="trf_frequency">Last 7 days</string>
     <string name="trf_per_day">about %1$s per day</string>
+    <string name="trf_per_day_under_one">less than once a day</string>
     <string name="trf_apps_used">Apps that used it</string>
     <string name="trf_first_seen">First seen</string>
     <string name="trf_last_seen">Last seen</string>
@@ -142,7 +142,6 @@
     <string name="ev_data_7d_def">%1$s in total. Connections with the most data first.</string>
     <string name="ev_beacon_row">%1$s times · about every %2$s</string>
     <string name="ev_at">Counted at %1$s</string>
-    <string name="dash_blocked_24h">Blocked (24 h)</string>
     <string name="dash_cleartext_24h">Unencrypted (24 h)</string>
 
     <!-- Sleep report definition -->

@@ -46,13 +46,14 @@ fun NetworkMapCanvas(
 ) {
     val maxCount = countries.maxOfOrNull { it.connectionCount }?.toFloat().takeIf { it != null && it > 0 } ?: 1f
 
+    val palette = com.privacyguard.app.ui.theme.legacyColors
     Box(
         modifier = modifier
             .background(PgPanel, RoundedCornerShape(16.dp))
             .padding(2.dp)
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            drawGrid()
+            drawGrid(palette)
 
             // Device at center of screen
             val devicePos = Offset(size.width * 0.50f, size.height * 0.46f)
@@ -61,32 +62,32 @@ fun NetworkMapCanvas(
                 val (rx, ry) = COUNTRY_COORDS[stat.countryCode] ?: return@forEach
                 val dest = Offset(size.width * rx, size.height * ry)
                 val intensity = (stat.connectionCount.toFloat() / maxCount).coerceIn(0.15f, 1f)
-                val arcColor = arcColor(intensity)
+                val arcColor = arcColor(palette, intensity)
                 drawCurvedArc(devicePos, dest, arcColor, intensity)
                 drawCircle(arcColor, 4f + intensity * 4f, dest)
                 drawCircle(arcColor.copy(alpha = 0.25f), 10f + intensity * 5f, dest)
             }
 
             // Device indicator
-            drawCircle(PgAccent, 7f, devicePos)
-            drawCircle(PgAccent.copy(alpha = 0.25f), 15f, devicePos)
-            drawCircle(Color.White, 3f, devicePos)
+            drawCircle(palette.accent, 7f, devicePos)
+            drawCircle(palette.accent.copy(alpha = 0.25f), 15f, devicePos)
+            drawCircle(palette.mapDevice, 3f, devicePos)
         }
     }
 }
 
-private fun arcColor(intensity: Float): Color = when {
-    intensity > 0.65f -> PgDanger.copy(alpha = 0.75f + intensity * 0.25f)
-    intensity > 0.35f -> PgWarning.copy(alpha = 0.65f + intensity * 0.25f)
-    else             -> PgAccent.copy(alpha = 0.50f + intensity * 0.4f)
+private fun arcColor(palette: com.privacyguard.app.ui.theme.LegacyPalette, intensity: Float): Color = when {
+    intensity > 0.65f -> palette.danger.copy(alpha = 0.75f + intensity * 0.25f)
+    intensity > 0.35f -> palette.warning.copy(alpha = 0.65f + intensity * 0.25f)
+    else             -> palette.accent.copy(alpha = 0.50f + intensity * 0.4f)
 }
 
-private fun DrawScope.drawGrid() {
-    val grid = Color(0x12FFFFFF)
+private fun DrawScope.drawGrid(palette: com.privacyguard.app.ui.theme.LegacyPalette) {
+    val grid = palette.mapGrid
     repeat(4) { i -> drawLine(grid, Offset(0f, size.height * (i + 1) / 5f), Offset(size.width, size.height * (i + 1) / 5f)) }
     repeat(6) { i -> drawLine(grid, Offset(size.width * (i + 1) / 7f, 0f), Offset(size.width * (i + 1) / 7f, size.height)) }
     COUNTRY_COORDS.values.forEach { (rx, ry) ->
-        drawCircle(Color(0x1AFFFFFF), 2.5f, Offset(size.width * rx, size.height * ry))
+        drawCircle(palette.mapDot, 2.5f, Offset(size.width * rx, size.height * ry))
     }
 }
 

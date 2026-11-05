@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 1.1 Apps and App detail (DESIGN_SPEC_1.1.md §6.3, §6.4, D8, D9).
+     Machine translations are listed in docs/TRANSLATION_REVIEW_1.1.md. -->
+<resources>
+    <!-- Apps list -->
+    <string name="ui_apps_search">Search apps</string>
+    <string name="ui_apps_active_now">Active now</string>
+    <string name="ui_sort_by">Sort by</string>
+    <string name="ui_sort_most_blocked">Most blocked</string>
+    <string name="ui_sort_name">Name</string>
+    <string name="ui_sort_most_data">Most data</string>
+    <string name="ui_sort_background">Background activity</string>
+    <string name="ui_sort_risk">Highest risk</string>
+    <string name="ui_sort_destinations">Most destinations</string>
+    <string name="ui_apps_empty_search">No app called “%1$s”.</string>
+    <string name="ui_apps_empty_blocked">No apps blocked. Open an app to block it.</string>
+    <string name="ui_apps_empty_active">No app used the internet in the last 5 minutes.</string>
+    <string name="ui_apps_empty">No apps that use the internet were found.</string>
+    <string name="ui_error_apps">Couldn’t load your apps.</string>
+    <plurals name="ui_apps_could_watch">
+        <item quantity="one">%d app could be watching you. Check that you installed it yourself.</item>
+        <item quantity="other">%d apps could be watching you. Check that you installed them yourself.</item>
+    </plurals>
+    <string name="ui_show_them">Show them</string>
+    <string name="ui_clear_search">Clear search</string>
+    <string name="ui_risk_word_hint">Explain</string>
+
+    <!-- App detail -->
+    <string name="ui_app_status">Internet access</string>
+    <string name="ui_connected_recently">Connected recently</string>
+    <string name="ui_connected_recently_sub">Last 24 hours. Tap a name to allow or block it for this app.</string>
+    <string name="ui_other_names">Other</string>
+    <string name="ui_built_in_trackers">Built-in trackers</string>
+    <string name="ui_built_in_trackers_sub">Found in the app’s code. CoreLock blocks their connections when they are on its lists.</string>
+    <string name="ui_no_trackers_found">No built-in trackers found.</string>
+    <string name="ui_checking_app">Checking the app’s code…</string>
+    <string name="ui_empty_app_connections">No connections in the last 24 hours.</string>
+    <string name="ui_error_app">Couldn’t load this app’s connections.</string>
+    <string name="ui_usage_access_needed">CoreLock needs Usage Access to know when an app is in the background.</string>
+    <string name="ui_app_now_allowed">%1$s is allowed.</string>
+    <string name="ui_app_now_blocked">%1$s is blocked.</string>
+    <string name="ui_app_now_blocked_background">%1$s is blocked in the background.</string>
+    <string name="ui_share_report">Share report</string>
+
+    <!-- App detail › Technical details -->
+    <string name="ui_tech_risk_grade">Risk grade</string>
+    <string name="ui_tech_permissions">Permissions</string>
+    <plurals name="ui_tech_permissions_n">
+        <item quantity="one">%d permission</item>
+        <item quantity="other">%d permissions</item>
+    </plurals>
+    <string name="ui_tech_behaviour">Behaviour, last 24 hours</string>
+    <string name="ui_tech_inspected">Inspected content</string>
+    <string name="ui_tech_names">Every name</string>
+</resources>

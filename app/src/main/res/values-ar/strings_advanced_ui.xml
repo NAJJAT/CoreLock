@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- الإعدادات › متقدم (1.1) -->
+    <string name="ui_adv_network">الشبكة</string>
+    <string name="ui_adv_network_sub">DNS المشفّر، وخادم DNS، والخوادم الوسيطة، وخيارات الحظر</string>
+    <string name="ui_adv_https">فحص HTTPS</string>
+    <string name="ui_adv_https_sub">رؤية محتوى بعض الاتصالات المشفّرة</string>
+    <string name="ui_adv_analysis">التحليل</string>
+    <string name="ui_adv_analysis_sub">الإحصاءات والتنبيهات والتقارير</string>
+    <string name="ui_adv_diagnostics">التشخيص</string>
+    <string name="ui_adv_diagnostics_sub">فحوص الشبكة، وسلامة التطبيق، وتفاصيل قوائم الحظر</string>
+
+    <string name="ui_net_group_lookups">البحث عن العناوين</string>
+    <string name="ui_net_group_blocking">الحظر</string>
+    <string name="ui_net_group_more">المزيد</string>
+    <string name="ui_net_doh">DNS المشفّر</string>
+    <string name="ui_net_doh_sub">أخفِ عن شبكتك المواقع التي تبحث عنها</string>
+    <string name="ui_net_doh_note">يُرسل البحث إلى %1$s مشفّرًا. إذا تعذّر الوصول إليه (بعض شبكات Wi-Fi في الفنادق أو العمل تحظره)، تتوقف المواقع عن التحميل حتى توقف هذا الخيار.</string>
+    <string name="ui_net_dns">خادم DNS</string>
+    <string name="ui_net_dns_sub">الخادم الذي يجيب عن البحث</string>
+    <string name="ui_net_dns_other">خادم آخر</string>
+    <string name="ui_net_dns_field">عنوان الخادم، مثل 1.1.1.1</string>
+    <string name="ui_net_dns_invalid">أدخل عنوان IP، مثل 1.1.1.1 أو 2606:4700::1111.</string>
+    <string name="ui_net_dns_use">استخدم هذا الخادم</string>
+    <string name="ui_net_dns_doh_note">عند تشغيل DNS المشفّر، يؤدي اختيار Cloudflare أو Google أو Quad9 إلى اختياره للبحث المشفّر أيضًا.</string>
+    <string name="ui_net_quic">بروتوكول الويب السريع (QUIC)</string>
+    <string name="ui_net_quic_sub">احظره ليرى CoreLock مزيدًا من الاتصالات</string>
+    <string name="ui_net_weak_tls">التشفير القديم</string>
+    <string name="ui_net_weak_tls_sub">احظر الاتصالات ذات الحماية القديمة</string>
+    <string name="ui_net_cleartext">الاتصالات غير المشفّرة</string>
+    <string name="ui_net_cleartext_sub">احظر الاتصالات التي يستطيع أي شخص على الشبكة قراءتها</string>
+    <string name="ui_net_public_ip">فحص عنوان IP العام</string>
+    <string name="ui_net_public_ip_sub">اسأل خادمًا عن عنوانك العام</string>
+    <string name="ui_net_proxy">استخدام خادمين وسيطين</string>
+    <string name="ui_net_proxy_sub">غير مشفّر. يستطيع الخادم الأول رؤية الوجهات التي تتصل بها.</string>
+    <string name="ui_on">مفعّل</string>
+    <string name="ui_off">متوقف</string>
+
+    <string name="ui_proxy_first">الخادم الأول</string>
+    <string name="ui_proxy_second">الخادم الثاني</string>
+    <string name="ui_proxy_host_invalid">أدخل اسم خادم أو عنوانه، بدون http://.</string>
+    <string name="ui_proxy_port_invalid">أدخل منفذًا من 1 إلى 65535.</string>
+    <string name="ui_proxy_incomplete">املأ بيانات الخادمين كي تعمل السلسلة.</string>
+    <string name="ui_proxy_block">احظر باقي حركة البيانات</string>
+    <string name="ui_proxy_block_sub">أوقف حركة البيانات التي لا يمكنها المرور عبر الخادمين</string>
+
+    <string name="ui_an_security">التحليل الأمني</string>
+    <string name="ui_an_stats">الإحصاءات</string>
+    <string name="ui_an_stats_sub">درجة الخصوصية، واستهلاك البيانات، وتقرير تقنية المعلومات، والتقاط الحزم</string>
+    <string name="ui_an_alerts">التنبيهات</string>
+    <string name="ui_an_alerts_sub">التحذيرات التي أطلقها CoreLock</string>
+    <string name="ui_an_systems">أنظمة الأمان</string>
+    <string name="ui_an_systems_sub">فحوص تراقب السلوك غير المعتاد، وتقرير الليل</string>
+    <string name="ui_an_ad_privacy">خصوصية الإعلانات</string>
+    <string name="ui_an_ads">تفاصيل الإعلانات والمتتبّعات</string>
+    <string name="ui_an_ct">فحص الشهادات</string>
+    <string name="ui_an_ct_sub">نبّهني إلى شهادات المواقع المريبة</string>
+    <string name="ui_an_report">أنشئ تقريرًا الآن</string>
+    <string name="ui_an_report_sub">الملخص الأسبوعي، الآن، كإشعار</string>
+    <string name="ui_an_report_started">يجري إعداد التقرير. سيصلك كإشعار.</string>
+
+    <string name="ui_diag_network">تشخيص الشبكة</string>
+    <string name="ui_diag_network_sub">افحص ما قد يوقف الحماية</string>
+    <string name="ui_diag_run">ابدأ الفحص</string>
+    <string name="ui_diag_running">جارٍ الفحص…</string>
+    <string name="ui_diag_not_run">لم يُفحص بعد.</string>
+    <string name="ui_diag_integrity">سلامة التطبيق</string>
+    <string name="ui_diag_integrity_sub">تحقّق من أن CoreLock لم يُعدَّل</string>
+    <string name="ui_diag_lists">تفاصيل قوائم الحظر</string>
+    <string name="ui_diag_list_updated">نُزّلت %1$s</string>
+    <string name="ui_diag_list_never">لم تُنزَّل بعد</string>
+    <string name="ui_diag_names">عدد الأسماء في كل قائمة</string>
+    <string name="ui_diag_battery">البطارية</string>
+    <string name="ui_diag_battery_ok">غير مقيّد: لن يوقف Android الحماية لتوفير البطارية.</string>
+    <string name="ui_diag_builtin">مدمجة: %1$s</string>
+    <string name="ui_diag_list_count">%1$s: %2$s</string>
+    <plurals name="ui_diag_names_n">
+        <item quantity="zero">%1$s اسم</item>
+        <item quantity="one">اسم واحد</item>
+        <item quantity="two">اسمان</item>
+        <item quantity="few">%1$s أسماء</item>
+        <item quantity="many">%1$s اسمًا</item>
+        <item quantity="other">%1$s اسم</item>
+    </plurals>
+</resources>

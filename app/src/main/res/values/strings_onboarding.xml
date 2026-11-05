@@ -1,35 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="onb_1_title">Your device. Your rules.</string>
-    <string name="onb_1_body">The app runs a local VPN to see every connection your apps make, so nothing leaves your device unnoticed.</string>
-    <string name="onb_1_b1">Looks at connection details only: no content is decrypted unless you turn HTTPS inspection on</string>
-    <string name="onb_1_b2">Works on your device, with no cloud account</string>
-    <string name="onb_1_b3">Android can block traffic if protection drops (Always-on VPN)</string>
-    <string name="onb_2_title">What it detects</string>
-    <string name="onb_2_body">Several analysis layers surface things your phone wouldn\'t normally show you.</string>
-    <string name="onb_2_b1">Apps that suddenly connect in a new way (TLS fingerprints)</string>
-    <string name="onb_2_b2">DNS tunneling and random-looking (DGA) domains</string>
-    <string name="onb_2_b3">Tracker SDKs built into your apps</string>
-    <string name="onb_2_b4">Apps using the network in the background</string>
-    <string name="onb_2_b5">Unencrypted (cleartext) connections</string>
-    <string name="onb_3_title">What you control</string>
-    <string name="onb_3_body">Block anything: per app, per domain, per IP or everywhere. Rules apply immediately.</string>
-    <string name="onb_3_b1">Block specific apps, domains or IPs</string>
-    <string name="onb_3_b2">Block all cleartext or weak TLS</string>
-    <string name="onb_3_b3">Suggested rules based on what your apps do</string>
-    <string name="onb_3_b4">Export logs as PCAP, CSV or an IT report</string>
-    <string name="onb_start">I understand: start monitoring</string>
-    <string name="onb_continue">Continue without turning on the VPN</string>
-    <string name="onb_next">Next</string>
-    <string name="onb_consent_title">What this app does</string>
-    <string name="onb_consent_body">Please read and confirm each item before continuing.</string>
-    <string name="onb_c_net">Network monitoring</string>
     <string name="onb_c_net_body">A local VPN is created on this device. All network traffic passes through it so the app can show which apps talk to whom. Nothing is ever sent to the makers of CoreLock.\nWhat does leave this phone:\n• Your DNS lookups, to the resolver you choose in Settings (Cloudflare 1.1.1.1 by default; encrypted to cloudflare-dns.com, dns.google or dns.quad9.net only when you turn on DoH).\n• Blocklist downloads, about once a week: the HaGeZi lists from raw.githubusercontent.com (or cdn.jsdelivr.net when GitHub cannot be reached) and the OISD list from small.oisd.nl.\n• The Exodus tracker list, at most once a week: reports.exodus-privacy.eu.org.\nOnly if you turn them on in Settings:\n• Certificate Transparency checks: the domains you visit are sent to crt.sh.\n• The public IP check in Diagnostics: asks api.ipify.org.</string>
-    <string name="onb_c_https">HTTPS traffic inspection (optional)</string>
-    <string name="onb_c_https_body">To read the contents of HTTPS traffic, CoreLock acts as a local proxy, and you install its certificate in Android’s settings. Checking this box records your consent; inspection stays off until you switch it on in the Payload screen.\nAndroid keeps that certificate after you uninstall CoreLock. Remove it yourself: open Settings, search for “User certificates” (usually under Security → More security settings → Encryption and credentials), tap “PrivacyGuard Enterprise CA” and choose Remove.</string>
-    <string name="onb_c_storage">Local storage</string>
     <string name="onb_c_storage_body">Traffic logs are stored encrypted in the app’s private storage on this device. They are never uploaded. They leave the phone only when you share an export yourself (PCAP, CSV or IT report). You can delete them at any time from Settings.</string>
-    <string name="onb_required_note">Required items must be checked to continue.</string>
-    <string name="onb_required">Required</string>
-    <string name="onb_optional">Optional</string>
+    <!-- 1.1 onboarding (DESIGN_SPEC_1.1.md §6.7) -->
+    <string name="onb11_step">Step %1$d of %2$d</string>
+    <string name="onb11_what_title">CoreLock protects this phone</string>
+    <string name="onb11_what_body">It blocks ads, trackers and malware on this phone.</string>
+    <string name="onb11_what_private">Nothing leaves your phone for us: your history stays here, encrypted.</string>
+    <string name="onb11_what_limit">It can\'t block ads inside YouTube, Instagram, Snapchat, TikTok or Facebook.</string>
+    <string name="onb11_next">Next</string>
+    <string name="onb11_vpn_title">Why Android asks about a VPN</string>
+    <string name="onb11_vpn_body">CoreLock uses Android\'s VPN feature to check connections on your phone. Your traffic isn\'t sent to us: we have no servers.</string>
+    <string name="onb11_vpn_ask">Android asks you once to allow it.</string>
+    <string name="onb11_leaves">What leaves this phone</string>
+    <string name="onb11_continue">Continue</string>
+    <string name="onb11_level_title">How much should CoreLock block?</string>
+    <string name="onb11_level_body">You can change this at any time on Home.</string>
+    <string name="onb11_battery">Android limits CoreLock in the background, so protection may stop. Allow it to run in the background.</string>
+    <string name="onb11_battery_action">Open battery settings</string>
+    <string name="onb11_done">Done</string>
 </resources>

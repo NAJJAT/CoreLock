@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 1.1 Activity, detail sheet, fix flow and pause (DESIGN_SPEC_1.1.md §6.2, D1, D3).
+     Machine translations are listed in docs/TRANSLATION_REVIEW_1.1.md. -->
+<resources>
+    <!-- Groups -->
+    <string name="ui_group_just_now">Just now</string>
+    <string name="ui_group_today">Today</string>
+    <string name="ui_group_yesterday">Yesterday</string>
+    <string name="ui_group_earlier">Earlier</string>
+
+    <!-- Row reasons (besides the Phase 2 ones in strings_ui.xml) -->
+    <string name="ui_reason_lookup_bypass">Blocked · Skips CoreLock</string>
+    <string name="ui_reason_lookup_bypass_port">Blocked · Never allowed</string>
+    <string name="ui_title_lookup_service">Private lookup service</string>
+    <plurals name="ui_times">
+        <item quantity="one">%d time</item>
+        <item quantity="other">%d times</item>
+    </plurals>
+    <string name="ui_reason_setting">Blocked · A rule or setting</string>
+
+    <!-- Detail sheet -->
+    <string name="ui_what_named">%1$s (%2$s) from %3$s</string>
+    <string name="ui_what_plain">%1$s from %2$s</string>
+    <string name="ui_why_ads">It\'s on the Ads and trackers list.</string>
+    <string name="ui_why_malware">It\'s on the malware list. Sites like this can steal passwords or install harmful apps.</string>
+    <string name="ui_why_rule">You blocked it.</string>
+    <string name="ui_why_rule_named">You blocked it with your rule “%1$s”.</string>
+    <string name="ui_why_lookup_bypass">It\'s a private lookup service. Apps that use it would skip CoreLock\'s lists, so it stays blocked. If you run your own, allow it in Rules and allowed sites.</string>
+    <string name="ui_why_lookup_bypass_port">The app tried to look up sites in a way that skips CoreLock\'s lists. This can\'t be allowed.</string>
+    <string name="ui_why_setting">A rule or one of your settings stopped it at the time, for example an app block or blocking unencrypted connections. If you removed that rule since, it no longer applies.</string>
+    <string name="ui_why_allowed">Nothing on your lists or rules stopped it.</string>
+    <string name="ui_reason_now_note">Based on your lists and rules as they are now.</string>
+    <string name="ui_allow_anyway">Allow anyway</string>
+    <string name="ui_block_for_app">Block for this app</string>
+    <string name="ui_block_everywhere">Block everywhere</string>
+    <string name="ui_about_this_app">About %1$s</string>
+    <string name="ui_more_about_name">More about this name</string>
+    <string name="ui_tech_name">Name</string>
+    <string name="ui_tech_ip">IP address</string>
+    <string name="ui_tech_port">Port</string>
+    <string name="ui_tech_protocol">Protocol</string>
+    <string name="ui_tech_rule">Rule</string>
+    <string name="ui_tech_time">Time</string>
+
+    <!-- After an action -->
+    <string name="ui_allowed_try_again">Allowed. Try the app again.</string>
+    <string name="ui_undo">Undo</string>
+    <string name="ui_blocked_done">Blocked.</string>
+    <string name="ui_rule_removed">Your rule was removed.</string>
+    <string name="ui_action_failed">That didn\'t work. Try again.</string>
+
+    <!-- List states -->
+    <string name="ui_empty_activity_all">Nothing here yet. Connections show up here as apps use the internet.</string>
+    <string name="ui_empty_activity_off">Protection is off, so nothing is being blocked.</string>
+    <string name="ui_activity_limit">Showing the newest %1$d.</string>
+    <string name="ui_back">Back</string>
+    <string name="ui_more_options">More options</string>
+    <string name="ui_live_connections">Live connections</string>
+
+    <!-- Rule labels (shown in Rules and allowed sites) -->
+    <string name="rule_allow_domain_for_app">Allow %1$s for %2$s</string>
+    <string name="rule_block_domain_for_app">Block %1$s for %2$s</string>
+
+    <!-- Fix flow: "Something not working?" -->
+    <string name="ui_fix_step_n">Step %1$d of %2$d</string>
+    <string name="ui_fix_which_app">Which app isn\'t working?</string>
+    <string name="ui_fix_which_app_sub">Apps with something blocked in the last hour, newest first.</string>
+    <string name="ui_fix_not_sure">Not listed or not sure</string>
+    <string name="ui_fix_not_sure_sub">See everything blocked in the last hour</string>
+    <string name="ui_fix_blocked_hour">This was blocked in the last hour</string>
+    <string name="ui_fix_blocked_hour_sub">The most likely cause is at the top.</string>
+    <string name="ui_fix_unknown_app_names">Also blocked, app not known</string>
+    <string name="ui_fix_none_hour">Nothing was blocked in the last hour, so CoreLock is probably not the cause.</string>
+    <string name="ui_fix_none_app">Nothing was blocked for this app in the last hour. CoreLock is probably not the cause.</string>
+    <string name="ui_fix_all_handled">Done. Try the app again. If it still doesn\'t work, go back and pick another app.</string>
+    <plurals name="ui_fix_attempts">
+        <item quantity="one">%d attempt</item>
+        <item quantity="other">%d attempts</item>
+    </plurals>
+    <string name="ui_fix_try_pause">Still not sure? Pause protection for 5 minutes and try the app again.</string>
+
+    <!-- Pause (owner's decision D1) -->
+    <string name="ui_pause_5">Pause protection for 5 minutes</string>
+    <string name="ui_pause_needs_alarms">To pause, CoreLock needs “Alarms &amp; reminders” access, so it can turn itself back on.</string>
+    <string name="ui_pause_always_on">Pausing is not available while Always-on VPN is on: Android would turn CoreLock back on at once.</string>
+    <string name="ui_paused_toast">Paused for 5 minutes. Try the app now.</string>
+    <string name="ui_hero_paused">Protection is paused</string>
+    <string name="ui_hero_paused_sub">Back on at %1$s.</string>
+    <string name="ui_resume_now">Resume now</string>
+    <string name="pause_notif_title">Protection paused</string>
+    <string name="pause_notif_text">CoreLock turns back on at %1$s.</string>
+    <string name="ui_reason_ad_sdk">Blocked · An ad tracker built into the app</string>
+    <string name="ui_why_ad_sdk">It\'s an ad tracker that apps build in. CoreLock blocks it in every app except the one that makes it.</string>
+</resources>

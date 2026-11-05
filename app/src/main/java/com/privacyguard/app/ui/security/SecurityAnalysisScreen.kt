@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -18,6 +19,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.testTag
+import com.privacyguard.app.ui.components.InfoSheet
+import com.privacyguard.app.ui.theme.CoreLockTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,7 +71,7 @@ fun SecurityAnalysisScreen(
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             ScreenScaffold(
-                title = stringResource(R.string.sec_title),
+                title = stringResource(R.string.ui_an_security),
                 subtitle = stringResource(R.string.sec_subtitle),
                 badge = stringResource(R.string.dash_badge_live).uppercase()
             ) {
@@ -216,7 +222,16 @@ fun SecurityAnalysisScreen(
 }
 
 @Composable
-private fun TlsBaselinePanel(summary: TlsBaselineSummary, onTrust: (TlsChangeItem) -> Unit) {
+internal fun TlsBaselinePanel(summary: TlsBaselineSummary, onTrust: (TlsChangeItem) -> Unit) {
+    // The longer explanation 1.0 showed in Settings (owner, 2026-11-04): one tap away, in a sheet.
+    var explain by rememberSaveable { mutableStateOf(false) }
+    if (explain) {
+        InfoSheet(
+            title = stringResource(R.string.tls_fp_what_is),
+            body = stringResource(R.string.tls_fp_settings_explainer),
+            onDismiss = { explain = false },
+        )
+    }
     PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
         SectionLabel(stringResource(R.string.tls_fp_section_title))
         Spacer(modifier = Modifier.height(6.dp))
@@ -225,6 +240,10 @@ private fun TlsBaselinePanel(summary: TlsBaselineSummary, onTrust: (TlsChangeIte
             style = MaterialTheme.typography.bodySmall,
             color = PgTextMuted,
         )
+        TextButton(
+            onClick = { explain = true },
+            modifier = Modifier.heightIn(min = CoreLockTheme.spacing.minTouchTarget).testTag(TAG_TLS_WHAT_IS),
+        ) { Text(stringResource(R.string.tls_fp_what_is)) }
         Spacer(modifier = Modifier.height(10.dp))
         if (summary.appCount == 0) {
             EmptyBanner(stringResource(R.string.tls_fp_no_apps_yet), isGood = false)
@@ -439,3 +458,6 @@ private fun ViewAllAlertsButton(count: Int, onClick: () -> Unit) {
         )
     }
 }
+
+/** "What is a TLS fingerprint?": opens the explanation 1.0 showed in Settings. */
+const val TAG_TLS_WHAT_IS = "sec_tls_what_is"

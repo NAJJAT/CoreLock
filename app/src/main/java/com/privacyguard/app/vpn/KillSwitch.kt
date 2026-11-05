@@ -37,6 +37,14 @@ object KillSwitch {
             else runCatching { s.isAlwaysOn && s.isLockdownEnabled }.getOrNull()
         })
 
+    /**
+     * Always-on VPN is set for CoreLock, as far as the running service can tell (API 29+).
+     * False when unknown. A pause reads it: under Always-on Android restarts the VPN itself.
+     */
+    val alwaysOn: Boolean
+        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            service?.get()?.let { s -> runCatching { s.isAlwaysOn }.getOrNull() } == true
+
     /** [lockdown] null: no running service to ask, or Android did not answer. */
     internal fun statusOf(sdk: Int, lockdown: Boolean?): LockdownStatus = when {
         sdk < Build.VERSION_CODES.Q -> LockdownStatus.UNSUPPORTED

@@ -18,6 +18,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Visibility
@@ -57,6 +58,7 @@ import com.privacyguard.app.ui.components.AttentionBanner
 import com.privacyguard.app.ui.components.BannerTone
 import com.privacyguard.app.ui.components.CoreLockBottomSheet
 import com.privacyguard.app.ui.components.ProtectionState
+import com.privacyguard.app.ui.components.SecondaryButton
 import com.privacyguard.app.ui.components.SettingRow
 import com.privacyguard.app.ui.components.StatusHeroCard
 import com.privacyguard.app.ui.dashboard.PrivateDnsStartDialog
@@ -67,8 +69,8 @@ import com.privacyguard.vpn.interception.TlsInterceptionFactory
 
 /**
  * Home: "am I protected?" (DESIGN_SPEC_1.1.md §6.1). The status hero, the level, today's
- * count and at most one attention card. Everything else of the 1.0 Home is one tap away
- * under "Security details" until Phase 6 moves it to Settings › Advanced.
+ * count and at most one attention card. Everything else of the 1.0 Home is in
+ * Settings › Advanced › Analysis (parity table §5.2).
  */
 @Composable
 fun HomeScreen(
@@ -78,7 +80,8 @@ fun HomeScreen(
     onOpenStatistics: () -> Unit,
     /** Null in builds without HTTPS inspection. */
     onOpenPayloads: (() -> Unit)?,
-    onOpenSecurityDetails: () -> Unit,
+    /** "Something not working?" (§6.2). */
+    onOpenFix: () -> Unit = {},
     viewModel: HomeViewModel = viewModel(),
 ) {
     val context = LocalContext.current
@@ -121,7 +124,7 @@ fun HomeScreen(
             onOpenBlocked = onOpenBlocked,
             onRetryBlocked = viewModel::retryBlockedToday,
             onOpenPayloads = onOpenPayloads,
-            onOpenSecurityDetails = onOpenSecurityDetails,
+            onOpenFix = onOpenFix,
             onAttentionAction = { attention ->
                 when (attention) {
                     is HomeLogic.Attention.PrivateDns -> PrivateDnsCheck.openSettings(context)
@@ -156,7 +159,7 @@ class HomeActions(
     val onOpenBlocked: () -> Unit = {},
     val onRetryBlocked: () -> Unit = {},
     val onOpenPayloads: (() -> Unit)? = null,
-    val onOpenSecurityDetails: () -> Unit = {},
+    val onOpenFix: () -> Unit = {},
     val onAttentionAction: (HomeLogic.Attention) -> Unit = {},
     val onAttentionSecondary: (HomeLogic.Attention) -> Unit = {},
     val onAttentionDismiss: (HomeLogic.Attention) -> Unit = {},
@@ -177,7 +180,9 @@ fun HomeContent(state: HomeUiState, inspection: InspectionStatus, actions: HomeA
         StatusHeroCard(
             state = state.protection,
             title = stringResource(HomeLogic.heroTitle(state.protection)),
-            subtitle = stringResource(HomeLogic.heroSubtitle(state.protection, state.level, state.stopReason)),
+            subtitle = state.pausedUntil?.let { until ->
+                stringResource(R.string.ui_hero_paused_sub, android.text.format.DateFormat.getTimeFormat(LocalContext.current).format(java.util.Date(until)))
+            } ?: stringResource(HomeLogic.heroSubtitle(state.protection, state.level, state.stopReason)),
             onToggle = actions.onToggle,
             modifier = Modifier.testTag(TAG_HERO),
         )
@@ -208,18 +213,15 @@ fun HomeContent(state: HomeUiState, inspection: InspectionStatus, actions: HomeA
             }
         }
 
-        state.attention?.let { HomeAttention(it, hasPayloads = actions.onOpenPayloads != null, actions = actions) }
+        // §6.1: right under the numbers, so a broken app is two taps from a fix.
+        SecondaryButton(
+            stringResource(R.string.ui_something_not_working),
+            onClick = actions.onOpenFix,
+            leadingIcon = Icons.Rounded.Build,
+            modifier = Modifier.fillMaxWidth().testTag(TAG_HOME_FIX),
+        )
 
-        // TEMPORARY (Phase 3 → 6): the 1.0 Home cards (score, security systems, alerts,
-        // reports, packet capture) live behind this row until Settings › Advanced exists.
-        Surface(shape = CoreLockTheme.shapes.card, color = CoreLockTheme.colors.surface, modifier = Modifier.fillMaxWidth()) {
-            SettingRow(
-                title = stringResource(R.string.ui_home_security_details),
-                subtitle = stringResource(R.string.ui_home_security_details_sub),
-                leadingIcon = Icons.Rounded.Insights,
-                onClick = actions.onOpenSecurityDetails,
-            )
-        }
+        state.attention?.let { HomeAttention(it, hasPayloads = actions.onOpenPayloads != null, actions = actions) }
     }
 
     if (showLevels) {
@@ -397,6 +399,7 @@ private fun HomeAttention(attention: HomeLogic.Attention, hasPayloads: Boolean, 
 }
 
 const val TAG_HERO = "home_hero"
+const val TAG_HOME_FIX = "home_fix"
 const val TAG_LEVEL_ROW = "home_level_row"
 const val TAG_LEVEL_PREFIX = "home_level_"
 const val TAG_BLOCKED_ROW = "home_blocked_row"

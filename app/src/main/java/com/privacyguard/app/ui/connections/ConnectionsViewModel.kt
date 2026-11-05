@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.privacyguard.app.ui.launchWhileObserved
+import com.privacyguard.app.ui.changesOf
 
 data class Connection(
     val id: String,
@@ -143,6 +144,11 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
     private val _dnsLookup = MutableStateFlow(DnsLookupState())
     val dnsLookup: StateFlow<DnsLookupState> = _dnsLookup.asStateFlow()
 
+    private val reloader = com.privacyguard.app.ui.Reloader("Connections")
+    /** True while the latest load failed; the last list stays on screen. */
+    val loadFailed: StateFlow<Boolean> = reloader.failed
+    fun retry() = reloader.retry()
+
     private val _selectedConnection = MutableStateFlow<ConnectionDetailState?>(null)
     val selectedConnection: StateFlow<ConnectionDetailState?> = _selectedConnection.asStateFlow()
 
@@ -151,9 +157,10 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
             RuleSyncBus.version.collect { refreshBlockedRuleKeys() }
         }
 
+        // Reloaded when connections are written, not every 5 s; a failure is shown, not swallowed.
         viewModelScope.launchWhileObserved(_recentConnections) {
-            while (true) {
-                try {
+            // History is the whole day with a GeoIP lookup per unnamed row: at most every 5 s.
+            reloader.runOn(db.changesOf("connections", minIntervalMs = 5_000)) {
                 val since = System.currentTimeMillis() - 24L * 60L * 60L * 1000L
                 // Every connection that ended in the last 24 h (blocked attempts included).
                 _recentConnections.value = db.connectionDao().allSince(since).filterNot {
@@ -186,10 +193,6 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
                         wasBackground = it.wasBackground,
                     ).withRuleState()
                 }
-                } catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                  catch (_: Exception) { }
-                // History is the whole day with a GeoIP lookup per unnamed row: refresh calmly.
-                delay(5_000)
             }
         }
     }

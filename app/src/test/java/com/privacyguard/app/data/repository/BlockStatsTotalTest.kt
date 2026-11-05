@@ -14,8 +14,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 
 /**
- * The ongoing notification shows [BlockStats.totalBetween]; the dashboard's
- * "Blocked (24 h)" tile shows [BlockStats.between]'s total. They must be the same number.
+ * [BlockStats.totalBetween] (under [BlockStats.today]) and [BlockStats.between]'s total
+ * (the Security systems "Blocked (24 h)" tile) must be the same number for one window.
+ * The places that show "blocked today": BlockCountAgreementTest.
  */
 @RunWith(RobolectricTestRunner::class)
 class BlockStatsTotalTest {

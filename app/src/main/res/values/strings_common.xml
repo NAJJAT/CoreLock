@@ -11,7 +11,6 @@
     <string name="net_wifi">Wi-Fi network</string>
     <string name="net_cellular">Mobile network</string>
     <string name="net_ethernet">Ethernet network</string>
-    <string name="net_vpn">VPN network</string>
     <string name="net_wifi_named">Wi-Fi: %1$s</string>
     <string name="nd_mitm_off">HTTPS inspection is off or its consent has expired, so this connection was passed through untouched.</string>
     <string name="nd_bypass">This host is on the never-intercept list (DNS-over-HTTPS, Google or Samsung services). Decrypting it breaks name resolution or sign-in, so it is passed through.</string>
@@ -21,7 +20,7 @@
     <string name="common_all">All</string>
     <string name="nav_home">Home</string>
     <string name="nav_apps">Apps</string>
-    <string name="nav_traffic">Traffic</string>
+    <string name="nav_traffic">Activity</string>
     <string name="nav_stats">Stats</string>
     <string name="nav_payload">Payload</string>
     <string name="nav_settings">Settings</string>

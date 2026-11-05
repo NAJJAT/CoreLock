@@ -45,6 +45,8 @@ class PrivacyGuardApplication : Application() {
         FlavorStartup.onCreate(this)
         PruneWorker.schedule(this)
         BlocklistUpdateWorker.schedulePeriodic(this)
+        // A pause whose alarm was lost (force stop) ends here at the latest (D1).
+        com.privacyguard.app.vpn.ProtectionPause.recheck(this)
     }
 
     /**

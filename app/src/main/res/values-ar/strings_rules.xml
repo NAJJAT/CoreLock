@@ -1,25 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="rules_title">القواعد</string>
     <string name="rules_add">إضافة قاعدة</string>
-    <string name="rules_empty">لا قواعد بعد</string>
-    <string name="rules_empty_desc">اضغط + لإضافة قاعدة لنطاق أو تطبيق</string>
     <string name="rules_search">ابحث عن نطاق أو تطبيق أو IP…</string>
-    <string name="rules_clear">مسح</string>
     <string name="rules_suggested">مقترحة</string>
-    <string name="rules_active">القواعد النشطة · %1$d</string>
-    <plurals name="rules_count">
-        <item quantity="zero">لا قواعد</item>
-        <item quantity="one">قاعدة واحدة</item>
-        <item quantity="two">قاعدتان</item>
-        <item quantity="few">%d قواعد</item>
-        <item quantity="many">%d قاعدةً</item>
-        <item quantity="other">%d قاعدة</item>
-    </plurals>
-    <string name="rules_d_domain">النطاق: %1$s</string>
-    <string name="rules_d_app">التطبيق: %1$s</string>
-    <string name="rules_d_ip">IP: %1$s</string>
-    <string name="rules_d_bg">في الخلفية فقط</string>
     <plurals name="rules_triggered">
         <item quantity="zero">لم تُطبَّق بعد</item>
         <item quantity="one">طُبّقت مرة واحدة</item>
@@ -28,13 +11,6 @@
         <item quantity="many">طُبّقت %d مرةً</item>
         <item quantity="other">طُبّقت %d مرة</item>
     </plurals>
-    <string name="rules_delete">حذف</string>
-    <string name="rules_add_title">إضافة قاعدة</string>
-    <string name="rules_type">النوع:</string>
-    <string name="rules_hint_domain">النطاق (مثل ads.example.com)</string>
-    <string name="rules_hint_package">حزمة التطبيق (مثل com.example.app)</string>
-    <string name="rules_hint_ip">IP أو CIDR (مثل 1.2.3.4 أو 10.0.0.0/8)</string>
-    <string name="rules_action">الإجراء:</string>
     <string name="rules_add_button">إضافة</string>
     <string name="rules_skip">تخطٍّ</string>
     <plurals name="rules_reason_cleartext">
@@ -55,9 +31,6 @@
     </plurals>
     <string name="rule_block_cleartext_app">حظر الاتصالات غير المشفّرة لـ %1$s</string>
     <string name="rule_block_background_app">حظر %1$s في الخلفية</string>
-    <string name="rules_type_domain">نطاق</string>
-    <string name="rules_type_app">تطبيق</string>
-    <string name="rules_type_ip">عنوان IP</string>
     <string name="rules_ip_invalid">أدخل عنوان IPv4 أو نطاقًا، مثل 1.2.3.4 أو 10.0.0.0/8. قواعد IPv6 غير مدعومة بعد.</string>
     <string name="rules_domain_exact">يطابق هذا الاسم بالضبط. اكتب *.example.com لتشمل example.com وكل النطاقات الفرعية.</string>
 </resources>

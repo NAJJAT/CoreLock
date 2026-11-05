@@ -32,9 +32,46 @@ class BlockStats(private val db: AppDatabase) {
             if (allLookups == 0) 0f else (blockedLookups.toFloat() / allLookups).coerceIn(0f, 1f)
     }
 
-    /** [Counts.total] alone (two counts, no name list): for the ongoing notification. */
+    /**
+     * "Blocked today": since local midnight. The one count the notification, Home, Apps,
+     * Activity and Statistics show (owner, 2026-11-04), so the same number never differs
+     * between two places; BlockCountAgreementTest checks they all use it.
+     */
+    suspend fun today(now: Long, zone: java.util.TimeZone = java.util.TimeZone.getDefault()): Int =
+        totalBetween(startOfDay(now, zone), now)
+
+    /** Per app, for the same window as [today]: the Apps list's "N blocked today". */
+    suspend fun perAppToday(now: Long, zone: java.util.TimeZone = java.util.TimeZone.getDefault()): Map<String, Int> =
+        perAppBetween(startOfDay(now, zone), now)
+
+    /** [today] with the names behind it ("5 blocked · 2 domains"), same rows and window. */
+    suspend fun todayCounts(now: Long, zone: java.util.TimeZone = java.util.TimeZone.getDefault()): Counts =
+        between(startOfDay(now, zone), now)
+
+    companion object {
+        /** Local midnight before [now]: where "today" starts. */
+        fun startOfDay(now: Long, zone: java.util.TimeZone = java.util.TimeZone.getDefault()): Long =
+            java.util.Calendar.getInstance(zone).apply {
+                timeInMillis = now
+                set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
+                set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+            }.timeInMillis
+    }
+
+    /** [Counts.total] alone (two counts, no name list). */
     suspend fun totalBetween(from: Long, to: Long): Int =
         db.dnsQueryDao().countBlockedBetween(from, to) + db.connectionDao().countBlockedBetween(from, to)
+
+    /**
+     * [Counts.total] per app, from the same rows: the Apps list's "N blocked today" adds
+     * up to Home's number (apart from rows no app is known for).
+     */
+    suspend fun perAppBetween(from: Long, to: Long): Map<String, Int> {
+        val out = HashMap<String, Int>()
+        (db.dnsQueryDao().countBlockedByPackageBetween(from, to) + db.connectionDao().countBlockedByPackageBetween(from, to))
+            .forEach { out.merge(it.packageName, it.count, Int::plus) }
+        return out
+    }
 
     suspend fun between(from: Long, to: Long): Counts = Counts(
         blockedLookups = db.dnsQueryDao().countBlockedBetween(from, to),

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="trf_unattributed">لا يمكن نسبته إلى تطبيق</string>
     <string name="trf_removed_app">تطبيق محذوف</string>
     <string name="trf_source_sni">TLS SNI</string>
     <string name="trf_source_dns">DNS</string>
@@ -106,6 +105,7 @@
     <string name="trf_not_tracker">ليس في قاعدة بيانات المتتبّعات.</string>
     <string name="trf_frequency">آخر 7 أيام</string>
     <string name="trf_per_day">نحو %1$s يوميًا</string>
+    <string name="trf_per_day_under_one">أقل من مرة واحدة يوميًا</string>
     <string name="trf_apps_used">التطبيقات التي استخدمته</string>
     <string name="trf_first_seen">أول ظهور</string>
     <string name="trf_last_seen">آخر ظهور</string>
@@ -143,7 +143,6 @@
     <string name="ev_data_7d_def">%1$s إجمالًا. الاتصالات الأكثر بيانات أولًا.</string>
     <string name="ev_beacon_row">%1$s مرة · نحو كل %2$s</string>
     <string name="ev_at">حُسب في %1$s</string>
-    <string name="dash_blocked_24h">المحظور (24 س)</string>
     <string name="dash_cleartext_24h">غير مشفّر (24 س)</string>
     <string name="sleep_definition">«الخمول» يعني أن الشاشة كانت مطفأة. تُرتَّب التطبيقات حسب طلبات DNS التي أجرتها والشاشة مطفأة خلال الفترة المختارة. اضغط تطبيقًا لعرض كل اتصالاته.</string>
     <string name="ev_connections_24h">الاتصالات · آخر 24 ساعة</string>

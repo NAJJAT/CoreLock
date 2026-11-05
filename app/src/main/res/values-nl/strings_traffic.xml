@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="trf_unattributed">Niet aan een app toe te wijzen</string>
     <string name="trf_removed_app">Verwijderde app</string>
     <string name="trf_source_sni">TLS SNI</string>
     <string name="trf_source_dns">DNS</string>
@@ -90,6 +89,7 @@
     <string name="trf_not_tracker">Niet in de trackerdatabase.</string>
     <string name="trf_frequency">Laatste 7 dagen</string>
     <string name="trf_per_day">ongeveer %1$s per dag</string>
+    <string name="trf_per_day_under_one">minder dan één keer per dag</string>
     <string name="trf_apps_used">Apps die het gebruikten</string>
     <string name="trf_first_seen">Eerst gezien</string>
     <string name="trf_last_seen">Laatst gezien</string>
@@ -127,7 +127,6 @@
     <string name="ev_data_7d_def">In totaal %1$s. Verbindingen met de meeste gegevens eerst.</string>
     <string name="ev_beacon_row">%1$s keer · ongeveer elke %2$s</string>
     <string name="ev_at">Geteld om %1$s</string>
-    <string name="dash_blocked_24h">Geblokkeerd (24 u)</string>
     <string name="dash_cleartext_24h">Onversleuteld (24 u)</string>
     <string name="sleep_definition">‘Inactief’ betekent dat het scherm uit stond. Apps worden gerangschikt op de DNS-opzoekingen die ze deden terwijl het scherm uit stond in de gekozen periode. Tik op een app om alle verbindingen te zien.</string>
     <string name="ev_connections_24h">Verbindingen · afgelopen 24 u</string>

@@ -2,8 +2,6 @@
 <resources>
     <string name="dash_card_behavior">البصمة السلوكية للتطبيقات</string>
     <string name="dash_card_behavior_desc">تغيّرات عن النمط المُتعلَّم لكل تطبيق، آخر 7 أيام</string>
-    <string name="dash_status_anomalous">غير طبيعي</string>
-    <string name="dash_status_learning">يتعلّم</string>
     <string name="dash_status_quiet">هادئ</string>
     <plurals name="dash_alerts_count">
         <item quantity="zero">لا تنبيهات</item>
@@ -15,9 +13,6 @@
     </plurals>
     <string name="dash_card_ipv6">حركة IPv6</string>
     <string name="dash_card_ipv6_desc">جلسات IPv6 خلال آخر 24 ساعة، تمر عبر النفق مثل IPv4</string>
-    <string name="dash_status_critical">حرج</string>
-    <string name="dash_status_blocked">محظور</string>
-    <string name="dash_status_contained">تحت السيطرة</string>
     <plurals name="dash_blocked_count">
         <item quantity="zero">لا شيء محظور</item>
         <item quantity="one">%d محظور</item>
@@ -38,15 +33,11 @@
     <string name="dash_kill_switch_off_desc">فعّل «VPN دائم التشغيل» و«حظر الاتصالات دون VPN»</string>
     <string name="dash_status_blocking">يحظر</string>
     <string name="dash_status_not_checked">لم يُفحص</string>
-    <string name="dash_vpn_live">VPN يعمل</string>
-    <string name="dash_vpn_off">VPN متوقف</string>
     <string name="dash_card_no_decrypt">لا فكّ لتشفير المحتوى</string>
     <string name="dash_card_no_decrypt_desc">فحص البيانات الوصفية فقط؛ يبقى محتوى TLS خاصًا</string>
-    <string name="dash_status_verified">تم التحقق</string>
     <string name="dash_headers_only">الترويسات فقط</string>
     <string name="dash_card_entropy">أسماء تبدو عشوائية</string>
     <string name="dash_card_entropy_desc">أسماء نطاقات تبدو مولّدة آليًا، آخر 7 أيام</string>
-    <string name="dash_status_high_value">مهم</string>
     <string name="dash_status_normal">طبيعي</string>
     <plurals name="dash_signals_count">
         <item quantity="zero">لا إشارات</item>
@@ -127,14 +118,12 @@
         <item quantity="many">رصدت البصمة السلوكية %d انحرافًا لدى التطبيقات. تستحق الوجهات الجديدة وعمليات الرفع في أوقات غريبة المراجعة.</item>
         <item quantity="other">رصدت البصمة السلوكية %d انحراف لدى التطبيقات. تستحق الوجهات الجديدة وعمليات الرفع في أوقات غريبة المراجعة.</item>
     </plurals>
-    <string name="dash_rec_ipv6">رُصدت حركة IPv6 أثناء عمل VPN. أضف دعم توجيه IPv6 أو عطّل تجاوز IPv6.</string>
     <string name="dash_rec_entropy">رُصدت أسماء نطاقات تبدو عشوائية. افتح البطاقة لترى التطبيقات التي طلبتها.</string>
     <string name="dash_rec_beacon">رُصدت اتصالات بتوقيت ثابت. افتح البطاقة لترى التطبيق والمضيف.</string>
     <string name="dash_rec_strict">يُنصح بالوضع الصارم على %1$s لأن الثقة انخفضت إلى %2$d/100.</string>
     <string name="dash_rec_default">الحظر القياسي مع مفتاح الإيقاف يمنح معظم الناس أقوى حماية افتراضية.</string>
     <string name="dash_rec_no_decrypt">يعمل تحليل السلوك دون فك تشفير المحتوى، لذلك يبقى ما ترسله خاصًا.</string>
-    <string name="dash_title">الرئيسية</string>
-    <string name="dash_subtitle_on">النفق المحمي يعمل</string>
+    <string name="dash_subtitle_on">الحماية مفعّلة</string>
     <string name="dash_subtitle_off">الحماية متوقفة مؤقتًا</string>
     <string name="dash_badge_live">مباشر</string>
     <string name="dash_badge_offline">غير متصل</string>
@@ -145,8 +134,6 @@
     <string name="dash_privacy_score_n">درجة الخصوصية %1$d</string>
     <string name="dash_encryption_health">سلامة التشفير</string>
     <string name="dash_tls_percent">%1$d%% مشفّر</string>
-    <string name="dash_trackers_blocked">المتتبّعات المحظورة</string>
-    <string name="dash_cleartext_conns">الاتصالات غير المشفّرة</string>
     <string name="dash_privacy_score">درجة الخصوصية</string>
     <string name="dash_throughput">معدل النقل</string>
     <string name="dash_active_conns">الاتصالات النشطة</string>
@@ -226,6 +213,6 @@
     <string name="dash_pcap_file">%1$s · %2$s</string>
     <string name="dash_pcap_file_limit">%1$s · %2$s · توقف عند حد 100 ميغابايت</string>
     <string name="dash_inspection_title">فحص HTTPS مفعّل</string>
-    <string name="dash_inspection_body">يفك CoreLock تشفير HTTPS للتطبيقات التي تثق بشهادته، ومعظم التطبيقات لا تثق بها. يمكنك إيقافه من «المحتوى».</string>
+    <string name="dash_inspection_body">يفك CoreLock تشفير HTTPS للتطبيقات التي تثق بشهادته، ومعظم التطبيقات لا تفعل ذلك. يمكنك إيقافه من شاشة فحص HTTPS.</string>
     <string name="dash_inspection_org_body">فعّلته مؤسستك. يفك CoreLock تشفير HTTPS للتطبيقات التي تثق بشهادته، ومعظم التطبيقات لا تثق بها.</string>
 </resources>

@@ -507,6 +507,41 @@ class NotificationHelper(private val baseContext: Context) {
 
     fun cancelProtectionStopped() = manager.cancel(NOTIFICATION_ID_PROTECTION_STOPPED)
 
+    /**
+     * While protection is paused (D1): a countdown to [until] and "Resume now". The tap
+     * and the action start the service directly, like "Protection stopped": explicit,
+     * immutable, nothing exported. The service ends the pause once it is up.
+     * Not muted by the Notifications switch: like "Protection stopped", it says protection
+     * is off (NotificationSwitchTest).
+     */
+    fun postPaused(until: Long) {
+        createChannels()
+        val start = PrivacyVpnService.startIntent(context)
+        val resume = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            PendingIntent.getForegroundService(context, NOTIFICATION_ID_PAUSED, start,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        else
+            PendingIntent.getService(context, NOTIFICATION_ID_PAUSED, start,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val at = android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(until))
+        val notification = PrivateNotifications.builder(context, CHANNEL_VPN_STATUS)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_lock)
+            .setContentTitle(context.getString(R.string.pause_notif_title))
+            .setContentText(context.getString(R.string.pause_notif_text, at))
+            .setWhen(until)
+            .setShowWhen(true)
+            .setUsesChronometer(true)
+            .setChronometerCountDown(true)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setContentIntent(resume)
+            .addAction(0, context.getString(R.string.ui_resume_now), resume)
+            .build()
+        manager.notify(NOTIFICATION_ID_PAUSED, notification)
+    }
+
+    fun cancelPaused() = manager.cancel(NOTIFICATION_ID_PAUSED)
+
     fun postBackgroundBlockAlert(
         packageName: String,
         destination: String,
@@ -556,6 +591,7 @@ class NotificationHelper(private val baseContext: Context) {
         const val NOTIFICATION_ID_BACKGROUND_BLOCK = 9
         const val NOTIFICATION_ID_PROTECTION_STOPPED = 10
         const val NOTIFICATION_ID_INSPECTION_BY_ORG = 11
+        const val NOTIFICATION_ID_PAUSED = 12
         // 1000..5095: one slot per app (see postTlsFingerprintChange).
         const val NOTIFICATION_ID_TLS_FP_BASE  = 1000
 

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ui_settings">الإعدادات</string>
+    <string name="ui_set_rules">القواعد والمواقع المسموح بها</string>
+    <string name="ui_set_rules_sub">المواقع والتطبيقات التي سمحت بها أو حظرتها</string>
+    <string name="ui_set_blocklists">قوائم الحظر</string>
+    <string name="ui_set_lists_updated">حُدّثت %1$s</string>
+    <string name="ui_set_lists_some_missing">حُدّثت %1$s. بعض القوائم لم تُنزَّل بعد.</string>
+    <string name="ui_set_lists_never">لم تُنزَّل بعد. تُستخدم القوائم المدمجة.</string>
+    <string name="ui_set_kill_switch">مفتاح الإيقاف</string>
+    <string name="ui_set_ks_on">مفعّل: لا إنترنت بدون CoreLock</string>
+    <string name="ui_set_ks_off">متوقف</string>
+    <string name="ui_set_ks_not_running">شغّل الحماية للتحقق</string>
+    <string name="ui_set_ks_unsupported">لا يستطيع Android معرفة ذلك قبل Android 10</string>
+    <string name="ui_set_notifications">الإشعارات</string>
+    <string name="ui_set_notifications_sub">الحالة والتحذيرات المهمة</string>
+    <string name="ui_set_show_details">عرض التفاصيل</string>
+    <string name="ui_set_show_details_sub">عرض أسماء التطبيقات في الإشعارات</string>
+    <string name="ui_set_weekly">الملخص الأسبوعي</string>
+    <string name="ui_set_weekly_sub">تقرير قصير كل أسبوع</string>
+    <string name="ui_set_language">اللغة</string>
+    <string name="ui_set_appearance">المظهر</string>
+    <string name="ui_set_theme">السمة</string>
+    <string name="ui_theme_system">النظام</string>
+    <string name="ui_theme_light">فاتح</string>
+    <string name="ui_theme_dark">داكن</string>
+    <string name="ui_set_data">البيانات</string>
+    <string name="ui_set_keep_history">الاحتفاظ بالسجل لمدة</string>
+    <string name="ui_set_keep_history_sub">يُحذف السجل الأقدم تلقائيًا.</string>
+    <string name="ui_set_export">تصدير السجل</string>
+    <string name="ui_set_export_sub">احفظ ملفًا يمكنك فتحه في جدول بيانات</string>
+    <string name="ui_set_export_title">تصدير السجل؟</string>
+    <string name="ui_set_export_body">يحتوي الملف على المواقع التي اتصلت بها تطبيقاتك خلال آخر 7 أيام. يستطيع قراءته كل من تشاركه معه. احتفظ به لنفسك.</string>
+    <string name="ui_set_export_action">تصدير</string>
+    <string name="ui_set_export_failed">تعذّر إنشاء الملف. حاول مرة أخرى.</string>
+    <string name="ui_set_screenshots">السماح بلقطات الشاشة</string>
+    <string name="ui_set_screenshots_sub">إيقافه يحمي سجلك</string>
+    <string name="ui_set_clear_sub">يحذف السجل والإحصاءات. تبقى الإعدادات والقواعد وقوائم الحظر.</string>
+    <string name="ui_set_cleared">حُذف السجل والإحصاءات.</string>
+    <string name="ui_set_about">حول</string>
+    <string name="ui_set_version">الإصدار</string>
+    <string name="ui_set_policy">سياسة الحظر</string>
+    <string name="ui_set_policy_sub">ما يحظره كل مستوى، ولماذا</string>
+    <string name="ui_set_licenses">تراخيص المصادر المفتوحة</string>
+    <string name="ui_set_new_versions">عرض الإصدارات الجديدة</string>
+    <string name="ui_set_new_versions_sub">يفتح صفحة الإصدارات على GitHub</string>
+    <string name="ui_set_report">الإبلاغ عن مشكلة</string>
+    <string name="ui_set_report_sub">يفتح GitHub في متصفحك</string>
+    <string name="ui_set_no_browser">لا يوجد تطبيق يستطيع فتح هذا الرابط.</string>
+
+    <string name="ui_ks_body">وحده Android يستطيع حظر الإنترنت عندما لا يعمل CoreLock. فعّل «شبكة VPN قيد التشغيل دائمًا» و«حظر الاتصالات بدون VPN» لـ CoreLock في إعدادات VPN في Android.</string>
+    <string name="ui_ks_tradeoff">عند تفعيل الخيارين لا يخرج شيء دون حماية. وإذا توقف CoreLock يبقى الهاتف بلا إنترنت حتى يعمل CoreLock من جديد.</string>
+    <string name="ui_ks_open">فتح إعدادات Android</string>
+
+    <string name="ui_lists_names">الأسماء المحظورة</string>
+    <string name="ui_lists_refresh">التحديث الآن</string>
+    <string name="ui_lists_refreshing">جارٍ تنزيل أحدث القوائم…</string>
+    <string name="ui_lists_auto">يحدّث CoreLock القوائم بنفسه كل أسبوع عبر Wi-Fi.</string>
+    <string name="ui_lists_details">تفاصيل كل قائمة في «متقدم › التشخيص».</string>
+</resources>

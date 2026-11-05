@@ -107,6 +107,11 @@
             android:name=".vpn.ProtectionWatchdogReceiver"
             android:exported="false" />
 
+        <!-- Ends a pause (D1); only the app's own alarm reaches it. -->
+        <receiver
+            android:name=".vpn.PauseReceiver"
+            android:exported="false" />
+
         <!-- Watches the VPN process from its own process and reacts the moment it dies
              (linkToDeath); bound by the VPN service only. PrivacyGuardApplication skips
              all setup in this process. -->

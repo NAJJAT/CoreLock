@@ -47,4 +47,6 @@
     <string name="rule_security_warn_confirm">Allow anyway</string>
     <string name="rule_security_warn_cancel">Keep blocked</string>
     <string name="ads_blocked_at_level">%1$s blocked at %2$s</string>
+    <string name="ads_pill_not_used">Not used</string>
+    <string name="ads_not_at_level">Not used at your protection level.</string>
 </resources>

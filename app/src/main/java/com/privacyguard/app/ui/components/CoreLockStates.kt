@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -104,3 +105,19 @@ private fun StatesPreview() = PreviewSurface {
         LoadingSkeleton(rows = 2)
     }
 }
+
+/**
+ * A reload failed, but older data is still on screen: say so above it, with "Try again".
+ * For screens that keep their last numbers instead of switching to [ErrorState].
+ */
+@Composable
+fun LoadFailedBanner(onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    AttentionBanner(
+        message = stringResource(R.string.ui_error_load),
+        actionLabel = stringResource(R.string.ui_try_again),
+        onAction = onRetry,
+        modifier = modifier.testTag(TAG_LOAD_FAILED),
+    )
+}
+
+const val TAG_LOAD_FAILED = "load_failed"

@@ -109,6 +109,7 @@ fun DashboardScreen(
     val context = LocalContext.current
     val resources = LocalResources.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val loadFailed by viewModel.loadFailed.collectAsStateWithLifecycle()
     val runProtectedAction = rememberProtectedActionRunner()
     // Lists open for the same window the numbers were computed for.
     val open: (EvidenceKind) -> Unit = { kind -> onOpenEvidence(kind, uiState.evidenceAt) }
@@ -139,9 +140,12 @@ fun DashboardScreen(
         modifier = Modifier.background(MaterialTheme.colorScheme.background),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        if (loadFailed) item {
+            com.privacyguard.app.ui.components.LoadFailedBanner(onRetry = viewModel::retry, modifier = Modifier.padding(horizontal = 16.dp))
+        }
         item {
             ScreenScaffold(
-                title = stringResource(R.string.dash_title),
+                title = stringResource(R.string.ui_an_systems),
                 subtitle = if (uiState.isVpnActive) stringResource(R.string.dash_subtitle_on) else stringResource(R.string.dash_subtitle_off),
                 badge = (if (uiState.isVpnActive) stringResource(R.string.dash_badge_live) else stringResource(R.string.dash_badge_offline)).uppercase()
             ) {
@@ -175,7 +179,7 @@ fun DashboardScreen(
                         modifier = Modifier
                             .background(
                                 Brush.linearGradient(
-                                    listOf(Color(0xFF0F1E30), Color(0xFF0D2819))
+                                    com.privacyguard.app.ui.theme.PgHeroGradient
                                 )
                             )
                             .padding(20.dp)
@@ -228,7 +232,7 @@ fun DashboardScreen(
                                     modifier = Modifier
                                         .size(56.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0x3300E5A0)),
+                                        .background(com.privacyguard.app.ui.theme.PgAccentHalo),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(Icons.Default.Shield, contentDescription = null, tint = PgAccent, modifier = Modifier.size(28.dp))
@@ -248,7 +252,7 @@ fun DashboardScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatTile(stringResource(R.string.dash_blocked_24h), formatCount(uiState.trackersBlocked), PgAccent, Modifier.weight(1f).clickable { open(EvidenceKind.BLOCKED_24H) },
+                    StatTile(stringResource(R.string.stats_blocked_today), formatCount(uiState.trackersBlocked), PgAccent, Modifier.weight(1f).clickable(onClick = onOpenConnections),
                         detail = pluralStringResource(R.plurals.trf_n_domains, uiState.blockedDomains24h, uiState.blockedDomains24h))
                     StatTile(stringResource(R.string.dash_cleartext_24h), formatCount(uiState.cleartextCount), PgDanger, Modifier.weight(1f).clickable { open(EvidenceKind.CLEARTEXT_24H) })
                     StatTile(stringResource(R.string.dash_privacy_score), formatCount(uiState.privacyScore.score), PgInfo, Modifier.weight(1f).clickable(onClick = onOpenStatistics))
@@ -699,7 +703,7 @@ private fun PrivacySwitch(checked: Boolean, onToggle: () -> Unit) {
                 modifier = Modifier
                     .size(22.dp)
                     .clip(CircleShape)
-                    .background(Color.White)
+                    .background(com.privacyguard.app.ui.theme.PgThumb)
                     .padding(2.dp)
             )
         }

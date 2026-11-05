@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings › Data: export and import of rules and settings (D2, ADR 0013). -->
+<resources>
+    <string name="ui_cfg_export">Export rules and settings</string>
+    <string name="ui_cfg_export_sub">To move them to another phone</string>
+    <string name="ui_cfg_import">Import rules and settings</string>
+    <string name="ui_cfg_import_sub">From a file you exported</string>
+    <string name="ui_cfg_export_body">The file holds your rules and settings: the sites and apps you blocked or allowed. Keep it private: anyone who has it can read them. Your history, passwords and keys are not in it.</string>
+    <string name="ui_cfg_export_action">Choose where to save</string>
+    <string name="ui_cfg_import_title">Import these rules and settings?</string>
+    <plurals name="ui_cfg_new_rules">
+        <item quantity="one">%d new rule</item>
+        <item quantity="other">%d new rules</item>
+    </plurals>
+    <string name="ui_cfg_rules_split">%1$d block · %2$d allow</string>
+    <plurals name="ui_cfg_settings_changed">
+        <item quantity="one">%d setting will change</item>
+        <item quantity="other">%d settings will change</item>
+    </plurals>
+    <plurals name="ui_cfg_already">
+        <item quantity="one">%d rule is already on this phone</item>
+        <item quantity="other">%d rules are already on this phone</item>
+    </plurals>
+    <plurals name="ui_cfg_skipped">
+        <item quantity="one">%d entry is not valid and is left out</item>
+        <item quantity="other">%d entries are not valid and are left out</item>
+    </plurals>
+    <string name="ui_cfg_import_note">Your own rules stay. An imported Allow rule never lets a malware or phishing site through.</string>
+    <string name="ui_cfg_import_action">Import</string>
+    <string name="ui_cfg_problem_title">Can\'t import this file</string>
+    <string name="ui_cfg_err_managed">Your organisation manages this phone\'s settings, so importing is turned off.</string>
+    <string name="ui_cfg_err_read">The file could not be read.</string>
+    <string name="ui_cfg_err_too_big">This file is too large to be a CoreLock rules file.</string>
+    <string name="ui_cfg_err_invalid">This is not a CoreLock rules file, or it is damaged.</string>
+    <string name="ui_cfg_err_newer">This file was made by a newer version of CoreLock. Update the app first.</string>
+    <string name="ui_cfg_err_too_many">This file has more than 5,000 rules.</string>
+    <string name="ui_cfg_nothing">Everything in this file is already on this phone.</string>
+    <string name="ui_cfg_saved">Rules and settings saved</string>
+    <string name="ui_cfg_save_failed">The file could not be saved</string>
+    <string name="ui_cfg_imported">Rules and settings imported</string>
+</resources>

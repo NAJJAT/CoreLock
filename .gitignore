@@ -37,3 +37,6 @@ signing.properties
 # Scratch folder a local tool keeps at the repo root; nothing in the build uses it.
 /state/
 compile-log.txt
+
+# Local copies of agent skills: kept on disk, not in the repository.
+.skills/

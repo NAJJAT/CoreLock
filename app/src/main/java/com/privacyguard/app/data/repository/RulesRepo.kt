@@ -34,6 +34,14 @@ class RulesRepo(
         RuleSyncBus.publish()
     }
 
+    /** Many rules at once (an import): one database write and one change notice, not one per rule. */
+    suspend fun addRules(rules: List<FilterRule>) = withContext(Dispatchers.IO) {
+        if (rules.isEmpty()) return@withContext
+        rulesDao.insertAll(rules.map { it.toRuleEntity() })
+        rules.forEach(filterEngine::upsertRule)
+        RuleSyncBus.publish()
+    }
+
     suspend fun upsertRule(rule: FilterRule) = withContext(Dispatchers.IO) {
         rulesDao.insert(rule.toRuleEntity())
         filterEngine.upsertRule(rule)

@@ -7,15 +7,19 @@ import androidx.lifecycle.viewModelScope
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.db.ConfigDatabase
 import com.privacyguard.app.data.repository.RulesRepo
+import com.privacyguard.app.ui.activity.ActivityMessage
 import com.privacyguard.core.filter.FilterEngine
 import com.privacyguard.core.filter.FilterRule
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.privacyguard.app.ui.apps.AppsViewModel
 import java.util.UUID
 
@@ -44,29 +48,88 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
     private val _suggestions = MutableStateFlow<List<SuggestedRule>>(emptyList())
     val suggestions: StateFlow<List<SuggestedRule>> = _suggestions.asStateFlow()
 
-    val rules: StateFlow<List<FilterRule>> = combine(_allRules, _searchQuery) { rules, q ->
-        if (q.isBlank()) rules
-        else rules.filter { rule ->
-            rule.label.contains(q, ignoreCase = true) ||
-            rule.matchDomain?.contains(q, ignoreCase = true) == true ||
-            rule.matchPackage?.contains(q, ignoreCase = true) == true ||
-            rule.matchIp?.contains(q, ignoreCase = true) == true
-        }
+    /** App name per package of the rules, read off the main thread (PackageManager). */
+    private val _appNames = MutableStateFlow<Map<String, String>>(emptyMap())
+    val appNames: StateFlow<Map<String, String>> = _appNames.asStateFlow()
+
+    val rules: StateFlow<List<FilterRule>> = combine(_allRules, _searchQuery, _appNames) { rules, q, names ->
+        rules.filter { RulesLogic.matches(it, q, it.matchPackage?.let(names::get)) }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Whether any rule exists, so "nothing matches the search" and "no rules yet" read differently. */
+    val hasAnyRule: StateFlow<Boolean> = _allRules.map { it.isNotEmpty() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     fun setSearchQuery(q: String) { _searchQuery.value = q }
 
-    init { refresh() }
+    /** False until the first load; [loadFailed] when reading the rules failed (shown, with Try again). */
+    private val _loaded = MutableStateFlow(false)
+    val loaded: StateFlow<Boolean> = _loaded.asStateFlow()
+    private val _loadFailed = MutableStateFlow(false)
+    val loadFailed: StateFlow<Boolean> = _loadFailed.asStateFlow()
 
-    private fun refresh() {
-        viewModelScope.launch {
-            try {
-                _allRules.value = repo.allRules()
-                buildSuggestions()
-            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
-              catch (_: Exception) { }
+    /** A short note after a change, with Undo after a delete. Held here so it survives rotation. */
+    private val _message = MutableStateFlow<ActivityMessage?>(null)
+    val message: StateFlow<ActivityMessage?> = _message.asStateFlow()
+    fun messageShown(id: Long) { if (_message.value?.id == id) _message.value = null }
+
+    // Every rule write anywhere (Activity, Apps, this screen) publishes on RuleSyncBus, so
+    // the list stays current while it is open. The first value loads the list.
+    init { viewModelScope.launch { com.privacyguard.app.data.repository.RuleSyncBus.version.collect { load() } } }
+
+    fun retry() {
+        viewModelScope.launch { load() }
+    }
+
+    private suspend fun load() {
+        try {
+            val all = repo.allRules()
+            _appNames.value = appNamesFor(all)
+            _allRules.value = all
+            _loadFailed.value = false
+            buildSuggestions()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.w("RulesViewModel", "Loading rules failed: ${e.javaClass.simpleName}")
+            _loadFailed.value = true
+        } finally {
+            _loaded.value = true
         }
     }
+
+    private suspend fun appNamesFor(rules: List<FilterRule>): Map<String, String> = withContext(Dispatchers.IO) {
+        val removed = str(R.string.trf_removed_app)
+        rules.mapNotNull { it.matchPackage?.takeIf(String::isNotBlank) }.distinct().associateWith { pkg ->
+            // An uninstalled app: its package says more than "Removed app".
+            com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), pkg, null).takeIf { it != removed } ?: pkg
+        }
+    }
+
+    /**
+     * Runs one rule write. A failed write is said on screen instead of crashing the app
+     * (1.0 had no catch here) or being swallowed; the list is read again either way, so
+     * it always shows what is stored.
+     */
+    private fun write(onDone: () -> Unit = {}, block: suspend () -> Unit) {
+        viewModelScope.launch {
+            try {
+                block()
+                onDone()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("RulesViewModel", "Saving a rule failed: ${e.javaClass.simpleName}")
+                _message.value = ActivityMessage(str(R.string.ui_rules_save_failed))
+            }
+            load()
+        }
+    }
+
+    private fun added() { _message.value = ActivityMessage(str(R.string.ui_rules_added)) }
+
+    /** Undo after a delete: the same rule back, with its id, priority, hit count and override flag. */
+    fun restoreRule(rule: FilterRule) = write { repo.upsertRule(rule) }
 
     private suspend fun buildSuggestions() {
         val since = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000L
@@ -90,13 +153,10 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun acceptSuggestion(s: SuggestedRule) {
-        viewModelScope.launch {
-            val rule = RuleSuggestions.ruleFor(s.candidate, id = UUID.randomUUID().toString(), label = s.label)
-            repo.upsertRule(rule)
-            _suggestions.value = _suggestions.value.filter { it.id != s.id }
-            refresh()
-        }
+    fun acceptSuggestion(s: SuggestedRule) = write(onDone = ::added) {
+        val rule = RuleSuggestions.ruleFor(s.candidate, id = UUID.randomUUID().toString(), label = s.label)
+        repo.upsertRule(rule)
+        _suggestions.value = _suggestions.value.filter { it.id != s.id }
     }
 
     fun dismissSuggestion(id: String) {
@@ -119,11 +179,15 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
      * it first asks ([securityWarning]); [confirmedRisk] is the user's answer.
      */
     fun addDomainRule(domain: String, action: FilterRule.Action, confirmedRisk: Boolean = false) {
-        val normalized = domain.trim().lowercase()
-        viewModelScope.launch {
+        // The sheet enables Add only for a valid name; checked again here, the one way in.
+        val normalized = RulesLogic.parseSite(domain) ?: return
+        var waitsForWarning = false
+        write(onDone = { if (!waitsForWarning) added() }) {
+            // Checked at the moment of the tap, against the lists as stored now.
             if (action == FilterRule.Action.ALLOW && !confirmedRisk && blocklistRepo.isSecurityThreat(normalized)) {
+                waitsForWarning = true
                 _securityWarning.value = normalized
-                return@launch
+                return@write
             }
             _securityWarning.value = null
             val overrides = action == FilterRule.Action.ALLOW && confirmedRisk
@@ -141,14 +205,13 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
                 overridesSecurity = overrides,
             )
             repo.addRule(rule)
-            refresh()
         }
     }
 
     fun addIpRule(ip: String, action: FilterRule.Action) {
-        viewModelScope.launch {
-            val trimmed = ip.trim()
-            if (!isValidIpOrCidr(trimmed)) return@launch
+        val trimmed = ip.trim()
+        if (!isValidIpOrCidr(trimmed)) return
+        write(onDone = ::added) {
             val rule = FilterRule(
                 id       = UUID.randomUUID().toString(),
                 label    = str(if (action == FilterRule.Action.DENY) R.string.rule_block_domain else R.string.rule_allow_domain, trimmed),
@@ -158,12 +221,11 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
                 matchIp  = trimmed,
             )
             repo.upsertRule(rule)
-            refresh()
         }
     }
 
     companion object {
-        /** IPv4 address or CIDR range. Rules cannot match IPv6 yet, so the dialog says so. */
+        /** IPv4 address or CIDR range. Rules cannot match IPv6 yet, so the sheet says so. */
         fun isValidIpOrCidr(value: String): Boolean {
             val parts = value.split('/')
             if (parts.size !in 1..2) return false
@@ -180,37 +242,28 @@ class RulesViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun addPackageRule(pkg: String, action: FilterRule.Action) {
-        viewModelScope.launch {
-            val trimmed = pkg.trim()
+        val trimmed = pkg.trim()
+        if (!RulesLogic.isValidPackage(trimmed)) return
+        write(onDone = ::added) {
             val rule = FilterRule(
                 id       = if (action == FilterRule.Action.DENY) AppsViewModel.packageBlockRuleId(trimmed)
                            else UUID.randomUUID().toString(),
                 // The app's name ("WhatsApp"), not the package, as on every other screen.
                 label    = str(if (action == FilterRule.Action.DENY) R.string.rule_block_app else R.string.rule_allow_app,
-                    com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), trimmed, null)),
+                    withContext(Dispatchers.IO) { com.privacyguard.app.ui.traffic.AppNames.label(getApplication(), trimmed, null) }),
                 action   = action,
                 source   = FilterRule.Source.USER,
                 priority = FilterRule.HIGH_PRIORITY,
                 matchPackage = trimmed,
             )
             repo.upsertRule(rule)
-            refresh()
         }
     }
 
-    fun deleteRule(id: String) {
-        viewModelScope.launch {
-            repo.deleteRule(id)
-            refresh()
-        }
-    }
+    /** Deletes [rule] and offers Undo, which writes the same rule back. */
+    fun deleteRule(rule: FilterRule) = write(onDone = {
+        _message.value = ActivityMessage(str(R.string.ui_rules_deleted), undo = { restoreRule(rule) })
+    }) { repo.deleteRule(rule.id) }
 
-    fun toggleRule(id: String, enabled: Boolean) {
-        viewModelScope.launch {
-            repo.setEnabled(id, enabled)
-            refresh()
-        }
-    }
+    fun toggleRule(id: String, enabled: Boolean) = write { repo.setEnabled(id, enabled) }
 }
-
-

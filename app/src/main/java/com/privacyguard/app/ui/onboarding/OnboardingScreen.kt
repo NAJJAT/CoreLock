@@ -1,371 +1,211 @@
 package com.privacyguard.app.ui.onboarding
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.rounded.Shield
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.VpnLock
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import com.privacyguard.app.R
-import com.privacyguard.app.ui.theme.*
-import kotlinx.coroutines.launch
+import com.privacyguard.app.core.network.PrivateDnsCheck
+import com.privacyguard.app.core.power.BatteryCheck
+import com.privacyguard.app.ui.components.AttentionBanner
+import com.privacyguard.app.ui.components.InfoSheet
+import com.privacyguard.app.ui.components.PrimaryButton
+import com.privacyguard.app.ui.components.SecondaryButton
+import com.privacyguard.app.ui.dashboard.PrivateDnsStartDialog
+import com.privacyguard.app.ui.home.LevelOptions
+import com.privacyguard.app.ui.theme.CoreLockTheme
 
-private data class OnboardingPage(
-    val icon: ImageVector,
-    val iconTint: androidx.compose.ui.graphics.Color,
-    val title: Int,
-    val body: Int,
-    val bullets: List<Int> = emptyList(),
-)
+/** The three steps (DESIGN_SPEC_1.1.md §6.7). Never more: a test counts them. */
+enum class OnboardingStep { WHAT, VPN, LEVEL }
 
-private val infoPages = listOf(
-    OnboardingPage(
-        icon     = Icons.Default.Shield,
-        iconTint = PgAccent,
-        title    = R.string.onb_1_title,
-        body     = R.string.onb_1_body,
-        bullets  = listOf(
-            R.string.onb_1_b1,
-            R.string.onb_1_b2,
-            R.string.onb_1_b3,
-        ),
-    ),
-    OnboardingPage(
-        icon     = Icons.Default.Fingerprint,
-        iconTint = PgDanger,
-        title    = R.string.onb_2_title,
-        body     = R.string.onb_2_body,
-        bullets  = listOf(
-            R.string.onb_2_b1,
-            R.string.onb_2_b2,
-            R.string.onb_2_b3,
-            R.string.onb_2_b4,
-            R.string.onb_2_b5,
-        ),
-    ),
-    OnboardingPage(
-        icon     = Icons.Default.Visibility,
-        iconTint = PgWarning,
-        title    = R.string.onb_3_title,
-        body     = R.string.onb_3_body,
-        bullets  = listOf(
-            R.string.onb_3_b1,
-            R.string.onb_3_b2,
-            R.string.onb_3_b3,
-            R.string.onb_3_b4,
-        ),
-    ),
-)
+const val TAG_ONB_NEXT = "onb_next"
+const val TAG_ONB_CONTINUE = "onb_continue"
+const val TAG_ONB_DONE = "onb_done"
+const val TAG_ONB_BATTERY = "onb_battery"
+const val TAG_ONB_LEAVES = "onb_leaves"
 
-// Total pages = info pages + consent page
-private val TOTAL_PAGES = infoPages.size + 1
-private val CONSENT_PAGE_INDEX = infoPages.size
-
+/**
+ * First start: what CoreLock does (and can't), why Android asks about a VPN, and the level.
+ *
+ * HTTPS inspection is not offered here. Its consent is asked on its own screen, with the
+ * full explanation, when someone turns it on.
+ *
+ * @param onRequestVpn asks Android for the VPN (and notifications); the result comes back
+ *   to MainActivity, so the steps go on whatever the answer.
+ * @param onFinish the chosen level; the caller stores it and opens Home.
+ */
 @Composable
 fun OnboardingScreen(
-    onGetStarted: (tlsConsentGiven: Boolean) -> Unit,
-    onEnableVpn: (tlsConsentGiven: Boolean) -> Unit,
+    initialLevel: String,
+    onVpnConsent: () -> Unit,
+    onRequestVpn: () -> Unit,
+    onFinish: (level: String) -> Unit,
 ) {
-    val pagerState = rememberPagerState { TOTAL_PAGES }
-    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var confirmStartHost by remember { mutableStateOf<String?>(null) }
+    // Read when the level step shows: the user may have just changed it in Android.
+    val batteryRestricted = remember { BatteryCheck.state(context) == BatteryCheck.State.RESTRICTED }
+    var step by rememberSaveable { mutableIntStateOf(0) }
 
-    var vpnAccepted by remember { mutableStateOf(false) }
-    var tlsAccepted by remember { mutableStateOf(false) }
-    var localStorageAck by remember { mutableStateOf(false) }
-
-    val isConsentPage = pagerState.currentPage == CONSENT_PAGE_INDEX
-    val canProceed = vpnAccepted && localStorageAck
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(bottom = 32.dp),
-    ) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.weight(1f),
-            userScrollEnabled = !isConsentPage,  // lock scroll on consent to force reading
-        ) { pageIndex ->
-            if (pageIndex < infoPages.size) {
-                InfoPageContent(page = infoPages[pageIndex])
-            } else {
-                ConsentPageContent(
-                    vpnAccepted       = vpnAccepted,
-                    onVpnAccepted     = { vpnAccepted = it },
-                    tlsAccepted       = tlsAccepted,
-                    onTlsAccepted     = { tlsAccepted = it },
-                    localStorageAck   = localStorageAck,
-                    onLocalStorageAck = { localStorageAck = it },
-                )
-            }
-        }
-
-        // Dot indicator
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            (0 until TOTAL_PAGES).forEach { i ->
-                val color by animateColorAsState(
-                    if (pagerState.currentPage == i) PgAccent else PgTextFaint,
-                    label = "dot",
-                )
-                Box(
-                    modifier = Modifier
-                        .padding(horizontal = 4.dp)
-                        .size(if (pagerState.currentPage == i) 8.dp else 6.dp)
-                        .background(color, CircleShape),
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Column(
-            modifier = Modifier.padding(horizontal = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            if (isConsentPage) {
-                Button(
-                    onClick = { if (canProceed) onEnableVpn(tlsAccepted) },
-                    enabled = canProceed,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                ) {
-                    Text(stringResource(R.string.onb_start), fontWeight = FontWeight.SemiBold)
-                }
-                TextButton(
-                    onClick = { if (canProceed) onGetStarted(tlsAccepted) },
-                    enabled = canProceed,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.onb_continue), color = if (canProceed) PgTextMuted else PgTextFaint)
-                }
-            } else {
-                Button(
-                    onClick = {
-                        scope.launch {
-                            pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                ) {
-                    Text(stringResource(R.string.onb_next), fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
+    confirmStartHost?.let { host ->
+        PrivateDnsStartDialog(
+            host = host,
+            onOpenSettings = { confirmStartHost = null; PrivateDnsCheck.openSettings(context) },
+            onStartAnyway = { confirmStartHost = null; onRequestVpn(); step = OnboardingStep.LEVEL.ordinal },
+            onDismiss = { confirmStartHost = null },
+        )
     }
+
+    OnboardingContent(
+        step = OnboardingStep.entries[step],
+        initialLevel = initialLevel,
+        batteryRestricted = batteryRestricted,
+        onStep = { step = it.ordinal },
+        onContinueToVpn = {
+            onVpnConsent()
+            // As on Home: a Private DNS hostname bypasses the filter, so say so first.
+            val host = PrivateDnsCheck.strictHostname(context)
+            if (host != null) {
+                confirmStartHost = host
+            } else {
+                onRequestVpn()
+                step = OnboardingStep.LEVEL.ordinal
+            }
+        },
+        onOpenBattery = { BatteryCheck.openSettings(context) },
+        onFinish = onFinish,
+    )
 }
 
 @Composable
-private fun ConsentPageContent(
-    vpnAccepted: Boolean,       onVpnAccepted: (Boolean) -> Unit,
-    tlsAccepted: Boolean,       onTlsAccepted: (Boolean) -> Unit,
-    localStorageAck: Boolean,   onLocalStorageAck: (Boolean) -> Unit,
+fun OnboardingContent(
+    step: OnboardingStep,
+    initialLevel: String,
+    batteryRestricted: Boolean,
+    onStep: (OnboardingStep) -> Unit,
+    onContinueToVpn: () -> Unit,
+    onOpenBattery: () -> Unit,
+    onFinish: (String) -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 24.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(72.dp)
-                .background(PgInfo.copy(alpha = 0.12f), CircleShape)
-                .align(Alignment.CenterHorizontally),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Default.VerifiedUser, contentDescription = null,
-                tint = PgInfo, modifier = Modifier.size(36.dp))
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Text(
-            stringResource(R.string.onb_consent_title),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = PgText,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Text(
-            stringResource(R.string.onb_consent_body),
-            style = MaterialTheme.typography.bodyMedium,
-            color = PgTextMuted,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 20.dp),
-        )
-
-        ConsentItem(
-            checked   = vpnAccepted,
-            onChecked = onVpnAccepted,
-            required  = true,
-            title     = stringResource(R.string.onb_c_net),
-            body      = stringResource(R.string.onb_c_net_body),
-
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Optional: consent only; inspection stays off until switched on in Payload.
-        ConsentItem(
-            checked   = tlsAccepted,
-            onChecked = onTlsAccepted,
-            required  = false,
-            title     = stringResource(R.string.onb_c_https),
-            body      = stringResource(R.string.onb_c_https_body),
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        ConsentItem(
-            checked   = localStorageAck,
-            onChecked = onLocalStorageAck,
-            required  = true,
-            title     = stringResource(R.string.onb_c_storage),
-            body      = stringResource(R.string.onb_c_storage_body),
-
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            stringResource(R.string.onb_required_note),
-            style = MaterialTheme.typography.labelSmall,
-            color = PgTextFaint,
-            modifier = Modifier.padding(top = 4.dp),
+    var level by rememberSaveable { mutableStateOf(initialLevel) }
+    var showLeaves by rememberSaveable { mutableStateOf(false) }
+    if (showLeaves) {
+        // The full list of what leaves the phone (OutboundHostsDisclosureTest), next to the consent.
+        InfoSheet(
+            title = stringResource(R.string.onb11_leaves),
+            body = stringResource(R.string.onb_c_net_body) + "\n\n" + stringResource(R.string.onb_c_storage_body),
+            onDismiss = { showLeaves = false },
         )
     }
-}
+    BackHandler(enabled = step != OnboardingStep.WHAT) { onStep(OnboardingStep.entries[step.ordinal - 1]) }
 
-@Composable
-private fun ConsentItem(
-    checked: Boolean,
-    onChecked: (Boolean) -> Unit,
-    required: Boolean,
-    title: String,
-    body: String,
-) {
-    val borderColor = when {
-        checked  -> PgAccent
-        required -> PgDanger.copy(alpha = 0.4f)
-        else     -> PgBorder
-    }
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = if (checked) PgAccent.copy(alpha = 0.06f) else MaterialTheme.colorScheme.surface,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onChecked(!checked) },
-        tonalElevation = 1.dp,
-    ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.Top,
-        ) {
-            Checkbox(
-                checked = checked,
-                onCheckedChange = onChecked,
-                colors = CheckboxDefaults.colors(
-                    checkedColor = PgAccent,
-                    uncheckedColor = if (required) PgDanger else PgTextMuted,
-                ),
+    Surface(color = CoreLockTheme.colors.background, modifier = Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().safeDrawingPadding().padding(CoreLockTheme.spacing.xl)) {
+            Text(
+                stringResource(R.string.onb11_step, step.ordinal + 1, OnboardingStep.entries.size),
+                style = MaterialTheme.typography.labelLarge,
+                color = CoreLockTheme.colors.onSurfaceMuted,
             )
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(title, fontWeight = FontWeight.SemiBold, color = PgText,
-                        style = MaterialTheme.typography.bodyMedium)
-                    if (required) {
-                        Text(stringResource(R.string.onb_required), style = MaterialTheme.typography.labelSmall,
-                            color = PgDanger)
-                    } else {
-                        Text(stringResource(R.string.onb_optional), style = MaterialTheme.typography.labelSmall,
-                            color = PgTextFaint)
+            Column(
+                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(top = CoreLockTheme.spacing.xl),
+                verticalArrangement = Arrangement.spacedBy(CoreLockTheme.spacing.l),
+            ) {
+                when (step) {
+                    OnboardingStep.WHAT -> {
+                        StepHeader(Icons.Rounded.Shield, R.string.onb11_what_title)
+                        Body(R.string.onb11_what_body)
+                        Body(R.string.onb11_what_private)
+                        Body(R.string.onb11_what_limit)
+                    }
+                    OnboardingStep.VPN -> {
+                        StepHeader(Icons.Rounded.VpnLock, R.string.onb11_vpn_title)
+                        Body(R.string.onb11_vpn_body)
+                        Body(R.string.onb11_vpn_ask)
+                        SecondaryButton(
+                            stringResource(R.string.onb11_leaves),
+                            onClick = { showLeaves = true },
+                            modifier = Modifier.fillMaxWidth().testTag(TAG_ONB_LEAVES),
+                        )
+                    }
+                    OnboardingStep.LEVEL -> {
+                        StepHeader(Icons.Rounded.Tune, R.string.onb11_level_title)
+                        Body(R.string.onb11_level_body)
+                        LevelOptions(current = level, onSelect = { level = it })
+                        if (batteryRestricted) {
+                            AttentionBanner(
+                                message = stringResource(R.string.onb11_battery),
+                                actionLabel = stringResource(R.string.onb11_battery_action),
+                                onAction = onOpenBattery,
+                                modifier = Modifier.testTag(TAG_ONB_BATTERY),
+                            )
+                        }
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(body, style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
+            }
+            Spacer(Modifier.height(CoreLockTheme.spacing.l))
+            when (step) {
+                OnboardingStep.WHAT -> PrimaryButton(
+                    stringResource(R.string.onb11_next),
+                    onClick = { onStep(OnboardingStep.VPN) },
+                    modifier = Modifier.fillMaxWidth().testTag(TAG_ONB_NEXT),
+                )
+                OnboardingStep.VPN -> PrimaryButton(
+                    stringResource(R.string.onb11_continue),
+                    onClick = onContinueToVpn,
+                    modifier = Modifier.fillMaxWidth().testTag(TAG_ONB_CONTINUE),
+                )
+                OnboardingStep.LEVEL -> PrimaryButton(
+                    stringResource(R.string.onb11_done),
+                    onClick = { onFinish(level) },
+                    modifier = Modifier.fillMaxWidth().testTag(TAG_ONB_DONE),
+                )
             }
         }
     }
 }
 
 @Composable
-private fun InfoPageContent(page: OnboardingPage) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 32.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(88.dp)
-                .background(page.iconTint.copy(alpha = 0.12f), CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(page.icon, contentDescription = null,
-                tint = page.iconTint, modifier = Modifier.size(44.dp))
-        }
+private fun ColumnScope.StepHeader(icon: ImageVector, title: Int) {
+    Icon(icon, contentDescription = null, tint = CoreLockTheme.colors.primary, modifier = Modifier.size(CoreLockTheme.spacing.xxxl))
+    Text(
+        stringResource(title),
+        style = MaterialTheme.typography.headlineSmall,
+        modifier = Modifier.semantics { heading() },
+    )
+}
 
-        Spacer(modifier = Modifier.height(28.dp))
-
-        Text(stringResource(page.title),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold, color = PgText, textAlign = TextAlign.Center)
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(stringResource(page.body),
-            style = MaterialTheme.typography.bodyLarge,
-            color = PgTextMuted, textAlign = TextAlign.Center)
-
-        if (page.bullets.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(24.dp))
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                page.bullets.forEach { bullet ->
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.Top,
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .padding(top = 6.dp)
-                                .size(6.dp)
-                                .background(page.iconTint, CircleShape),
-                        )
-                        Text(stringResource(bullet),
-                            style = MaterialTheme.typography.bodyMedium, color = PgTextMuted)
-                    }
-                }
-            }
-        }
-    }
+@Composable
+private fun Body(text: Int) {
+    Text(stringResource(text), style = MaterialTheme.typography.bodyLarge, color = CoreLockTheme.colors.onSurface)
 }

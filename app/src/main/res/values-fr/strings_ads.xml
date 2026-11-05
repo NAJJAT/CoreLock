@@ -49,4 +49,6 @@
     <string name="rule_security_warn_confirm">Autoriser quand même</string>
     <string name="rule_security_warn_cancel">Laisser bloqué</string>
     <string name="ads_blocked_at_level">%1$s bloqués en mode %2$s</string>
+    <string name="ads_pill_not_used">Non utilisée</string>
+    <string name="ads_not_at_level">Non utilisée à votre niveau de protection.</string>
 </resources>

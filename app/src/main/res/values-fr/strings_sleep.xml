@@ -29,11 +29,6 @@
         <item quantity="many">%d écran éteint</item>
         <item quantity="other">%d écran éteint</item>
     </plurals>
-    <plurals name="sleep_total_n">
-        <item quantity="one">%d au total</item>
-        <item quantity="many">%d au total</item>
-        <item quantity="other">%d au total</item>
-    </plurals>
     <plurals name="sleep_idle_queries">
         <item quantity="one">%d recherche DNS écran éteint</item>
         <item quantity="many">%d recherches DNS écran éteint</item>

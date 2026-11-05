@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- الإعدادات › القواعد والمواقع المسموح بها (1.1) -->
+    <string name="ui_rules_add">إضافة قاعدة</string>
+    <string name="ui_rules_empty">لا توجد قواعد بعد. اسمح بموقع أو احظره من النشاط، أو أضف قاعدة هنا.</string>
+    <string name="ui_rules_error">تعذّر تحميل قواعدك.</string>
+    <string name="ui_rules_save_failed">تعذّر حفظ التغيير. حاول مرة أخرى.</string>
+    <string name="ui_rules_added">أُضيفت القاعدة</string>
+    <string name="ui_rules_deleted">حُذفت القاعدة</string>
+    <string name="ui_rules_search">ابحث عن مواقع أو تطبيقات أو عناوين</string>
+    <string name="ui_rules_no_match">لا توجد قاعدة تطابق «%1$s».</string>
+    <plurals name="ui_rules_yours">
+        <item quantity="zero">قواعدك · %1$d</item>
+        <item quantity="one">قواعدك · %1$d</item>
+        <item quantity="two">قواعدك · %1$d</item>
+        <item quantity="few">قواعدك · %1$d</item>
+        <item quantity="many">قواعدك · %1$d</item>
+        <item quantity="other">قواعدك · %1$d</item>
+    </plurals>
+    <string name="ui_rules_effect_block">تحظر</string>
+    <string name="ui_rules_effect_block_bg">تحظر في الخلفية</string>
+    <string name="ui_rules_effect_allow">تسمح</string>
+    <string name="ui_rules_effect_allow_risky">تسمح رغم تحذير البرمجيات الخبيثة</string>
+    <string name="ui_rules_off">متوقفة</string>
+    <string name="ui_rules_d_site">الموقع: %1$s</string>
+    <string name="ui_rules_d_app">التطبيق: %1$s</string>
+    <string name="ui_rules_d_address">العنوان: %1$s</string>
+    <string name="ui_rules_d_port">المنفذ %1$d</string>
+    <string name="ui_rules_d_unencrypted">الاتصالات غير المشفّرة فقط</string>
+    <string name="ui_rules_use">استخدام القاعدة: %1$s</string>
+    <string name="ui_rules_delete">حذف القاعدة: %1$s</string>
+    <string name="ui_rules_kind_site">موقع</string>
+    <string name="ui_rules_kind_app">تطبيق</string>
+    <string name="ui_rules_kind_address">عنوان</string>
+    <string name="ui_rules_site_label">اسم الموقع، مثل example.com</string>
+    <string name="ui_rules_site_invalid">هذا ليس اسم موقع. اكتبه مثل example.com.</string>
+    <string name="ui_rules_app_label">اسم حزمة التطبيق</string>
+    <string name="ui_rules_app_hint">مثل com.example.app. لحظر تطبيق مثبّت، الأسهل أن تفتحه في التطبيقات.</string>
+    <string name="ui_rules_app_invalid">هذا ليس اسم حزمة. يبدو مثل com.example.app.</string>
+    <string name="ui_rules_address_label">عنوان IPv4 أو نطاق عناوين</string>
+    <string name="ui_rules_address_hint">مثل 1.2.3.4 أو 10.0.0.0/8.</string>
+    <string name="ui_rules_allow_note">السماح يتقدّم على قوائم الإعلانات والمتتبّعات. وإذا كان الموقع في قائمة برمجيات خبيثة، ينبّهك CoreLock أولًا.</string>
+</resources>

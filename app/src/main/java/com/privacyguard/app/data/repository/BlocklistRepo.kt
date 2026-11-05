@@ -94,6 +94,11 @@ class BlocklistRepo(
         blocklistDao.anyInCategory(CAT_MALWARE, securityCandidates(domain))
     }
 
+    /** True when an ad, tracker or telemetry list has this domain or a parent of it. */
+    suspend fun isOnBlockList(domain: String): Boolean = withContext(Dispatchers.IO) {
+        blocklistDao.anyInCategories(listOf(CAT_ADS, CAT_TRACKERS, CAT_TELEMETRY), securityCandidates(domain))
+    }
+
     suspend fun domainsForCategory(cat: String): List<String> = withContext(Dispatchers.IO) {
         blocklistDao.getEntriesByCategory(cat).map { it.domain }
     }

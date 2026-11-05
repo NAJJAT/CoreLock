@@ -104,6 +104,7 @@ fun groupTitle(context: Context, group: PurposeGroup, appName: String): String {
     }
 }
 
+@Composable
 fun purposeColors(p: DomainPurpose): Pair<Color, Color> = when (p) {
     DomainPurpose.ADS, DomainPurpose.TRACKING -> PgDangerDim to PgDanger
     DomainPurpose.ANALYTICS -> PgWarningDim to PgWarning

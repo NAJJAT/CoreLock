@@ -1,6 +1,8 @@
 package com.privacyguard.app.ui.apps
 
-import androidx.compose.foundation.Canvas
+import android.content.Context
+import android.content.Intent
+import android.text.format.DateUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,94 +13,100 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Fingerprint
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.MonetizationOn
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Route
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.TrackChanges
-import androidx.compose.material.icons.filled.WarningAmber
-import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Public
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import android.content.Intent
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
-import com.privacyguard.app.R
-import com.privacyguard.app.data.db.AppDatabase
-import com.privacyguard.app.data.db.PayloadLogEntity
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.privacyguard.app.R
 import com.privacyguard.app.core.detection.MismatchSeverity
 import com.privacyguard.app.core.detection.PermissionMismatchFinding
-import com.privacyguard.app.core.tracker.TrackerCategory
 import com.privacyguard.app.core.tracker.TrackerEntry
+import com.privacyguard.app.data.db.AppDatabase
+import com.privacyguard.app.data.db.PayloadLogEntity
+import com.privacyguard.app.ui.activity.ActivityDetail
+import com.privacyguard.app.ui.activity.ActivityItem
+import com.privacyguard.app.ui.activity.kindOf
+import com.privacyguard.app.ui.activity.reasonLabel
+import com.privacyguard.app.ui.activity.rowShape
+import com.privacyguard.app.ui.components.ActivityRow
 import com.privacyguard.app.ui.components.AppIconImage
-import com.privacyguard.app.ui.components.PanelCard
-import com.privacyguard.app.ui.components.ScreenScaffold
-import com.privacyguard.app.ui.components.SectionLabel
-import com.privacyguard.app.ui.components.StatusPill
+import com.privacyguard.app.ui.components.AttentionBanner
+import com.privacyguard.app.ui.components.CoreLockBottomSheet
+import com.privacyguard.app.ui.components.CoreLockTopBar
+import com.privacyguard.app.ui.components.EmptyState
+import com.privacyguard.app.ui.components.ErrorState
+import com.privacyguard.app.ui.components.LoadingSkeleton
+import com.privacyguard.app.ui.components.PlaceholderAppIcon
+import com.privacyguard.app.ui.components.SectionHeader
+import com.privacyguard.app.ui.components.SegmentedControl
+import com.privacyguard.app.ui.components.SettingRow
+import com.privacyguard.app.ui.components.TechnicalDetailsHeader
+import com.privacyguard.app.ui.components.TechnicalValue
+import com.privacyguard.app.ui.components.WordTone
 import com.privacyguard.app.ui.components.formatBytes
-import com.privacyguard.app.ui.theme.PgAccent
-import com.privacyguard.app.ui.theme.PgAccentDim
-import com.privacyguard.app.ui.theme.PgBackgroundAlt
-import com.privacyguard.app.ui.theme.PgDanger
-import com.privacyguard.app.ui.theme.PgDangerDim
-import com.privacyguard.app.ui.theme.PgInfo
-import com.privacyguard.app.ui.theme.PgInfoDim
-import com.privacyguard.app.ui.theme.PgPanelMuted
-import com.privacyguard.app.ui.theme.PgPanelStrong
-import com.privacyguard.app.ui.theme.PgText
-import com.privacyguard.app.ui.theme.PgTextFaint
-import com.privacyguard.app.ui.theme.PgTextMuted
-import com.privacyguard.app.ui.theme.PgWarning
-import com.privacyguard.app.ui.theme.PgWarningDim
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.privacyguard.app.ui.rules.SecurityAllowWarningDialog
+import com.privacyguard.app.ui.text.FindingText
+import com.privacyguard.app.ui.theme.CoreLockTheme
+import com.privacyguard.platform.android.ForegroundAppDetector
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
+/** What App detail can ask for; a plain class so tests drive the content directly. */
+class AppDetailActions(
+    val onBack: () -> Unit = {},
+    val onStatus: (AppStatus) -> Unit = {},
+    val onSelect: (ActivityItem) -> Unit = {},
+    val onRetry: () -> Unit = {},
+    val onOpenTraffic: () -> Unit = {},
+    val onOpenDomain: (String) -> Unit = {},
+    val onGrantUsageAccess: () -> Unit = {},
+    val onShare: () -> Unit = {},
+)
+
+/**
+ * App detail (DESIGN_SPEC_1.1.md §6.4): what the app may do (one control), where it
+ * connected and what is built into it. 1.0's tabs (Mismatch, Connections, SDKs,
+ * Activity, Payload) are all still here: SDKs became "Built-in trackers", the rest is
+ * under Technical details, so the first thing shown is never an expert finding.
+ */
 @Composable
 fun AppDetailScreen(
     packageName: String,
@@ -109,652 +117,521 @@ fun AppDetailScreen(
     vm: AppDetailViewModel = viewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
-    val labelContext = LocalContext.current
-    var selectedTab by remember { mutableIntStateOf(0) }
-    var domainSort by remember { mutableStateOf(DomainSort.COUNT) }
+    val selected by vm.selected.collectAsStateWithLifecycle()
+    val warning by vm.ruleActions.malwareWarning.collectAsStateWithLifecycle()
+    val ruleMessage by vm.ruleActions.message.collectAsStateWithLifecycle()
+    val statusMessage by vm.message.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val snackbar = remember { SnackbarHostState() }
+    val undoLabel = stringResource(R.string.ui_undo)
+
     // A background-only rule needs Usage Access to know the app is in the background.
     // Access can change in system settings: read it again on every resume.
-    var usageAccess by remember { mutableStateOf(com.privacyguard.platform.android.ForegroundAppDetector(labelContext).hasUsageAccess()) }
-    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
-        usageAccess = com.privacyguard.platform.android.ForegroundAppDetector(labelContext).hasUsageAccess()
+    var usageAccess by remember { mutableStateOf(ForegroundAppDetector(context).hasUsageAccess()) }
+    LifecycleResumeEffect(Unit) {
+        usageAccess = ForegroundAppDetector(context).hasUsageAccess()
         onPauseOrDispose { }
     }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item {
-            ScreenScaffold(
-                // Friendly name only; the package name is not shown.
-                title = com.privacyguard.app.ui.traffic.AppNames.label(labelContext, packageName, appName),
-                subtitle = null,
-                badge = (if (state.detectedSdks.isNotEmpty()) stringResource(R.string.appd_badge_trackers) else stringResource(R.string.appd_badge_app)).uppercase(),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.appd_back), tint = PgTextMuted)
-                        }
-                        AppIconImage(packageName = state.packageName.ifBlank { packageName }, size = 32.dp, cornerRadius = 8.dp)
-                    }
-                    val shareContext = LocalContext.current
-                    val resources = LocalResources.current
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        IconButton(onClick = {
-                            val report = buildAppReport(shareContext, state)
-                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_SUBJECT, resources.getString(R.string.appd_report_subject, state.appName))
-                                putExtra(Intent.EXTRA_TEXT, report)
-                            }
-                            shareContext.startActivity(Intent.createChooser(intent, resources.getString(R.string.appd_share_report)))
-                        }) {
-                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.appd_share_report), tint = PgTextMuted, modifier = Modifier.size(20.dp))
-                        }
-                        StatusPill(
-                            pluralStringResource(R.plurals.appd_flags, state.mismatchFindings.size, state.mismatchFindings.size),
-                            if (state.mismatchFindings.isEmpty()) PgBackgroundAlt else PgWarningDim,
-                            if (state.mismatchFindings.isEmpty()) PgTextMuted else PgWarning,
-                        )
-                        StatusPill(pluralStringResource(R.plurals.appd_domains, state.domains.size, state.domains.size), PgInfoDim, PgInfo)
-                        StatusPill(
-                            pluralStringResource(R.plurals.appd_sdks, state.detectedSdks.size, state.detectedSdks.size),
-                            if (state.detectedSdks.isEmpty()) PgAccentDim else PgDangerDim,
-                            if (state.detectedSdks.isEmpty()) PgAccent else PgDanger,
-                        )
-                    } // end inner pills Row
-                } // end outer header Row
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            if (state.isBlocked) PgDangerDim else PgAccentDim,
-                            RoundedCornerShape(12.dp),
-                        )
-                        .clickable { vm.toggleBlock() }
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = if (state.isBlocked) Icons.Default.Block else Icons.Default.Security,
-                            contentDescription = null,
-                            tint = if (state.isBlocked) PgDanger else PgAccent,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            if (state.isBlocked) stringResource(R.string.appd_blocked_tap) else stringResource(R.string.appd_active_tap),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = if (state.isBlocked) PgDanger else PgAccent,
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(PgBackgroundAlt, RoundedCornerShape(10.dp))
-                        .clickable { vm.toggleBackgroundBlock() }
-                        .padding(horizontal = 14.dp, vertical = 9.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        stringResource(R.string.appd_block_bg),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (state.isBackgroundBlocked) PgWarning else PgTextMuted,
-                    )
-                    com.privacyguard.app.ui.components.ToggleChip(state.isBackgroundBlocked)
-                }
-                if (state.isBackgroundBlocked && !usageAccess) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    BackgroundRuleNeedsUsageAccess(appName.ifBlank { packageName })
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(PgInfoDim, RoundedCornerShape(10.dp))
-                        .clickable(onClick = onOpenTraffic)
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(stringResource(R.string.trf_see_all), style = MaterialTheme.typography.titleSmall, color = PgInfo)
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    DetailTab(stringResource(R.string.appd_tab_mismatch), selectedTab == 0) { selectedTab = 0 }
-                    DetailTab(stringResource(R.string.appd_tab_connections), selectedTab == 1) { selectedTab = 1 }
-                    DetailTab(stringResource(R.string.appd_tab_sdks), selectedTab == 2) { selectedTab = 2 }
-                    DetailTab(stringResource(R.string.appd_tab_activity), selectedTab == 3) { selectedTab = 3 }
-                    DetailTab(stringResource(R.string.appd_tab_payload), selectedTab == 4) { selectedTab = 4 }
-                }
-            }
-        }
+    LaunchedEffect(ruleMessage?.id) {
+        val m = ruleMessage ?: return@LaunchedEffect
+        val r = snackbar.showSnackbar(m.text, actionLabel = m.undo?.let { undoLabel }, duration = if (m.undo != null) SnackbarDuration.Long else SnackbarDuration.Short)
+        if (r == SnackbarResult.ActionPerformed) m.undo?.invoke()
+        vm.ruleActions.messageShown(m.id)
+    }
+    LaunchedEffect(statusMessage?.id) {
+        val m = statusMessage ?: return@LaunchedEffect
+        val r = snackbar.showSnackbar(m.text, actionLabel = m.undo?.let { undoLabel }, duration = if (m.undo != null) SnackbarDuration.Long else SnackbarDuration.Short)
+        if (r == SnackbarResult.ActionPerformed) m.undo?.invoke()
+        vm.messageShown(m.id)
+    }
 
-        when (selectedTab) {
-            0 -> mismatchTab(state)
-            1 -> connectionsTab(state, domainSort, onOpenDomain) { domainSort = it }
-            2 -> sdkTab(state)
-            3 -> activityTab(state, onOpenDomain)
-            4 -> item { PayloadTabContent(state.packageName) }
-        }
+    Box(Modifier.fillMaxSize().background(CoreLockTheme.colors.background)) {
+        AppDetailContent(
+            state = state,
+            usageAccess = usageAccess,
+            actions = AppDetailActions(
+                onBack = onBack,
+                onStatus = vm::setStatus,
+                onSelect = { vm.select(it) },
+                onRetry = vm::retry,
+                onOpenTraffic = onOpenTraffic,
+                onOpenDomain = onOpenDomain,
+                onGrantUsageAccess = {
+                    com.privacyguard.app.adprivacy.AdPrivacyLinks.open(context, com.privacyguard.app.adprivacy.AdPrivacyLinks.usageAccess(context.packageName))
+                },
+                onShare = { shareReport(context, state) },
+            ),
+        )
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(CoreLockTheme.spacing.l))
+    }
 
-        item { Spacer(modifier = Modifier.height(8.dp)) }
+    selected?.let { item ->
+        CoreLockBottomSheet(title = item.title, onDismiss = { vm.select(null) }) {
+            ActivityDetail(
+                item = item,
+                onAction = { action -> vm.perform(action, item) },
+                onOpenDomain = { host -> vm.select(null); onOpenDomain(host) },
+                onOpenApp = null,
+            )
+        }
+    }
+    warning?.let { pending ->
+        SecurityAllowWarningDialog(
+            domain = pending.item.host.orEmpty(),
+            onConfirm = { vm.perform(pending.action, pending.item, confirmedMalware = true) },
+            onDismiss = vm.ruleActions::dismissMalwareWarning,
+        )
     }
 }
 
-private fun LazyListScope.activityTab(state: AppDetailState, onOpenDomain: (String) -> Unit) {
-    item {
-        PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-            SectionLabel(stringResource(R.string.appd_activity_summary))
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                ActivityStat(stringResource(R.string.appd_dns), state.dnsQueryCount.toString(), pluralStringResource(R.plurals.appd_idle_count, state.idleDnsQueryCount, state.idleDnsQueryCount), PgInfo, Modifier.weight(1f))
-                ActivityStat(stringResource(R.string.appd_tab_connections), state.connectionCount.toString(), pluralStringResource(R.plurals.appd_bg_count, state.idleConnectionCount, state.idleConnectionCount), PgAccent, Modifier.weight(1f))
-            }
-        }
-    }
-    item { ActivityTimelineChart(state.activityTimeline) }
-    item {
-        PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-            SectionLabel(stringResource(R.string.appd_top_dns))
-            Spacer(modifier = Modifier.height(10.dp))
-            if (state.dnsDomains.isEmpty()) {
-                Text(stringResource(R.string.appd_no_dns), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
-            } else {
-                state.dnsDomains.take(8).forEachIndexed { index, row ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clickable { onOpenDomain(row.domain) },
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(row.domain, style = MaterialTheme.typography.bodySmall, color = PgText, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            if (row.idleQueries > 0) {
-                                Text(pluralStringResource(R.plurals.appd_idle_count, row.idleQueries, row.idleQueries), style = MaterialTheme.typography.labelSmall, color = PgWarning)
-                            }
-                        }
-                        StatusPill(
-                            pluralStringResource(R.plurals.appd_times, row.totalQueries, row.totalQueries),
-                            if (row.blockedQueries > 0) PgDangerDim else PgInfoDim,
-                            if (row.blockedQueries > 0) PgDanger else PgInfo,
-                        )
-                    }
-                    if (index != state.dnsDomains.take(8).lastIndex) Spacer(modifier = Modifier.height(8.dp))
-                }
-            }
-        }
-    }
-    item {
-        PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-            SectionLabel(stringResource(R.string.appd_recent_activity))
-            Spacer(modifier = Modifier.height(10.dp))
-            if (state.recentActivity.isEmpty()) {
-                Text(stringResource(R.string.appd_no_recent), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
-            } else {
-                state.recentActivity.forEachIndexed { index, row ->
-                    RecentActivityItem(row)
-                    if (index != state.recentActivity.lastIndex) Spacer(modifier = Modifier.height(8.dp))
-                }
-            }
-        }
-    }
-}
-
-/** A background-only rule never applies without Usage Access: say so, and offer to grant it. */
 @Composable
-private fun BackgroundRuleNeedsUsageAccess(appLabel: String) {
+fun AppDetailContent(state: AppDetailState, usageAccess: Boolean, actions: AppDetailActions) {
+    val spacing = CoreLockTheme.spacing
+    var explain by remember { mutableStateOf(false) }
+    var technical by rememberSaveable { mutableStateOf(false) }
+    var menu by remember { mutableStateOf(false) }
+
+    LazyColumn(Modifier.fillMaxSize().testTag(TAG_APP_DETAIL)) {
+        item(key = "top") {
+            CoreLockTopBar(title = state.appName, onBack = actions.onBack) {
+                Box {
+                    IconButton(onClick = { menu = true }) {
+                        Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.ui_more_options))
+                    }
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(text = { Text(stringResource(R.string.ui_share_report)) }, onClick = { menu = false; actions.onShare() })
+                    }
+                }
+            }
+        }
+        item(key = "header") { Header(state) { explain = true } }
+        item(key = "status") { Column { StatusControl(state, usageAccess, actions) } }
+
+        connectedRecently(state, actions)
+        builtInTrackers(state)
+
+        item(key = "tech") {
+            TechnicalDetailsHeader(
+                expanded = technical,
+                onToggle = { technical = !technical },
+                modifier = Modifier.padding(horizontal = spacing.screen).padding(top = spacing.xl).testTag(TAG_TECHNICAL),
+            )
+        }
+        if (technical) technicalDetails(state, actions)
+
+        item(key = "bottom") { Spacer(Modifier.height(spacing.xxxl)) }
+    }
+
+    if (explain) state.summary?.let { RiskWordSheet(it) { explain = false } }
+}
+
+@Composable
+private fun Header(state: AppDetailState, onExplain: () -> Unit) {
+    val spacing = CoreLockTheme.spacing
+    val colors = CoreLockTheme.colors
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(horizontal = spacing.screen, vertical = spacing.s),
+    ) {
+        AppIconImage(state.packageName, size = 56.dp, cornerRadius = 16.dp)
+        Spacer(Modifier.width(spacing.l))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            val status = state.status?.let { stringResource(it.label) }
+            val blocked = state.summary?.blockedToday?.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.ui_blocked_today_n, it, it) }
+            val line = listOfNotNull(status, blocked).joinToString(" · ")
+            if (line.isNotEmpty()) Text(line, style = MaterialTheme.typography.bodyLarge, color = colors.onSurface)
+            state.summary?.let { summary ->
+                val word = AppsLogic.riskWord(summary)
+                val color = when (word.tone) {
+                    WordTone.DANGER -> colors.danger
+                    WordTone.ATTENTION -> colors.attention
+                    WordTone.MUTED -> colors.onSurfaceMuted
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .heightIn(min = spacing.minTouchTarget)
+                        .clickable(role = Role.Button, onClickLabel = stringResource(R.string.ui_risk_word_hint), onClick = onExplain)
+                        .testTag(TAG_RISK_WORD),
+                ) {
+                    Text(stringResource(word.label), style = MaterialTheme.typography.labelLarge, color = color)
+                    Spacer(Modifier.width(spacing.xs))
+                    Icon(Icons.Outlined.Info, contentDescription = null, tint = color, modifier = Modifier.padding(top = 1.dp).width(16.dp).height(16.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatusControl(state: AppDetailState, usageAccess: Boolean, actions: AppDetailActions) {
+    val spacing = CoreLockTheme.spacing
+    SectionHeader(stringResource(R.string.ui_app_status))
+    Column(
+        verticalArrangement = Arrangement.spacedBy(spacing.s),
+        modifier = Modifier.padding(horizontal = spacing.screen),
+    ) {
+        val status = state.status
+        if (status == null) {
+            LoadingSkeleton(rows = 1)
+            return@Column
+        }
+        SegmentedControl(
+            options = AppStatus.entries,
+            selected = status,
+            label = { stringResource(it.label) },
+            onSelect = actions.onStatus,
+            modifier = Modifier.testTag(TAG_STATUS),
+        )
+        status.description?.let {
+            Text(stringResource(it), style = MaterialTheme.typography.bodyMedium, color = CoreLockTheme.colors.onSurfaceMuted)
+        }
+        // The rule is saved either way (1.0 behaviour); without access it can't apply yet.
+        if (status == AppStatus.BLOCKED_IN_BACKGROUND && !usageAccess) {
+            AttentionBanner(
+                message = stringResource(R.string.ui_usage_access_needed),
+                actionLabel = stringResource(R.string.ui_open_settings),
+                onAction = actions.onGrantUsageAccess,
+                modifier = Modifier.testTag(TAG_USAGE_BANNER),
+            )
+        }
+    }
+}
+
+private fun LazyListScope.connectedRecently(state: AppDetailState, actions: AppDetailActions) {
+    item(key = "cr_header") {
+        Column {
+            SectionHeader(stringResource(R.string.ui_connected_recently))
+            Text(
+                stringResource(R.string.ui_connected_recently_sub),
+                style = MaterialTheme.typography.bodyMedium,
+                color = CoreLockTheme.colors.onSurfaceMuted,
+                modifier = Modifier.padding(horizontal = CoreLockTheme.spacing.screen).padding(bottom = CoreLockTheme.spacing.s),
+            )
+        }
+    }
+    when (val c = state.connected) {
+        ConnectedRecently.Loading -> item(key = "cr_loading") { LoadingSkeleton(rows = 3) }
+        ConnectedRecently.Error -> item(key = "cr_error") { ErrorState(stringResource(R.string.ui_error_app), onRetry = actions.onRetry) }
+        is ConnectedRecently.Loaded -> if (c.sections.isEmpty()) {
+            item(key = "cr_empty") { EmptyState(stringResource(R.string.ui_empty_app_connections)) }
+        } else {
+            c.sections.forEach { section ->
+                val key = section.title ?: "\u0000other"
+                item(key = "cr_s_$key") {
+                    Text(
+                        section.title ?: stringResource(R.string.ui_other_names),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = CoreLockTheme.colors.onSurface,
+                        modifier = Modifier.padding(horizontal = CoreLockTheme.spacing.screen).padding(top = CoreLockTheme.spacing.m, bottom = CoreLockTheme.spacing.xs),
+                    )
+                }
+                itemsIndexed(section.items, key = { _, it -> "cr_${key}_${it.host ?: it.ip}" }) { i, item ->
+                    NameRow(item, first = i == 0, last = i == section.items.lastIndex) { actions.onSelect(item) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NameRow(item: ActivityItem, first: Boolean, last: Boolean, onClick: () -> Unit) {
+    Column(
+        Modifier
+            .padding(horizontal = CoreLockTheme.spacing.screen)
+            .clip(rowShape(first, last))
+            .background(CoreLockTheme.colors.surface),
+    ) {
+        ActivityRow(
+            destination = item.host ?: item.ip.orEmpty(),
+            subtitle = if (item.count > 1) pluralStringResource(R.plurals.ui_times, item.count, item.count) else null,
+            reason = stringResource(reasonLabel(item.reason)),
+            kind = kindOf(item),
+            onClick = onClick,
+            time = DateUtils.formatSameDayTime(item.timestamp, System.currentTimeMillis(), java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).toString(),
+            appIcon = { PlaceholderAppIcon(Icons.Rounded.Public) },
+            modifier = Modifier.testTag("$TAG_NAME_ROW${item.host ?: item.ip}"),
+        )
+        if (!last) HorizontalDivider(color = CoreLockTheme.colors.surfaceVariant)
+    }
+}
+
+private fun LazyListScope.builtInTrackers(state: AppDetailState) {
+    item(key = "bt_header") {
+        Column {
+            SectionHeader(stringResource(R.string.ui_built_in_trackers))
+            Text(
+                stringResource(R.string.ui_built_in_trackers_sub),
+                style = MaterialTheme.typography.bodyMedium,
+                color = CoreLockTheme.colors.onSurfaceMuted,
+                modifier = Modifier.padding(horizontal = CoreLockTheme.spacing.screen).padding(bottom = CoreLockTheme.spacing.s),
+            )
+        }
+    }
+    when {
+        state.isScanning -> item(key = "bt_scan") { Muted(stringResource(R.string.ui_checking_app)) }
+        state.detectedSdks.isEmpty() -> item(key = "bt_none") { Muted(stringResource(R.string.ui_no_trackers_found)) }
+        else -> itemsIndexed(state.detectedSdks, key = { _, it -> "bt_${it.name}" }) { i, sdk ->
+            TrackerRow(sdk, first = i == 0, last = i == state.detectedSdks.lastIndex)
+        }
+    }
+}
+
+@Composable
+private fun TrackerRow(sdk: TrackerEntry, first: Boolean, last: Boolean) {
     val context = LocalContext.current
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(PgWarningDim, RoundedCornerShape(10.dp))
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+        Modifier
+            .padding(horizontal = CoreLockTheme.spacing.screen)
+            .clip(rowShape(first, last))
+            .background(CoreLockTheme.colors.surface),
     ) {
-        Text(stringResource(R.string.appd_bg_needs_usage, appLabel), style = MaterialTheme.typography.bodySmall, color = PgWarning)
-        androidx.compose.material3.TextButton(onClick = {
-            com.privacyguard.app.adprivacy.AdPrivacyLinks.open(context, com.privacyguard.app.adprivacy.AdPrivacyLinks.usageAccess(context.packageName))
-        }) { Text(stringResource(R.string.trf_usage_grant), color = PgWarning) }
+        Column(
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = CoreLockTheme.spacing.l, vertical = CoreLockTheme.spacing.m),
+        ) {
+            Text(sdk.name, style = MaterialTheme.typography.titleMedium, color = CoreLockTheme.colors.onSurface)
+            Text(
+                stringResource(R.string.appd_tracker_company, sdk.company, FindingText.trackerCategory(context, sdk.category)),
+                style = MaterialTheme.typography.bodyMedium,
+                color = CoreLockTheme.colors.onSurfaceMuted,
+            )
+        }
+        if (!last) HorizontalDivider(color = CoreLockTheme.colors.surfaceVariant)
     }
 }
 
+/** 1.0's Mismatch, Activity, Connections and Payload tabs, for experts. */
+private fun LazyListScope.technicalDetails(state: AppDetailState, actions: AppDetailActions) {
+    item(key = "t_values") {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(CoreLockTheme.spacing.s),
+            modifier = Modifier.padding(horizontal = CoreLockTheme.spacing.screen),
+        ) {
+            TechnicalValue(stringResource(R.string.conn_package), state.packageName)
+            state.summary?.let { TechnicalValue(stringResource(R.string.ui_tech_risk_grade), it.privacyGrade) }
+            TechnicalValue(
+                stringResource(R.string.ui_tech_permissions),
+                pluralStringResource(R.plurals.ui_tech_permissions_n, state.declaredPermissions.size, state.declaredPermissions.size) +
+                    if (state.declaredPermissions.isEmpty()) "" else "\n" + state.declaredPermissions.sorted().joinToString("\n") { it.substringAfterLast('.') },
+            )
+            SettingRow(title = stringResource(R.string.trf_see_all), onClick = actions.onOpenTraffic)
+        }
+    }
+
+    // Permissions vs traffic (1.0 "Mismatch")
+    item(key = "t_mm") { TechHeading(stringResource(R.string.appd_perm_vs_traffic)) }
+    when {
+        state.isLoadingMismatch -> item(key = "t_mm_load") { Muted(stringResource(R.string.appd_loading_mismatch)) }
+        state.mismatchFindings.isEmpty() -> item(key = "t_mm_none") {
+            Muted(stringResource(R.string.appd_no_mismatch) + ". " + stringResource(R.string.appd_no_mismatch_desc))
+        }
+        else -> itemsIndexed(state.mismatchFindings, key = { _, it -> "t_mm_${it.id}" }) { _, f -> FindingRow(f) }
+    }
+
+    // Behaviour (1.0 "Activity")
+    item(key = "t_beh") { TechHeading(stringResource(R.string.ui_tech_behaviour)) }
+    item(key = "t_beh_values") {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(CoreLockTheme.spacing.s),
+            modifier = Modifier.padding(horizontal = CoreLockTheme.spacing.screen),
+        ) {
+            TechnicalValue(
+                stringResource(R.string.appd_dns),
+                state.dnsQueryCount.toString() + " · " + pluralStringResource(R.plurals.appd_idle_count, state.idleDnsQueryCount, state.idleDnsQueryCount),
+            )
+            TechnicalValue(
+                stringResource(R.string.appd_tab_connections),
+                state.connectionCount.toString() + " · " + pluralStringResource(R.plurals.appd_bg_count, state.idleConnectionCount, state.idleConnectionCount),
+            )
+            Timeline(state.activityTimeline)
+            Text(stringResource(R.string.appd_top_dns), style = MaterialTheme.typography.labelMedium, color = CoreLockTheme.colors.onSurfaceMuted)
+            if (state.dnsDomains.isEmpty()) {
+                Text(stringResource(R.string.appd_no_dns), style = MaterialTheme.typography.bodyMedium, color = CoreLockTheme.colors.onSurfaceMuted)
+            } else {
+                state.dnsDomains.take(8).forEach { row ->
+                    TechLine(
+                        row.domain,
+                        pluralStringResource(R.plurals.appd_times, row.totalQueries, row.totalQueries) +
+                            if (row.idleQueries > 0) " · " + pluralStringResource(R.plurals.appd_idle_count, row.idleQueries, row.idleQueries) else "",
+                    ) { actions.onOpenDomain(row.domain) }
+                }
+            }
+            Text(stringResource(R.string.appd_recent_activity), style = MaterialTheme.typography.labelMedium, color = CoreLockTheme.colors.onSurfaceMuted)
+            if (state.recentActivity.isEmpty()) {
+                Text(stringResource(R.string.appd_no_recent), style = MaterialTheme.typography.bodyMedium, color = CoreLockTheme.colors.onSurfaceMuted)
+            } else {
+                val context = LocalContext.current
+                state.recentActivity.forEach { row ->
+                    TechLine(row.label, row.detail + " · " + DateUtils.formatDateTime(context, row.timestamp, DateUtils.FORMAT_SHOW_TIME), onClick = null)
+                }
+            }
+        }
+    }
+
+    // Every name (1.0 "Connections")
+    item(key = "t_names") { TechHeading(stringResource(R.string.ui_tech_names)) }
+    if (state.domains.isEmpty()) {
+        item(key = "t_names_none") { Muted(stringResource(R.string.ui_empty_app_connections)) }
+    } else {
+        itemsIndexed(state.domains, key = { _, it -> "t_n_${it.domain}" }) { _, row ->
+            val owner = row.company ?: stringResource(R.string.trf_company_unknown)
+            val who = row.trackerName?.let { stringResource(R.string.appd_tracker_company, it, owner) } ?: owner
+            val extra = listOfNotNull(
+                pluralStringResource(R.plurals.appd_times, row.count, row.count),
+                row.backgroundCount.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.appd_bg_count, it, it) },
+                (row.bytesSent + row.bytesReceived).takeIf { it > 0 }?.let { formatBytes(it) },
+            ).joinToString(" · ")
+            Box(Modifier.padding(horizontal = CoreLockTheme.spacing.screen)) {
+                TechLine(row.domain, "$who\n$extra") { actions.onOpenDomain(row.domain) }
+            }
+        }
+    }
+
+    // Inspected content (1.0 "Payload")
+    item(key = "t_payload") { TechHeading(stringResource(R.string.ui_tech_inspected)) }
+    item(key = "t_payload_list") { PayloadList(state.packageName) }
+}
+
 @Composable
-private fun ActivityStat(
-    label: String,
-    value: String,
-    sub: String,
-    tint: Color,
-    modifier: Modifier = Modifier,
-) {
+private fun TechHeading(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.titleSmall,
+        color = CoreLockTheme.colors.onSurface,
+        modifier = Modifier.padding(horizontal = CoreLockTheme.spacing.screen).padding(top = CoreLockTheme.spacing.l, bottom = CoreLockTheme.spacing.xs),
+    )
+}
+
+@Composable
+private fun Muted(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = CoreLockTheme.colors.onSurfaceMuted,
+        modifier = Modifier.padding(horizontal = CoreLockTheme.spacing.screen, vertical = CoreLockTheme.spacing.s),
+    )
+}
+
+/** A technical name and a line about it; opens the name's page when [onClick] is set. */
+@Composable
+private fun TechLine(title: String, detail: String, onClick: (() -> Unit)?) {
+    val tap = if (onClick == null) Modifier else Modifier.clickable(role = Role.Button, onClick = onClick)
     Column(
-        modifier = modifier
-            .background(PgBackgroundAlt, RoundedCornerShape(14.dp))
-            .padding(12.dp),
+        Modifier.fillMaxWidth().heightIn(min = CoreLockTheme.spacing.minTouchTarget).then(tap).padding(vertical = CoreLockTheme.spacing.xs),
     ) {
-        Text(value, style = MaterialTheme.typography.titleLarge, color = tint, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(sub, style = MaterialTheme.typography.labelSmall, color = PgTextFaint)
+        Text(title, style = com.privacyguard.app.ui.theme.CoreLockTechnicalValue, color = CoreLockTheme.colors.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(detail, style = MaterialTheme.typography.bodySmall, color = CoreLockTheme.colors.onSurfaceMuted)
     }
 }
 
 @Composable
-private fun ActivityTimelineChart(rows: List<ActivityHourRow>) {
-    val peak = rows.maxOfOrNull { it.allowed + it.blocked + it.suspicious }?.coerceAtLeast(1) ?: 1
-    PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-        SectionLabel(stringResource(R.string.appd_timeline_24h))
-        Spacer(modifier = Modifier.height(8.dp))
+private fun FindingRow(finding: PermissionMismatchFinding) {
+    val context = LocalContext.current
+    val colors = CoreLockTheme.colors
+    val tint = when (finding.severity) {
+        MismatchSeverity.HIGH -> colors.danger
+        MismatchSeverity.MEDIUM -> colors.attention
+        MismatchSeverity.LOW -> colors.onSurfaceMuted
+    }
+    Column(
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = CoreLockTheme.spacing.screen, vertical = CoreLockTheme.spacing.s),
+    ) {
+        // Severity in words, not colour alone.
+        Text(FindingText.severity(context, finding.severity), style = MaterialTheme.typography.labelMedium, color = tint)
+        Text(FindingText.title(context, finding), style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
+        Text(FindingText.summary(context, finding), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceMuted)
+        FindingText.evidence(context, finding).forEach { line ->
+            Text("• $line", style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceMuted)
+        }
+    }
+}
+
+/** Connections per hour: allowed, screen off or app not on screen, blocked (1.0 legend). */
+@Composable
+private fun Timeline(rows: List<ActivityHourRow>) {
+    val colors = CoreLockTheme.colors
+    val peak = (rows.maxOfOrNull { it.allowed + it.blocked + it.suspicious } ?: 0).coerceAtLeast(1)
+    Column(verticalArrangement = Arrangement.spacedBy(CoreLockTheme.spacing.xs)) {
+        Text(stringResource(R.string.appd_timeline_24h), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceMuted)
         Row(
-            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.Bottom,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
         ) {
             rows.forEach { row ->
                 val total = row.allowed + row.blocked + row.suspicious
-                val frac = total.toFloat() / peak.toFloat()
                 val color = when {
-                    row.blocked > 0 -> PgDanger
-                    row.suspicious > 0 -> PgWarning
-                    total > 0 -> PgAccent
-                    else -> PgTextFaint.copy(alpha = 0.18f)
+                    row.blocked > 0 -> colors.danger
+                    row.suspicious > 0 -> colors.attention
+                    total > 0 -> colors.protected
+                    else -> colors.surfaceVariant
                 }
-                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height((44f * frac.coerceAtLeast(if (total > 0) 0.08f else 0.02f)).dp)
-                            .background(color, RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp)),
-                    )
-                    if (row.hour % 6 == 0) {
-                        Text(stringResource(R.string.appd_hour, row.hour), style = MaterialTheme.typography.labelSmall, color = PgTextFaint)
-                    }
-                }
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height((44f * (total.toFloat() / peak).coerceAtLeast(if (total > 0) 0.08f else 0.03f)).dp)
+                        .background(color, RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp)),
+                )
             }
         }
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(stringResource(R.string.appd_legend), style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
+        Row(Modifier.fillMaxWidth()) {
+            listOf(0, 6, 12, 18).forEach { h ->
+                Text(stringResource(R.string.appd_hour, h), style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceMuted, modifier = Modifier.weight(1f))
+            }
+        }
+        Text(stringResource(R.string.appd_legend), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceMuted)
     }
 }
 
+/** Inspected content for this app; read only when Technical details is open. */
 @Composable
-private fun RecentActivityItem(row: RecentActivityRow) {
-    val tint = when {
-        row.blocked -> PgDanger
-        row.idle -> PgWarning
-        else -> PgAccent
+private fun PayloadList(packageName: String) {
+    val context = LocalContext.current
+    var logs by remember { mutableStateOf<List<PayloadLogEntity>?>(null) }
+    LaunchedEffect(packageName) {
+        logs = runCatching {
+            withContext(Dispatchers.IO) { AppDatabase.getInstance(context).payloadLogDao().logsForPackage(packageName, 100) }
+        }.onFailure { android.util.Log.w("AppDetail", "Payloads failed: ${it.javaClass.simpleName}") }.getOrDefault(emptyList())
     }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .background(tint, CircleShape),
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(row.label, style = MaterialTheme.typography.bodySmall, color = PgText, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(row.detail, style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
-        }
-        Text(
-            android.text.format.DateUtils.formatDateTime(LocalContext.current, row.timestamp, android.text.format.DateUtils.FORMAT_SHOW_TIME),
-            style = MaterialTheme.typography.labelSmall,
-            color = PgTextFaint,
-        )
-    }
-}
-
-private fun LazyListScope.mismatchTab(state: AppDetailState) {
-    when {
-        // Don't wait for the APK scan (tens of seconds on large apps): permission vs
-        // traffic findings are ready first, and the scan refines them when it ends.
-        state.isLoadingMismatch -> {
-            item { LoadingCard(stringResource(R.string.appd_loading_mismatch)) }
-        }
-        state.mismatchFindings.isEmpty() -> {
-            item {
-                PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Text(stringResource(R.string.appd_no_mismatch), style = MaterialTheme.typography.titleMedium, color = PgText)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        stringResource(R.string.appd_no_mismatch_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = PgTextMuted,
-                    )
-                }
-            }
-        }
-        else -> {
-            item {
-                PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    SectionLabel(stringResource(R.string.appd_perm_vs_traffic))
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        stringResource(R.string.appd_perm_vs_traffic_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = PgTextMuted,
-                    )
-                }
-            }
-            items(state.mismatchFindings, key = { "finding:${it.id}" }) { finding ->
-                MismatchCard(finding)
-            }
-        }
-    }
-}
-
-private enum class DomainSort { COUNT, DATA, BACKGROUND }
-
-private fun LazyListScope.connectionsTab(
-    state: AppDetailState,
-    sort: DomainSort,
-    onOpenDomain: (String) -> Unit,
-    onSortChange: (DomainSort) -> Unit,
-) {
-    if (state.hourlyActivity.any { it > 0 } && !state.isLoadingDomains) {
-        item { HourlyActivityChart(state.hourlyActivity) }
-    }
-    item {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            DomainSortChip(stringResource(R.string.appd_sort_count),      sort == DomainSort.COUNT)      { onSortChange(DomainSort.COUNT) }
-            DomainSortChip(stringResource(R.string.appd_sort_data),       sort == DomainSort.DATA)       { onSortChange(DomainSort.DATA) }
-            DomainSortChip(stringResource(R.string.appd_sort_background), sort == DomainSort.BACKGROUND) { onSortChange(DomainSort.BACKGROUND) }
-        }
-    }
-    when {
-        state.isLoadingDomains -> {
-            item { LoadingCard(stringResource(R.string.appd_loading_connections)) }
-        }
-        state.domains.isEmpty() -> {
-            item {
-                PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Text(stringResource(R.string.appd_no_connections), style = MaterialTheme.typography.titleMedium, color = PgText)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        stringResource(R.string.appd_no_connections_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = PgTextMuted,
-                    )
-                }
-            }
-        }
-        else -> {
-            val sorted = when (sort) {
-                DomainSort.COUNT      -> state.domains.sortedByDescending { it.count }
-                DomainSort.DATA       -> state.domains.sortedByDescending { it.bytesSent + it.bytesReceived }
-                DomainSort.BACKGROUND -> state.domains.sortedByDescending { it.backgroundCount }
-            }
-            items(sorted, key = { "domain:${it.domain}" }) { row -> DomainCard(row) { onOpenDomain(row.domain) } }
-        }
-    }
-}
-
-private fun LazyListScope.sdkTab(state: AppDetailState) {
-    when {
-        state.isScanning -> {
-            item { LoadingCard(stringResource(R.string.appd_scanning)) }
-        }
-        state.detectedSdks.isEmpty() -> {
-            item {
-                PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Text(stringResource(R.string.appd_no_sdks), style = MaterialTheme.typography.titleMedium, color = PgText)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        stringResource(R.string.appd_no_sdks_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = PgTextMuted,
-                    )
-                }
-            }
-        }
-        else -> {
-            items(state.detectedSdks) { sdk ->
-                SdkCard(sdk)
-            }
-        }
-    }
-}
-
-@Composable
-private fun DetailTab(label: String, active: Boolean, onClick: () -> Unit) {
-    Box(modifier = Modifier.clickable(onClick = onClick)) {
-        StatusPill(
-            text = label,
-            background = if (active) PgAccentDim else PgBackgroundAlt,
-            content = if (active) PgAccent else PgTextMuted,
-        )
-    }
-}
-
-@Composable
-private fun MismatchCard(finding: PermissionMismatchFinding) {
-    val (background, tint) = when (finding.severity) {
-        MismatchSeverity.LOW -> PgInfoDim to PgInfo
-        MismatchSeverity.MEDIUM -> PgWarningDim to PgWarning
-        MismatchSeverity.HIGH -> PgDangerDim to PgDanger
-    }
-    PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .background(background, RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Default.WarningAmber, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(com.privacyguard.app.ui.text.FindingText.title(LocalContext.current, finding), style = MaterialTheme.typography.titleMedium, color = PgText, fontWeight = FontWeight.SemiBold)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(com.privacyguard.app.ui.text.FindingText.summary(LocalContext.current, finding), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
-            }
-            StatusPill(com.privacyguard.app.ui.text.FindingText.severity(LocalContext.current, finding.severity).uppercase(), background, tint)
-        }
-        val evidence = com.privacyguard.app.ui.text.FindingText.evidence(LocalContext.current, finding)
-        if (evidence.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(12.dp))
-            evidence.forEach { line ->
-                Text("• $line", style = MaterialTheme.typography.bodySmall, color = PgTextFaint)
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun LoadingCard(message: String) {
-    PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = PgAccent)
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(message, style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
-        }
-    }
-}
-
-@Composable
-private fun HourlyActivityChart(hourly: List<Int>) {
-    if (hourly.isEmpty()) return
-    val peak = (hourly.maxOrNull() ?: 1).coerceAtLeast(1)
-    PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-        Text(stringResource(R.string.appd_activity_by_hour), style = MaterialTheme.typography.labelSmall, color = PgTextMuted)
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            verticalAlignment = Alignment.Bottom,
-        ) {
-            hourly.forEachIndexed { hour, count ->
-                val frac = count.toFloat() / peak.toFloat()
-                val barColor = when {
-                    hour in 0..5  -> PgInfo.copy(alpha = 0.7f)
-                    hour in 22..23 -> PgInfo.copy(alpha = 0.7f)
-                    frac > 0.7f   -> PgDanger
-                    frac > 0.3f   -> PgWarning
-                    else          -> PgAccent.copy(alpha = 0.5f)
-                }
-                Column(
-                    modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height((36f * frac.coerceAtLeast(if (count > 0) 0.08f else 0f)).dp)
-                            .background(barColor, RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp)),
-                    )
-                    if (hour % 6 == 0) {
-                        Text(
-                            stringResource(R.string.appd_hour, hour),
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = androidx.compose.ui.unit.TextUnit(8f, androidx.compose.ui.unit.TextUnitType.Sp)),
-                            color = PgTextFaint,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DomainSortChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .background(
-                if (selected) PgAccentDim else PgBackgroundAlt,
-                RoundedCornerShape(20.dp),
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 5.dp),
+    val list = logs
+    Column(
+        verticalArrangement = Arrangement.spacedBy(CoreLockTheme.spacing.s),
+        modifier = Modifier.padding(horizontal = CoreLockTheme.spacing.screen),
     ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = if (selected) PgAccent else PgTextMuted,
-        )
-    }
-}
-
-@Composable
-private fun DomainCard(row: DomainRow, onClick: () -> Unit) {
-    PanelCard(modifier = Modifier.padding(horizontal = 16.dp).clickable(onClick = onClick)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .background(if (row.trackerName != null) PgDangerDim else PgInfoDim, RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = if (row.trackerName != null) Icons.Default.TrackChanges else Icons.Default.Wifi,
-                    contentDescription = null,
-                    tint = if (row.trackerName != null) PgDanger else PgInfo,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(row.domain, style = MaterialTheme.typography.titleMedium, color = PgText, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    (row.company ?: stringResource(R.string.trf_company_unknown)).let { owner ->
-                        row.trackerName?.let { stringResource(R.string.appd_tracker_company, it, owner) } ?: owner
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = PgTextMuted,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    pluralStringResource(R.plurals.appd_times, row.count, row.count),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (row.trackerName != null) PgDanger else PgTextFaint,
-                )
-                if (row.backgroundCount > 0) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        pluralStringResource(R.plurals.appd_bg_count, row.backgroundCount, row.backgroundCount),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = PgWarning,
-                    )
-                }
-                val totalBytes = row.bytesSent + row.bytesReceived
-                if (totalBytes > 0) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        formatBytes(totalBytes),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = PgTextFaint,
-                    )
-                }
+        when {
+            list == null -> Text(stringResource(R.string.appd_loading_payloads), style = MaterialTheme.typography.bodyMedium, color = CoreLockTheme.colors.onSurfaceMuted)
+            list.isEmpty() -> Text(
+                stringResource(R.string.appd_no_payloads) + ". " + stringResource(R.string.appd_no_payloads_desc),
+                style = MaterialTheme.typography.bodyMedium,
+                color = CoreLockTheme.colors.onSurfaceMuted,
+            )
+            else -> list.forEach { log ->
+                val title = "${log.method ?: log.direction} ${log.sniHostname ?: log.destinationIp}${log.urlPath?.let { " $it" } ?: ""}"
+                val detail = listOfNotNull(
+                    android.text.format.Formatter.formatShortFileSize(context, log.sizeBytes.toLong()),
+                    log.protocol,
+                    if (log.piiRedacted) "PII" else log.direction,
+                ).joinToString(" · ") + (log.body?.takeIf { it.isNotBlank() }?.let { "\n" + it.take(200) } ?: "")
+                TechLine(title, detail, onClick = null)
             }
         }
     }
 }
 
-@Composable
-private fun SdkCard(sdk: TrackerEntry) {
-    val tint = categoryColor(sdk.category)
-    PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .background(tint.copy(alpha = 0.14f), RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(categoryIcon(sdk.category), contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(sdk.name, style = MaterialTheme.typography.titleMedium, color = PgText, fontWeight = FontWeight.SemiBold)
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(stringResource(R.string.appd_tracker_company, sdk.company, com.privacyguard.app.ui.text.FindingText.trackerCategory(LocalContext.current, sdk.category)), style = MaterialTheme.typography.bodySmall, color = PgTextMuted)
-            }
-            StatusPill(com.privacyguard.app.ui.text.FindingText.trackerCategory(LocalContext.current, sdk.category).uppercase(), PgPanelMuted, tint)
-        }
+private fun shareReport(context: Context, state: AppDetailState) {
+    val report = buildAppReport(context, state)
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.appd_report_subject, state.appName))
+        putExtra(Intent.EXTRA_TEXT, report)
     }
+    context.startActivity(Intent.createChooser(intent, context.getString(R.string.appd_share_report)))
 }
 
-private fun categoryColor(cat: TrackerCategory): Color = when (cat) {
-    TrackerCategory.ADVERTISING -> PgDanger
-    TrackerCategory.ANALYTICS -> PgWarning
-    TrackerCategory.CRASH_REPORTING -> PgInfo
-    TrackerCategory.FINGERPRINTING -> Color(0xFFB56CFF)
-    TrackerCategory.SOCIAL -> Color(0xFF6C8CFF)
-    TrackerCategory.PROFILING -> Color(0xFFFF6FAE)
-    TrackerCategory.OTHER -> PgTextFaint
-}
-
-private fun categoryIcon(cat: TrackerCategory) = when (cat) {
-    TrackerCategory.ADVERTISING -> Icons.Default.MonetizationOn
-    TrackerCategory.ANALYTICS -> Icons.Default.BarChart
-    TrackerCategory.CRASH_REPORTING -> Icons.Default.BugReport
-    TrackerCategory.FINGERPRINTING -> Icons.Default.Fingerprint
-    TrackerCategory.SOCIAL -> Icons.Default.People
-    TrackerCategory.PROFILING -> Icons.Default.Person
-    TrackerCategory.OTHER -> Icons.Default.Info
-}
-
-private fun buildAppReport(context: android.content.Context, state: AppDetailState): String = buildString {
+private fun buildAppReport(context: Context, state: AppDetailState): String = buildString {
     appendLine(context.getString(R.string.appd_r_title))
     appendLine("======================")
     appendLine(context.getString(R.string.appd_r_app, state.appName))
@@ -763,21 +640,16 @@ private fun buildAppReport(context: android.content.Context, state: AppDetailSta
     appendLine(context.getString(R.string.appd_r_traffic))
     appendLine(context.getString(R.string.appd_r_domains, state.domains.size))
     appendLine(context.getString(R.string.appd_r_bg, state.domains.sumOf { it.backgroundCount }))
-    val totalBytes = state.domains.sumOf { it.bytesSent + it.bytesReceived }
-    appendLine(context.getString(R.string.appd_r_data, formatBytes(totalBytes)))
+    appendLine(context.getString(R.string.appd_r_data, formatBytes(state.domains.sumOf { it.bytesSent + it.bytesReceived })))
     appendLine()
     if (state.detectedSdks.isNotEmpty()) {
         appendLine(context.getString(R.string.appd_r_sdks, state.detectedSdks.size))
-        state.detectedSdks.take(5).forEach { sdk ->
-            appendLine("  · ${sdk.name} (${sdk.company})")
-        }
+        state.detectedSdks.take(5).forEach { sdk -> appendLine("  · ${sdk.name} (${sdk.company})") }
         appendLine()
     }
     if (state.mismatchFindings.isNotEmpty()) {
         appendLine(context.getString(R.string.appd_r_mismatches, state.mismatchFindings.size))
-        state.mismatchFindings.take(3).forEach { f ->
-            appendLine("  · ${f.title}")
-        }
+        state.mismatchFindings.take(3).forEach { f -> appendLine("  · ${f.title}") }
         appendLine()
     }
     appendLine(context.getString(R.string.appd_r_top))
@@ -786,87 +658,17 @@ private fun buildAppReport(context: android.content.Context, state: AppDetailSta
         appendLine("  ${d.count}x  ${d.domain}$tracker")
     }
     appendLine()
-    appendLine(context.getString(R.string.appd_r_generated, android.text.format.DateUtils.formatDateTime(context, System.currentTimeMillis(), android.text.format.DateUtils.FORMAT_SHOW_DATE or android.text.format.DateUtils.FORMAT_SHOW_TIME or android.text.format.DateUtils.FORMAT_SHOW_YEAR)))
+    appendLine(
+        context.getString(
+            R.string.appd_r_generated,
+            DateUtils.formatDateTime(context, System.currentTimeMillis(), DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_SHOW_YEAR),
+        ),
+    )
 }
 
-@Composable
-private fun PayloadTabContent(packageName: String) {
-    val context = LocalContext.current
-    var logs by remember { mutableStateOf<List<PayloadLogEntity>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
-
-    LaunchedEffect(packageName) {
-        loading = true
-        logs = withContext(Dispatchers.IO) {
-            AppDatabase.getInstance(context).payloadLogDao().logsForPackage(packageName, 100)
-        }
-        loading = false
-    }
-
-    if (loading) {
-        LoadingCard(stringResource(R.string.appd_loading_payloads))
-        return
-    }
-
-    if (logs.isEmpty()) {
-        PanelCard(modifier = Modifier.padding(horizontal = 16.dp)) {
-            Text(stringResource(R.string.appd_no_payloads), style = MaterialTheme.typography.titleMedium, color = PgText)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                stringResource(R.string.appd_no_payloads_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = PgTextMuted,
-            )
-        }
-        return
-    }
-
-    Column(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        logs.forEach { log ->
-            PanelCard {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "${log.method ?: log.direction} ${log.sniHostname ?: log.destinationIp}${log.urlPath?.let { " $it" } ?: ""}",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = PgText,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            "${android.text.format.Formatter.formatShortFileSize(LocalContext.current, log.sizeBytes.toLong())} · ${log.protocol}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = PgTextMuted,
-                        )
-                    }
-                    if (log.piiRedacted) {
-                        StatusPill("PII", PgDangerDim, PgDanger)
-                    } else {
-                        StatusPill(log.direction, PgAccentDim, PgAccent)
-                    }
-                }
-                if (!log.body.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        log.body.take(200),
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                        ),
-                        color = PgTextFaint,
-                        maxLines = 4,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-        }
-    }
-}
-
+internal const val TAG_APP_DETAIL = "app_detail"
+internal const val TAG_STATUS = "app_status"
+internal const val TAG_RISK_WORD = "app_risk_word"
+internal const val TAG_TECHNICAL = "app_technical"
+internal const val TAG_USAGE_BANNER = "app_usage_banner"
+internal const val TAG_NAME_ROW = "app_name_row:"

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Réglages › Avancé (1.1) -->
+    <string name="ui_adv_network">Réseau</string>
+    <string name="ui_adv_network_sub">DNS chiffré, serveur DNS, proxys et options de blocage</string>
+    <string name="ui_adv_https">Inspection HTTPS</string>
+    <string name="ui_adv_https_sub">Voir le contenu de certaines connexions chiffrées</string>
+    <string name="ui_adv_analysis">Analyse</string>
+    <string name="ui_adv_analysis_sub">Statistiques, alertes et rapports</string>
+    <string name="ui_adv_diagnostics">Diagnostic</string>
+    <string name="ui_adv_diagnostics_sub">Vérifications réseau, intégrité de l’appli et détails des listes de blocage</string>
+
+    <string name="ui_net_group_lookups">Recherches de noms</string>
+    <string name="ui_net_group_blocking">Blocage</string>
+    <string name="ui_net_group_more">Plus</string>
+    <string name="ui_net_doh">DNS chiffré</string>
+    <string name="ui_net_doh_sub">Masquer à votre réseau les sites que vous recherchez</string>
+    <string name="ui_net_doh_note">Les recherches vont à %1$s, chiffrées. S’il est injoignable (certains Wi-Fi d’hôtel ou de bureau le bloquent), les sites ne se chargent plus tant que vous ne désactivez pas cette option.</string>
+    <string name="ui_net_dns">Serveur DNS</string>
+    <string name="ui_net_dns_sub">Le serveur qui répond aux recherches</string>
+    <string name="ui_net_dns_other">Autre serveur</string>
+    <string name="ui_net_dns_field">Adresse du serveur, comme 1.1.1.1</string>
+    <string name="ui_net_dns_invalid">Saisissez une adresse IP, comme 1.1.1.1 ou 2606:4700::1111.</string>
+    <string name="ui_net_dns_use">Utiliser ce serveur</string>
+    <string name="ui_net_dns_doh_note">Avec le DNS chiffré activé, choisir Cloudflare, Google ou Quad9 le choisit aussi pour les recherches chiffrées.</string>
+    <string name="ui_net_quic">Protocole web rapide (QUIC)</string>
+    <string name="ui_net_quic_sub">Le bloquer pour que CoreLock voie plus de connexions</string>
+    <string name="ui_net_weak_tls">Ancien chiffrement</string>
+    <string name="ui_net_weak_tls_sub">Bloquer les connexions à la sécurité dépassée</string>
+    <string name="ui_net_cleartext">Connexions non chiffrées</string>
+    <string name="ui_net_cleartext_sub">Bloquer les connexions que tout le monde sur le réseau peut lire</string>
+    <string name="ui_net_public_ip">Vérification de l’IP publique</string>
+    <string name="ui_net_public_ip_sub">Demander votre adresse publique à un serveur</string>
+    <string name="ui_net_proxy">Utiliser deux serveurs proxy</string>
+    <string name="ui_net_proxy_sub">Non chiffré. Le premier serveur voit où vous vous connectez.</string>
+    <string name="ui_on">Activé</string>
+    <string name="ui_off">Désactivé</string>
+
+    <string name="ui_proxy_first">Premier serveur</string>
+    <string name="ui_proxy_second">Second serveur</string>
+    <string name="ui_proxy_host_invalid">Saisissez un nom ou une adresse de serveur, sans http://.</string>
+    <string name="ui_proxy_port_invalid">Saisissez un port de 1 à 65535.</string>
+    <string name="ui_proxy_incomplete">Remplissez les deux serveurs pour que la chaîne fonctionne.</string>
+    <string name="ui_proxy_block">Bloquer le reste du trafic</string>
+    <string name="ui_proxy_block_sub">Arrêter le trafic qui ne peut pas passer par les serveurs</string>
+
+    <string name="ui_an_security">Analyse de sécurité</string>
+    <string name="ui_an_stats">Statistiques</string>
+    <string name="ui_an_stats_sub">Score de confidentialité, données utilisées, rapport informatique et capture de paquets</string>
+    <string name="ui_an_alerts">Alertes</string>
+    <string name="ui_an_alerts_sub">Les avertissements émis par CoreLock</string>
+    <string name="ui_an_systems">Systèmes de sécurité</string>
+    <string name="ui_an_systems_sub">Des vérifications qui repèrent les comportements inhabituels, et le rapport de nuit</string>
+    <string name="ui_an_ad_privacy">Confidentialité publicitaire</string>
+    <string name="ui_an_ads">Détail des publicités et traqueurs</string>
+    <string name="ui_an_ct">Vérification des certificats</string>
+    <string name="ui_an_ct_sub">Avertir en cas de certificats de site suspects</string>
+    <string name="ui_an_report">Créer un rapport maintenant</string>
+    <string name="ui_an_report_sub">Le résumé hebdomadaire, maintenant, en notification</string>
+    <string name="ui_an_report_started">Rapport en cours. Il arrivera en notification.</string>
+
+    <string name="ui_diag_network">Diagnostic réseau</string>
+    <string name="ui_diag_network_sub">Vérifier ce qui pourrait arrêter la protection</string>
+    <string name="ui_diag_run">Lancer les vérifications</string>
+    <string name="ui_diag_running">Vérification…</string>
+    <string name="ui_diag_not_run">Pas encore vérifié.</string>
+    <string name="ui_diag_integrity">Intégrité de l’appli</string>
+    <string name="ui_diag_integrity_sub">Vérifier que CoreLock n’a pas été modifiée</string>
+    <string name="ui_diag_lists">Détails des listes de blocage</string>
+    <string name="ui_diag_list_updated">Téléchargée %1$s</string>
+    <string name="ui_diag_list_never">Pas encore téléchargée</string>
+    <string name="ui_diag_names">Noms par liste</string>
+    <string name="ui_diag_battery">Batterie</string>
+    <string name="ui_diag_battery_ok">Sans restriction : Android n’arrêtera pas la protection pour économiser la batterie.</string>
+    <string name="ui_diag_builtin">Intégrée : %1$s</string>
+    <string name="ui_diag_list_count">%1$s : %2$s</string>
+    <plurals name="ui_diag_names_n">
+        <item quantity="one">%1$s nom</item>
+        <item quantity="many">%1$s noms</item>
+        <item quantity="other">%1$s noms</item>
+    </plurals>
+</resources>

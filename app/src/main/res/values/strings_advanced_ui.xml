@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings › Advanced (1.1, DESIGN_SPEC_1.1.md §6.6). Titles plain; subtitles may be technical. -->
+    <string name="ui_adv_network">Network</string>
+    <string name="ui_adv_network_sub">Encrypted DNS, DNS server, proxies and blocking options</string>
+    <string name="ui_adv_https">HTTPS inspection</string>
+    <string name="ui_adv_https_sub">See inside some encrypted connections</string>
+    <string name="ui_adv_analysis">Analysis</string>
+    <string name="ui_adv_analysis_sub">Statistics, alerts and reports</string>
+    <string name="ui_adv_diagnostics">Diagnostics</string>
+    <string name="ui_adv_diagnostics_sub">Network checks, app integrity and blocklist details</string>
+
+    <!-- Advanced › Network -->
+    <string name="ui_net_group_lookups">Lookups</string>
+    <string name="ui_net_group_blocking">Blocking</string>
+    <string name="ui_net_group_more">More</string>
+    <string name="ui_net_doh">Encrypted DNS</string>
+    <string name="ui_net_doh_sub">Hide which sites you look up from your network</string>
+    <string name="ui_net_doh_note">Lookups go to %1$s, encrypted. If it can’t be reached (some hotel or work Wi-Fi blocks it), sites stop loading until you turn this off.</string>
+    <string name="ui_net_dns">DNS server</string>
+    <string name="ui_net_dns_sub">Which server answers lookups</string>
+    <string name="ui_net_dns_other">Other server</string>
+    <string name="ui_net_dns_field">Server address, like 1.1.1.1</string>
+    <string name="ui_net_dns_invalid">Enter an IP address, like 1.1.1.1 or 2606:4700::1111.</string>
+    <string name="ui_net_dns_use">Use this server</string>
+    <string name="ui_net_dns_doh_note">With Encrypted DNS on, picking Cloudflare, Google or Quad9 also picks it for encrypted lookups.</string>
+    <string name="ui_net_quic">Fast web protocol (QUIC)</string>
+    <string name="ui_net_quic_sub">Block it so CoreLock can see more connections</string>
+    <string name="ui_net_weak_tls">Old encryption</string>
+    <string name="ui_net_weak_tls_sub">Block connections with outdated security</string>
+    <string name="ui_net_cleartext">Unencrypted connections</string>
+    <string name="ui_net_cleartext_sub">Block connections anyone on the network can read</string>
+    <string name="ui_net_public_ip">Public IP check</string>
+    <string name="ui_net_public_ip_sub">Ask a server for your public address</string>
+    <string name="ui_net_proxy">Use two proxy servers</string>
+    <string name="ui_net_proxy_sub">Not encrypted. The first server can see where you connect.</string>
+    <string name="ui_on">On</string>
+    <string name="ui_off">Off</string>
+
+    <!-- Advanced › Network › Use two proxy servers -->
+    <string name="ui_proxy_first">First server</string>
+    <string name="ui_proxy_second">Second server</string>
+    <string name="ui_proxy_host_invalid">Enter a server name or address, without http://.</string>
+    <string name="ui_proxy_port_invalid">Enter a port from 1 to 65535.</string>
+    <string name="ui_proxy_incomplete">Fill in both servers for the chain to work.</string>
+    <string name="ui_proxy_block">Block other traffic</string>
+    <string name="ui_proxy_block_sub">Stop traffic that can’t go through the servers</string>
+
+    <!-- Advanced › Analysis -->
+    <string name="ui_an_security">Security analysis</string>
+    <string name="ui_an_stats">Statistics</string>
+    <string name="ui_an_stats_sub">Privacy score, data use, IT report and packet capture</string>
+    <string name="ui_an_alerts">Alerts</string>
+    <string name="ui_an_alerts_sub">Warnings CoreLock raised</string>
+    <string name="ui_an_systems">Security systems</string>
+    <string name="ui_an_systems_sub">Checks that watch for unusual behaviour, and the night report</string>
+    <string name="ui_an_ad_privacy">Ad privacy</string>
+    <string name="ui_an_ads">Ads and trackers detail</string>
+    <string name="ui_an_ct">Certificate checks</string>
+    <string name="ui_an_ct_sub">Warn about suspicious site certificates</string>
+    <string name="ui_an_report">Make a report now</string>
+    <string name="ui_an_report_sub">The weekly summary, now, as a notification</string>
+    <string name="ui_an_report_started">Making the report. It arrives as a notification.</string>
+
+    <!-- Advanced › Diagnostics -->
+    <string name="ui_diag_network">Network diagnostics</string>
+    <string name="ui_diag_network_sub">Check what may stop protection</string>
+    <string name="ui_diag_run">Run checks</string>
+    <string name="ui_diag_running">Checking…</string>
+    <string name="ui_diag_not_run">Not checked yet.</string>
+    <string name="ui_diag_integrity">App integrity</string>
+    <string name="ui_diag_integrity_sub">Check that CoreLock hasn’t been changed</string>
+    <string name="ui_diag_lists">Blocklist details</string>
+    <string name="ui_diag_list_updated">Downloaded %1$s</string>
+    <string name="ui_diag_list_never">Not downloaded yet</string>
+    <string name="ui_diag_names">Names per list</string>
+    <string name="ui_diag_battery">Battery</string>
+    <string name="ui_diag_battery_ok">Unrestricted: Android won’t stop protection to save battery.</string>
+    <string name="ui_diag_builtin">Built-in: %1$s</string>
+    <string name="ui_diag_list_count">%1$s: %2$s</string>
+    <plurals name="ui_diag_names_n">
+        <item quantity="one">%1$s name</item>
+        <item quantity="other">%1$s names</item>
+    </plurals>
+</resources>

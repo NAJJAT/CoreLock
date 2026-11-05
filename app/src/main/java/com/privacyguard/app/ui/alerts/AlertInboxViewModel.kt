@@ -6,12 +6,12 @@ import androidx.lifecycle.viewModelScope
 import com.privacyguard.app.data.db.AppDatabase
 import com.privacyguard.app.data.db.DnsAnomalyEntity
 import com.privacyguard.app.data.db.TlsAlertEntity
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.privacyguard.app.ui.launchWhileObserved
+import com.privacyguard.app.ui.changesOf
 
 enum class AlertType { DNS_ANOMALY, JA3_THREAT, TLS_FP_CHANGE, WEAK_CIPHER, CT_EVENT, CLEARTEXT }
 
@@ -38,14 +38,16 @@ class AlertInboxViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow(AlertInboxState())
     val state: StateFlow<AlertInboxState> = _state.asStateFlow()
 
+    private val reloader = com.privacyguard.app.ui.Reloader("AlertInbox")
+    /** True while the latest load failed; the last list stays on screen. */
+    val loadFailed: StateFlow<Boolean> = reloader.failed
+    fun retry() = reloader.retry()
+
     init {
+        // The tables AlertFeed reads; reloaded when they change, not every 5 s.
         viewModelScope.launchWhileObserved(_state) {
-            while (true) {
-                try { refresh() }
-                catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                catch (_: Exception) { }
-                delay(5_000)
-            }
+            val db = AppDatabase.getInstance(getApplication<Application>())
+            reloader.runOn(db.changesOf("dns_anomalies", "tls_alerts", "connections")) { refresh() }
         }
     }
 

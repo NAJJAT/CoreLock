@@ -30,7 +30,7 @@ Gaps found:
    (no reader under `app/ui`). A user, or a bug report, can't tell whether lists are
    fresh.
 3. **Swallowed errors.** The list downloader does not record why a download failed,
-   so failures are neither counted nor shown. Planned for 1.0.1 (Decision 3).
+   so failures are neither counted nor shown. Planned for a later release (Decision 3).
 4. **No upstream signature.** HaGeZi and OISD don't sign their lists; integrity rests on
    HTTPS to GitHub, jsDelivr and oisd.nl. This is a limit, not something CoreLock can
    fix alone.

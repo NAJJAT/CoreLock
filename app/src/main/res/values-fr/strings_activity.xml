@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ui_group_just_now">À l\'instant</string>
+    <string name="ui_group_today">Aujourd\'hui</string>
+    <string name="ui_group_yesterday">Hier</string>
+    <string name="ui_group_earlier">Plus tôt</string>
+
+    <string name="ui_reason_lookup_bypass">Bloqué · Contourne CoreLock</string>
+    <string name="ui_reason_lookup_bypass_port">Bloqué · Jamais autorisé</string>
+    <string name="ui_title_lookup_service">Service de recherche privé</string>
+    <plurals name="ui_times">
+        <item quantity="one">%d fois</item>
+        <item quantity="many">%d fois</item>
+        <item quantity="other">%d fois</item>
+    </plurals>
+    <string name="ui_reason_setting">Bloqué · Une règle ou un réglage</string>
+
+    <string name="ui_what_named">%1$s (%2$s) depuis %3$s</string>
+    <string name="ui_what_plain">%1$s depuis %2$s</string>
+    <string name="ui_why_ads">Il figure sur la liste pubs et traqueurs.</string>
+    <string name="ui_why_malware">Il figure sur la liste des logiciels malveillants. Ce genre de site peut voler des mots de passe ou installer des applis dangereuses.</string>
+    <string name="ui_why_rule">Vous l\'avez bloqué.</string>
+    <string name="ui_why_rule_named">Vous l\'avez bloqué avec votre règle « %1$s ».</string>
+    <string name="ui_why_lookup_bypass">C\'est un service de recherche privé. Les applis qui l\'utilisent contourneraient les listes de CoreLock, il reste donc bloqué. Si vous avez votre propre service, autorisez-le dans Règles et sites autorisés.</string>
+    <string name="ui_why_lookup_bypass_port">L\'appli a essayé de chercher des sites d\'une façon qui contourne les listes de CoreLock. Ce n\'est pas possible de l\'autoriser.</string>
+    <string name="ui_why_setting">Une règle ou un de vos réglages l’a arrêté à ce moment-là, par exemple le blocage d’une app ou des connexions non chiffrées. Si vous avez supprimé cette règle depuis, elle ne s’applique plus.</string>
+    <string name="ui_why_allowed">Aucune liste ni règle ne l\'a arrêté.</string>
+    <string name="ui_reason_now_note">D\'après vos listes et vos règles actuelles.</string>
+    <string name="ui_allow_anyway">Autoriser quand même</string>
+    <string name="ui_block_for_app">Bloquer pour cette appli</string>
+    <string name="ui_block_everywhere">Bloquer partout</string>
+    <string name="ui_about_this_app">À propos de %1$s</string>
+    <string name="ui_more_about_name">En savoir plus sur ce nom</string>
+    <string name="ui_tech_name">Nom</string>
+    <string name="ui_tech_ip">Adresse IP</string>
+    <string name="ui_tech_port">Port</string>
+    <string name="ui_tech_protocol">Protocole</string>
+    <string name="ui_tech_rule">Règle</string>
+    <string name="ui_tech_time">Heure</string>
+
+    <string name="ui_allowed_try_again">Autorisé. Réessayez l\'appli.</string>
+    <string name="ui_undo">Annuler</string>
+    <string name="ui_blocked_done">Bloqué.</string>
+    <string name="ui_rule_removed">Votre règle a été supprimée.</string>
+    <string name="ui_action_failed">Ça n\'a pas marché. Réessayez.</string>
+
+    <string name="ui_empty_activity_all">Rien pour l\'instant. Les connexions s\'affichent ici quand les applis utilisent Internet.</string>
+    <string name="ui_empty_activity_off">La protection est désactivée, rien n\'est donc bloqué.</string>
+    <string name="ui_activity_limit">Les %1$d plus récents sont affichés.</string>
+    <string name="ui_back">Retour</string>
+    <string name="ui_more_options">Plus d\'options</string>
+    <string name="ui_live_connections">Connexions en cours</string>
+
+    <string name="rule_allow_domain_for_app">Autoriser %1$s pour %2$s</string>
+    <string name="rule_block_domain_for_app">Bloquer %1$s pour %2$s</string>
+
+    <string name="ui_fix_step_n">Étape %1$d sur %2$d</string>
+    <string name="ui_fix_which_app">Quelle appli ne marche pas ?</string>
+    <string name="ui_fix_which_app_sub">Les applis pour lesquelles quelque chose a été bloqué depuis une heure, les plus récentes d\'abord.</string>
+    <string name="ui_fix_not_sure">Pas dans la liste ou pas sûr</string>
+    <string name="ui_fix_not_sure_sub">Voir tout ce qui a été bloqué depuis une heure</string>
+    <string name="ui_fix_blocked_hour">Ceci a été bloqué depuis une heure</string>
+    <string name="ui_fix_blocked_hour_sub">La cause la plus probable est en haut.</string>
+    <string name="ui_fix_unknown_app_names">Aussi bloqué, appli inconnue</string>
+    <string name="ui_fix_none_hour">Rien n\'a été bloqué depuis une heure, CoreLock n\'est donc probablement pas en cause.</string>
+    <string name="ui_fix_none_app">Rien n\'a été bloqué pour cette appli depuis une heure. CoreLock n\'est probablement pas en cause.</string>
+    <string name="ui_fix_all_handled">C\'est fait. Réessayez l\'appli. Si elle ne marche toujours pas, revenez en arrière et choisissez une autre appli.</string>
+    <plurals name="ui_fix_attempts">
+        <item quantity="one">%d tentative</item>
+        <item quantity="many">%d tentatives</item>
+        <item quantity="other">%d tentatives</item>
+    </plurals>
+    <string name="ui_fix_try_pause">Toujours pas sûr ? Mettez la protection en pause 5 minutes et réessayez l\'appli.</string>
+
+    <string name="ui_pause_5">Mettre la protection en pause 5 minutes</string>
+    <string name="ui_pause_needs_alarms">Pour mettre en pause, CoreLock a besoin de l’accès « Alarmes et rappels », pour se rallumer tout seul.</string>
+    <string name="ui_pause_always_on">La pause n’est pas disponible quand le VPN permanent est activé : Android rallumerait CoreLock aussitôt.</string>
+    <string name="ui_paused_toast">En pause pour 5 minutes. Essayez l\'appli maintenant.</string>
+    <string name="ui_hero_paused">La protection est en pause</string>
+    <string name="ui_hero_paused_sub">Reprise à %1$s.</string>
+    <string name="ui_resume_now">Reprendre maintenant</string>
+    <string name="pause_notif_title">Protection en pause</string>
+    <string name="pause_notif_text">CoreLock se réactive à %1$s.</string>
+    <string name="ui_reason_ad_sdk">Bloqué · Un traqueur publicitaire intégré à l\'app</string>
+    <string name="ui_why_ad_sdk">C\'est un traqueur publicitaire que les apps intègrent. CoreLock le bloque dans toutes les apps, sauf celle qui le fabrique.</string>
+</resources>

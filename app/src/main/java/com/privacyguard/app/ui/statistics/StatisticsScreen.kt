@@ -1,5 +1,7 @@
 package com.privacyguard.app.ui.statistics
 
+import android.widget.Toast
+import androidx.compose.runtime.LaunchedEffect
 import android.content.Intent
 import androidx.core.content.FileProvider
 import androidx.compose.foundation.clickable
@@ -30,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.privacyguard.app.R
@@ -64,12 +67,17 @@ import com.privacyguard.app.ui.theme.PgTextMuted
 import com.privacyguard.app.ui.theme.PgWarning
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
+/** The "Blocked today" tile: BlockCountAgreementTest and the screen tests find it by this. */
+internal const val TAG_STATS_BLOCKED = "stats_blocked_today"
+
 @Composable
 fun StatisticsScreen(
     /** Opens the same list Home opens for this number, for the window it was computed at. */
     onOpenEvidence: (com.privacyguard.app.ui.traffic.EvidenceKind, Long) -> Unit = { _, _ -> },
     onOpenDomain: (String) -> Unit = {},
     onOpenApp: (String) -> Unit = {},
+    /** Home's "blocked today" list (Activity, Blocked): the tile shows the same number. */
+    onOpenBlocked: () -> Unit = {},
     viewModel: StatisticsViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -82,7 +90,20 @@ fun StatisticsScreen(
     val timeline by viewModel.timeline.collectAsStateWithLifecycle()
     val rememberedNetworks by viewModel.rememberedNetworks.collectAsStateWithLifecycle()
     val lastItReportPaths by viewModel.lastItReportPaths.collectAsStateWithLifecycle()
-    val csvExportPath by viewModel.csvExportPath.collectAsStateWithLifecycle()
+    val csvExport by viewModel.csvExport.collectAsStateWithLifecycle()
+    val loadFailed by viewModel.loadFailed.collectAsStateWithLifecycle()
+    // The file is shared as soon as it is written: one tap (and the device lock), not a
+    // second "share" button that read like the first and exported again (audit, task 10).
+    LaunchedEffect(csvExport) {
+        when (val e = csvExport) {
+            is StatisticsViewModel.CsvExport.Ready -> runCatching {
+                context.startActivity(HistoryExport.shareIntent(context, java.io.File(e.path), resources.getString(R.string.stats_share_log)))
+            }.onFailure { Toast.makeText(context, resources.getString(R.string.ui_set_no_browser), Toast.LENGTH_SHORT).show() }
+            StatisticsViewModel.CsvExport.Failed -> Toast.makeText(context, resources.getString(R.string.ui_set_export_failed), Toast.LENGTH_SHORT).show()
+            null -> Unit
+        }
+        if (csvExport != null) viewModel.csvExportHandled()
+    }
     val heatmap by viewModel.heatmap.collectAsStateWithLifecycle()
     val sunburstOrgs by viewModel.sunburstOrgs.collectAsStateWithLifecycle()
     val topAppsByData by viewModel.topAppsByData.collectAsStateWithLifecycle()
@@ -90,6 +111,9 @@ fun StatisticsScreen(
     val open: (com.privacyguard.app.ui.traffic.EvidenceKind) -> Unit = { kind -> onOpenEvidence(kind, stats.at) }
 
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (loadFailed) item {
+            com.privacyguard.app.ui.components.LoadFailedBanner(onRetry = viewModel::retry, modifier = Modifier.padding(horizontal = 16.dp))
+        }
         item {
             ScreenScaffold(
                 title = stringResource(R.string.stats_title),
@@ -98,7 +122,7 @@ fun StatisticsScreen(
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     StatTile(stringResource(R.string.stats_total_connections), fmtCount(stats.totalConnections), PgText, Modifier.weight(1f).clickable { open(com.privacyguard.app.ui.traffic.EvidenceKind.CONNECTIONS_24H) })
-                    StatTile(stringResource(R.string.dash_blocked), fmtCount(stats.blockedToday), PgDanger, Modifier.weight(1f).clickable { open(com.privacyguard.app.ui.traffic.EvidenceKind.BLOCKED_24H) })
+                    StatTile(stringResource(R.string.stats_blocked_today), fmtCount(stats.blockedToday), PgDanger, Modifier.weight(1f).clickable(onClick = onOpenBlocked).testTag(TAG_STATS_BLOCKED))
                 }
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -148,30 +172,15 @@ fun StatisticsScreen(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
-                    onClick = { viewModel.exportConnectionsCsv() },
+                    onClick = {
+                        runProtectedAction(resources.getString(R.string.stats_csv_export), resources.getString(R.string.ui_set_export_body)) {
+                            viewModel.exportConnectionsCsv()
+                        }
+                    },
                     colors = ButtonDefaults.buttonColors(containerColor = PgAccentDim, contentColor = PgAccent),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (csvExportPath != null) stringResource(R.string.stats_csv_ready) else stringResource(R.string.stats_csv_export))
-                }
-                csvExportPath?.let { path ->
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Button(
-                        onClick = {
-                            val uri = androidx.core.content.FileProvider.getUriForFile(
-                                context, "${context.packageName}.fileprovider", java.io.File(path))
-                            val share = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/csv"
-                                putExtra(Intent.EXTRA_STREAM, uri)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            context.startActivity(Intent.createChooser(share, resources.getString(R.string.stats_share_log)))
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = PgAccentDim, contentColor = PgAccent),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(R.string.stats_share_csv))
-                    }
+                    Text(stringResource(R.string.stats_csv_export))
                 }
             }
         }
@@ -205,12 +214,7 @@ fun StatisticsScreen(
                     SectionLabel(stringResource(R.string.stats_by_org))
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        val palette = listOf(
-                            Color(0xFF00E5A0), Color(0xFF4D9CFF), Color(0xFFFFB23F),
-                            Color(0xFFFF4D6A), Color(0xFF9C6DFF), Color(0xFF00C8E0),
-                            Color(0xFFFF8C42), Color(0xFF6BFF6B), Color(0xFFFF6B9D),
-                            Color(0xFFFFD166), Color(0xFF06D6A0), Color(0xFFEF476F),
-                        )
+                        val palette = com.privacyguard.app.ui.theme.PgChartPalette
                         SunburstChart(
                             rings = listOf(
                                 SunburstRing(sunburstOrgs.take(12).mapIndexed { i, s ->

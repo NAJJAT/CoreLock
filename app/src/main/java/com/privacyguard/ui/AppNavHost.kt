@@ -1,14 +1,13 @@
 package com.privacyguard.ui
 
 import android.net.Uri
+import com.privacyguard.app.ui.theme.CoreLockTheme
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ManageSearch
-import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.automirrored.rounded.ListAlt
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
@@ -18,6 +17,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -27,9 +29,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -51,17 +51,25 @@ import com.privacyguard.app.ui.security.SecurityAnalysisScreen
 import com.privacyguard.app.ui.settings.LicenseText
 import com.privacyguard.app.ui.settings.LicenseTextScreen
 import com.privacyguard.app.ui.settings.OpenSourceLicensesScreen
-import com.privacyguard.app.ui.settings.SettingsScreen
 import com.privacyguard.app.ui.sleep.SleepReportScreen
 import com.privacyguard.app.ui.statistics.StatisticsScreen
-import com.privacyguard.app.ui.theme.PgBackgroundAlt
-import com.privacyguard.app.ui.theme.PgBorder
-import com.privacyguard.app.ui.theme.PgTextFaint
-import com.privacyguard.app.ui.theme.PgTextMuted
 import com.privacyguard.ui.flavor.PayloadInspectorUi
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 internal data class NavTab(val route: String, @androidx.annotation.StringRes val labelRes: Int, val icon: ImageVector)
+
+/**
+ * The four tabs of 1.1 (DESIGN_SPEC_1.1.md §4.1). Stats and Payload left the bar: they are
+ * Settings › Advanced › Analysis › Statistics and Settings › Advanced › HTTPS inspection,
+ * and their 1.0 routes still work. Activity keeps the 1.0 route name "connections" because
+ * notifications posted by 1.0 open it (§4.3).
+ */
+internal val APP_TABS = listOf(
+    NavTab("dashboard", com.privacyguard.app.R.string.nav_home, Icons.Rounded.Shield),
+    NavTab("apps", com.privacyguard.app.R.string.nav_apps, Icons.Rounded.Apps),
+    NavTab("connections", com.privacyguard.app.R.string.nav_traffic, Icons.AutoMirrored.Rounded.ListAlt),
+    NavTab("settings", com.privacyguard.app.R.string.nav_settings, Icons.Rounded.Settings),
+)
 
 @Composable
 fun AppNavHost(
@@ -71,16 +79,7 @@ fun AppNavHost(
     val context = LocalContext.current
     val settingsPreferences = remember(context) { SettingsPreferences.getInstance(context) }
 
-    val tabs = remember {
-        buildList {
-            add(NavTab("dashboard", com.privacyguard.app.R.string.nav_home,    Icons.Default.Home))
-            add(NavTab("apps",      com.privacyguard.app.R.string.nav_apps,    Icons.Default.Apps))
-            add(NavTab("connections",com.privacyguard.app.R.string.nav_traffic, Icons.Default.Wifi))
-            add(NavTab("statistics",com.privacyguard.app.R.string.nav_stats,   Icons.Default.BarChart))
-            add(NavTab("payloads",  com.privacyguard.app.R.string.nav_payload, Icons.AutoMirrored.Filled.ManageSearch))
-            add(NavTab("settings",  com.privacyguard.app.R.string.nav_settings,Icons.Default.Settings))
-        }
-    }
+    val tabs = APP_TABS
 
     val topLevelRoutes = remember(tabs) { tabs.map { it.route }.toSet() }
     val onboardingCompleted by settingsPreferences.onboardingCompleted.collectAsStateWithLifecycle()
@@ -102,8 +101,8 @@ fun AppNavHost(
     }
 
     LaunchedEffect(onboardingCompleted) {
-        val target = if (onboardingCompleted) "dashboard" else "onboarding"
-        if (currentRoute != target) {
+        val target = onboardingRedirect(onboardingCompleted, currentRoute)
+        if (target != null) {
             navController.navigate(target) {
                 popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
                 launchSingleTop = true
@@ -112,8 +111,11 @@ fun AppNavHost(
     }
 
     // Navigate to a specific tab when launched from a notification deep-link
+    // Once per launch: the intent survives rotation, and handling it again would jump back.
+    var deepLinkHandled by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(initialRoute) {
-        if (initialRoute != null && onboardingCompleted) {
+        if (initialRoute != null && onboardingCompleted && !deepLinkHandled) {
+            deepLinkHandled = true
             navController.navigate(initialRoute) {
                 popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                 launchSingleTop = true
@@ -149,20 +151,13 @@ fun AppNavHost(
             modifier = Modifier.padding(innerPadding),
         ) {
             composable("onboarding") {
+                val level by settingsPreferences.protectionLevel.collectAsStateWithLifecycle()
                 OnboardingScreen(
-                    onEnableVpn = { tlsAccepted ->
-                        settingsPreferences.recordVpnConsent()
-                        if (tlsAccepted) com.privacyguard.vpn.interception.TlsInterceptionFactory.recordConsent(context)
-                        settingsPreferences.setOnboardingCompleted(true)
-                        navController.navigate("dashboard") {
-                            popUpTo("onboarding") { inclusive = true }
-                            launchSingleTop = true
-                        }
-                        onRequestVpn()
-                    },
-                    onGetStarted = { tlsAccepted ->
-                        settingsPreferences.recordVpnConsent()
-                        if (tlsAccepted) com.privacyguard.vpn.interception.TlsInterceptionFactory.recordConsent(context)
+                    initialLevel = level,
+                    onVpnConsent = settingsPreferences::recordVpnConsent,
+                    onRequestVpn = onRequestVpn,
+                    onFinish = { level ->
+                        settingsPreferences.setProtectionLevel(level)
                         settingsPreferences.setOnboardingCompleted(true)
                         navController.navigate("dashboard") {
                             popUpTo("onboarding") { inclusive = true }
@@ -175,19 +170,19 @@ fun AppNavHost(
             composable("dashboard") {
                 com.privacyguard.app.ui.home.HomeScreen(
                     onRequestVpn = onRequestVpn,
-                    // Phase 4 replaces this with Activity › Blocked (a list since midnight, like the count).
+                    // Activity opens on Blocked; "Today" there counts from midnight, like this number.
                     onOpenBlocked = { navController.navigate("connections") { launchSingleTop = true } },
                     onOpenAlerts = { navController.navigate("alerts") },
                     onOpenStatistics = { navController.navigate("statistics") { launchSingleTop = true } },
                     onOpenPayloads = { navController.navigate("payloads") { launchSingleTop = true } },
-                    onOpenSecurityDetails = { navController.navigate("securityOverview") },
+                    onOpenFix = { navController.navigate("fix") },
                 )
             }
 
             // TEMPORARY (Phase 3 → 6): the 1.0 Home, whole, until its cards move to
             // Settings › Advanced › Analysis (DESIGN_SPEC_1.1.md §5.2).
             composable("securityOverview") {
-                DashboardScreen(
+                Pushed(navController) { DashboardScreen(
                     onRequestVpn = onRequestVpn,
                     onOpenSettings = { navController.navigate("settings") },
                     onOpenAlerts = { navController.navigate("alerts") },
@@ -197,7 +192,7 @@ fun AppNavHost(
                     onOpenEvidence = { kind, at -> navController.navigate("evidence/${kind.name}?at=$at") },
                     onOpenStatistics = { navController.navigate("statistics") },
                     onOpenPayloads = { navController.navigate("payloads") },
-                )
+                ) }
             }
 
             // Drill-downs behind Home numbers: same window as the number, so the counts match.
@@ -219,14 +214,20 @@ fun AppNavHost(
                     navArgument("to") { type = NavType.StringType; nullable = true; defaultValue = null },
                     navArgument("idle") { type = NavType.StringType; nullable = true; defaultValue = null },
                 ),
-            ) {
+            ) { backStack ->
+                val trafficPkg = backStack.arguments?.getString("packageName").orEmpty()
                 com.privacyguard.app.ui.traffic.AppTrafficScreen(
                     onBack = { navController.popBackStack() },
-                    onOpenDomain = { host -> navController.navigate("domain/${Uri.encode(host)}") },
+                    onOpenDomain = { host -> navController.navigate("domain/${Uri.encode(host)}?app=${Uri.encode(trafficPkg)}") },
                 )
             }
 
-            composable("domain/{host}") {
+            // "app": opened from one app's traffic, so per-app Allow and Block apply. The
+            // plain "domain/{host}" route of 1.0 still matches (the argument is optional).
+            composable(
+                "domain/{host}?app={app}",
+                arguments = listOf(navArgument("app") { type = NavType.StringType; nullable = true; defaultValue = null }),
+            ) {
                 com.privacyguard.app.ui.traffic.DomainDetailScreen(
                     onBack = { navController.popBackStack() },
                     onOpenApp = { pkg -> navController.navigate(appTrafficRoute(pkg)) },
@@ -249,12 +250,56 @@ fun AppNavHost(
                 )
             }
 
+            // The Activity tab (DESIGN_SPEC_1.1.md §6.2). The route keeps its 1.0 name: blocked-
+            // connection notifications posted by 1.0 open "connections" (§4.3).
             composable("connections") {
-                ConnectionsScreen(
-                    onAppClick = { pkg, name ->
-                        navController.navigate("appDetail/${Uri.encode(pkg)}?appName=${Uri.encode(name)}")
-                    }
+                com.privacyguard.app.ui.activity.ActivityScreen(
+                    onOpenFix = { navController.navigate("fix") },
+                    onRequestVpn = onRequestVpn,
+                    onOpenDomain = { host -> navController.navigate("domain/${Uri.encode(host)}") },
+                    onOpenApp = { pkg, name -> navController.navigate("appDetail/${Uri.encode(pkg)}?appName=${Uri.encode(name)}") },
+                    onOpenLive = { navController.navigate("trafficLive") },
                 )
+            }
+
+            // "Something not working?" (§6.2): from Home and from Activity.
+            composable("fix") {
+                com.privacyguard.app.ui.activity.FixFlowScreen(
+                    onClose = { navController.popBackStack() },
+                    onOpenDomain = { host -> navController.navigate("domain/${Uri.encode(host)}") },
+                    onOpenApp = { pkg, name -> navController.navigate("appDetail/${Uri.encode(pkg)}?appName=${Uri.encode(name)}") },
+                    // D1: back to Home, where the hero shows the pause and its end time.
+                    onPause = {
+                        val paused = com.privacyguard.app.vpn.ProtectionPause.pause(context)
+                        android.widget.Toast.makeText(
+                            context,
+                            if (paused) com.privacyguard.app.R.string.ui_paused_toast else com.privacyguard.app.R.string.ui_action_failed,
+                            android.widget.Toast.LENGTH_LONG,
+                        ).show()
+                        if (paused) navController.navigate("dashboard") {
+                            popUpTo(navController.graph.findStartDestination().id)
+                            launchSingleTop = true
+                        }
+                    },
+                )
+            }
+
+            // The 1.0 Traffic screen, whole (live sessions, speed, search, name lookup), until
+            // Phase 6 moves live speed to Statistics (parity R6). Reached from Activity's menu.
+            // The 1.0 Traffic screen, now pushed from Activity: it has no top bar of its own,
+            // so it gets one here with a back arrow (until Phase 6 moves it).
+            composable("trafficLive") {
+                androidx.compose.foundation.layout.Column {
+                    com.privacyguard.app.ui.components.CoreLockTopBar(
+                        title = androidx.compose.ui.res.stringResource(com.privacyguard.app.R.string.ui_live_connections),
+                        onBack = { navController.popBackStack() },
+                    )
+                    ConnectionsScreen(
+                        onAppClick = { pkg, name ->
+                            navController.navigate("appDetail/${Uri.encode(pkg)}?appName=${Uri.encode(name)}")
+                        }
+                    )
+                }
             }
 
             composable("apps") {
@@ -266,52 +311,108 @@ fun AppNavHost(
             }
 
             composable("ads") {
-                AdsScreen()
+                Pushed(navController) { AdsScreen() }
             }
 
             composable("adPrivacy") {
-                com.privacyguard.app.adprivacy.AdPrivacyScreen()
+                Pushed(navController) { com.privacyguard.app.adprivacy.AdPrivacyScreen() }
             }
 
             composable("rules") {
-                com.privacyguard.app.ui.rules.RulesScreen()
+                com.privacyguard.app.ui.rules.RulesScreen(onBack = { navController.popBackStack() })
             }
 
+            // Advanced › Analysis › Statistics (parity R8; was the Stats tab).
             composable("statistics") {
-                StatisticsScreen(
-                    onOpenEvidence = { kind, at -> navController.navigate("evidence/${kind.name}?at=$at") },
-                    onOpenDomain = { host -> navController.navigate("domain/${Uri.encode(host)}") },
-                    onOpenApp = { pkg -> navController.navigate(appTrafficRoute(pkg)) },
-                )
+                Pushed(navController) {
+                    StatisticsScreen(
+                        onOpenEvidence = { kind, at -> navController.navigate("evidence/${kind.name}?at=$at") },
+                        onOpenDomain = { host -> navController.navigate("domain/${Uri.encode(host)}") },
+                        onOpenApp = { pkg -> navController.navigate(appTrafficRoute(pkg)) },
+                        onOpenBlocked = { navController.navigate("connections") { launchSingleTop = true } },
+                    )
+                }
             }
 
             composable("crypto") {
-                SecurityAnalysisScreen(onOpenAlerts = { navController.navigate("alerts") })
+                Pushed(navController) { SecurityAnalysisScreen(onOpenAlerts = { navController.navigate("alerts") }) }
             }
 
+            // Advanced › HTTPS inspection (parity R9; was the Payload tab).
             composable("payloads") {
-                PayloadInspectorUi.Screen()
+                PayloadInspectorUi.Screen(onBack = { navController.backOrHome() })
             }
 
             composable("settings") {
-                SettingsScreen(
-                    onLanguageChanged = {},
-                    onOpenSecurityAnalysis = { navController.navigate("crypto") },
-                    onOpenAds = { navController.navigate("ads") },
-                    onOpenAdPrivacy = { navController.navigate("adPrivacy") },
-                    onOpenRules = { navController.navigate("rules") },
-                    onOpenPayloads = { navController.navigate("payloads") },
-                    onOpenLicenses = { navController.navigate("licenses") },
+                com.privacyguard.app.ui.settings.SettingsHomeScreen(
+                    com.privacyguard.app.ui.settings.SettingsNav(
+                        onOpenRules = { navController.navigate("rules") },
+                        onOpenBlocklists = { navController.navigate("settings/blocklists") },
+                        onOpenKillSwitch = { navController.navigate("settings/killswitch") },
+                        onOpenLicenses = { navController.navigate("licenses") },
+                        onOpenAdvanced = { navController.navigate("advanced") },
+                    ),
                 )
             }
 
+            composable("settings/blocklists") {
+                com.privacyguard.app.ui.settings.BlocklistsScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable("settings/killswitch") {
+                com.privacyguard.app.ui.settings.KillSwitchScreen(onBack = { navController.popBackStack() })
+            }
+
+            // Settings › Advanced (DESIGN_SPEC_1.1.md §6.6). Every expert setting of the 1.0
+            // Settings screen is on one of these four screens (parity table §5.6).
+            composable("advanced") {
+                com.privacyguard.app.ui.settings.AdvancedScreen(
+                    com.privacyguard.app.ui.settings.AdvancedNav(
+                        onBack = { navController.popBackStack() },
+                        onOpenNetwork = { navController.navigate("advanced/network") },
+                        onOpenHttpsInspection = { navController.navigate("payloads") },
+                        onOpenAnalysis = { navController.navigate("advanced/analysis") },
+                        onOpenDiagnostics = { navController.navigate("advanced/diagnostics") },
+                    ),
+                )
+            }
+
+            composable("advanced/network") {
+                com.privacyguard.app.ui.settings.NetworkScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenProxies = { navController.navigate("advanced/proxies") },
+                )
+            }
+
+            composable("advanced/proxies") {
+                com.privacyguard.app.ui.settings.ProxyChainScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable("advanced/analysis") {
+                com.privacyguard.app.ui.settings.AnalysisScreen(
+                    com.privacyguard.app.ui.settings.AnalysisNav(
+                        onBack = { navController.popBackStack() },
+                        onOpenSecurityAnalysis = { navController.navigate("crypto") },
+                        onOpenStatistics = { navController.navigate("statistics") },
+                        onOpenAlerts = { navController.navigate("alerts") },
+                        onOpenSecuritySystems = { navController.navigate("securityOverview") },
+                        onOpenAdPrivacy = { navController.navigate("adPrivacy") },
+                        onOpenAds = { navController.navigate("ads") },
+                    ),
+                )
+            }
+
+            composable("advanced/diagnostics") {
+                com.privacyguard.app.ui.settings.DiagnosticsScreen(onBack = { navController.popBackStack() })
+            }
+
             composable("licenses") {
-                OpenSourceLicensesScreen(onOpenText = { text -> navController.navigate("licenseText/${text.name}") })
+                Pushed(navController) { OpenSourceLicensesScreen(onOpenText = { text -> navController.navigate("licenseText/${text.name}") }) }
             }
 
             composable("licenseText/{key}") { backStack ->
                 val key = backStack.arguments?.getString("key")
-                LicenseTextScreen(LicenseText.entries.firstOrNull { it.name == key })
+                Pushed(navController) { LicenseTextScreen(LicenseText.entries.firstOrNull { it.name == key }) }
             }
 
             composable("appDetail/{packageName}?appName={appName}") { backStack ->
@@ -322,11 +423,25 @@ fun AppNavHost(
                     appName = appName,
                     onBack = { navController.popBackStack() },
                     onOpenTraffic = { navController.navigate(appTrafficRoute(pkg)) },
-                    onOpenDomain = { host -> navController.navigate("domain/${Uri.encode(host)}") },
+                    onOpenDomain = { host -> navController.navigate("domain/${Uri.encode(host)}?app=${Uri.encode(pkg)}") },
                 )
             }
         }
     }
+}
+
+/** A 1.0 screen pushed from a 1.1 one: its title row gets a back arrow (see LocalScreenBack). */
+@Composable
+private fun Pushed(navController: androidx.navigation.NavHostController, content: @Composable () -> Unit) {
+    androidx.compose.runtime.CompositionLocalProvider(
+        com.privacyguard.app.ui.components.LocalScreenBack provides { navController.backOrHome() },
+        content = content,
+    )
+}
+
+/** Back, or Home when this screen is the only one (opened from a notification). */
+private fun androidx.navigation.NavHostController.backOrHome() {
+    if (!popBackStack()) navigate("dashboard") { launchSingleTop = true }
 }
 
 /** Route to an app's traffic; a blank package (unattributed lookups) uses DnsHandler's "Unknown". */
@@ -350,8 +465,8 @@ internal fun PgBottomBar(
     onSelect: (NavTab) -> Unit,
 ) {
     NavigationBar(
-        containerColor = PgBackgroundAlt,
-        contentColor = PgTextMuted,
+        containerColor = CoreLockTheme.colors.surface,
+        contentColor = CoreLockTheme.colors.onSurfaceMuted,
         tonalElevation = 0.dp,
     ) {
         tabs.forEach { tab ->
@@ -375,23 +490,47 @@ internal fun PgBottomBar(
                     }
                 },
                 label = {
+                    // Four tabs leave room for the label at the user's font size; where a long
+                    // word still doesn't fit (200 %, "Instellingen"), it shrinks, but never below
+                    // its 100 % size, instead of being cut ("Réglag" in 1.0).
+                    val style = androidx.compose.material3.MaterialTheme.typography.labelMedium
+                    val fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale
                     Text(
                         text = stringResource(tab.labelRes),
+                        style = style,
                         maxLines = 1,
-                        overflow = TextOverflow.Clip,
                         softWrap = false,
-                        fontSize = 11.sp,
+                        // A small gap so neighbouring long labels never touch each other or the screen edge.
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                        autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(
+                            minFontSize = style.fontSize / fontScale.coerceAtLeast(1f),
+                            maxFontSize = style.fontSize,
+                        ),
                     )
                 },
                 alwaysShowLabel = true,
                 colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
                     selectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
                     selectedTextColor = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                    indicatorColor = PgBorder,
-                    unselectedIconColor = PgTextFaint,
-                    unselectedTextColor = PgTextFaint
+                    indicatorColor = CoreLockTheme.colors.surfaceVariant,
+                    unselectedIconColor = CoreLockTheme.colors.onSurfaceMuted,
+                    unselectedTextColor = CoreLockTheme.colors.onSurfaceMuted
                 )
             )
         }
     }
+}
+
+/**
+ * Where to send the user when onboarding status is known, or null to stay. Only a real
+ * mismatch moves: finished onboarding still on its screen, or not finished anywhere else.
+ * A restored screen (after rotation or process death) is left alone; comparing with
+ * "dashboard" sent every rotation back to Home. Null [currentRoute]: the graph isn't
+ * there yet and its start destination already matches.
+ */
+internal fun onboardingRedirect(completed: Boolean, currentRoute: String?): String? = when {
+    currentRoute == null -> null
+    completed && currentRoute == "onboarding" -> "dashboard"
+    !completed && currentRoute != "onboarding" -> "onboarding"
+    else -> null
 }

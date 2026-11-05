@@ -11,11 +11,12 @@ import java.io.File
  * died, or after Always-on was turned off; postStopped is their shared body); both
  * say that protection is off. Also exempt:
  * the notice that the user's organisation turned on HTTPS inspection. Muting it
- * would make decryption silent again (security review finding #1).
+ * would make decryption silent again (security review finding #1). And the pause
+ * notice (D1): it says protection is off for now and carries "Resume now".
  */
 class NotificationSwitchTest {
 
-    private val exempt = setOf("postProtectionStopped", "postStopped", "postInspectionEnabledByOrganisation")
+    private val exempt = setOf("postProtectionStopped", "postStopped", "postInspectionEnabledByOrganisation", "postPaused")
 
     @Test
     fun every_alert_checks_the_switch_first() {

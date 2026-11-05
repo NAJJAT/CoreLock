@@ -41,14 +41,6 @@
         <item quantity="many">%d والشاشة مطفأة</item>
         <item quantity="other">%d والشاشة مطفأة</item>
     </plurals>
-    <plurals name="sleep_total_n">
-        <item quantity="zero">%d إجمالًا</item>
-        <item quantity="one">%d إجمالًا</item>
-        <item quantity="two">%d إجمالًا</item>
-        <item quantity="few">%d إجمالًا</item>
-        <item quantity="many">%d إجمالًا</item>
-        <item quantity="other">%d إجمالًا</item>
-    </plurals>
     <plurals name="sleep_idle_queries">
         <item quantity="zero">لا عمليات بحث DNS والشاشة مطفأة</item>
         <item quantity="one">عملية بحث DNS واحدة والشاشة مطفأة</item>

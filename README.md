@@ -116,13 +116,16 @@ or Instagram.
 | **Reduce ad tracking checklist** | Deep links to Android advertising ID, Meta *Your activity off Meta technologies*, Google *My Ad Center*, Google *Timeline* and mic permission review. Done steps are remembered. |
 | **Explainer** | A short plain-language explanation of how ad targeting works and what the app can and cannot change. |
 
-### Home: every number opens its list
+### Security systems: every number opens its list
 
-- **Same list behind every number.** Each number and card on Home is computed
+- **Same list behind every number.** (Settings › Advanced › Analysis › Security systems,
+  the 1.0 Home.) Each number and card there is computed
   from the list it opens, for the same time window, anchored at the same moment
   (`HomeEvidence`). No `LIMIT` anywhere. The list count equals the number shown.
 - **What opens what:**
-  - *Blocked (24 h)*, *Unencrypted (24 h)* and *Encryption health* open their lists.
+  - *Blocked today* (since midnight, the same count as Home, Activity, Apps, Statistics and
+    the notification: `BlockStats.today`) opens the Activity tab's Blocked list;
+    *Unencrypted (24 h)* and *Encryption health* open their lists.
   - The security cards (behavior changes, random-looking domains, night activity,
     repeating patterns, uploads, background connections, IPv6 sessions) open their lists.
   - The weekly report (connections, blocked, behavior changes, data) opens its lists.
@@ -153,6 +156,7 @@ or Instagram.
   directions. Stops at 100 MB or when protection stops; not encrypted, deleted
   after 24 hours. Starting or sharing a capture requires device authentication.
 - **CSV export:** 7 days of connections (app, domain, IP, bytes, TLS, background, blocked).
+  Like every export, it asks for the phone's screen lock first.
 - **IT report:** PDF + JSON summary for IT staff (kept in English on purpose).
 - **Weekly report:** WorkManager summary notification.
 
@@ -164,17 +168,17 @@ CoreLock is published only on
 [GitHub Releases](https://github.com/NAJJAT/CoreLock/releases), not on Google Play.
 It runs on Android 7.0 and newer (ARM phones, 64- and 32-bit).
 
-Latest version: **1.0.1** ([release notes](RELEASE_NOTES_1.0.1.md)). Earlier: [1.0.0](RELEASE_NOTES_1.0.md).
+Latest version: **1.1.0** ([release notes](RELEASE_NOTES_1.1.0.md)). Earlier: [1.0.0](RELEASE_NOTES_1.0.md).
 
-1. On the phone, download the APK (`CoreLock-1.0.1.apk`) from the release page.
+1. On the phone, download the APK (`CoreLock-1.1.0.apk`) from the release page.
 2. **Check it before installing.** The release page lists the APK's SHA-256 and the
    signing certificate's SHA-256 fingerprint (also under [Security](#security)).
    On a computer with the Android SDK build-tools:
 
    ```bash
-   apksigner verify --print-certs CoreLock-1.0.1.apk   # certificate fingerprint
-   sha256sum CoreLock-1.0.1.apk                        # Linux / macOS
-   certutil -hashfile CoreLock-1.0.1.apk SHA256        # Windows
+   apksigner verify --print-certs CoreLock-1.1.0.apk   # certificate fingerprint
+   sha256sum CoreLock-1.1.0.apk                        # Linux / macOS
+   certutil -hashfile CoreLock-1.1.0.apk SHA256        # Windows
    ```
 
    Install only if both match. (`keytool -printcert -jarfile` does not work: the
@@ -186,14 +190,16 @@ Latest version: **1.0.1** ([release notes](RELEASE_NOTES_1.0.1.md)). Earlier: [1
 
 ## First setup
 
-1. **VPN permission.** Open CoreLock and follow the setup; Android asks once to
-   allow the VPN. Everything stays on the phone.
+1. **VPN permission.** Open CoreLock and follow the three setup screens; Android asks
+   once to allow the VPN. "What leaves this phone" on the second screen lists what the
+   app sends and stores. Everything else stays on the phone.
 2. **Protection level.** Standard is the default; see
    [Protection levels](#protection-levels).
 3. **Private DNS.** If Android's Private DNS is set to a hostname, lookups bypass the
    filter and fail while protection runs. The app warns you on Home and before
    starting; set Private DNS to Off or Automatic.
-4. **Battery.** Settings › Diagnostics › Battery use shows whether Android may stop
+4. **Battery.** Setup warns you when Android restricts CoreLock in the background.
+   Settings › Advanced › Diagnostics › Battery use shows whether Android may stop
    protection in the background, and opens the battery settings.
 5. **Kill switch.** In Android's VPN settings turn on **Always-on VPN** for
    CoreLock, and optionally **Block connections without VPN**. Only Android can
@@ -273,25 +279,24 @@ CoreLock is not affiliated with or endorsed by AdGuard.
 
 ## Screens
 
+Four tabs: **Home**, **Apps**, **Activity** and **Settings**. Expert screens are under
+Settings › Advanced. Every 1.0 screen is still there; where each moved is in
+[RELEASE_NOTES_1.1.0.md](RELEASE_NOTES_1.1.0.md) ("Where things moved").
+
 | Screen | Contents |
 |---|---|
-| **Onboarding** | First-run consent wizard: what the VPN does, required and optional consents (the optional HTTPS-inspection consent exists only in enterprise builds). |
-| **Home** | Protection switch, privacy score, encryption health, blocked/unencrypted counts, throughput, active connections, "While you slept", protection level, security cards, weekly report, PCAP, recommendations, recent alerts. All numbers drill down. |
-| **Apps** | Installed apps by risk, data, connections or background ratio; grade A–F; quick block. |
-| **App detail** | Permission mismatches, domains, tracker SDKs, activity timeline, block / block-in-background, *See every connection*, payload tab (enterprise). |
-| **App traffic** | By purpose / every connection / raw DNS, for any window; optional "only while the screen was off". |
-| **Domain detail** | Owner, purpose, tracker entry, frequency, apps, first/last seen, bytes. |
-| **Evidence lists** | The list behind each Home number. |
-| **Traffic** | Live and recent connections with filters and search. |
-| **Statistics** | Encryption, score factors, network map, traffic by organisation, 7×24 heatmap, trend, top apps, CSV/IT exports. |
-| **While you slept** | Idle activity by app and domain, with today / 7 / 30-day ranges. |
-| **Alert inbox** | DNS anomalies, TLS fingerprint changes, JA3 watch-list hits, weak ciphers, CT events, cleartext apps (last 7 days). |
-| **Security analysis** | TLS fingerprint profiles and alerts, cipher alerts, CT events, plain-language explainer. |
-| **Why am I seeing this ad?** | Camera & Mic Watch, location audit, ad-SDK blocking, checklist, explainer. |
-| **Rules** | Create, edit and search rules; hit counters; suggestions. |
-| **Ads & trackers** | Tracker traffic by app and category, block rate. |
-| **Settings** | Protection level, security toggles, DoH, kill switch, Dual VPN, CT, external-IP check, app integrity, **language picker**, blocklists (real per-list counts), data retention, diagnostics. |
-| **Payload inspector** | Enterprise only: captured HTTPS requests/responses, risk scoring, CA install flow. |
+| **Onboarding** | Three screens: what CoreLock does and can't do; why Android asks about a VPN, with what leaves the phone; the protection level (battery advice only when Android restricts the app). HTTPS inspection is not offered here: its consent is only on its own screen. |
+| **Home** | Whether you are protected, with one switch; protection level; blocked today; "Something not working?" (find and allow what an app needs in 3 taps, or pause protection for 5 minutes); a warning card when something needs attention. |
+| **Activity** | What was blocked or allowed, in plain words, grouped by time, repeats merged. A row opens why it happened, with Allow / Block for that app or everywhere and Undo; technical details folded away. ⋮ › Live connections shows the 1.0 live list. |
+| **Apps** | Apps with search, filters (All / Blocked / Active now) and sorting; status, blocked today and one plain risk word per app. |
+| **App detail** | Internet access (allowed, blocked in background, blocked); what it connected to recently; built-in trackers; Technical details with every 1.0 tab (permissions vs traffic, behaviour, timeline, names, *See every connection*, inspected content). |
+| **App traffic / Domain detail** | By purpose, every connection and raw DNS for an app; a name's owner, purpose, apps and the same Allow / Block choices. |
+| **Settings** | Protection (level, Rules and allowed sites, Blocklists, Kill switch, Restart after a crash), Notifications, Language, Appearance, Data (history length, export history, export and import of rules and settings, screenshots, clear data), About. |
+| **Rules and allowed sites** | Your rules titled by site, app or address, with search, switches, Undo, suggestions and an add sheet that checks what you typed. |
+| **Advanced › Network** | DNS server, encrypted DNS, QUIC, unencrypted and outdated-encryption blocking, certificate checks, public-IP check, two proxy servers. |
+| **Advanced › HTTPS inspection** | Captured HTTPS requests and responses for apps that allow it, risk, CA install; asks before every switch-on. |
+| **Advanced › Analysis** | Security analysis (TLS fingerprints, ciphers, CT), Statistics (score, network map, heatmap, trends, CSV and IT exports, PCAP), Alerts, Security systems (the 1.0 Home cards and their lists), Night report, Ad privacy, Ads & trackers. |
+| **Advanced › Diagnostics** | Checks, app integrity, battery, per-list counts and update times, block counters. |
 
 ---
 
@@ -355,7 +360,7 @@ app that connects to the answer within a minute; blocked or unused lookups stay
 | **Session → history** | `SessionTable` closes or reaps a session → snapshot (app, hostname, SNI, bytes, foreground, screen) → `ConnectionLogger` batches into Room |
 | **App state** | Recorded once when a session opens: foreground from `UsageStatsManager` (`ForegroundAppDetector`), screen from `PowerManager.isInteractive` |
 | **Rules** | UI → `RulesRepo` → `RuleSyncBus` → service reloads in place |
-| **Home numbers** | `DashboardViewModel` (15 s) → `HomeEvidence.select()` on one 24 h query; drill-downs re-run the same selection for the same anchor time |
+| **Home numbers** | `HomeViewModel` and Security systems (`DashboardViewModel`) reload when the database changes (at most every few seconds); "blocked today" is `BlockStats.today` everywhere; other drill-downs re-run `HomeEvidence.select()` for the same anchor time |
 | **Alerts** | Detector → notification with a deep link (`pg_nav_route`) → inbox / Security analysis |
 
 **Stack:** Kotlin, Jetpack Compose (Material 3), Navigation Compose, Room +
@@ -388,6 +393,12 @@ SQLCipher, WorkManager, AppCompat per-app locales, BouncyCastle and OkHttp
 - **Clear all collected data** (Settings) erases every history table, exports,
   PCAPs and the Certificate Transparency record, and what the running VPN holds
   in memory; settings, rules and blocklists stay.
+- **Export and import of rules and settings** (Settings › Data): a JSON file saved where you
+  choose with Android's file picker. It holds your rules and settings, never history,
+  passwords, keys or HTTPS-inspection data; keep it private. Import shows what it will add
+  and change before anything happens, adds rules without replacing yours, never lets an
+  imported rule override malware protection, and is turned off on phones an organisation
+  manages (ADR 0013).
 - **Screen privacy.** `FLAG_SECURE` blocks screenshots and recents thumbnails.
 - **Sensitive actions** (exports, PCAP, clearing data) require device
   authentication and are blocked on a tampered runtime. `AppSecurityMonitor`

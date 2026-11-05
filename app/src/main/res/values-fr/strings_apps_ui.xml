@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ui_apps_search">Rechercher des applis</string>
+    <string name="ui_apps_active_now">Actives maintenant</string>
+    <string name="ui_sort_by">Trier par</string>
+    <string name="ui_sort_most_blocked">Plus bloquées</string>
+    <string name="ui_sort_name">Nom</string>
+    <string name="ui_sort_most_data">Plus de données</string>
+    <string name="ui_sort_background">Activité en arrière-plan</string>
+    <string name="ui_sort_risk">Risque le plus élevé</string>
+    <string name="ui_sort_destinations">Plus de destinations</string>
+    <string name="ui_apps_empty_search">Aucune appli nommée « %1$s ».</string>
+    <string name="ui_apps_empty_blocked">Aucune appli bloquée. Ouvrez une appli pour la bloquer.</string>
+    <string name="ui_apps_empty_active">Aucune appli n’a utilisé Internet ces 5 dernières minutes.</string>
+    <string name="ui_apps_empty">Aucune appli utilisant Internet n’a été trouvée.</string>
+    <string name="ui_error_apps">Impossible de charger vos applis.</string>
+    <plurals name="ui_apps_could_watch">
+        <item quantity="one">%d appli pourrait vous surveiller. Vérifiez que vous l’avez installée vous-même.</item>
+        <item quantity="many">%d applis pourraient vous surveiller. Vérifiez que vous les avez installées vous-même.</item>
+        <item quantity="other">%d applis pourraient vous surveiller. Vérifiez que vous les avez installées vous-même.</item>
+    </plurals>
+    <string name="ui_show_them">Les afficher</string>
+    <string name="ui_clear_search">Effacer la recherche</string>
+    <string name="ui_risk_word_hint">Expliquer</string>
+
+    <string name="ui_app_status">Accès à Internet</string>
+    <string name="ui_connected_recently">Connexions récentes</string>
+    <string name="ui_connected_recently_sub">Dernières 24 heures. Touchez un nom pour l’autoriser ou le bloquer pour cette appli.</string>
+    <string name="ui_other_names">Autres</string>
+    <string name="ui_built_in_trackers">Traqueurs intégrés</string>
+    <string name="ui_built_in_trackers_sub">Trouvés dans le code de l’appli. CoreLock bloque leurs connexions quand ils figurent sur ses listes.</string>
+    <string name="ui_no_trackers_found">Aucun traqueur intégré trouvé.</string>
+    <string name="ui_checking_app">Vérification du code de l’appli…</string>
+    <string name="ui_empty_app_connections">Aucune connexion ces dernières 24 heures.</string>
+    <string name="ui_error_app">Impossible de charger les connexions de cette appli.</string>
+    <string name="ui_usage_access_needed">CoreLock a besoin de l’accès aux données d’utilisation pour savoir quand une appli est en arrière-plan.</string>
+    <string name="ui_app_now_allowed">%1$s est autorisée.</string>
+    <string name="ui_app_now_blocked">%1$s est bloquée.</string>
+    <string name="ui_app_now_blocked_background">%1$s est bloquée en arrière-plan.</string>
+    <string name="ui_share_report">Partager le rapport</string>
+
+    <string name="ui_tech_risk_grade">Note de risque</string>
+    <string name="ui_tech_permissions">Autorisations</string>
+    <plurals name="ui_tech_permissions_n">
+        <item quantity="one">%d autorisation</item>
+        <item quantity="many">%d autorisations</item>
+        <item quantity="other">%d autorisations</item>
+    </plurals>
+    <string name="ui_tech_behaviour">Comportement, dernières 24 heures</string>
+    <string name="ui_tech_inspected">Contenu inspecté</string>
+    <string name="ui_tech_names">Tous les noms</string>
+</resources>

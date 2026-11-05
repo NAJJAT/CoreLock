@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.Locale
 import com.privacyguard.app.ui.launchWhileObserved
+import com.privacyguard.app.ui.changesOf
 
 data class StatisticsData(
     val totalConnections: Int = 0,
@@ -107,22 +108,21 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
     @Volatile private var cachedProfiles: List<com.privacyguard.core.metadata.ConnectionProfile> = emptyList()
     @Volatile private var cachedBehaviorSummaries: List<com.privacyguard.app.core.behavior.AppBehaviorSummary> = emptyList()
 
+    private val reloader = com.privacyguard.app.ui.Reloader(TAG)
+    /** True while the latest load failed; the last numbers stay on screen. */
+    val loadFailed: StateFlow<Boolean> = reloader.failed
+    fun retry() = reloader.retry()
+
     init {
+        // Reloads when the data changes, not on a timer (CLAUDE.md §16.2 item 4). Profiles
+        // feed slow-moving behaviour summaries: at most once a minute.
         viewModelScope.launchWhileObserved(_stats) {
-            while (true) {
-                try { refreshSlow() }
-                catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                catch (_: Exception) { }
-                delay(60_000)
+            db.changesOf("connection_profiles", minIntervalMs = 60_000).collect {
+                com.privacyguard.app.ui.loadLogged(TAG) { refreshSlow() }
             }
         }
         viewModelScope.launchWhileObserved(_stats) {
-            while (true) {
-                try { refresh() }
-                catch (e: kotlinx.coroutines.CancellationException) { throw e }
-                catch (_: Exception) { }
-                delay(5_000)
-            }
+            reloader.runOn(db.changesOf("connections", "dns_queries", "dns_anomalies", "network_trust", minIntervalMs = 5_000)) { refresh() }
         }
     }
 
@@ -151,7 +151,9 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
 
         _stats.value = StatisticsData(
             totalConnections = recentConnections.size,
-            blockedToday = blocks.total,
+            // The one "blocked today" (BlockStats.today): the number Home, Activity and the
+            // notification show. The tile opens the same list as Home's number.
+            blockedToday = com.privacyguard.app.data.repository.BlockStats(db).today(now),
             cleartextToday = score.cleartextConnections,
             dataTransferredToday = formatBytes(db.connectionDao().bytesBetween(todaySince, now)),
             blockRate = blocks.lookupBlockRate,
@@ -269,24 +271,28 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
             .take(12)
     }
 
-    private val _csvExportPath = MutableStateFlow<String?>(null)
-    val csvExportPath: StateFlow<String?> = _csvExportPath.asStateFlow()
+    /** One export result for the screen to act on once: share the file, or say it failed. */
+    sealed interface CsvExport { data class Ready(val path: String) : CsvExport; data object Failed : CsvExport }
+
+    private val _csvExport = MutableStateFlow<CsvExport?>(null)
+    val csvExport: StateFlow<CsvExport?> = _csvExport.asStateFlow()
 
     fun exportConnectionsCsv() {
         viewModelScope.launch {
-            val now = System.currentTimeMillis()
-            val since = now - 7L * 24L * 60L * 60L * 1000L
-            val connections = db.connectionDao().allSince(since)
-            val stamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date(now))
-            val exportDir = java.io.File(getApplication<android.app.Application>().filesDir, "exports/csv").apply { mkdirs() }
-            val file = java.io.File(exportDir, "connections_$stamp.csv")
-            file.bufferedWriter().use { w ->
-                w.write(ConnectionsCsv.HEADER)
-                connections.forEach { c -> w.write(ConnectionsCsv.row(c)) }
+            // One export for Statistics and Settings (HistoryExport, written off the main thread).
+            _csvExport.value = try {
+                CsvExport.Ready(HistoryExport.writeCsv(getApplication()).absolutePath)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "CSV export failed: ${e.javaClass.simpleName}")
+                CsvExport.Failed
             }
-            _csvExportPath.value = file.absolutePath
         }
     }
+
+    /** The screen opened the share sheet or showed the error. */
+    fun csvExportHandled() { _csvExport.value = null }
 
     fun exportItReport() {
         viewModelScope.launch {
@@ -311,3 +317,5 @@ class StatisticsViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun formatBytes(bytes: Long): String = com.privacyguard.app.core.utils.ByteFormat.format(bytes)
 }
+
+private const val TAG = "Statistics"

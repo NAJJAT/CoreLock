@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
@@ -19,7 +20,6 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.privacyguard.app.ui.theme.PgAccent
 import com.privacyguard.app.ui.theme.PgPanel
 import com.privacyguard.app.ui.theme.PgTextMuted
@@ -55,7 +55,7 @@ fun TemporalHeatmap(
                 Spacer(modifier = Modifier.weight((frac - lastFrac).coerceAtLeast(0.001f)))
                 Text(
                     text = "%02d".format(h),
-                    fontSize = 8.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     color = PgTextMuted,
                 )
                 lastFrac = frac
@@ -68,15 +68,17 @@ fun TemporalHeatmap(
         grid.forEachIndexed { dayIdx, hours ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.height(15.dp),
+                modifier = Modifier.heightIn(min = 15.dp),  // grows with the font size instead of clipping the day name
             ) {
                 Text(
                     text = dayLabels.getOrElse(dayIdx) { "" },
                     maxLines = 1,
-                    fontSize = 8.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     color = PgTextMuted,
                     modifier = Modifier.width(30.dp),
                 )
+                val empty = PgPanel
+                val full = PgAccent
                 Canvas(modifier = Modifier.weight(1f).height(12.dp)) {
                     val cellW = size.width / 24f
                     val cellH = size.height
@@ -86,7 +88,7 @@ fun TemporalHeatmap(
                     hours.forEachIndexed { hour, count ->
                         val col = if (rtl) 23 - hour else hour
                         val intensity = count.toFloat() / maxVal.toFloat()
-                        val color = lerp(PgPanel, PgAccent, intensity.coerceIn(0f, 1f))
+                        val color = lerp(empty, full, intensity.coerceIn(0f, 1f))
                         drawRect(
                             color = color,
                             topLeft = Offset(col * cellW + 0.8f, 0f),

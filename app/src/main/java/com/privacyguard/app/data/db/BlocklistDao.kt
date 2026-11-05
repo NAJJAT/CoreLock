@@ -160,6 +160,9 @@ interface BlocklistDao {
     @Query("SELECT EXISTS(SELECT 1 FROM blocklist WHERE isEnabled = 1 AND category = :category AND domain IN (:candidates))")
     suspend fun anyInCategory(category: String, candidates: List<String>): Boolean
 
+    @Query("SELECT EXISTS(SELECT 1 FROM blocklist WHERE isEnabled = 1 AND category IN (:categories) AND domain IN (:candidates))")
+    suspend fun anyInCategories(categories: List<String>, candidates: List<String>): Boolean
+
     @Query("SELECT COUNT(*) FROM blocklist")
     suspend fun count(): Int
     
@@ -205,7 +208,16 @@ interface BlocklistDao {
         ORDER BY totalCount DESC
     """)
     suspend fun getCategoryToggleStats(): List<CategoryToggleStats>
+
+    /** Which categories each list fills: the Ads screen says which lists the current level uses. */
+    @Query("SELECT DISTINCT source, category FROM blocklist")
+    suspend fun sourceCategories(): List<SourceCategory>
 }
+
+data class SourceCategory(
+    val source: String,
+    val category: String,
+)
 
 data class SourceStats(
     val source: String,

@@ -13,6 +13,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.GppBad
 import androidx.compose.material.icons.rounded.GppMaybe
+import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material3.Icon
@@ -37,7 +38,8 @@ import com.privacyguard.app.R
 import com.privacyguard.app.ui.theme.CoreLockTheme
 
 /** What the service really is doing; never guessed (no "off" before the state is known). */
-enum class ProtectionState { ON, OFF, STARTING, STOPPED_UNEXPECTEDLY }
+/** PAUSED: off for a few minutes by the user's choice, coming back by itself (D1). */
+enum class ProtectionState { ON, OFF, STARTING, STOPPED_UNEXPECTEDLY, PAUSED }
 
 /**
  * Home's status hero (DESIGN_SPEC_1.1.md §6.1). The whole card is one switch: tapping
@@ -61,6 +63,8 @@ fun StatusHeroCard(
         ProtectionState.OFF -> HeroLook(colors.attentionContainer, colors.onAttentionContainer, colors.attention, Icons.Rounded.GppMaybe)
         ProtectionState.STARTING -> HeroLook(colors.surface, colors.onSurface, colors.onSurfaceMuted, Icons.Rounded.Shield)
         ProtectionState.STOPPED_UNEXPECTEDLY -> HeroLook(colors.dangerContainer, colors.onDangerContainer, colors.danger, Icons.Rounded.GppBad)
+        // Amber like Off: the user chose it. Tapping the card resumes at once.
+        ProtectionState.PAUSED -> HeroLook(colors.attentionContainer, colors.onAttentionContainer, colors.attention, Icons.Rounded.PauseCircle)
     }
     val on = state == ProtectionState.ON || state == ProtectionState.STARTING
     val label = stringResource(R.string.ui_protection)

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Instellingen › Geavanceerd (1.1) -->
+    <string name="ui_adv_network">Netwerk</string>
+    <string name="ui_adv_network_sub">Versleutelde DNS, DNS-server, proxy’s en blokkeeropties</string>
+    <string name="ui_adv_https">HTTPS-inspectie</string>
+    <string name="ui_adv_https_sub">In sommige versleutelde verbindingen kijken</string>
+    <string name="ui_adv_analysis">Analyse</string>
+    <string name="ui_adv_analysis_sub">Statistieken, meldingen en rapporten</string>
+    <string name="ui_adv_diagnostics">Diagnose</string>
+    <string name="ui_adv_diagnostics_sub">Netwerkcontroles, app-integriteit en details van blokkeerlijsten</string>
+
+    <string name="ui_net_group_lookups">Naamopzoekingen</string>
+    <string name="ui_net_group_blocking">Blokkeren</string>
+    <string name="ui_net_group_more">Meer</string>
+    <string name="ui_net_doh">Versleutelde DNS</string>
+    <string name="ui_net_doh_sub">Verberg voor je netwerk welke sites je opzoekt</string>
+    <string name="ui_net_doh_note">Opzoekingen gaan versleuteld naar %1$s. Als die niet bereikbaar is (sommige wifi in hotels of op het werk blokkeert hem), laden sites niet meer tot je dit uitzet.</string>
+    <string name="ui_net_dns">DNS-server</string>
+    <string name="ui_net_dns_sub">Welke server opzoekingen beantwoordt</string>
+    <string name="ui_net_dns_other">Andere server</string>
+    <string name="ui_net_dns_field">Serveradres, zoals 1.1.1.1</string>
+    <string name="ui_net_dns_invalid">Voer een IP-adres in, zoals 1.1.1.1 of 2606:4700::1111.</string>
+    <string name="ui_net_dns_use">Deze server gebruiken</string>
+    <string name="ui_net_dns_doh_note">Met versleutelde DNS aan kies je met Cloudflare, Google of Quad9 ook de server voor versleutelde opzoekingen.</string>
+    <string name="ui_net_quic">Snel webprotocol (QUIC)</string>
+    <string name="ui_net_quic_sub">Blokkeer het zodat CoreLock meer verbindingen ziet</string>
+    <string name="ui_net_weak_tls">Oude versleuteling</string>
+    <string name="ui_net_weak_tls_sub">Blokkeer verbindingen met verouderde beveiliging</string>
+    <string name="ui_net_cleartext">Onversleutelde verbindingen</string>
+    <string name="ui_net_cleartext_sub">Blokkeer verbindingen die iedereen op het netwerk kan lezen</string>
+    <string name="ui_net_public_ip">Controle van openbaar IP</string>
+    <string name="ui_net_public_ip_sub">Vraag een server naar je openbare adres</string>
+    <string name="ui_net_proxy">Twee proxyservers gebruiken</string>
+    <string name="ui_net_proxy_sub">Niet versleuteld. De eerste server ziet waarmee je verbinding maakt.</string>
+    <string name="ui_on">Aan</string>
+    <string name="ui_off">Uit</string>
+
+    <string name="ui_proxy_first">Eerste server</string>
+    <string name="ui_proxy_second">Tweede server</string>
+    <string name="ui_proxy_host_invalid">Voer een servernaam of -adres in, zonder http://.</string>
+    <string name="ui_proxy_port_invalid">Voer een poort van 1 tot 65535 in.</string>
+    <string name="ui_proxy_incomplete">Vul beide servers in, anders werkt de keten niet.</string>
+    <string name="ui_proxy_block">Ander verkeer blokkeren</string>
+    <string name="ui_proxy_block_sub">Stop verkeer dat niet via de servers kan</string>
+
+    <string name="ui_an_security">Beveiligingsanalyse</string>
+    <string name="ui_an_stats">Statistieken</string>
+    <string name="ui_an_stats_sub">Privacyscore, dataverbruik, IT-rapport en pakketopname</string>
+    <string name="ui_an_alerts">Meldingen</string>
+    <string name="ui_an_alerts_sub">Waarschuwingen van CoreLock</string>
+    <string name="ui_an_systems">Beveiligingssystemen</string>
+    <string name="ui_an_systems_sub">Controles die letten op ongewoon gedrag, en het nachtrapport</string>
+    <string name="ui_an_ad_privacy">Advertentieprivacy</string>
+    <string name="ui_an_ads">Details van advertenties en trackers</string>
+    <string name="ui_an_ct">Certificaatcontroles</string>
+    <string name="ui_an_ct_sub">Waarschuw bij verdachte sitecertificaten</string>
+    <string name="ui_an_report">Nu een rapport maken</string>
+    <string name="ui_an_report_sub">De weekelijkse samenvatting, nu, als melding</string>
+    <string name="ui_an_report_started">Rapport wordt gemaakt. Het komt als melding.</string>
+
+    <string name="ui_diag_network">Netwerkdiagnose</string>
+    <string name="ui_diag_network_sub">Controleer wat de bescherming kan stoppen</string>
+    <string name="ui_diag_run">Controles uitvoeren</string>
+    <string name="ui_diag_running">Bezig met controleren…</string>
+    <string name="ui_diag_not_run">Nog niet gecontroleerd.</string>
+    <string name="ui_diag_integrity">App-integriteit</string>
+    <string name="ui_diag_integrity_sub">Controleer of CoreLock niet is gewijzigd</string>
+    <string name="ui_diag_lists">Details van blokkeerlijsten</string>
+    <string name="ui_diag_list_updated">Gedownload %1$s</string>
+    <string name="ui_diag_list_never">Nog niet gedownload</string>
+    <string name="ui_diag_names">Namen per lijst</string>
+    <string name="ui_diag_battery">Batterij</string>
+    <string name="ui_diag_battery_ok">Onbeperkt: Android stopt de bescherming niet om batterij te sparen.</string>
+    <string name="ui_diag_builtin">Ingebouwd: %1$s</string>
+    <string name="ui_diag_list_count">%1$s: %2$s</string>
+    <plurals name="ui_diag_names_n">
+        <item quantity="one">%1$s naam</item>
+        <item quantity="other">%1$s namen</item>
+    </plurals>
+</resources>

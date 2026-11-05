@@ -10,7 +10,6 @@
     <string name="ui_dismiss">إخفاء</string>
     <string name="ui_close">إغلاق</string>
     <string name="ui_loading">جارٍ التحميل</string>
-    <string name="ui_learn_more">اعرف المزيد</string>
     <string name="ui_warning">تحذير</string>
     <string name="ui_open_settings">افتح الإعدادات</string>
     <string name="ui_turn_on">شغّل الحماية</string>
@@ -51,8 +50,6 @@
     <string name="ui_whats_new">تغيّرت أماكن بعض الأشياء. الإحصاءات وفحص HTTPS موجودة الآن في الإعدادات › متقدم.</string>
     <string name="ui_open_statistics">افتح الإحصاءات</string>
     <string name="ui_open_https_inspection">افتح فحص HTTPS</string>
-    <string name="ui_home_security_details">تفاصيل الأمان</string>
-    <string name="ui_home_security_details_sub">التنبيهات وفحوص الأمان والتقارير</string>
 
     <!-- Activity -->
     <string name="ui_filter_blocked">المحظور</string>
@@ -108,4 +105,5 @@
     <string name="ui_clear_all_data">امسح كل البيانات</string>
     <string name="ui_what_corelock_cant">ما يستطيعه CoreLock وما لا يستطيعه</string>
     <string name="ui_what_corelock_cant_body">يحظر CoreLock الإعلانات وأدوات التتبع والبرامج الضارة للتطبيقات على هذا الهاتف. لا يستطيع حظر الإعلانات داخل YouTube وInstagram وSnapchat وTikTok وFacebook، لأنها تأتي من الخوادم نفسها التي تأتي منها المقاطع والمنشورات.</string>
+    <string name="ui_error_load">تعذّر تحميل أحدث البيانات. قد يكون ما تراه قديمًا.</string>
 </resources>

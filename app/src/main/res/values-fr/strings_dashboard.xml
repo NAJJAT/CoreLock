@@ -2,8 +2,6 @@
 <resources>
     <string name="dash_card_behavior">ADN comportemental des apps</string>
     <string name="dash_card_behavior_desc">Écarts par rapport au comportement appris de chaque app, 7 derniers jours</string>
-    <string name="dash_status_anomalous">Anormal</string>
-    <string name="dash_status_learning">Apprentissage</string>
     <string name="dash_status_quiet">Calme</string>
     <plurals name="dash_alerts_count">
         <item quantity="one">%d alerte</item>
@@ -12,9 +10,6 @@
     </plurals>
     <string name="dash_card_ipv6">Trafic IPv6</string>
     <string name="dash_card_ipv6_desc">Sessions IPv6 des dernières 24 h, passées par le tunnel comme l’IPv4</string>
-    <string name="dash_status_critical">Critique</string>
-    <string name="dash_status_blocked">Bloqué</string>
-    <string name="dash_status_contained">Maîtrisé</string>
     <plurals name="dash_blocked_count">
         <item quantity="one">%d bloqué</item>
         <item quantity="many">%d bloqués</item>
@@ -29,15 +24,11 @@
     <string name="dash_kill_switch_off_desc">Activez « VPN permanent » et « Bloquer les connexions sans VPN »</string>
     <string name="dash_status_blocking">Bloque</string>
     <string name="dash_status_not_checked">Non vérifié</string>
-    <string name="dash_vpn_live">VPN actif</string>
-    <string name="dash_vpn_off">VPN désactivé</string>
     <string name="dash_card_no_decrypt">Aucun déchiffrement du contenu</string>
     <string name="dash_card_no_decrypt_desc">Inspection des seules métadonnées ; le contenu TLS reste privé</string>
-    <string name="dash_status_verified">Vérifié</string>
     <string name="dash_headers_only">En-têtes uniquement</string>
     <string name="dash_card_entropy">Noms d’apparence aléatoire</string>
     <string name="dash_card_entropy_desc">Noms de domaine qui semblent générés par une machine, 7 derniers jours</string>
-    <string name="dash_status_high_value">Important</string>
     <string name="dash_status_normal">Normal</string>
     <plurals name="dash_signals_count">
         <item quantity="one">%d signal</item>
@@ -97,14 +88,12 @@
         <item quantity="many">L’ADN comportemental a relevé %d écarts d’apps. Les nouvelles destinations et les envois à des heures inhabituelles méritent un examen.</item>
         <item quantity="other">L’ADN comportemental a relevé %d écarts d’apps. Les nouvelles destinations et les envois à des heures inhabituelles méritent un examen.</item>
     </plurals>
-    <string name="dash_rec_ipv6">Du trafic IPv6 a été vu alors que le VPN est actif. Ajoutez le routage IPv6 ou désactivez le contournement IPv6.</string>
     <string name="dash_rec_entropy">Des noms de domaine d’apparence aléatoire ont été vus. Ouvrez la carte pour voir quelles apps les ont demandés.</string>
     <string name="dash_rec_beacon">Des contacts à intervalle fixe ont été trouvés. Ouvrez la carte pour voir quelle app et quel hôte.</string>
     <string name="dash_rec_strict">Le mode strict est conseillé sur %1$s, car la confiance est tombée à %2$d/100.</string>
     <string name="dash_rec_default">Le blocage standard avec le kill switch offre à la plupart des gens la meilleure protection par défaut.</string>
     <string name="dash_rec_no_decrypt">L’analyse comportementale fonctionne sans déchiffrer le contenu ; ce que vous envoyez reste privé.</string>
-    <string name="dash_title">Tableau de bord</string>
-    <string name="dash_subtitle_on">Tunnel protégé actif</string>
+    <string name="dash_subtitle_on">La protection est active</string>
     <string name="dash_subtitle_off">Protection en pause</string>
     <string name="dash_badge_live">En direct</string>
     <string name="dash_badge_offline">Hors ligne</string>
@@ -115,8 +104,6 @@
     <string name="dash_privacy_score_n">Score de confidentialité %1$d</string>
     <string name="dash_encryption_health">Niveau de chiffrement</string>
     <string name="dash_tls_percent">%1$d %% chiffré</string>
-    <string name="dash_trackers_blocked">Traqueurs bloqués</string>
-    <string name="dash_cleartext_conns">Connexions en clair</string>
     <string name="dash_privacy_score">Score de confidentialité</string>
     <string name="dash_throughput">Débit</string>
     <string name="dash_active_conns">Connexions actives</string>
@@ -187,6 +174,6 @@
     <string name="dash_pcap_file">%1$s · %2$s</string>
     <string name="dash_pcap_file_limit">%1$s · %2$s · arrêtée à la limite de 100 Mo</string>
     <string name="dash_inspection_title">L\'inspection HTTPS est activée</string>
-    <string name="dash_inspection_body">CoreLock déchiffre le HTTPS des applications qui font confiance à son certificat ; la plupart ne le font pas. Vous pouvez la désactiver dans Contenu.</string>
+    <string name="dash_inspection_body">CoreLock déchiffre le HTTPS des applications qui font confiance à son certificat ; la plupart ne le font pas. Vous pouvez la désactiver sur l\'écran Inspection HTTPS.</string>
     <string name="dash_inspection_org_body">Votre organisation l\'a activée. CoreLock déchiffre le HTTPS des applications qui font confiance à son certificat ; la plupart ne le font pas.</string>
 </resources>

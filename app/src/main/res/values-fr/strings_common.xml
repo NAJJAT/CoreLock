@@ -11,7 +11,6 @@
     <string name="net_wifi">Réseau Wi-Fi</string>
     <string name="net_cellular">Réseau mobile</string>
     <string name="net_ethernet">Réseau Ethernet</string>
-    <string name="net_vpn">Réseau VPN</string>
     <string name="net_wifi_named">Wi-Fi : %1$s</string>
     <string name="nd_mitm_off">L’inspection HTTPS est désactivée ou son consentement a expiré ; cette connexion a donc été transmise sans modification.</string>
     <string name="nd_bypass">Cet hôte figure dans la liste jamais interceptée (DNS sur HTTPS, services Google ou Samsung). Le déchiffrer casserait la résolution de noms ou la connexion, il est donc transmis tel quel.</string>
@@ -21,7 +20,7 @@
     <string name="common_all">Tout</string>
     <string name="nav_home">Accueil</string>
     <string name="nav_apps">Apps</string>
-    <string name="nav_traffic">Trafic</string>
+    <string name="nav_traffic">Activité</string>
     <string name="nav_stats">Stats</string>
     <string name="nav_payload">Contenu</string>
     <string name="nav_settings">Réglages</string>

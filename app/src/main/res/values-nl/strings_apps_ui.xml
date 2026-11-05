@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ui_apps_search">Apps zoeken</string>
+    <string name="ui_apps_active_now">Nu actief</string>
+    <string name="ui_sort_by">Sorteren op</string>
+    <string name="ui_sort_most_blocked">Meest geblokkeerd</string>
+    <string name="ui_sort_name">Naam</string>
+    <string name="ui_sort_most_data">Meeste data</string>
+    <string name="ui_sort_background">Activiteit op de achtergrond</string>
+    <string name="ui_sort_risk">Hoogste risico</string>
+    <string name="ui_sort_destinations">Meeste bestemmingen</string>
+    <string name="ui_apps_empty_search">Geen app met de naam ‘%1$s’.</string>
+    <string name="ui_apps_empty_blocked">Geen apps geblokkeerd. Open een app om die te blokkeren.</string>
+    <string name="ui_apps_empty_active">Geen app heeft de afgelopen 5 minuten internet gebruikt.</string>
+    <string name="ui_apps_empty">Geen apps gevonden die internet gebruiken.</string>
+    <string name="ui_error_apps">Je apps kunnen niet worden geladen.</string>
+    <plurals name="ui_apps_could_watch">
+        <item quantity="one">%d app kan je misschien volgen. Controleer of je die zelf hebt geïnstalleerd.</item>
+        <item quantity="other">%d apps kunnen je misschien volgen. Controleer of je die zelf hebt geïnstalleerd.</item>
+    </plurals>
+    <string name="ui_show_them">Toon ze</string>
+    <string name="ui_clear_search">Zoekopdracht wissen</string>
+    <string name="ui_risk_word_hint">Uitleggen</string>
+
+    <string name="ui_app_status">Internettoegang</string>
+    <string name="ui_connected_recently">Recent verbonden</string>
+    <string name="ui_connected_recently_sub">Afgelopen 24 uur. Tik op een naam om die voor deze app toe te staan of te blokkeren.</string>
+    <string name="ui_other_names">Overig</string>
+    <string name="ui_built_in_trackers">Ingebouwde trackers</string>
+    <string name="ui_built_in_trackers_sub">Gevonden in de code van de app. CoreLock blokkeert hun verbindingen als ze op de lijsten staan.</string>
+    <string name="ui_no_trackers_found">Geen ingebouwde trackers gevonden.</string>
+    <string name="ui_checking_app">De code van de app wordt gecontroleerd…</string>
+    <string name="ui_empty_app_connections">Geen verbindingen in de afgelopen 24 uur.</string>
+    <string name="ui_error_app">De verbindingen van deze app kunnen niet worden geladen.</string>
+    <string name="ui_usage_access_needed">CoreLock heeft toegang tot gebruiksgegevens nodig om te weten wanneer een app op de achtergrond is.</string>
+    <string name="ui_app_now_allowed">%1$s is toegestaan.</string>
+    <string name="ui_app_now_blocked">%1$s is geblokkeerd.</string>
+    <string name="ui_app_now_blocked_background">%1$s is op de achtergrond geblokkeerd.</string>
+    <string name="ui_share_report">Rapport delen</string>
+
+    <string name="ui_tech_risk_grade">Risicocijfer</string>
+    <string name="ui_tech_permissions">Rechten</string>
+    <plurals name="ui_tech_permissions_n">
+        <item quantity="one">%d recht</item>
+        <item quantity="other">%d rechten</item>
+    </plurals>
+    <string name="ui_tech_behaviour">Gedrag, afgelopen 24 uur</string>
+    <string name="ui_tech_inspected">Geïnspecteerde inhoud</string>
+    <string name="ui_tech_names">Alle namen</string>
+</resources>

@@ -18,6 +18,7 @@ replaces it and the old one is marked **Superseded by NNNN**.
 | [0010](0010-block-reason-and-one-tap-allow.md) | Show why a name was blocked, and allow it in one tap | Proposed |
 | [0011](0011-blocklist-update-safety.md) | Guard against bad list updates and show when lists last updated | Proposed |
 | [0012](0012-doh-upstream-off-by-default.md) | Keep encrypted upstream DNS (DoH) off by default | Accepted |
+| [0013](0013-export-import-rules-and-settings.md) | Export and import of rules and settings (D2) | Accepted (2026-11-04) |
 
 Where a record says *not recorded*, the reason was not written down at the time.
 The owner fills it in; nobody guesses it.

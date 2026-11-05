@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Geavanceerd › HTTPS-inspectie (1.1) -->
+    <string name="ui_https_confirm_title">HTTPS-inspectie aanzetten?</string>
+    <string name="ui_https_confirm_body">CoreLock ontsleutelt de verbindingen van apps die zijn certificaat vertrouwen en bewaart wat ze versturen op deze telefoon. De meeste apps vertrouwen het niet; van die apps zie je alleen sitenamen. Zet het uit als je klaar bent.</string>
+    <string name="ui_https_confirm_on">Aanzetten</string>
+    <string name="ui_https_install_cd">Het inspectiecertificaat installeren</string>
+</resources>

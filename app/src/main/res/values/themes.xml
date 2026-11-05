@@ -3,5 +3,7 @@
 
     <!-- AppCompat parent: the per-app language API recreates AppCompat activities
          with the chosen locale on Android 12 and older. Compose draws the UI. -->
-    <style name="Theme.Privacyguard" parent="Theme.AppCompat.Light.NoActionBar" />
+    <style name="Theme.Privacyguard" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">@color/corelock_launch_background</item>
+    </style>
 </resources>

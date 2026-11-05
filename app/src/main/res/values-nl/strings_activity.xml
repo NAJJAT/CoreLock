@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ui_group_just_now">Zojuist</string>
+    <string name="ui_group_today">Vandaag</string>
+    <string name="ui_group_yesterday">Gisteren</string>
+    <string name="ui_group_earlier">Eerder</string>
+
+    <string name="ui_reason_lookup_bypass">Geblokkeerd · Omzeilt CoreLock</string>
+    <string name="ui_reason_lookup_bypass_port">Geblokkeerd · Nooit toegestaan</string>
+    <string name="ui_title_lookup_service">Eigen opzoekdienst</string>
+    <plurals name="ui_times">
+        <item quantity="one">%d keer</item>
+        <item quantity="other">%d keer</item>
+    </plurals>
+    <string name="ui_reason_setting">Geblokkeerd · Een regel of instelling</string>
+
+    <string name="ui_what_named">%1$s (%2$s) van %3$s</string>
+    <string name="ui_what_plain">%1$s van %2$s</string>
+    <string name="ui_why_ads">Het staat op de lijst met advertenties en trackers.</string>
+    <string name="ui_why_malware">Het staat op de malwarelijst. Zulke sites kunnen wachtwoorden stelen of schadelijke apps installeren.</string>
+    <string name="ui_why_rule">Je hebt het geblokkeerd.</string>
+    <string name="ui_why_rule_named">Je hebt het geblokkeerd met je regel ‘%1$s’.</string>
+    <string name="ui_why_lookup_bypass">Dit is een eigen opzoekdienst. Apps die hem gebruiken, zouden de lijsten van CoreLock omzeilen, dus hij blijft geblokkeerd. Heb je je eigen dienst, sta hem dan toe bij Regels en toegestane sites.</string>
+    <string name="ui_why_lookup_bypass_port">De app probeerde sites op te zoeken op een manier die de lijsten van CoreLock omzeilt. Dit kan niet worden toegestaan.</string>
+    <string name="ui_why_setting">Een regel of een van je instellingen heeft het toen tegengehouden, bijvoorbeeld een app-blokkade of het blokkeren van onversleutelde verbindingen. Als je die regel sindsdien hebt verwijderd, geldt hij niet meer.</string>
+    <string name="ui_why_allowed">Geen lijst of regel heeft het tegengehouden.</string>
+    <string name="ui_reason_now_note">Volgens je lijsten en regels zoals ze nu zijn.</string>
+    <string name="ui_allow_anyway">Toch toestaan</string>
+    <string name="ui_block_for_app">Blokkeren voor deze app</string>
+    <string name="ui_block_everywhere">Overal blokkeren</string>
+    <string name="ui_about_this_app">Over %1$s</string>
+    <string name="ui_more_about_name">Meer over deze naam</string>
+    <string name="ui_tech_name">Naam</string>
+    <string name="ui_tech_ip">IP-adres</string>
+    <string name="ui_tech_port">Poort</string>
+    <string name="ui_tech_protocol">Protocol</string>
+    <string name="ui_tech_rule">Regel</string>
+    <string name="ui_tech_time">Tijd</string>
+
+    <string name="ui_allowed_try_again">Toegestaan. Probeer de app opnieuw.</string>
+    <string name="ui_undo">Ongedaan maken</string>
+    <string name="ui_blocked_done">Geblokkeerd.</string>
+    <string name="ui_rule_removed">Je regel is verwijderd.</string>
+    <string name="ui_action_failed">Dat is niet gelukt. Probeer het opnieuw.</string>
+
+    <string name="ui_empty_activity_all">Hier staat nog niets. Verbindingen verschijnen hier zodra apps internet gebruiken.</string>
+    <string name="ui_empty_activity_off">De bescherming staat uit, dus er wordt niets geblokkeerd.</string>
+    <string name="ui_activity_limit">De nieuwste %1$d worden getoond.</string>
+    <string name="ui_back">Terug</string>
+    <string name="ui_more_options">Meer opties</string>
+    <string name="ui_live_connections">Huidige verbindingen</string>
+
+    <string name="rule_allow_domain_for_app">%1$s toestaan voor %2$s</string>
+    <string name="rule_block_domain_for_app">%1$s blokkeren voor %2$s</string>
+
+    <string name="ui_fix_step_n">Stap %1$d van %2$d</string>
+    <string name="ui_fix_which_app">Welke app werkt niet?</string>
+    <string name="ui_fix_which_app_sub">Apps waarvoor het afgelopen uur iets is geblokkeerd, nieuwste eerst.</string>
+    <string name="ui_fix_not_sure">Staat er niet bij of weet ik niet</string>
+    <string name="ui_fix_not_sure_sub">Alles zien wat het afgelopen uur is geblokkeerd</string>
+    <string name="ui_fix_blocked_hour">Dit is het afgelopen uur geblokkeerd</string>
+    <string name="ui_fix_blocked_hour_sub">De meest waarschijnlijke oorzaak staat bovenaan.</string>
+    <string name="ui_fix_unknown_app_names">Ook geblokkeerd, app onbekend</string>
+    <string name="ui_fix_none_hour">Het afgelopen uur is niets geblokkeerd, dus CoreLock is waarschijnlijk niet de oorzaak.</string>
+    <string name="ui_fix_none_app">Het afgelopen uur is voor deze app niets geblokkeerd. CoreLock is waarschijnlijk niet de oorzaak.</string>
+    <string name="ui_fix_all_handled">Klaar. Probeer de app opnieuw. Werkt hij nog steeds niet, ga dan terug en kies een andere app.</string>
+    <plurals name="ui_fix_attempts">
+        <item quantity="one">%d poging</item>
+        <item quantity="other">%d pogingen</item>
+    </plurals>
+    <string name="ui_fix_try_pause">Nog steeds niet zeker? Pauzeer de bescherming 5 minuten en probeer de app opnieuw.</string>
+
+    <string name="ui_pause_5">Bescherming 5 minuten pauzeren</string>
+    <string name="ui_pause_needs_alarms">Om te pauzeren heeft CoreLock toegang tot ‘Wekkers en herinneringen’ nodig, zodat het vanzelf weer aangaat.</string>
+    <string name="ui_pause_always_on">Pauzeren kan niet als ‘Altijd-aan VPN’ aanstaat: Android zet CoreLock dan meteen weer aan.</string>
+    <string name="ui_paused_toast">5 minuten gepauzeerd. Probeer de app nu.</string>
+    <string name="ui_hero_paused">De bescherming is gepauzeerd</string>
+    <string name="ui_hero_paused_sub">Weer aan om %1$s.</string>
+    <string name="ui_resume_now">Nu hervatten</string>
+    <string name="pause_notif_title">Bescherming gepauzeerd</string>
+    <string name="pause_notif_text">CoreLock gaat om %1$s weer aan.</string>
+    <string name="ui_reason_ad_sdk">Geblokkeerd · Een advertentietracker ingebouwd in de app</string>
+    <string name="ui_why_ad_sdk">Het is een advertentietracker die apps inbouwen. CoreLock blokkeert hem in elke app, behalve in de app die hem maakt.</string>
+</resources>
