@@ -32,7 +32,7 @@ class MitmConfig(
         private const val KEY_ENABLED_BY_ORG = "mitm_enabled_by_org"
         private const val KEY_CONSENT_TS = "mitm_consent_timestamp"
         private const val KEY_CONSENT_BY_ORG = "mitm_consent_by_org"
-        private const val USER_CONSENT_VALIDITY_MS = 90L * 24 * 60 * 60 * 1000
+        private const val USER_CONSENT_VALIDITY_MS = CaPolicy.CONSENT_DAYS * 24L * 60 * 60 * 1000
 
         /**
          * A user's consent is asked again after 90 days. The organisation's consent lasts
@@ -44,6 +44,12 @@ class MitmConfig(
             if (timestamp == 0L) return false
             if (byOrganisation) return true
             return timestamp > now - USER_CONSENT_VALIDITY_MS
+        }
+
+        /** (when consent was given, 0 = never; given by the organisation) for [CaManager]. */
+        internal fun consentOf(context: Context): Pair<Long, Boolean> {
+            val p = prefs(context)
+            return p.getLong(KEY_CONSENT_TS, 0L) to p.getBoolean(KEY_CONSENT_BY_ORG, false)
         }
 
         internal fun prefs(context: Context): SharedPreferences =

@@ -5,13 +5,16 @@
     <string name="mitm_consent_title">Verkeersinspectie inschakelen</string>
     <string name="mitm_consent_body">De app onderschept en logt je HTTPS-verkeer, zodat je elk verzoek en antwoord op dit toestel kunt bekijken.\n\nNa je bevestiging vraagt de app je een CA-certificaat te installeren. Dat is nodig om HTTPS te ontsleutelen. Het certificaat blijft op je toestel en kan altijd worden verwijderd via Instellingen → Beveiliging → Certificaten.</string>
     <string name="mitm_consent_confirm">Bevestigen en certificaat installeren</string>
+    <string name="mitm_consent_renew_title">Verkeersinspectie verlengen</string>
+    <string name="mitm_consent_renew_body">Je toestemming voor HTTPS-inspectie geldt 90 dagen en is verlopen. De inspectie is gepauzeerd tot je beslist.\n\nAls je verlengt, gaat de inspectie nog 90 dagen door. Voor je veiligheid vervangt de app ook zijn certificaat: Android vraagt je het nieuwe te installeren, en het oude werkt niet meer. Daarna kun je het oude verwijderen via Instellingen → Beveiliging → Certificaten.</string>
+    <string name="mitm_consent_renew_confirm">Verlengen en certificaat installeren</string>
     <string name="mitm_cancel">Annuleren</string>
     <string name="mitm_lock_title">Schermvergrendeling vereist</string>
     <string name="mitm_lock_body">Android vereist een schermvergrendeling (pincode, patroon of wachtwoord) voordat CA-certificaten kunnen worden geïnstalleerd.\n\nGa naar:\nInstellingen → Beveiliging → Schermvergrendeling\n\nStel een pincode of wachtwoord in, kom dan terug en tik op Installeren.</string>
     <string name="mitm_open_settings">Instellingen openen</string>
     <string name="mitm_install_title">Installeren via Instellingen</string>
     <string name="mitm_save_failed_title">Certificaat kon niet worden opgeslagen</string>
-    <string name="mitm_install_steps">Android 11 en nieuwer staan alleen toe dat CA-certificaten via de app Instellingen worden geïnstalleerd, niet vanuit andere apps.\n\nHet certificaat is in Downloads opgeslagen als:\n%1$s\n\n1. Tik op Instellingen openen (dit opent ‘Een certificaat installeren’)\n2. Tik op CA-certificaat → Toch installeren\n3. Open Download en kies %1$s. Oudere privacyguard_ca-bestanden daar komen van eerdere installaties en werken niet meer.\n4. Kom hier terug: de kaart wordt groen zodra Android het certificaat vertrouwt.\n\nOpent Instellingen een andere pagina, zoek dan in Instellingen naar ‘CA-certificaat’.</string>
+    <string name="mitm_install_steps">Android 11 en nieuwer staan alleen toe dat CA-certificaten via de app Instellingen worden geïnstalleerd, niet vanuit andere apps.\n\nHet certificaat is in Downloads opgeslagen als:\n%1$s\n\n1. Tik op Instellingen openen (dit opent ‘Een certificaat installeren’)\n2. Tik op CA-certificaat → Toch installeren\n3. Open Download en kies %1$s. Oudere CoreLock-CA- en PrivacyGuard-CA-bestanden daar komen van eerdere installaties en werken niet meer.\n4. Kom hier terug: de kaart wordt groen zodra Android het certificaat vertrouwt.\n\nOpent Instellingen een andere pagina, zoek dan in Instellingen naar ‘CA-certificaat’.</string>
     <string name="mitm_save_failed_body">Het certificaat kon niet naar Downloads worden geschreven. Controleer de vrije opslagruimte en probeer het opnieuw; details staan in logcat onder de tag CaInstallHelper.</string>
     <string name="mitm_ok">OK</string>
     <string name="mitm_later">Later</string>
@@ -39,8 +42,8 @@
     <string name="mitm_ca_ready_settings_desc">Android 11+ installeert CA-certificaten alleen via Instellingen. Tik op Installeren: het certificaat wordt in Downloads opgeslagen en je krijgt stapsgewijze instructies.</string>
     <string name="mitm_ca_generating_desc">De CA wordt voor het eerst aangemaakt. Dit duurt een paar seconden.</string>
     <plurals name="mitm_stale_cas">
-        <item quantity="one">Er is nog %d oud inspectiecertificaat geïnstalleerd dat niet meer werkt. Tik op Oude verwijderen, open het tabblad Gebruiker en verwijder elke ‘PrivacyGuard Enterprise CA’ behalve de nieuwste.</item>
-        <item quantity="other">Er zijn nog %d oude inspectiecertificaten geïnstalleerd die niet meer werken. Tik op Oude verwijderen, open het tabblad Gebruiker en verwijder elke ‘PrivacyGuard Enterprise CA’ behalve de nieuwste.</item>
+        <item quantity="one">Er is nog %d oud inspectiecertificaat geïnstalleerd dat niet meer werkt. Tik op Oude verwijderen, open het tabblad Gebruiker en verwijder elke ‘PrivacyGuard Enterprise CA’ en elke ‘CoreLock HTTPS Inspection CA’ behalve de nieuwste.</item>
+        <item quantity="other">Er zijn nog %d oude inspectiecertificaten geïnstalleerd die niet meer werken. Tik op Oude verwijderen, open het tabblad Gebruiker en verwijder elke ‘PrivacyGuard Enterprise CA’ en elke ‘CoreLock HTTPS Inspection CA’ behalve de nieuwste.</item>
     </plurals>
     <string name="mitm_remove_old">Oude verwijderen</string>
     <string name="mitm_regenerate">Opnieuw aanmaken</string>

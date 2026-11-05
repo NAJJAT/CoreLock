@@ -51,6 +51,19 @@ object BlocklistManager {
                 // After an update that changed the sources, fetch the new lists now rather
                 // than at the next weekly run (the old ones stay until they arrive).
                 if (repo.countBySourcePrefix(BlocklistRepo.SOURCE_HAGEZI_TIF_MINI) == 0) {
+                    // Never downloaded yet: protect with the bundled copy until it is.
+                    val loaded = runCatching {
+                        loadMalwareSnapshot({ context.applicationContext.assets.open(MalwareSnapshot.ASSET) }, repo)
+                    }.onFailure { android.util.Log.w("BlocklistManager", "Malware snapshot not loaded: ${it.javaClass.simpleName}") }
+                        .getOrDefault(false)
+                    if (loaded) {
+                        _size.value = repo.totalCount()
+                        if (!com.privacyguard.platform.android.PrivacyVpnService.isRunning) {
+                            runCatching { writeStartupCache(context.applicationContext, repo) }
+                                .onFailure { android.util.Log.w("BlocklistManager", "Start-up cache not written: ${it.javaClass.simpleName}") }
+                        }
+                        com.privacyguard.app.data.repository.BlocklistSyncBus.publish()
+                    }
                     com.privacyguard.app.workers.BlocklistUpdateWorker.updateNow(context.applicationContext)
                 }
             }
@@ -80,6 +93,7 @@ object BlocklistManager {
                 _lastUpdate.value = System.currentTimeMillis()
                 // With protection on, the VPN reloads and refreshes the start-up cache itself.
                 if (!com.privacyguard.platform.android.PrivacyVpnService.isRunning) runCatching { writeStartupCache(ctx, repo) }
+                    .onFailure { android.util.Log.w("BlocklistManager", "Start-up cache not written: ${it.javaClass.simpleName}") }
                 // The running VPN keeps its own in-memory filter; tell it to reload.
                 com.privacyguard.app.data.repository.BlocklistSyncBus.publish()
             }
@@ -157,6 +171,34 @@ object BlocklistManager {
     private suspend fun retireReplacedSources(repo: BlocklistRepo, updated: Set<BlocklistSource>) {
         val retired = retiredSourceNames(updated)
         if (retired.isNotEmpty()) repo.removeSources(retired)
+        retireMalwareSnapshot(repo, updated)
+    }
+
+    /**
+     * The bundled malware copy goes once the live TIF mini has downloaded (it then holds
+     * the same names, newer), and only while its rows are actually stored: a success time
+     * that outlived its rows must not leave the phone without any malware list.
+     */
+    internal suspend fun retireMalwareSnapshot(repo: BlocklistRepo, updated: Set<BlocklistSource>) {
+        if (BlocklistSource.HAGEZI_TIF_MINI in updated && repo.countBySourcePrefix(BlocklistRepo.SOURCE_HAGEZI_TIF_MINI) > 0) {
+            repo.removeSources(repo.sourcesWithPrefix(MalwareSnapshot.SOURCE_PREFIX))
+        }
+    }
+
+    /**
+     * Stores the bundled TIF mini copy ([MalwareSnapshot]) unless this copy is stored
+     * already, and drops older copies. Parsed and validated like a download. [open] gives
+     * the list's text; it is read twice (date, then names). True when rows were written.
+     */
+    internal suspend fun loadMalwareSnapshot(open: () -> java.io.InputStream, repo: BlocklistRepo): Boolean {
+        val date = open().bufferedReader().useLines { MalwareSnapshot.dateOf(it) }
+        val key = MalwareSnapshot.sourceKey(date)
+        if (repo.countBySource(key) > 0) return false
+        val names = open().bufferedReader().useLines { parseLines(BlocklistSource.HAGEZI_TIF_MINI, it) }
+        if (names.isNullOrEmpty()) return false
+        repo.replaceSource(key, BlocklistRepo.CAT_MALWARE, names.toList())
+        repo.removeSources(repo.sourcesWithPrefix(MalwareSnapshot.SOURCE_PREFIX) - key)
+        return true
     }
 
     /** Lists with a stored success time; none on an install updated from 1.0.0 builds before this. */
@@ -174,11 +216,10 @@ object BlocklistManager {
      * reads, so it does not wait half a minute for the encrypted database.
      */
     private suspend fun writeStartupCache(ctx: Context, repo: BlocklistRepo) {
-        val levels = com.privacyguard.core.filter.ProtectionLevels
-        val level = levels.parse(com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(ctx).protectionLevel.value)
-        val blocked = repo.levelListDomains(level) +
-            (if (levels.includesCuratedAdHosts(level)) CuratedAdDomains.all else emptyList())
-        BlocklistCache.write(ctx, level.name, blocked, repo.domainsIn(setOf(BlocklistRepo.CAT_MALWARE)))
+        val level = com.privacyguard.core.filter.ProtectionLevels.parse(
+            com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(ctx).protectionLevel.value)
+        val lists = repo.levelLists(level)
+        BlocklistCache.write(ctx, level.name, lists.blocked, lists.security)
     }
 
     private fun blocklistRepo(ctx: Context) = BlocklistRepo(
@@ -344,6 +385,8 @@ object BlocklistManager {
                 "sdk.iad-05.braze.com",
                 "braze.com",
             ) + CuratedAdDomains.snapchatTrackers,
+            // Test names, kept so malware blocking can be checked end to end. The real
+            // fallback before the first download is the bundled list (MalwareSnapshot).
             BlocklistRepo.CAT_MALWARE to listOf(
                 "malware.testcategory.com",
                 "phishing.testcategory.com",

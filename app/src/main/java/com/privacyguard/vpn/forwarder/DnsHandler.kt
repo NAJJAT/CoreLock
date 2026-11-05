@@ -3,6 +3,8 @@ package com.privacyguard.vpn.forwarder
 import com.privacyguard.app.core.utils.readBytesCapped
 import com.privacyguard.core.filter.FilterEngine
 import com.privacyguard.core.packet.DnsPacket
+import com.privacyguard.core.packet.DnsRecord
+import com.privacyguard.core.packet.EchStripper
 import com.privacyguard.core.packet.IpPacket
 import com.privacyguard.core.packet.UdpPacket
 import com.privacyguard.core.session.Session
@@ -54,6 +56,9 @@ class DnsHandler(
     private val dualVpnConfig:     () -> com.privacyguard.vpn.dualvpn.DualVpnConfig = { com.privacyguard.vpn.dualvpn.DualVpnConfig() },
     // Malware and phishing hosts: only an Allow rule the user confirmed after a warning lets them through.
     private val securityFilter:    DomainFilter? = null,
+    // ADR 0015: remove ECH keys from HTTPS/SVCB answers. The service passes the setting
+    // and the level (Strict only); read once per answer to an HTTPS or SVCB query.
+    private val stripEch:          () -> Boolean = { false },
 ) {
     // ─────────────────────────────────────────────────────────────────────────
     // Listeners
@@ -168,9 +173,21 @@ class DnsHandler(
      * tracker lists; a malware or phishing alias still blocks unless that Allow was
      * confirmed after the warning, the same order the name itself gets.
      */
-    internal fun blockedCnameTarget(response: DnsPacket, ownerPackage: String?, askedName: String? = null): String? {
+    internal fun blockedCnameTarget(response: DnsPacket, ownerPackage: String?, askedName: String? = null): String? =
+        firstBlockedTarget(response.cnameRecords, ownerPackage, askedName)
+
+    /**
+     * The first HTTPS/SVCB TargetName in [response] that is blocked (RFC 9460): like a CNAME,
+     * it sends the client to another name's servers, often with address hints so that name
+     * is never looked up itself. Same decision and the same Allow rule as [blockedCnameTarget].
+     */
+    internal fun blockedServiceTarget(response: DnsPacket, ownerPackage: String?, askedName: String? = null): String? =
+        firstBlockedTarget(response.serviceTargets, ownerPackage, askedName)
+
+    private fun firstBlockedTarget(targets: List<String>, ownerPackage: String?, askedName: String?): String? {
+        if (targets.isEmpty()) return null
         val allow = askedName?.let { nameBlockPolicy.allowRuleFor(it, ownerPackage) }
-        return response.cnameRecords.firstOrNull { target ->
+        return targets.firstOrNull { target ->
             val reason = blockReasonFor(target, ownerPackage) ?: return@firstOrNull false
             allow == null || (reason == DnsBlockDecision.Reason.SECURITY_LIST && !allow.overridesSecurity)
         }
@@ -308,7 +325,8 @@ class DnsHandler(
         }.getOrNull()
     }
 
-    private fun injectDnsResponse(
+    @androidx.annotation.VisibleForTesting
+    internal fun injectDnsResponse(
         ipPacket:     IpPacket,
         udpPacket:    UdpPacket,
         dnsQuery:     DnsPacket,
@@ -327,15 +345,25 @@ class DnsHandler(
         // CNAME cloaking: an allowed first-party name that is an alias of a blocked
         // tracker resolves to the tracker. Answer NXDOMAIN as for the tracker itself,
         // unless the user allowed the name the app asked for.
-        blockedCnameTarget(dnsResponse, ownerPackage, dnsQuery.queryName)?.let { target ->
+        // HTTPS/SVCB records (plan 1.3) can point to a blocked name the same way, at
+        // every level: the target is decided like a CNAME target (the answer differs, below).
+        val cnameTarget = blockedCnameTarget(dnsResponse, ownerPackage, dnsQuery.queryName)
+        val serviceTarget = if (cnameTarget == null)
+            blockedServiceTarget(dnsResponse, ownerPackage, dnsQuery.queryName) else null
+        (cnameTarget ?: serviceTarget)?.let { target ->
             queryListener?.onQuery(ownerPackage, target, true)
-            cnameBlocked.incrementAndGet()
+            if (cnameTarget != null) cnameBlocked.incrementAndGet() else svcbBlocked.incrementAndGet()
             tunWriter.enqueueWithChecksums(buildUdpResponse(
                 srcIp   = ipPacket.destinationIp,
                 dstIp   = ipPacket.sourceIp,
                 srcPort = DNS_PORT,
                 dstPort = udpPacket.sourcePort,
-                data    = DnsPacket.buildBlockedResponse(dnsQuery),
+                // A CNAME makes the asked name the tracker: NXDOMAIN, as for the tracker.
+                // An HTTPS/SVCB target is only a service binding of an allowed name: an
+                // empty answer removes it, and the name's own A/AAAA lookups go on
+                // (NXDOMAIN would say the allowed name doesn't exist; review 2026-11-05).
+                data    = if (cnameTarget != null) DnsPacket.buildBlockedResponse(dnsQuery)
+                          else DnsPacket.buildNoDataResponse(dnsQuery),
             ))
             return true
         }
@@ -360,9 +388,26 @@ class DnsHandler(
             dstIp   = ipPacket.sourceIp,
             srcPort = DNS_PORT,
             dstPort = udpPacket.sourcePort,
-            data    = responseData,
+            data    = withoutEchKeys(dnsQuery, responseData),
         ))
         return true
+    }
+
+    /**
+     * ADR 0015: with the setting on (Strict only), an answer to an HTTPS or SVCB query
+     * loses its ECH keys, so the browser's ClientHello shows the real server name. An
+     * answer that can't be rewritten safely becomes an empty one (the browser then uses
+     * A/AAAA records and a normal ClientHello); it is never passed on with its key.
+     */
+    private fun withoutEchKeys(dnsQuery: DnsPacket, responseData: ByteArray): ByteArray {
+        val type = dnsQuery.questions.firstOrNull()?.type
+        if (type != DnsRecord.TYPE_HTTPS && type != DnsRecord.TYPE_SVCB) return responseData
+        if (!stripEch()) return responseData
+        return when (val r = EchStripper.strip(responseData)) {
+            EchStripper.Result.Unchanged -> responseData
+            is EchStripper.Result.Stripped -> { echKeysRemoved.addAndGet(r.keysRemoved.toLong()); r.message }
+            EchStripper.Result.Unreadable -> { echUnreadable.incrementAndGet(); DnsPacket.buildNoDataResponse(dnsQuery) }
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -524,6 +569,12 @@ class DnsHandler(
     val droppedQueries = AtomicLong(0)
     /** Answers turned into NXDOMAIN because a CNAME pointed at a blocked name. */
     val cnameBlocked   = AtomicLong(0)
+    /** Answers turned into NXDOMAIN because an HTTPS or SVCB record pointed at a blocked name. */
+    val svcbBlocked    = AtomicLong(0)
+    /** ECH keys removed from HTTPS/SVCB answers (ADR 0015). */
+    val echKeysRemoved = AtomicLong(0)
+    /** HTTPS/SVCB answers replaced by an empty answer: they could not be rewritten safely. */
+    val echUnreadable  = AtomicLong(0)
     /** DoH lookups answered with SERVFAIL because DoH could not be reached. */
     val dohFailures    = AtomicLong(0)
 

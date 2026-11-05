@@ -139,7 +139,7 @@
     <string name="dash_protection">Bescherming</string>
     <string name="dash_per_second">%1$s/s</string>
     <string name="dash_card_decrypt_on">HTTPS-inspectie staat aan</string>
-    <string name="dash_card_decrypt_on_desc">Bij apps die het PrivacyGuard-certificaat vertrouwen, wordt de HTTPS-inhoud ontsleuteld en op deze telefoon bewaard</string>
+    <string name="dash_card_decrypt_on_desc">Bij apps die het CoreLock-certificaat vertrouwen, wordt de HTTPS-inhoud ontsleuteld en op deze telefoon bewaard</string>
     <string name="dash_status_decrypting">Ontsleutelt</string>
     <string name="dash_payloads">Payloads</string>
     <string name="dash_status_off">Ontsleutelt niet</string>

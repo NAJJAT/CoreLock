@@ -26,6 +26,9 @@
     <string name="ui_net_dns_doh_note">With Encrypted DNS on, picking Cloudflare, Google or Quad9 also picks it for encrypted lookups.</string>
     <string name="ui_net_quic">Fast web protocol (QUIC)</string>
     <string name="ui_net_quic_sub">Block it so CoreLock can see more connections</string>
+    <string name="ui_net_ech">Read names behind Encrypted Client Hello</string>
+    <string name="ui_net_ech_sub">Lets CoreLock see the names of encrypted browser connections. Your network can see these names too.</string>
+    <string name="ui_net_ech_strict_only">Works only at Strict protection.</string>
     <string name="ui_net_weak_tls">Old encryption</string>
     <string name="ui_net_weak_tls_sub">Block connections with outdated security</string>
     <string name="ui_net_cleartext">Unencrypted connections</string>
@@ -77,6 +80,7 @@
     <string name="ui_diag_battery">Battery</string>
     <string name="ui_diag_battery_ok">Unrestricted: Android won’t stop protection to save battery.</string>
     <string name="ui_diag_builtin">Built-in: %1$s</string>
+    <string name="ui_diag_list_snapshot">%1$s (built-in copy from %2$s, used until the first download)</string>
     <string name="ui_diag_list_count">%1$s: %2$s</string>
     <plurals name="ui_diag_names_n">
         <item quantity="one">%1$s name</item>

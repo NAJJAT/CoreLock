@@ -1,6 +1,7 @@
 package com.privacyguard.core.metadata
 
 import com.privacyguard.core.session.SessionSnapshot
+import com.privacyguard.vpn.firewall.DomainFilter
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
@@ -17,8 +18,13 @@ import java.util.concurrent.atomic.AtomicLong
  */
 class MetadataEngine {
 
-    /** Set of known tracker hostnames used for risk scoring. */
-    @Volatile var knownTrackers: Set<String> = emptySet()
+    /**
+     * Known tracker names for risk scoring: every stored list but the DoH ones. A compact
+     * [DomainFilter] (8 bytes per name, ADR 0014), not a set of strings: it holds all the
+     * lists whatever the level, so it was the largest set in memory. [DomainFilter.rebuild]
+     * swaps it atomically.
+     */
+    val knownTrackers = DomainFilter()
 
     val totalRecorded = AtomicLong(0)
 
@@ -129,17 +135,7 @@ class MetadataEngine {
     }
 
     /** The host or any parent domain is listed ("ads.tracker.com" matches "tracker.com"). */
-    private fun isKnownTracker(host: String): Boolean {
-        val trackers = knownTrackers
-        if (trackers.isEmpty()) return false
-        var h = host.lowercase()
-        while (true) {
-            if (h in trackers) return true
-            val dot = h.indexOf('.')
-            if (dot < 0 || dot == h.lastIndexOf('.')) return false
-            h = h.substring(dot + 1)
-        }
-    }
+    private fun isKnownTracker(host: String): Boolean = knownTrackers.size > 0 && knownTrackers.isBlocked(host)
 
     // ─────────────────────────────────────────────────────────────────────────
     // Queries

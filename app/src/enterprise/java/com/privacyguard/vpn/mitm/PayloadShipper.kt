@@ -180,6 +180,14 @@ class PayloadShipper private constructor(
     /** Number of events currently waiting to be shipped. */
     fun pendingCount(): Int = queue.size
 
+    /** The queued events, oldest first, without taking them (tests check what would be sent). */
+    @androidx.annotation.VisibleForTesting
+    internal fun pendingEvents(): List<ShipEvent> = queue.toList()
+
+    /** The JSON a batch of [events] is sent as. */
+    @androidx.annotation.VisibleForTesting
+    internal fun jsonFor(events: List<ShipEvent>): String = buildJsonBatch(events)
+
     private fun buildJsonBatch(events: List<ShipEvent>): String = buildString {
         append("[")
         events.forEachIndexed { i, event ->
@@ -197,7 +205,8 @@ class PayloadShipper private constructor(
             if (event.urlPath != null) append("\"urlPath\":\"${escapeJson(event.urlPath)}\",")
             if (event.headers.isNotEmpty()) append("\"headers\":${buildJsonHeaders(event.headers)},")
             if (event.body != null) append("\"body\":\"${escapeJson(event.body)}\",")
-            append("\"bodyEncoding\":\"${event.bodyEncoding}\",")
+            // Escaped too: it can hold a Content-Encoding value the server chose.
+            append("\"bodyEncoding\":\"${escapeJson(event.bodyEncoding)}\",")
             append("\"sizeBytes\":${event.sizeBytes},")
             append("\"piiRedacted\":${event.piiRedacted}")
             append("}")

@@ -16,7 +16,7 @@
 
     <string name="lic_desc_apache">Libraries by Google, JetBrains, Square and others, each used under the Apache License 2.0.</string>
     <string name="lic_desc_psl">Included with OkHttp.</string>
-    <string name="lic_desc_hagezi">Pro, Pro mini, Threat Intelligence Feeds mini, DoH and DoH IP lists.</string>
+    <string name="lic_desc_hagezi">Pro, Pro mini, Threat Intelligence Feeds mini, DoH and DoH IP lists. A copy of Threat Intelligence Feeds mini is included in the app, for the time before the first download.</string>
     <string name="lic_desc_oisd">Maintained by Stephan van Ruth.</string>
     <string name="lic_desc_exodus">Known trackers, used to name the tracker behind a connection.</string>
     <string name="lic_desc_rir">Their public delegated-extended files, turned into the built-in table that shows the country of an IP address.</string>

@@ -74,6 +74,14 @@ class TcpForwarder(
     private val dohBlocked: (Session, String?) -> Boolean = { _, sni -> com.privacyguard.vpn.firewall.DnsBypassGuard.isDohHost(sni) },
     // A session was reset as a DNS bypass.
     private val onDohBlocked: ((Session) -> Unit)? = null,
+    // At STANDARD and STRICT: a TLS connection whose server name can't be read is reset
+    // (fail closed, as QUIC). Secure by default; the service passes the level check.
+    private val failsClosed: () -> Boolean = { true },
+    // A connection was reset by failsClosed (counter only, never a row). Packet thread.
+    private val onHelloUnreadable: (() -> Unit)? = null,
+    // Reads the first bytes on every port as TLS, not only 443. Only tests set it
+    // (their loopback servers listen on random ports).
+    private val tlsOnEveryPort: Boolean = false,
 ) : Runnable {
 
     companion object {
@@ -99,6 +107,9 @@ class TcpForwarder(
         internal fun seqAtOrAfter(ack: Long, seq: Long): Boolean = ((ack - seq) and SEQ_MASK) < HALF_SEQ
     }
 
+    // A plain function, not a lambda: an (Int) -> Boolean would box the port on every call.
+    private fun isTlsPort(port: Int): Boolean = port == 443 || tlsOnEveryPort
+
     private val selector = Selector.open()
     private val running = AtomicBoolean(false)
     @Volatile private var thread: Thread? = null
@@ -111,6 +122,8 @@ class TcpForwarder(
     val encryptionBlocked = AtomicLong(0)
     /** Connections reset because their TLS SNI is on a blocklist or a Block rule. */
     val sniBlocked = AtomicLong(0)
+    // TLS connections reset because their ClientHello could not be read (fail closed).
+    val helloUnreadableDropped = AtomicLong(0)
     val mitmInterceptedCount = AtomicLong(0)
     val retransmittedSegments = AtomicLong(0)
 
@@ -316,7 +329,7 @@ class TcpForwarder(
         if (interception.isEnabled && !isPrivacyGuardTraffic(session.ownerPackage)) {
             // Metadata-only stub for TLS sessions we are NOT decrypting. MITM'd sessions
             // log real decrypted entries via capture.
-            if (key.destinationPort == 443 && session.tlsSni != null &&
+            if (isTlsPort(key.destinationPort) && session.tlsSni != null &&
                 !session.metadataLogged && !session.isMitmIntercepted) {
                 session.metadataLogged = true
                 runCatching { interception.logNotDecrypted(session, payload.size) }
@@ -352,42 +365,74 @@ class TcpForwarder(
      */
     private fun classifyFirstData(session: Session, payload: ByteArray): Boolean {
         val key = session.key
-        // ── Buffer a multi-segment ClientHello before classifying ──────────
-        // Chrome's post-quantum ClientHello (~1.6 KB) spans several TCP segments
-        // and the SNI lives past the first one. Accumulate the first TLS record,
+        // ── Buffer the whole ClientHello before classifying ────────────────
+        // Chrome's post-quantum ClientHello (~1.8 KB) spans several TCP segments and
+        // the SNI lives past the first one; TLS also lets a client split the hello
+        // across records. Reassemble it (bounded by ClientHelloAssembler.MAX_BYTES),
         // then classify and route on the whole thing.
-        var clientHelloBytes = payload
-        if (key.destinationPort == 443 && !session.isMitmIntercepted && payload.isNotEmpty() &&
+        var clientHelloBytes = payload      // what the client sent: forwarded unchanged
+        var helloRecord: ByteArray? = null  // the reassembled hello, for reading only
+        var helloUnreadable = false
+        if (isTlsPort(key.destinationPort) && !session.isMitmIntercepted && payload.isNotEmpty() &&
             (session.clientHelloBuf.isNotEmpty() || (payload[0].toInt() and 0xFF) == 0x16)) {
-            val buffered = session.clientHelloBuf + payload
-            val recordLen = if (buffered.size >= 5)
-                5 + (((buffered[3].toInt() and 0xFF) shl 8) or (buffered[4].toInt() and 0xFF))
-                else Int.MAX_VALUE
-            if (buffered.size < recordLen && buffered.size < 16_384) {
-                session.clientHelloBuf = buffered            // keep buffering, ACK, wait
-                sendAckToDevice(session, payload.size)
-                return true
+            val buffered = if (session.clientHelloBuf.isEmpty()) payload else session.clientHelloBuf + payload
+            when (val assembled = com.privacyguard.core.tls.ClientHelloAssembler.assemble(buffered)) {
+                com.privacyguard.core.tls.ClientHelloAssembler.NeedMore -> {
+                    session.clientHelloBuf = buffered        // keep buffering, ACK, wait
+                    sendAckToDevice(session, payload.size)
+                    return true
+                }
+                is com.privacyguard.core.tls.ClientHelloAssembler.Complete -> helloRecord = assembled.record
+                com.privacyguard.core.tls.ClientHelloAssembler.Unreadable -> helloUnreadable = true
             }
             clientHelloBytes = buffered
             session.clientHelloBuf = ByteArray(0)
         }
-        if (key.destinationPort == 443 && clientHelloBytes.isNotEmpty() &&
-            (clientHelloBytes[0].toInt() and 0xFF) == 0x16) {
-            runCatching { onClientHello?.invoke(session, clientHelloBytes) }
+        val hello = helloRecord?.let { com.privacyguard.core.tls.ClientHelloParser.parse(it) }
+
+        // Fail closed (plan 0.2): at STANDARD and STRICT a TLS connection must show the
+        // name it is for. A hello that is truncated, malformed, too large to reassemble
+        // or carries bytes that are no name at all would otherwise go out unchecked, so
+        // the connection is reset. A complete hello with no SNI (IP-only TLS), or with a
+        // single-label name or an IP literal (an intranet host: not RFC 6066, but no way
+        // around a check either), goes on; the latter still raises its alert. Counted
+        // only, never a row: like QUIC's unreadable drops, these are not a decision on a
+        // name, and apps retry them.
+        if ((helloUnreadable || (helloRecord != null && (hello == null || hello.sniUnreadable))) && failsClosed()) {
+            // A name that is not a hostname still raises its alert (Invalid server name).
+            if (hello?.sniRejected == true) {
+                runCatching { onSni?.invoke(session, null, true) }
+                    .onFailure { Log.w(TAG, "SNI listener failed: ${it.javaClass.simpleName}") }
+            }
+            helloUnreadableDropped.incrementAndGet()
+            runCatching { onHelloUnreadable?.invoke() }
+                .onFailure { Log.w(TAG, "Unreadable hello listener failed: ${it.javaClass.simpleName}") }
+            resetSession(session)
+            return true
+        }
+
+        val readBytes = helloRecord ?: clientHelloBytes
+        if (isTlsPort(key.destinationPort) && readBytes.isNotEmpty() &&
+            (readBytes[0].toInt() and 0xFF) == 0x16) {
+            runCatching { onClientHello?.invoke(session, readBytes) }
                 .onFailure { Log.w(TAG, "ClientHello listener failed: ${it.javaClass.simpleName}") }
         }
 
-        // Classified on the whole record: the last segment alone has neither the
+        // Classified on the whole hello: the last segment alone has neither the
         // record version nor supported_versions, so TLS 1.3 showed up as plain "TLS".
-        val result = encEnforcer.inspect(key.destinationPort, clientHelloBytes)
-        val sni = result.sniHostname
-            ?: com.privacyguard.core.tls.ClientHelloParser.parse(clientHelloBytes)?.sni
+        val result = encEnforcer.inspect(key.destinationPort, readBytes)
+        // One parse per connection (§6.2): the reassembled hello, or the first bytes when
+        // they start a TLS record. The vetted name wins; only when nothing could be parsed
+        // does the classifier's own reading count, so at Minimal (which doesn't fail
+        // closed) a hello the parser refused is still checked against the malware list.
+        val parsed = hello ?: if (helloRecord == null && clientHelloBytes.isNotEmpty() &&
+            (clientHelloBytes[0].toInt() and 0xFF) == 0x16) com.privacyguard.core.tls.ClientHelloParser.parse(clientHelloBytes) else null
+        val sni = if (parsed != null) parsed.sni else result.sniHostname
         session.encryptionStatus = result.encryptionStatus
         session.tlsVersion = result.tlsVersion
         session.encryptionClassified = true
-        val hello = if (clientHelloBytes.isNotEmpty() && (clientHelloBytes[0].toInt() and 0xFF) == 0x16)
-            com.privacyguard.core.tls.ClientHelloParser.parse(clientHelloBytes) else null
-        onSni?.invoke(session, sni, hello?.sniRejected == true)
+        val sniRejected = parsed?.sniRejected == true
+        onSni?.invoke(session, sni, sniRejected)
         if (sni != null) session.tlsSni = sni
 
         // DoH endpoints carry DNS past the blocklist; reset so the app falls back
@@ -416,7 +461,7 @@ class TcpForwarder(
             return true
         }
 
-        if (sni != null && key.destinationPort == 443 && !session.isMitmIntercepted &&
+        if (sni != null && isTlsPort(key.destinationPort) && !session.isMitmIntercepted &&
             interception.shouldIntercept(session.ownerUid, session.ownerPackage, sni) &&
             redirectToMitm(session, clientHelloBytes, sni)) {
             sendAckToDevice(session, payload.size)

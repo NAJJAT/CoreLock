@@ -13,8 +13,8 @@ import java.io.File
 
 /**
  * The app is called CoreLock wherever a user reads its name (owner, 2026-11-03), and some
- * "PrivacyGuard" names must stay: the inspection CA (renamed with the 90-day rotation,
- * ADR 0009), the SIEM signature header (receivers may check it), the User-Agent, and the
+ * "PrivacyGuard" names must stay: the old inspection CA name, still recognised (renamed
+ * with the 90-day rotation, ADR 0009), the SIEM signature header (receivers may check it), the User-Agent, and the
  * application ID (Android only updates an app with the same ID).
  */
 @RunWith(RobolectricTestRunner::class)
@@ -54,9 +54,13 @@ class BrandNameTest {
         assertEquals("X-PrivacyGuard-Sig", SiemEndpoint.SIGNATURE_HEADER)
         assertTrue(source("src/main/java/com/privacyguard/app/data/remote/BlocklistDownloader.kt")
             .contains("\"User-Agent\", \"PrivacyGuard/1.0\""))
-        // The CA keeps its name, and the texts telling users which certificate to remove still match it.
+        // The CA was renamed with the 90-day rotation (plan 2.3); the old name is still
+        // recognised, and the text telling users which certificates to remove names both.
+        assertTrue(source("src/enterprise/java/com/privacyguard/vpn/mitm/CaPolicy.kt")
+            .contains("LEGACY_CN = \"PrivacyGuard Enterprise CA\""))
         assertTrue(source("src/enterprise/java/com/privacyguard/vpn/mitm/CaManager.kt")
-            .contains("CA_CN             = \"PrivacyGuard Enterprise CA\""))
-        assertTrue(source("src/enterprise/res/values/strings_mitm.xml").contains("“PrivacyGuard Enterprise CA”"))
+            .contains("X500Name(\"CN=\${CaPolicy.CN}, O=\${CaPolicy.ORG}"))
+        val stale = source("src/enterprise/res/values/strings_mitm.xml")
+        assertTrue(stale.contains("“PrivacyGuard Enterprise CA”") && stale.contains("“CoreLock HTTPS Inspection CA”"))
     }
 }

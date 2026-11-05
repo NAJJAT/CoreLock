@@ -3,6 +3,7 @@ package com.privacyguard.app.ui.settings
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -87,6 +88,24 @@ class AdvancedScreensTest {
         show { NetworkContent(NetworkState(blockQuic = false), NetworkActions(onQuic = { quic = it })) }
         rule.onNodeWithTag(TAG_NET_QUIC).performClick()
         assertEquals(true, quic)
+    }
+
+    @Test
+    fun the_ech_setting_says_its_cost_and_works_only_at_strict() {
+        var ech: Boolean? = null
+        show { NetworkContent(NetworkState(isStrict = true), NetworkActions(onEch = { ech = it })) }
+        rule.onNodeWithText("Your network can see these names too.", substring = true).assertIsDisplayed()
+        rule.onNodeWithTag(TAG_NET_ECH).performClick()
+        assertEquals(true, ech)
+    }
+
+    @Test
+    fun below_strict_the_ech_setting_is_off_and_cannot_be_changed() {
+        var ech: Boolean? = null
+        show { NetworkContent(NetworkState(stripEch = true, isStrict = false), NetworkActions(onEch = { ech = it })) }
+        rule.onNodeWithText("Works only at Strict protection.", substring = true).assertIsDisplayed()
+        rule.onNodeWithTag(TAG_NET_ECH).assertIsOff().assertIsNotEnabled().performClick()
+        assertEquals(null, ech)
     }
 
     @Test

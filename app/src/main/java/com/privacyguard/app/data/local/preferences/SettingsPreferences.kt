@@ -35,6 +35,7 @@ class SettingsPreferences private constructor(context: Context) {
         private const val KEY_RULE_SUGGESTIONS_DISMISSED = "rule_suggestions_dismissed"
         private const val KEY_APPEARANCE = "ui_appearance"
         private const val KEY_EXTERNAL_IP_CHECK_ENABLED  = "external_ip_check_enabled"
+        private const val KEY_STRIP_ECH                  = "strip_ech"
         private const val KEY_DOH_PROVIDER               = "doh_provider"
         private const val KEY_RETENTION_DAYS             = "retention_days"
         private const val KEY_UPSTREAM_DNS               = "upstream_dns"
@@ -181,6 +182,13 @@ class SettingsPreferences private constructor(context: Context) {
     /** Diagnostics asks api.ipify.org for the public IP. */
     private val _externalIpCheckEnabled = MutableStateFlow(prefs.getBoolean(KEY_EXTERNAL_IP_CHECK_ENABLED, false))
     val externalIpCheckEnabled: StateFlow<Boolean> = _externalIpCheckEnabled.asStateFlow()
+
+    /**
+     * Remove ECH keys from HTTPS/SVCB answers, at Strict only (ADR 0015). Off by default
+     * until the team decides; review the default when encrypted upstream DNS ships.
+     */
+    private val _stripEch = MutableStateFlow(prefs.getBoolean(KEY_STRIP_ECH, false))
+    val stripEch: StateFlow<Boolean> = _stripEch.asStateFlow()
 
     private val _dohProvider = MutableStateFlow(prefs.getString(KEY_DOH_PROVIDER, DOH_CLOUDFLARE) ?: DOH_CLOUDFLARE)
     val dohProvider: StateFlow<String> = _dohProvider.asStateFlow()
@@ -332,6 +340,11 @@ class SettingsPreferences private constructor(context: Context) {
         val next = if (done) _adChecklistDone.value + id else _adChecklistDone.value - id
         prefs.edit().putStringSet(KEY_AD_CHECKLIST_DONE, next).apply()
         _adChecklistDone.value = next
+    }
+
+    fun setStripEch(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_STRIP_ECH, enabled).apply()
+        _stripEch.value = enabled
     }
 
     fun setExternalIpCheckEnabled(enabled: Boolean) {

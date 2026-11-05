@@ -16,6 +16,11 @@ data class ClientHello(
     val signatureAlgorithms: List<Int> = emptyList(),
     /** An SNI was sent but was not a valid hostname (then [sni] is null). */
     val sniRejected: Boolean = false,
+    /**
+     * [sniRejected], and not even a local name or an IP literal: bytes that are no name.
+     * Only this fails closed at Standard and Strict (plan 0.2, review 2026-11-05).
+     */
+    val sniUnreadable: Boolean = false,
 ) {
     fun ja3String(): String {
         val version = tlsVersion.toString()
@@ -86,6 +91,7 @@ object ClientHelloParser {
         val versions = mutableListOf<Int>()
         var sni: String? = null
         var sniRejected = false
+        var sniUnreadable = false
         val alpn = mutableListOf<String>()
         val sigAlgs = mutableListOf<Int>()
 
@@ -98,6 +104,7 @@ object ClientHelloParser {
                 0x0000 -> {
                     sni = parseSni(data, pos, eEnd)
                     sniRejected = sni == null && eLen > 0
+                    if (sniRejected) sniUnreadable = !sniIsLocalOrLiteral(data, pos, eEnd)
                 }
                 0x000a -> parseGroups(data, pos, eEnd, groups)
                 0x000b -> parsePointFormats(data, pos, eEnd, pointFmts)
@@ -109,7 +116,7 @@ object ClientHelloParser {
         }
 
         return ClientHello(clientVersion, ciphers, comprMethods, extTypes, groups,
-            pointFmts, sni, alpn, versions, sigAlgs, sniRejected)
+            pointFmts, sni, alpn, versions, sigAlgs, sniRejected, sniUnreadable)
     }
 
     /**
@@ -136,6 +143,17 @@ object ClientHelloParser {
         if (p + nameLen > data.size) return null
         // Attacker-chosen: only a real hostname is kept (no bidi text, HTML, IP literal).
         return com.privacyguard.core.utils.Hostnames.validSni(data, p, nameLen)
+    }
+
+    /** The same header walk as [parseSni]; false when the name can't even be located. */
+    private fun sniIsLocalOrLiteral(data: ByteArray, start: Int, end: Int): Boolean {
+        var p = start + 2
+        if (p >= end || data[p].toInt() and 0xFF != 0) return false
+        p++
+        if (p + 2 > end) return false
+        val nameLen = readU16(data, p); p += 2
+        if (p + nameLen > data.size) return false
+        return com.privacyguard.core.utils.Hostnames.isLocalNameOrIpLiteral(data, p, nameLen)
     }
 
     private fun parseGroups(data: ByteArray, start: Int, end: Int, out: MutableList<Int>) {

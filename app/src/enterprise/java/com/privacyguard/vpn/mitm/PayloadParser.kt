@@ -70,6 +70,12 @@ class PayloadParser(
         private const val TAG = "PayloadParser"
         private const val MAX_BODY_SIZE = 65_536
 
+        /** bodyEncoding of a body [redactForExport] reduced to its type and size. */
+        const val REDACTED_ENCODING = "redacted"
+
+        /** Headers whose value is a URL, and so can carry a query. */
+        private val URL_HEADERS = setOf("referer", "location", "content-location", "origin")
+
         private val HTTP_METHODS = setOf(
             "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH", "CONNECT", "TRACE"
         )
@@ -193,11 +199,54 @@ class PayloadParser(
         )
     }
 
-    /** Copy with credentials and personal data masked, for shipping off-device. */
-    fun redactForExport(payload: ParsedPayload): ParsedPayload = payload.copy(
-        headers = piiRedactor.redactHeaders(payload.headers),
-        body = payload.body?.let { if (payload.bodyEncoding == "UTF-8") piiRedactor.redact(it) else it },
-    )
+    /**
+     * Copy with credentials and personal data masked: what the SIEM always gets, and what
+     * the local log stores while "Redact PII" is on (the default).
+     *
+     * - Headers: credentials replaced, the rest through [PiiRedactor]; URLs in Referer,
+     *   Location, Content-Location and Origin get the URL rule below.
+     * - URL: query values become placeholders (keys kept), the fragment is dropped, the path
+     *   goes through [PiiRedactor].
+     * - Body: a form body's values become placeholders; other text through [PiiRedactor];
+     *   anything that is not text (binary, base64, compressed, multipart, unparsed) is
+     *   reduced to its type and size.
+     * - The raw bytes are never carried over.
+     *
+     * Each step is linear in the input ([PayloadRedaction], [PiiRedactor]).
+     */
+    fun redactForExport(payload: ParsedPayload): ParsedPayload {
+        val contentType = PayloadRedaction.header(payload.headers, "Content-Type")
+        val headers = piiRedactor.redactHeaders(payload.headers).mapValues { (name, value) ->
+            when {
+                // HTTP/2 frames are kept as a hex preview: bytes of the message, so not kept.
+                name == "raw_hex" -> PayloadRedaction.binarySummary("application/http2", payload.sizeBytes)
+                name.lowercase() in URL_HEADERS -> PayloadRedaction.url(value) { piiRedactor.redact(it) }
+                else -> value
+            }
+        }
+        val unparsed = payload.protocol == Protocol.HTTP1 && payload.method == null && payload.headers.isEmpty()
+        val type = contentType?.substringBefore(';')?.trim()?.lowercase()
+        val (body, encoding) = when {
+            payload.body == null -> null to payload.bodyEncoding
+            unparsed -> PayloadRedaction.binarySummary(null, payload.sizeBytes) to REDACTED_ENCODING
+            payload.bodyEncoding == "UTF-8" && type == "application/x-www-form-urlencoded" ->
+                PayloadRedaction.form(payload.body) to "UTF-8"
+            payload.bodyEncoding == "UTF-8" && type?.startsWith("multipart/") == true ->
+                PayloadRedaction.binarySummary(type, payload.sizeBytes) to REDACTED_ENCODING
+            payload.bodyEncoding == "UTF-8" -> piiRedactor.redact(payload.body) to "UTF-8"
+            payload.bodyEncoding == "base64" ->
+                PayloadRedaction.binarySummary(type, PayloadRedaction.base64Bytes(payload.body)) to REDACTED_ENCODING
+            // Compressed, not decodable, or any other encoding: only the message size is known.
+            else -> PayloadRedaction.binarySummary(type, payload.sizeBytes) to REDACTED_ENCODING
+        }
+        return payload.copy(
+            raw = ByteArray(0),
+            urlPath = payload.urlPath?.let { url -> PayloadRedaction.url(url) { piiRedactor.redact(it) } },
+            headers = headers,
+            body = body,
+            bodyEncoding = encoding,
+        )
+    }
 
     private fun decodeUrl(text: String): String =
         runCatching { java.net.URLDecoder.decode(text, "UTF-8") }.getOrDefault(text)

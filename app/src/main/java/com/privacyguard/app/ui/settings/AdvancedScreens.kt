@@ -113,6 +113,9 @@ data class NetworkState(
     val dohProvider: String = SettingsPreferences.DOH_CLOUDFLARE,
     val upstreamDns: String = AdvancedLogic.DnsPreset.CLOUDFLARE.ip,
     val blockQuic: Boolean = false,
+    /** ADR 0015: remove ECH keys from DNS answers; applies at Strict only. */
+    val stripEch: Boolean = false,
+    val isStrict: Boolean = false,
     val blockWeakTls: Boolean = false,
     val blockCleartext: Boolean = false,
     val publicIpCheck: Boolean = false,
@@ -126,6 +129,7 @@ data class NetworkActions(
     /** Called only with a complete IP address. */
     val onCustomDns: (String) -> Unit = {},
     val onQuic: (Boolean) -> Unit = {},
+    val onEch: (Boolean) -> Unit = {},
     val onWeakTls: (Boolean) -> Unit = {},
     val onCleartext: (Boolean) -> Unit = {},
     val onPublicIp: (Boolean) -> Unit = {},
@@ -143,6 +147,7 @@ fun NetworkScreen(onBack: () -> Unit, onOpenProxies: () -> Unit, vm: SettingsVie
     val upstream by prefs.upstreamDns.collectAsStateWithLifecycle()
     val level by prefs.protectionLevel.collectAsStateWithLifecycle()
     val quicChoice by prefs.blockQuicChoice.collectAsStateWithLifecycle()
+    val stripEch by prefs.stripEch.collectAsStateWithLifecycle()
     val publicIp by prefs.externalIpCheckEnabled.collectAsStateWithLifecycle()
     val proxies by prefs.dualVpnEnabled.collectAsStateWithLifecycle()
     NetworkContent(
@@ -150,6 +155,7 @@ fun NetworkScreen(onBack: () -> Unit, onOpenProxies: () -> Unit, vm: SettingsVie
             dohEnabled = doh, dohProvider = provider, upstreamDns = upstream,
             // The user's choice, else the level default (on at Strict), as QuicGate applies it.
             blockQuic = quicChoice ?: (level == FilterEngine.BlockLevel.STRICT.name),
+            stripEch = stripEch, isStrict = level == FilterEngine.BlockLevel.STRICT.name,
             blockWeakTls = security.blockWeakTls, blockCleartext = security.blockCleartext,
             publicIpCheck = publicIp, proxyChain = proxies,
         ),
@@ -159,6 +165,7 @@ fun NetworkScreen(onBack: () -> Unit, onOpenProxies: () -> Unit, vm: SettingsVie
             onDnsPreset = { preset -> prefs.setUpstreamDns(preset.ip); prefs.setDohProvider(preset.dohProvider) },
             onCustomDns = { ip -> if (DnsHandler.isIpLiteral(ip)) prefs.setUpstreamDns(ip) },
             onQuic = prefs::setBlockQuic,
+            onEch = prefs::setStripEch,
             onWeakTls = vm::toggleBlockWeakTls,
             onCleartext = vm::toggleBlockCleartext,
             onPublicIp = prefs::setExternalIpCheckEnabled,
@@ -187,6 +194,14 @@ fun NetworkContent(state: NetworkState, actions: NetworkActions) {
         }
         group("blocking", R.string.ui_net_group_blocking) {
             PrimaryToggleRow(stringResource(R.string.ui_net_quic), state.blockQuic, actions.onQuic, subtitle = stringResource(R.string.ui_net_quic_sub), modifier = Modifier.testTag(TAG_NET_QUIC))
+            SettingsDivider()
+            // ADR 0015: the privacy cost is said in the row itself; off below Strict.
+            val echSub = stringResource(R.string.ui_net_ech_sub)
+            PrimaryToggleRow(
+                stringResource(R.string.ui_net_ech), state.stripEch && state.isStrict, actions.onEch,
+                subtitle = if (state.isStrict) echSub else echSub + " " + stringResource(R.string.ui_net_ech_strict_only),
+                enabled = state.isStrict, modifier = Modifier.testTag(TAG_NET_ECH),
+            )
             SettingsDivider()
             PrimaryToggleRow(stringResource(R.string.ui_net_weak_tls), state.blockWeakTls, actions.onWeakTls, subtitle = stringResource(R.string.ui_net_weak_tls_sub))
             SettingsDivider()
@@ -517,6 +532,7 @@ fun DiagnosticsContent(state: DiagnosticsState, actions: DiagnosticsActions, now
                     val name = when (val list = AdvancedLogic.storedList(src.source)) {
                         is AdvancedLogic.StoredList.Named -> list.name
                         is AdvancedLogic.StoredList.Unknown -> list.key
+                        is AdvancedLogic.StoredList.Snapshot -> stringResource(R.string.ui_diag_list_snapshot, list.name, list.date)
                         is AdvancedLogic.StoredList.BuiltIn -> stringResource(
                             R.string.ui_diag_builtin,
                             stringResource(
@@ -722,6 +738,7 @@ internal const val TAG_NET_DNS = "net_dns"
 internal const val TAG_NET_DNS_FIELD = "net_dns_field"
 internal const val TAG_NET_DNS_USE = "net_dns_use"
 internal const val TAG_NET_QUIC = "net_quic"
+internal const val TAG_NET_ECH = "net_ech"
 internal const val TAG_NET_PROXY = "net_proxy"
 internal const val TAG_PROXY_SWITCH = "proxy_switch"
 internal const val TAG_PROXY_INCOMPLETE = "proxy_incomplete"

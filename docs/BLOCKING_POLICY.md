@@ -25,7 +25,8 @@ decision, so a name blocked at one point cannot slip through another:
 
 1. **DNS.** When an app looks up a name, CoreLock answers "this name does not exist"
    if the name is blocked. No connection is made. If the answer is an alias (CNAME)
-   that points to a blocked name, that is blocked too.
+   that points to a blocked name, that is blocked too, and so is a "service" record
+   (HTTPS or SVCB) that sends the app on to a blocked name.
 2. **No way around the filter's DNS.** Some apps use their own encrypted DNS to skip
    the phone's DNS. CoreLock drops DNS over TLS (port 853) and stops known encrypted-DNS
    (DoH) servers, from a built-in list plus HaGeZi's DoH lists. The app then falls
@@ -34,6 +35,10 @@ decision, so a name blocked at one point cannot slip through another:
    server it wants. CoreLock reads that name, on normal connections (TCP) and on QUIC
    (HTTP/3, over UDP), and resets the connection if the name is blocked. This catches
    apps that reach a blocked server without asking DNS first.
+   - At Standard and Strict, a secure TCP connection on port 443 whose start can't be
+     read (cut off, malformed, too large, or with a server name that is not a real
+     hostname) is reset rather than let through unchecked. A connection that simply
+     names no server goes on.
    - At Standard and Strict, a new QUIC connection is held until its server name can
      be read. QUIC that cannot be read is dropped; the app then retries over TCP,
      where the name can be checked.
@@ -53,6 +58,9 @@ downloaded from their authors:
 - whenever you tap **Refresh now** under Settings › Blocklists.
 
 A list that fails to download keeps its previous version and is tried again later.
+Until the malware and phishing list has downloaded once (for example on a first start
+without network), a copy of it that comes with the app is used; Settings › Advanced ›
+Diagnostics shows its date.
 All lists together are about 4 MB to download. The sizes below were counted on
 2026-10-28 and change with every update.
 
@@ -122,6 +130,12 @@ consequences:
   (2026-10-28) that this applies to every blocker without root, including their own.
 - **Sites that use Encrypted Client Hello (ECH).** ECH hides the real server name.
   CoreLock only sees the outer, shared name and cannot tell sites behind it apart.
+  At Strict you can turn on *Read names behind Encrypted Client Hello* (Settings ›
+  Advanced › Network, off by default): CoreLock then removes the ECH key from the
+  DNS answers it passes to apps, so browsers send the real name, which CoreLock can
+  check. Your network can then see those names too, as it could before ECH. It does
+  not reach browsers that use their own encrypted DNS, or keys a browser stored
+  before you turned it on (until they expire).
 - **Ads placed in the page by scripts, or shown with page styling** (cosmetic ads).
   This needs a content blocker inside the browser.
 - **Anything that needs the content of the connection**: tracking parameters in links,

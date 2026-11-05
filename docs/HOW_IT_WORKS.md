@@ -71,7 +71,17 @@ Say a news app opens `https://ads.example.net/pixel`.
    Cloudflare `1.1.1.1` by default, or DNS over HTTPS when you turn DoH on. The
    answer is checked (it must match the question) and handed back to the app.
    If the answer's CNAME chain points at a blocked name, the app gets NXDOMAIN
-   instead (CNAME cloaking). A query with more than one question is dropped.
+   instead (CNAME cloaking). The target name of an HTTPS or SVCB record (RFC 9460,
+   used by browsers for HTTP/3 and ECH) is checked too: it can point a client at
+   another name's servers with address hints, so that name is never looked up itself.
+   A blocked target gets an empty answer (no records), not NXDOMAIN: the asked name
+   is allowed, and its own A/AAAA lookups go on. A query with more than one question is dropped.
+   With *Read names behind Encrypted Client Hello* on (Strict only, off by default,
+   ADR 0015), answers to HTTPS and SVCB queries lose their `ech` parameter
+   (`core/packet/EchStripper.kt`); every other parameter stays, and lengths and
+   compression pointers are rewritten. A record that can't be read safely is removed;
+   an answer that can't be rewritten safely becomes an empty answer. The browser then
+   makes a normal ClientHello, whose name step 4 checks.
    CoreLock remembers which address belongs to which name. Every UDP packet
    to port 53 goes to `DnsHandler`, whatever else is open on that flow.
 4. **Connection.** The app sends a TCP SYN to the returned address. `TunReader`
@@ -99,6 +109,16 @@ Say a news app opens `https://ads.example.net/pixel`.
    without our DNS (hard-coded address, own resolver) is still stopped. It is
    recorded as stopped by *Server name (SNI)* and counted apart from DNS blocks.
    This runs before HTTPS inspection (enterprise) could take the connection.
+   The ClientHello is reassembled first, across TCP segments and across TLS records
+   (TLS allows a hello to span records), up to 16 KB (`core/tls/ClientHelloAssembler.kt`).
+   At Standard and Strict, port 443 fails closed: a hello that is truncated,
+   malformed, larger than 16 KB, or whose SNI is not a name at all resets the
+   connection before a byte reaches the server. A complete hello with no SNI at all
+   passes (IP-only TLS), and so does one whose SNI is a single-label name or an IP
+   literal (an intranet host such as `wiki` or `10.0.0.5`): not standard, but it
+   hides nothing; it still raises the *Invalid server name* alert. These resets are only counted, in Settings › Diagnostics ›
+   Server-name blocking, never written as history rows (like unreadable QUIC). At
+   Minimal such connections are forwarded as before.
    Encrypted DNS is checked here too: an SNI on the DoH lists (built in, plus
    HaGeZi's `doh-onlydomains`, refreshed with the other lists) resets the
    connection, and so does a ClientHello without an SNI to an address on HaGeZi's
@@ -182,7 +202,7 @@ half a minute with the full lists.
 |---|---|
 | Resolver | Plain DNS to the address you set (default Cloudflare `1.1.1.1`, with its second address as fallback). Never a different company's resolver. If it cannot be reached, the app gets *SERVFAIL*. |
 | DoH | Optional, off by default. Cloudflare (`cloudflare-dns.com`), Google (`dns.google`) or Quad9 (`dns.quad9.net`). Connects to a fixed bootstrap address so looking up the DoH server does not loop through the tunnel; TLS still checks the name. A failed DoH lookup answers *SERVFAIL* and is never resent as plain DNS. |
-| Answer checks | The answer must parse and match the question's ID and name, or it is dropped. A CNAME to a blocked name turns the answer into NXDOMAIN. Queries with more than one question are dropped. |
+| Answer checks | The answer must parse and match the question's ID and name, or it is dropped. A CNAME to a blocked name turns the answer into NXDOMAIN; an HTTPS/SVCB target that is blocked turns it into an empty answer. Queries with more than one question are dropped. |
 | Network checks | On plain DNS, a public name answered with a private or null address is recorded as *tampered*. A lookup of a random `.invalid` name that gets an address means the network *hijacks* DNS. A DoH certificate that does not validate means something is *intercepting* TLS. These feed network trust (section 5.6). |
 
 ### 3.3 Storage
@@ -230,8 +250,13 @@ addresses always apply as well.
 
 On a test phone in October 2026 this gave about 179,000 ad names, 43,000 tracker
 names, 428 malware names and the built-in telemetry names; about 216,000 distinct names at Strict
-(the lists overlap). Lists are held in memory as two hash sets (`vpn/firewall/DomainFilter.kt`);
-an entry blocks the name and every subdomain.
+(the lists overlap). An entry blocks the name and every subdomain. Lists are held in memory
+as sorted arrays of 64-bit name fingerprints, about 9 bytes per name instead of about 105
+for a set of strings (`vpn/firewall/DomainFilter.kt`, `NameFingerprints.kt`, ADR 0014). A
+lookup fingerprints the name and each parent in place and searches the arrays, without
+creating any object. Two different names with the same fingerprint are possible in
+theory (about 3 in 10^14 per lookup at 500,000 names); it could only block a name, never
+unblock one.
 
 Downloads are HTTPS only, without redirects, and read line by line. Each entry is
 checked (`app/core/blocklist/ListEntryValidator.kt`): converted to punycode, and
@@ -635,11 +660,24 @@ retention period. Only CoreLock's own UID is exempt from inspection.
 Redaction runs on two bounded workers, not the capture thread; its scanners are
 one-pass and each call has a time budget. When time runs out the text is
 replaced, never stored or shipped unredacted. Redaction covers headers and text
-bodies; URL query strings, form data and binary bodies are not redacted yet, in
-the local log or in what is shipped to a SIEM. Turning inspection off deletes the CA key and the stored
+bodies by pattern; values in URL query strings and form bodies become
+`[REDACTED]` (names kept, the URL fragment dropped); bodies that are not text are
+reduced to type and size (`vpn/mitm/PayloadRedaction.kt`). The SIEM always gets
+the redacted copy; the local log does while "Redact PII" is on (the default). Turning inspection off deletes the CA key and the stored
 payloads. **Android keeps the installed certificate after CoreLock is
 uninstalled**; onboarding tells the user how to remove it (Settings → search
-"User certificates" → "PrivacyGuard Enterprise CA" → Remove).
+"User certificates" → "CoreLock HTTPS Inspection CA", or "PrivacyGuard Enterprise CA"
+for certificates of versions up to 1.1 → Remove).
+
+**CA lifetime and rotation** (`vpn/mitm/CaPolicy.kt`): the CA lasts 97 days. Your
+consent lasts 90 days; when you renew it, CoreLock makes a new CA at once and asks you
+to install it in the same step, so there is one prompt every 90 days. The old key is
+deleted, so the old certificate can sign nothing more; the CA card counts it and asks
+you to remove it. With the organisation's consent (MDM), the CA is replaced 14 days
+before its end and, where CoreLock is Device or Profile Owner and the old one was
+installed, the new certificate replaces the old one in Android's list. A CA made by an
+older version (longer lifetime or the old name) is replaced at the next start. Site
+certificates last 30 days and never past the CA's end.
 
 **SIEM**: inspected payload records are queued and sent to the configured
 endpoint in batches (100 events or 60 seconds; the queue is held in memory only), only over HTTPS, with a bearer API
@@ -700,12 +738,18 @@ key, an optional certificate pin and an optional body signature (`SiemEndpoint.k
   (This design replaced a 30-second deadman alarm on 15 October 2026 and has
   only been unit-tested so far; see docs/security-test-2026-10-14.md.)
 - **First start after install:** until the first download (about a minute after
-  install) only the built-in lists apply. A download writes the start-up cache, so
+  install) only the built-in lists apply, plus a copy of HaGeZi's TIF mini malware and
+  phishing list shipped in the app (`assets/blocklists/hagezi-tif-mini.txt`, refreshed
+  monthly by a pull request from `.github/workflows/malware-snapshot.yml`; its date is
+  in Settings › Advanced › Diagnostics). The copy is parsed like a download and deleted
+  once the live list has downloaded. A download writes the start-up cache (the
+  fingerprint arrays, checked by length, order and checksum before use), so
   later starts take a few seconds. Only a start whose cache is missing (for example
   the first one after this cache was introduced) waits about half a minute for the
   database.
-- **Memory:** with all lists loaded the app uses about 200–260 MB (PSS) on a test
-  phone, about 68 MB of it Java heap.
+- **Memory:** with all lists loaded the app used about 200–260 MB (PSS) on a test
+  phone, about 68 MB of it Java heap, before the lists were stored as fingerprints
+  (1.2). The new numbers are still to be measured on a phone.
 - **No in-app kill switch.** Only Android's Always-on VPN with "Block
   connections without VPN" blocks traffic once the tunnel is gone; Settings has a
   button to Android's VPN settings. The app shows lockdown as on only when

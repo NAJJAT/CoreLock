@@ -123,6 +123,26 @@ class BlocklistRepo(
         blocklistDao.deleteBySource(src)
     }
 
+    /** What the VPN filters load for one level: [blocked] for DNS/SNI, [security] at every level. */
+    class LevelLists(val blocked: List<String>, val security: List<String>)
+
+    /**
+     * The names the running filters get at [level]: its list categories and sources, the
+     * curated ad hosts from Standard up, and malware and phishing always. The service and
+     * ProtectionLevelMatrixTest both use this, so the test checks what really runs.
+     */
+    suspend fun levelLists(level: com.privacyguard.core.filter.FilterEngine.BlockLevel): LevelLists {
+        val levels = com.privacyguard.core.filter.ProtectionLevels
+        val blocked = levelListDomains(level) +
+            (if (levels.includesCuratedAdHosts(level)) com.privacyguard.app.core.blocklist.CuratedAdDomains.all else emptyList())
+        return LevelLists(blocked, domainsIn(setOf(CAT_MALWARE)))
+    }
+
+    /** Stored source keys that start with [prefix] (case-sensitive). */
+    suspend fun sourcesWithPrefix(prefix: String): List<String> = withContext(Dispatchers.IO) {
+        blocklistDao.sources().filter { it.startsWith(prefix) }
+    }
+
     /** Deletes every row of [sources] that is still stored. */
     suspend fun removeSources(sources: Collection<String>) = withContext(Dispatchers.IO) {
         val stored = blocklistDao.sources().toSet()

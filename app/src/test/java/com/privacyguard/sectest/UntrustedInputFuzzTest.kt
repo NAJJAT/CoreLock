@@ -125,10 +125,14 @@ class UntrustedInputFuzzTest {
     @Test fun startupCacheFile() {
         val dir = createTempDir("pgcache")
         try {
-            val good = File(dir, "good.gz")
-            GZIPOutputStream(good.outputStream()).bufferedWriter().use { it.write("privacyguard-blocklist-cache 1\nads.example\n--security--\nmal.example\n") }
+            val good = File(dir, "good.bin")
+            BlocklistCache.write(
+                good,
+                com.privacyguard.vpn.firewall.DomainFilter().apply { rebuild(listOf("ads.example", "*.t.example")) },
+                com.privacyguard.vpn.firewall.DomainFilter().apply { rebuild(listOf("mal.example")) },
+            )
             val seed = good.readBytes()
-            val f = File(dir, "f.gz")
+            val f = File(dir, "f.bin")
             Fuzz.run("BlocklistCache.read", listOf(seed), iterations = 5_000) { raw ->
                 f.writeBytes(raw)
                 try { BlocklistCache.read(f) } catch (_: java.io.IOException) { }

@@ -25,6 +25,9 @@
     <string name="ui_net_dns_doh_note">Met versleutelde DNS aan kies je met Cloudflare, Google of Quad9 ook de server voor versleutelde opzoekingen.</string>
     <string name="ui_net_quic">Snel webprotocol (QUIC)</string>
     <string name="ui_net_quic_sub">Blokkeer het zodat CoreLock meer verbindingen ziet</string>
+    <string name="ui_net_ech">Namen achter Encrypted Client Hello lezen</string>
+    <string name="ui_net_ech_sub">Laat CoreLock de namen van versleutelde browserverbindingen zien. Je netwerk kan deze namen dan ook zien.</string>
+    <string name="ui_net_ech_strict_only">Werkt alleen bij de bescherming Streng.</string>
     <string name="ui_net_weak_tls">Oude versleuteling</string>
     <string name="ui_net_weak_tls_sub">Blokkeer verbindingen met verouderde beveiliging</string>
     <string name="ui_net_cleartext">Onversleutelde verbindingen</string>
@@ -73,6 +76,7 @@
     <string name="ui_diag_battery">Batterij</string>
     <string name="ui_diag_battery_ok">Onbeperkt: Android stopt de bescherming niet om batterij te sparen.</string>
     <string name="ui_diag_builtin">Ingebouwd: %1$s</string>
+    <string name="ui_diag_list_snapshot">%1$s (ingebouwde kopie van %2$s, gebruikt tot de eerste download)</string>
     <string name="ui_diag_list_count">%1$s: %2$s</string>
     <plurals name="ui_diag_names_n">
         <item quantity="one">%1$s naam</item>

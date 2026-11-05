@@ -216,13 +216,17 @@ internal fun InspectionSwitch(
     }
 }
 
-/** The 1.0 consent dialog: same text, same buttons, theme colours only. */
+/**
+ * The 1.0 consent dialog: same text, same buttons, theme colours only. [renew]: the
+ * user's own 90-day consent ended; the text says that renewing also replaces the
+ * certificate (plan 2.3, CaPolicy), so the install that follows is no surprise.
+ */
 @Composable
-internal fun ConsentDialog(onAccept: () -> Unit, onDecline: () -> Unit) {
+internal fun ConsentDialog(onAccept: () -> Unit, onDecline: () -> Unit, renew: Boolean = false) {
     TokenDialog(
-        title = stringResource(R.string.mitm_consent_title),
-        body = stringResource(R.string.mitm_consent_body),
-        confirm = stringResource(R.string.mitm_consent_confirm),
+        title = stringResource(if (renew) R.string.mitm_consent_renew_title else R.string.mitm_consent_title),
+        body = stringResource(if (renew) R.string.mitm_consent_renew_body else R.string.mitm_consent_body),
+        confirm = stringResource(if (renew) R.string.mitm_consent_renew_confirm else R.string.mitm_consent_confirm),
         dismiss = stringResource(R.string.mitm_cancel),
         onConfirm = onAccept,
         onDismiss = onDecline,
@@ -381,9 +385,12 @@ fun MitmScreen(onBack: (() -> Unit)? = null) {
         if (showConsentDialog) {
             // No consent, no inspection: leaving the switch on without consent decrypted
             // nothing but showed "on", which misled the user.
+            // The user consented before and it ran out: the renewal text.
+            val renew = remember { MitmConfig.consentOf(context).let { (at, byOrg) -> at > 0L && !byOrg } }
             ConsentDialog(
                 onAccept = { vm.recordConsent(); showConsentDialog = false },
                 onDecline = { vm.disableMitm(); showConsentDialog = false },
+                renew = renew,
             )
         }
 
@@ -679,7 +686,7 @@ private fun CaInstallCard(
     var caReady      by remember { mutableStateOf(false) }
     var caFailed     by remember { mutableStateOf(false) }
     var caTrusted    by remember { mutableStateOf(false) }
-    // Old PrivacyGuard CAs still trusted by Android; their keys are gone, so they are
+    // Old CoreLock (or PrivacyGuard) CAs still trusted by Android; their keys are gone, so they are
     // dead weight and make it unclear which certificate is the working one.
     var staleCas     by remember { mutableIntStateOf(0) }
 
@@ -690,6 +697,16 @@ private fun CaInstallCard(
         caFailed  = !ok
         caTrusted = ok && helper.isCaTrustedByDevice()
         staleCas  = helper.staleTrustedCaCount()
+    }
+
+    // A rotation (renewed consent, CaPolicy) swaps the certificate while the screen is
+    // open: show the new one's state, and count the old one as stale at once.
+    val currentCa by caManager.caCertFlow.collectAsStateWithLifecycle(initialValue = null)
+    LaunchedEffect(currentCa) {
+        if (currentCa != null && caReady) {
+            caTrusted = helper.isCaTrustedByDevice()
+            staleCas  = helper.staleTrustedCaCount()
+        }
     }
 
     // Re-check trust when the user returns to the app (e.g. after the CA install dialog).

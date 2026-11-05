@@ -77,6 +77,28 @@ class DeviceAdminReceiver : android.app.admin.DeviceAdminReceiver() {
                 false
             }
         }
+
+        /**
+         * After a CA rotation (CaPolicy): installs [newCa] and removes [oldCa], only on a
+         * phone where the app is Device or Profile Owner and the old CA is still trusted.
+         * Trust is moved, never created: a CA the organisation didn't install stays off.
+         */
+        fun replaceCaCertificate(context: Context, oldCa: ByteArray, newCa: ByteArray): Boolean {
+            if (!hasOwnerPrivileges(context)) return false
+            return try {
+                val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+                val admin = componentName(context)
+                if (!dpm.hasCaCertInstalled(admin, oldCa)) return false
+                val installed = dpm.installCaCert(admin, newCa)
+                // The old key is already deleted; its certificate can sign nothing more.
+                if (installed) dpm.uninstallCaCert(admin, oldCa)
+                Log.i(TAG, "replaceCaCert: installed=$installed")
+                installed
+            } catch (e: Exception) {
+                Log.e(TAG, "replaceCaCert failed: ${e.javaClass.simpleName}")
+                false
+            }
+        }
     }
 
     // Background scope — never block the main thread inside a BroadcastReceiver

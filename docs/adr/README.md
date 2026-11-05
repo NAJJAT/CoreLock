@@ -19,6 +19,8 @@ replaces it and the old one is marked **Superseded by NNNN**.
 | [0011](0011-blocklist-update-safety.md) | Guard against bad list updates and show when lists last updated | Proposed |
 | [0012](0012-doh-upstream-off-by-default.md) | Keep encrypted upstream DNS (DoH) off by default | Accepted |
 | [0013](0013-export-import-rules-and-settings.md) | Export and import of rules and settings (D2) | Accepted (2026-11-04) |
+| [0014](0014-compact-blocklist-storage.md) | Keep blocklists in memory as sorted 64-bit fingerprints | Proposed |
+| [0015](0015-ech-stripping-at-strict.md) | Optionally remove ECH keys from DNS answers at Strict | Proposed (default for the team) |
 
 Where a record says *not recorded*, the reason was not written down at the time.
 The owner fills it in; nobody guesses it.

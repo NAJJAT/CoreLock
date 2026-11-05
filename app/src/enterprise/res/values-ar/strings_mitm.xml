@@ -5,13 +5,16 @@
     <string name="mitm_consent_title">تفعيل فحص حركة البيانات</string>
     <string name="mitm_consent_body">سيعترض التطبيق حركة بيانات HTTPS ويسجّلها لتتمكّن من فحص كل طلب واستجابة على هذا الجهاز.\n\nبعد التأكيد، سيطلب منك التطبيق تثبيت شهادة CA. هذا ضروري لفك تشفير HTTPS. تبقى الشهادة على جهازك ويمكن إزالتها في أي وقت من الإعدادات ← الأمان ← الشهادات.</string>
     <string name="mitm_consent_confirm">تأكيد وتثبيت الشهادة</string>
+    <string name="mitm_consent_renew_title">تجديد فحص حركة البيانات</string>
+    <string name="mitm_consent_renew_body">تدوم موافقتك على فحص HTTPS مدة 90 يومًا وقد انتهت. الفحص متوقف حتى تقرّر.\n\nإذا جدّدت، يستمر الفحص 90 يومًا أخرى. ولأمانك يستبدل التطبيق شهادته أيضًا: سيطلب منك Android تثبيت الشهادة الجديدة، وتتوقف القديمة عن العمل. يمكنك بعدها إزالة القديمة من الإعدادات ← الأمان ← الشهادات.</string>
+    <string name="mitm_consent_renew_confirm">تجديد وتثبيت الشهادة</string>
     <string name="mitm_cancel">إلغاء</string>
     <string name="mitm_lock_title">قفل الشاشة مطلوب</string>
     <string name="mitm_lock_body">يتطلّب Android قفلًا للشاشة (رمز PIN أو نمط أو كلمة مرور) قبل تثبيت شهادات CA.\n\nانتقل إلى:\nالإعدادات ← الأمان ← قفل الشاشة\n\nعيّن رمز PIN أو كلمة مرور، ثم عُد واضغط تثبيت.</string>
     <string name="mitm_open_settings">فتح الإعدادات</string>
     <string name="mitm_install_title">التثبيت من الإعدادات</string>
     <string name="mitm_save_failed_title">تعذّر حفظ الشهادة</string>
-    <string name="mitm_install_steps">لا يسمح Android 11 والإصدارات الأحدث بتثبيت شهادات CA إلا من تطبيق الإعدادات، وليس من داخل التطبيقات الأخرى.\n\nحُفظت الشهادة في مجلد التنزيلات باسم:\n%1$s\n\n1. اضغط فتح الإعدادات (تُفتح صفحة «تثبيت شهادة»)\n2. اضغط شهادة CA ← التثبيت على أي حال\n3. افتح Download واختر %1$s. ملفات privacyguard_ca الأقدم هناك من عمليات تثبيت سابقة ولم تعد تعمل.\n4. عُد إلى هنا: تصبح البطاقة خضراء حين يثق Android بالشهادة.\n\nإذا فتحت الإعدادات صفحة مختلفة، فابحث في الإعدادات عن «شهادة CA».</string>
+    <string name="mitm_install_steps">لا يسمح Android 11 والإصدارات الأحدث بتثبيت شهادات CA إلا من تطبيق الإعدادات، وليس من داخل التطبيقات الأخرى.\n\nحُفظت الشهادة في مجلد التنزيلات باسم:\n%1$s\n\n1. اضغط فتح الإعدادات (تُفتح صفحة «تثبيت شهادة»)\n2. اضغط شهادة CA ← التثبيت على أي حال\n3. افتح Download واختر %1$s. ملفات CoreLock-CA وPrivacyGuard-CA الأقدم هناك من عمليات تثبيت سابقة ولم تعد تعمل.\n4. عُد إلى هنا: تصبح البطاقة خضراء حين يثق Android بالشهادة.\n\nإذا فتحت الإعدادات صفحة مختلفة، فابحث في الإعدادات عن «شهادة CA».</string>
     <string name="mitm_save_failed_body">تعذّرت كتابة الشهادة في مجلد التنزيلات. تحقّق من المساحة الفارغة وحاول مجددًا؛ التفاصيل في logcat تحت الوسم CaInstallHelper.</string>
     <string name="mitm_ok">حسنًا</string>
     <string name="mitm_later">لاحقًا</string>
@@ -40,11 +43,11 @@
     <string name="mitm_ca_generating_desc">يجري إنشاء شهادة CA للمرة الأولى. يستغرق ذلك بضع ثوانٍ.</string>
     <plurals name="mitm_stale_cas">
         <item quantity="zero">لا توجد شهادات فحص قديمة مثبّتة.</item>
-        <item quantity="one">ما زالت شهادة فحص قديمة واحدة مثبّتة ولم تعد تعمل. اضغط إزالة القديمة، وافتح تبويب المستخدم، وأزل كل «PrivacyGuard Enterprise CA» ما عدا الأحدث.</item>
-        <item quantity="two">ما زالت شهادتا فحص قديمتان مثبّتتين ولم تعودا تعملان. اضغط إزالة القديمة، وافتح تبويب المستخدم، وأزل كل «PrivacyGuard Enterprise CA» ما عدا الأحدث.</item>
-        <item quantity="few">ما زالت %d شهادات فحص قديمة مثبّتة ولم تعد تعمل. اضغط إزالة القديمة، وافتح تبويب المستخدم، وأزل كل «PrivacyGuard Enterprise CA» ما عدا الأحدث.</item>
-        <item quantity="many">ما زالت %d شهادةً قديمة مثبّتة ولم تعد تعمل. اضغط إزالة القديمة، وافتح تبويب المستخدم، وأزل كل «PrivacyGuard Enterprise CA» ما عدا الأحدث.</item>
-        <item quantity="other">ما زالت %d شهادة فحص قديمة مثبّتة ولم تعد تعمل. اضغط إزالة القديمة، وافتح تبويب المستخدم، وأزل كل «PrivacyGuard Enterprise CA» ما عدا الأحدث.</item>
+        <item quantity="one">ما زالت شهادة فحص قديمة واحدة مثبّتة ولم تعد تعمل. اضغط إزالة القديمة، وافتح تبويب المستخدم، وأزل كل «PrivacyGuard Enterprise CA» وكل «CoreLock HTTPS Inspection CA» ما عدا الأحدث.</item>
+        <item quantity="two">ما زالت شهادتا فحص قديمتان مثبّتتين ولم تعودا تعملان. اضغط إزالة القديمة، وافتح تبويب المستخدم، وأزل كل «PrivacyGuard Enterprise CA» وكل «CoreLock HTTPS Inspection CA» ما عدا الأحدث.</item>
+        <item quantity="few">ما زالت %d شهادات فحص قديمة مثبّتة ولم تعد تعمل. اضغط إزالة القديمة، وافتح تبويب المستخدم، وأزل كل «PrivacyGuard Enterprise CA» وكل «CoreLock HTTPS Inspection CA» ما عدا الأحدث.</item>
+        <item quantity="many">ما زالت %d شهادةً قديمة مثبّتة ولم تعد تعمل. اضغط إزالة القديمة، وافتح تبويب المستخدم، وأزل كل «PrivacyGuard Enterprise CA» وكل «CoreLock HTTPS Inspection CA» ما عدا الأحدث.</item>
+        <item quantity="other">ما زالت %d شهادة فحص قديمة مثبّتة ولم تعد تعمل. اضغط إزالة القديمة، وافتح تبويب المستخدم، وأزل كل «PrivacyGuard Enterprise CA» وكل «CoreLock HTTPS Inspection CA» ما عدا الأحدث.</item>
     </plurals>
     <string name="mitm_remove_old">إزالة القديمة</string>
     <string name="mitm_regenerate">إعادة الإنشاء</string>

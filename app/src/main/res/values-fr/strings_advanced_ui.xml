@@ -25,6 +25,9 @@
     <string name="ui_net_dns_doh_note">Avec le DNS chiffré activé, choisir Cloudflare, Google ou Quad9 le choisit aussi pour les recherches chiffrées.</string>
     <string name="ui_net_quic">Protocole web rapide (QUIC)</string>
     <string name="ui_net_quic_sub">Le bloquer pour que CoreLock voie plus de connexions</string>
+    <string name="ui_net_ech">Lire les noms derrière Encrypted Client Hello</string>
+    <string name="ui_net_ech_sub">Permet à CoreLock de voir les noms des connexions chiffrées du navigateur. Votre réseau peut aussi voir ces noms.</string>
+    <string name="ui_net_ech_strict_only">Fonctionne uniquement avec la protection Stricte.</string>
     <string name="ui_net_weak_tls">Ancien chiffrement</string>
     <string name="ui_net_weak_tls_sub">Bloquer les connexions à la sécurité dépassée</string>
     <string name="ui_net_cleartext">Connexions non chiffrées</string>
@@ -73,6 +76,7 @@
     <string name="ui_diag_battery">Batterie</string>
     <string name="ui_diag_battery_ok">Sans restriction : Android n’arrêtera pas la protection pour économiser la batterie.</string>
     <string name="ui_diag_builtin">Intégrée : %1$s</string>
+    <string name="ui_diag_list_snapshot">%1$s (copie intégrée du %2$s, utilisée jusqu’au premier téléchargement)</string>
     <string name="ui_diag_list_count">%1$s : %2$s</string>
     <plurals name="ui_diag_names_n">
         <item quantity="one">%1$s nom</item>

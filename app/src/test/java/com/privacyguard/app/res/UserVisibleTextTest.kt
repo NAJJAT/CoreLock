@@ -13,8 +13,10 @@ import javax.xml.parsers.DocumentBuilderFactory
  *
  * - The app is called CoreLock (owner, 2026-11-03). "PrivacyGuard" stays only where it
  *   names something that really is still called that: the HTTPS-inspection certificate
- *   ("PrivacyGuard Enterprise CA", renamed with the 90-day CA rotation, ADR 0009) and the
- *   SIEM signature header (receivers may check it).
+ *   of builds up to 1.1 ("PrivacyGuard Enterprise CA"; since the 90-day CA rotation it is
+ *   "CoreLock HTTPS Inspection CA", ADR 0009, but users must still find and remove old
+ *   ones), the files those builds saved, and the SIEM signature header (receivers may
+ *   check it).
  * - Strict does not block Google Safe Browsing (removed in 1.0.0, BuiltInSeedTest):
  *   blocking it turned off Chrome's phishing and malware warnings, and no text may say
  *   otherwise.
@@ -31,8 +33,7 @@ class UserVisibleTextTest {
      * users which certificate to look for in Android's settings).
      */
     private val allowedToSayPrivacyGuard = mapOf(
-        "dash_card_decrypt_on_desc" to "names the inspection certificate (organisation PrivacyGuard)",
-        "restriction_ca_install_automatic_desc" to "MDM text about the PrivacyGuard CA and what it signs",
+        "mitm_install_steps" to "names the PrivacyGuard-CA files that builds up to 1.1 saved to Downloads",
         "restriction_mitm_siem_signing_key_desc" to "names the X-PrivacyGuard-Sig header",
     )
     private val certificateName = "PrivacyGuard Enterprise CA"

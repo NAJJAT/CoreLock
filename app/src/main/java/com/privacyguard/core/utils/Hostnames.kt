@@ -23,6 +23,22 @@ object Hostnames {
         return host.takeIf { labels.all { LABEL.matches(it) } }
     }
 
+    /**
+     * A name [validSni] refuses that is still a name: a single label ("wiki", an intranet
+     * host) or an IP literal ("10.0.0.5", "2001:db8::1", bracketed or not). Such an SNI is
+     * not RFC 6066 conformant, but it hides nothing: a hello without any SNI passes anyway.
+     * Anything else refused (other bytes, bad labels) is not a name at all (plan 0.2).
+     */
+    fun isLocalNameOrIpLiteral(bytes: ByteArray, offset: Int, length: Int): Boolean {
+        if (length <= 0 || length > 253 || offset < 0 || offset + length > bytes.size) return false
+        val s = String(bytes, offset, length, Charsets.ISO_8859_1).trimEnd('.').lowercase()
+        if (s.isEmpty()) return false
+        if ('.' !in s && LABEL.matches(s)) return true
+        if (s.all { it.isDigit() || it == '.' } && s.split('.').size == 4) return true
+        val v6 = s.removePrefix("[").removeSuffix("]")
+        return ':' in v6 && v6.all { it in '0'..'9' || it in 'a'..'f' || it == ':' || it == '.' }
+    }
+
     /** [validSni] on raw SNI bytes; any byte outside ASCII makes it invalid. */
     fun validSni(bytes: ByteArray, offset: Int, length: Int): String? {
         if (length <= 0 || offset < 0 || offset + length > bytes.size) return null

@@ -23,7 +23,7 @@ class CertForger(
     companion object {
         private const val TAG = "CertForger"
         // Leaves live only in the in-memory cache; a short life limits what a leaked one is worth.
-        private const val CERT_VALIDITY_DAYS = 30
+        internal const val CERT_VALIDITY_DAYS = 30
         private const val MAX_CACHE_SIZE = 200
 
         private val LABEL = Regex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$")
@@ -83,7 +83,7 @@ class CertForger(
         val caKey = caManager.getCaKey() ?: throw IllegalStateException("CA private key not available")
 
         val keyPair = generateKeyPair()
-        val cert = buildCertificate(domain, keyPair.public, caCert, caKey)
+        val cert = buildLeafCertificate(domain, keyPair.public, caCert, caKey)
 
         return cert to keyPair.private
     }
@@ -96,65 +96,68 @@ class CertForger(
         keyPairGenerator.initialize(java.security.spec.ECGenParameterSpec("secp256r1"))
         return keyPairGenerator.generateKeyPair()
     }
+}
 
-    private fun buildCertificate(
-        domain: String,
-        publicKey: PublicKey,
-        caCert: X509Certificate,
-        caKey: PrivateKey
-    ): X509Certificate {
-        // Copy the CA subject's DER encoding verbatim. Parsing the RFC 2253 string
-        // (X500Name(principal.name)) reverses the RDN order, so the leaf's issuer
-        // would not match the installed CA and Android could never build a chain.
-        val issuer = X500Name.getInstance(caCert.subjectX500Principal.encoded)
-        // Built RDN by RDN: string parsing would let a crafted SNI add attributes.
-        val subject = X500NameBuilder(BCStyle.INSTANCE)
-            .addRDN(BCStyle.O, "PrivacyGuard")
-            .addRDN(BCStyle.OU, "MITM Proxy")
-            .addRDN(BCStyle.CN, domain)
-            .build()
-        val serialNumber = BigInteger(64, SecureRandom())
-        val notBefore = Date(System.currentTimeMillis() - 86400000)
-        val notAfter = Date(System.currentTimeMillis() + CERT_VALIDITY_DAYS * 86400000L)
+/** The leaf for [domain], signed by [caKey]; pure, so it is tested on the JVM (CaInfoTest). */
+internal fun buildLeafCertificate(
+    domain: String,
+    publicKey: PublicKey,
+    caCert: X509Certificate,
+    caKey: PrivateKey
+): X509Certificate {
+    // Copy the CA subject's DER encoding verbatim. Parsing the RFC 2253 string
+    // (X500Name(principal.name)) reverses the RDN order, so the leaf's issuer
+    // would not match the installed CA and Android could never build a chain.
+    val issuer = X500Name.getInstance(caCert.subjectX500Principal.encoded)
+    // Built RDN by RDN: string parsing would let a crafted SNI add attributes.
+    val subject = X500NameBuilder(BCStyle.INSTANCE)
+        .addRDN(BCStyle.O, CaPolicy.ORG)
+        .addRDN(BCStyle.OU, "HTTPS Inspection")
+        .addRDN(BCStyle.CN, domain)
+        .build()
+    val serialNumber = BigInteger(64, SecureRandom())
+    val notBefore = Date(System.currentTimeMillis() - 86400000)
+    // Never past the CA's own end: the CA lasts 97 days now (CaPolicy), and a leaf
+    // outliving its issuer only fails later, with a less clear error.
+    val notAfter = Date(minOf(System.currentTimeMillis() + CertForger.CERT_VALIDITY_DAYS * 86400000L, caCert.notAfter.time))
 
-        val certBuilder = JcaX509v3CertificateBuilder(
-            issuer,
-            serialNumber,
-            notBefore,
-            notAfter,
-            subject,
-            publicKey
-        )
+    val certBuilder = JcaX509v3CertificateBuilder(
+        issuer,
+        serialNumber,
+        notBefore,
+        notAfter,
+        subject,
+        publicKey
+    )
 
-        // Exactly the requested host: a *.domain SAN would make one forged leaf
-        // valid for every sibling host as well.
-        val sanList = GeneralNames(GeneralName(GeneralName.dNSName, domain))
-        certBuilder.addExtension(Extension.subjectAlternativeName, false, sanList)
+    // Exactly the requested host: a *.domain SAN would make one forged leaf
+    // valid for every sibling host as well.
+    val sanList = GeneralNames(GeneralName(GeneralName.dNSName, domain))
+    certBuilder.addExtension(Extension.subjectAlternativeName, false, sanList)
 
-        // Basic Constraints - NOT a CA
-        certBuilder.addExtension(Extension.basicConstraints, true, BasicConstraints(false))
+    // Basic Constraints - NOT a CA
+    certBuilder.addExtension(Extension.basicConstraints, true, BasicConstraints(false))
 
-        // Key Usage
-        certBuilder.addExtension(
-            Extension.keyUsage,
-            true,
-            KeyUsage(KeyUsage.digitalSignature)   // EC keys sign; keyEncipherment is RSA-only
-        )
+    // Key Usage
+    certBuilder.addExtension(
+        Extension.keyUsage,
+        true,
+        KeyUsage(KeyUsage.digitalSignature)   // EC keys sign; keyEncipherment is RSA-only
+    )
 
-        // Extended Key Usage - Server Authentication
-        certBuilder.addExtension(
-            Extension.extendedKeyUsage,
-            false,
-            ExtendedKeyUsage(KeyPurposeId.id_kp_serverAuth)
-        )
+    // Extended Key Usage - Server Authentication
+    certBuilder.addExtension(
+        Extension.extendedKeyUsage,
+        false,
+        ExtendedKeyUsage(KeyPurposeId.id_kp_serverAuth)
+    )
 
-        // NO SubjectKeyIdentifier - not required
-        // NO AuthorityKeyIdentifier - not required
+    // NO SubjectKeyIdentifier - not required
+    // NO AuthorityKeyIdentifier - not required
 
-        // Sign with CA key
-        val signer = JcaContentSignerBuilder("SHA256WithRSA").build(caKey)
-        val certHolder = certBuilder.build(signer)
+    // Sign with CA key
+    val signer = JcaContentSignerBuilder("SHA256WithRSA").build(caKey)
+    val certHolder = certBuilder.build(signer)
 
-        return JcaX509CertificateConverter().getCertificate(certHolder)
-    }
+    return JcaX509CertificateConverter().getCertificate(certHolder)
 }

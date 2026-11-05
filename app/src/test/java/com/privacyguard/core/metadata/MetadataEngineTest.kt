@@ -83,7 +83,7 @@ class MetadataEngineTest {
 
     @Test
     fun parent_domain_on_tracker_list_marks_subdomain() {
-        val e = MetadataEngine().apply { knownTrackers = setOf("example.com") }
+        val e = MetadataEngine().apply { knownTrackers.rebuild(listOf("example.com")) }
         e.add(snap("1.1.1.1", 0))
         assertTrue(e.allProfiles().single().riskSignals.any { it.code == RiskCode.KNOWN_TRACKER })
     }

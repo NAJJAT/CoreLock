@@ -5,13 +5,16 @@
     <string name="mitm_consent_title">Enable traffic inspection</string>
     <string name="mitm_consent_body">The app will intercept and log your HTTPS traffic so you can inspect every request and response on this device.\n\nAfter you confirm, the app will ask you to install a CA certificate. This is required to decrypt HTTPS. The certificate stays on your device and can be removed at any time from Settings → Security → Certificates.</string>
     <string name="mitm_consent_confirm">Confirm and install certificate</string>
+    <string name="mitm_consent_renew_title">Renew traffic inspection</string>
+    <string name="mitm_consent_renew_body">Your consent to HTTPS inspection lasts 90 days and has ended. Inspection is paused until you decide.\n\nIf you renew, inspection continues for another 90 days. For your safety the app also replaces its certificate: Android will ask you to install the new one, and the old one stops working. You can then remove the old one from Settings → Security → Certificates.</string>
+    <string name="mitm_consent_renew_confirm">Renew and install certificate</string>
     <string name="mitm_cancel">Cancel</string>
     <string name="mitm_lock_title">Screen lock required</string>
     <string name="mitm_lock_body">Android requires a screen lock (PIN, pattern or password) before installing CA certificates.\n\nGo to:\nSettings → Security → Screen lock\n\nSet a PIN or password, then come back and tap Install.</string>
     <string name="mitm_open_settings">Open Settings</string>
     <string name="mitm_install_title">Install from Settings</string>
     <string name="mitm_save_failed_title">Couldn\'t save certificate</string>
-    <string name="mitm_install_steps">Android 11 and newer only allow CA certificates to be installed from the Settings app, not from inside other apps.\n\nThe certificate was saved to Downloads as:\n%1$s\n\n1. Tap Open Settings (it opens “Install a certificate”)\n2. Tap CA certificate → Install anyway\n3. Open Download and pick %1$s. Older privacyguard_ca files there are from earlier installs and no longer work.\n4. Come back here: the card turns green once Android trusts it.\n\nIf Settings opens a different page, search Settings for “CA certificate”.</string>
+    <string name="mitm_install_steps">Android 11 and newer only allow CA certificates to be installed from the Settings app, not from inside other apps.\n\nThe certificate was saved to Downloads as:\n%1$s\n\n1. Tap Open Settings (it opens “Install a certificate”)\n2. Tap CA certificate → Install anyway\n3. Open Download and pick %1$s. Older CoreLock-CA and PrivacyGuard-CA files there are from earlier installs and no longer work.\n4. Come back here: the card turns green once Android trusts it.\n\nIf Settings opens a different page, search Settings for “CA certificate”.</string>
     <string name="mitm_save_failed_body">The certificate could not be written to Downloads. Check free storage and try again; details are in logcat under the CaInstallHelper tag.</string>
     <string name="mitm_ok">OK</string>
     <string name="mitm_later">Later</string>
@@ -39,8 +42,8 @@
     <string name="mitm_ca_ready_settings_desc">Android 11+ only installs CA certificates from Settings. Tap Install: the certificate is saved to Downloads and you\'ll get step-by-step instructions.</string>
     <string name="mitm_ca_generating_desc">Generating the CA for the first time. This takes a few seconds.</string>
     <plurals name="mitm_stale_cas">
-        <item quantity="one">%d old inspection certificate is still installed and no longer works. Tap Remove old, open the User tab and remove every “PrivacyGuard Enterprise CA” except the newest.</item>
-        <item quantity="other">%d old inspection certificates are still installed and no longer work. Tap Remove old, open the User tab and remove every “PrivacyGuard Enterprise CA” except the newest.</item>
+        <item quantity="one">%d old inspection certificate is still installed and no longer works. Tap Remove old, open the User tab and remove every “PrivacyGuard Enterprise CA” and every “CoreLock HTTPS Inspection CA” except the newest.</item>
+        <item quantity="other">%d old inspection certificates are still installed and no longer work. Tap Remove old, open the User tab and remove every “PrivacyGuard Enterprise CA” and every “CoreLock HTTPS Inspection CA” except the newest.</item>
     </plurals>
     <string name="mitm_remove_old">Remove old</string>
     <string name="mitm_regenerate">Regenerate</string>

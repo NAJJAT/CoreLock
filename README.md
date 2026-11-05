@@ -182,11 +182,18 @@ Latest version: **1.1.0** ([release notes](RELEASE_NOTES_1.1.0.md)). Earlier: [1
    ```
 
    Install only if both match. (`keytool -printcert -jarfile` does not work: the
-   APK is signed with APK Signature Scheme v2 only.)
+   APK is signed with APK Signature Scheme v2 only.) From 1.2 the release page also
+   has `SHA256SUMS.txt`: with it next to the APK, `sha256sum -c SHA256SUMS.txt` checks
+   the file. An automatic check on each release confirms the APK is signed with the key
+   below before the file is added.
 3. Open the APK. Android asks to allow installs from the app you used (browser or
    file manager): allow it for this install, then turn it off again.
 4. **Updating:** install the newer APK over the old one; your data stays. Android
    refuses an APK signed with a different key.
+5. **Google's developer verification.** Google has announced that from 2027 Android
+   may also check sideloaded apps against developers registered with Google. Nothing
+   changes for installs today; what it will mean for CoreLock is in
+   [docs/GOOGLE_DEVELOPER_VERIFICATION.md](docs/GOOGLE_DEVELOPER_VERIFICATION.md).
 
 ## First setup
 
@@ -564,11 +571,13 @@ SIEM code live in `src/enterprise`, the shared engine in `src/main`.
   - Turning inspection off deletes the signing key and tells the user how to
     remove the installed CA.
 - **PII redaction**: emails, card numbers, phone numbers, JWTs, bearer tokens
-  and sensitive JSON fields, in headers and text bodies. Anything sent to the
-  SIEM is always redacted this way; URL query strings, form data and binary
-  bodies are not redacted yet. The local payload log is redacted the same way
-  while `mitm_redact_pii` is on (the default); with it off, the inspector stores
-  exactly what left the phone.
+  and sensitive JSON fields, in headers and text bodies. Values in URL query
+  strings (also in Referer and Location headers) and in HTML form bodies become
+  `[REDACTED]`, with the names kept; bodies that are not text (images, files,
+  compressed or multipart data, HTTP/2 frames) are kept as type and size only.
+  Anything sent to the SIEM is always redacted this way. The local payload log is
+  redacted the same way while `mitm_redact_pii` is on (the default); with it off,
+  the inspector stores exactly what left the phone.
 - **SIEM shipping** happens automatically once 100 events are queued or a
   minute after the first one, and "Ship now" sends the same queue.
 - **Consent from MDM** (`mitm_consent_given`) is valid for as long as the
@@ -710,6 +719,11 @@ docs/  .github/
   - New fingerprints are accepted silently after an update; that is also when a
     malicious SDK could arrive.
   - QUIC (UDP/443) is not fingerprinted.
+- **Encrypted Client Hello (ECH)** hides the real server name of some browser
+  connections; CoreLock sees only a shared outer name. At Strict, an optional setting
+  (off by default) removes the ECH key from DNS answers so the real name is readable;
+  your network can then see it too. Details in
+  [docs/BLOCKING_POLICY.md](docs/BLOCKING_POLICY.md#5-limits-of-domain-level-blocking).
 - **Per-app rules on Android 7 to 9.** On these versions a per-app rule can
   occasionally apply to the wrong app. Android 10 and newer are not affected.
 - **Meta app events** share `graph.facebook.com` with login, so they cannot be
@@ -786,7 +800,7 @@ CoreLock downloads these lists at runtime; they are not shipped inside the APK.
 
 | Data | Author | License |
 |---|---|---|
-| DNS blocklists (Pro, Pro mini, Threat Intelligence Feeds mini, DoH, DoH IPs) | [HaGeZi](https://github.com/hagezi/dns-blocklists) | GPL-3.0 |
+| DNS blocklists (Pro, Pro mini, Threat Intelligence Feeds mini, DoH, DoH IPs); a copy of Threat Intelligence Feeds mini is bundled in the app for the time before the first download | [HaGeZi](https://github.com/hagezi/dns-blocklists) | GPL-3.0 |
 | OISD small | [OISD](https://oisd.nl), maintained by Stephan van Ruth ([repository](https://github.com/sjhgvr/oisd)) | GPL-3.0 |
 | Tracker list | [Exodus Privacy](https://reports.exodus-privacy.eu.org) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) (contents: [DbCL 1.0](https://opendatacommons.org/licenses/dbcl/1-0/)) |
 

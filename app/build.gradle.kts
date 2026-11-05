@@ -158,6 +158,13 @@ android {
             isReturnDefaultValues = true
             // Robolectric tests read the app's strings (notifications, channels).
             isIncludeAndroidResources = true
+            // Fuzz length and seed: unset on pull requests (fixed, a few seconds); the
+            // nightly workflow passes larger values (-Pprivacyguard.fuzz.scale=…).
+            all { test ->
+                listOf("privacyguard.fuzz.scale", "privacyguard.fuzz.seedOffset").forEach { key ->
+                    project.findProperty(key)?.let { test.systemProperty(key, it) }
+                }
+            }
         }
     }
 

@@ -231,6 +231,182 @@ class TcpForwarderTest {
         assertEquals(List(3) { com.privacyguard.core.session.BlockSource.SNI to DnsBlockDecision.Reason.BLOCKLIST }, reported)
     }
 
+    // ── Fail closed on an unreadable ClientHello (plan task 0.2) ─────────────
+
+    /** A forwarder as the service runs it at [failClosed] = STANDARD/STRICT, with every port read as TLS. */
+    private fun failClosedForwarder(failClosed: Boolean, seenSni: MutableList<String?> = mutableListOf()) {
+        forwarder.stop()
+        forwarder = TcpForwarder(
+            sessionTable, tunWriter, EncryptionEnforcer(), FilterEngine(),
+            protectSocket = { true }, interception = TlsInterception.None,
+            nameBlocked = { _, host -> DnsBlockDecision.Reason.BLOCKLIST.takeIf { host == "ads.example.com" } },
+            onSni = { _, sni, _ -> seenSni += sni },
+            failsClosed = { failClosed },
+            tlsOnEveryPort = true,
+        ).also { it.start() }
+    }
+
+    @Test
+    fun a_client_hello_split_across_tls_records_is_reassembled_and_its_name_decided() {
+        val seen = mutableListOf<String?>()
+        failClosedForwarder(failClosed = true, seenSni = seen)
+        for ((i, case) in listOf("ads.example.com" to true, "news.example.org" to false).withIndex()) {
+            val (name, blocked) = case
+            val msg = helloMessage(name.toByteArray())
+            // The second record starts inside the SNI extension, so the first holds no name.
+            val wire = records(msg, msg.size - name.length - 4)
+            val (sawRst, atServer) = sendSegments(40_200 + i, listOf(wire), expectBytes = if (blocked) 1 else wire.size)
+            assertEquals("RST for $name", blocked, sawRst)
+            assertEquals("bytes at server for $name", if (blocked) 0 else wire.size, atServer)
+        }
+        assertEquals(listOf("ads.example.com", "news.example.org"), seen)
+        assertEquals(1L, forwarder.sniBlocked.get())
+    }
+
+    @Test
+    fun a_client_hello_split_in_records_and_segments_is_still_decided() {
+        failClosedForwarder(failClosed = true)
+        val msg = helloMessage("ads.example.com".toByteArray(), padding = 3_000)
+        val wire = records(msg, 1, 700, 2_500)            // 4 records, the first holding 1 byte
+        val segments = wire.toList().chunked(500).map { it.toByteArray() }
+        val (sawRst, atServer) = sendSegments(40_210, segments, expectBytes = 1)
+        assertTrue(sawRst)
+        assertEquals(0, atServer)
+    }
+
+    @Test
+    fun at_standard_an_unreadable_client_hello_is_reset_and_never_reaches_the_server() {
+        val seen = mutableListOf<String?>()
+        failClosedForwarder(failClosed = true, seenSni = seen)
+        val tooLarge = helloMessage("news.example.org".toByteArray(), padding = 20_000)
+        val notAHello = helloMessage("news.example.org".toByteArray()).also { it[0] = 2 }   // ServerHello type
+        val truncated = helloMessage("news.example.org".toByteArray()).let { m ->
+            // The handshake records end early; the next record is application data.
+            records(m.copyOf(m.size - 20)) + byteArrayOf(0x17, 3, 3, 0, 20) + ByteArray(20)
+        }
+        val cases = listOf(
+            "larger than can be reassembled" to records(tooLarge, 16_000),
+            "not a ClientHello" to records(notAHello),
+            "truncated" to truncated,
+            "rejected name" to records(helloMessage("bad name!.example".toByteArray())),
+        )
+        for ((i, case) in cases.withIndex()) {
+            val (what, wire) = case
+            val segments = wire.toList().chunked(1_400).map { it.toByteArray() }
+            val (sawRst, atServer) = sendSegments(40_220 + i, segments, expectBytes = 1)
+            assertTrue("RST for $what", sawRst)
+            assertEquals("bytes at server for $what", 0, atServer)
+        }
+        assertEquals(4L, forwarder.helloUnreadableDropped.get())
+        assertEquals(0L, forwarder.sniBlocked.get())
+        // Only the rejected name is reported (so its alert is raised); the others carry no name.
+        assertEquals(listOf<String?>(null), seen)
+    }
+
+    /**
+     * Review finding (2026-11-05): an intranet name ("wiki") or an IP literal is not a valid
+     * SNI, but it is a name, not garbage. Resetting it broke intranet sites and gained
+     * nothing: a hello without any SNI goes through anyway. Its alert stays.
+     */
+    @Test
+    fun at_standard_single_label_and_ip_literal_names_go_through_with_their_alert() {
+        val seen = mutableListOf<String?>()
+        failClosedForwarder(failClosed = true, seenSni = seen)
+        for ((i, name) in listOf("wiki", "intranet", "10.0.0.5", "[2001:db8::1]", "2001:db8::1").withIndex()) {
+            val wire = records(helloMessage(name.toByteArray()))
+            val (sawRst, atServer) = sendSegments(40_250 + i, listOf(wire), expectBytes = wire.size)
+            assertEquals("RST for $name", false, sawRst)
+            assertEquals("bytes at server for $name", wire.size, atServer)
+        }
+        assertEquals(0L, forwarder.helloUnreadableDropped.get())
+        assertEquals(List(5) { null }, seen)        // reported as rejected (alert), with no name
+    }
+
+    @Test
+    fun at_standard_a_complete_client_hello_without_sni_still_goes_through() {
+        failClosedForwarder(failClosed = true)
+        val wire = records(helloMessage(null))
+        val (sawRst, atServer) = sendSegments(40_230, listOf(wire), expectBytes = wire.size)
+        assertEquals(false, sawRst)
+        assertEquals(wire.size, atServer)
+        assertEquals(0L, forwarder.helloUnreadableDropped.get())
+    }
+
+    @Test
+    fun at_minimal_an_unreadable_client_hello_is_forwarded_as_before() {
+        failClosedForwarder(failClosed = false)
+        val rejected = records(helloMessage("bad name!.example".toByteArray()))
+        val (rst1, at1) = sendSegments(40_240, listOf(rejected), expectBytes = rejected.size)
+        assertEquals(false, rst1)
+        assertEquals(rejected.size, at1)
+        val tooLarge = records(helloMessage("news.example.org".toByteArray(), padding = 20_000), 16_000)
+        val (rst2, at2) = sendSegments(40_241, tooLarge.toList().chunked(1_400).map { it.toByteArray() }, expectBytes = tooLarge.size)
+        assertEquals(false, rst2)
+        assertEquals(tooLarge.size, at2)
+        assertEquals(0L, forwarder.helloUnreadableDropped.get())
+    }
+
+    /**
+     * One connection: [segments] are sent in order after the handshake. Returns whether the
+     * device got a RST and how many bytes reached the server (read until [expectBytes] or end of stream).
+     */
+    private fun sendSegments(clientPort: Int, segments: List<ByteArray>, expectBytes: Int): Pair<Boolean, Int> {
+        val serverSocket = ServerSocket(0, 1, InetAddress.getLoopbackAddress())
+        val got = ByteArrayOutputStream()
+        val t = thread(isDaemon = true) {
+            runCatching {
+                serverSocket.accept().use { s ->
+                    s.soTimeout = 3_000
+                    val b = ByteArray(8_192)
+                    while (synchronized(got) { got.size() } < expectBytes) {
+                        val n = s.getInputStream().read(b)
+                        if (n < 0) break
+                        synchronized(got) { got.write(b, 0, n) }
+                    }
+                }
+            }
+        }
+        try {
+            val key = SessionKey.of("10.0.0.2", clientPort, "127.0.0.1", serverSocket.localPort, IpPacket.PROTO_TCP)
+            forwarder.handle(key, segment(seq = 1_000, ack = 0, syn = true, window = 65_535))
+            val synAck = nextSegment()!!
+            var seq = 1_001L
+            for (data in segments) {
+                forwarder.handle(key, segment(seq = seq, ack = (synAck.sequenceNumber + 1) and 0xFFFFFFFFL, ack_ = true, window = 65_535, data = data))
+                seq += data.size
+            }
+            t.join(4_000)
+            var sawRst = false
+            while (true) { val s = nextSegment(300) ?: break; if (s.flagRst) sawRst = true }
+            return sawRst to synchronized(got) { got.size() }
+        } finally {
+            serverSocket.close()
+        }
+    }
+
+    /** A ClientHello handshake message (type, 3-byte length, body); [name] null sends no SNI. */
+    private fun helloMessage(name: ByteArray?, padding: Int = 0): ByteArray {
+        fun u16(v: Int) = byteArrayOf((v ushr 8).toByte(), v.toByte())
+        val pad = if (padding > 0) u16(0x0015) + u16(padding) + ByteArray(padding) else ByteArray(0)
+        val sni = if (name == null) ByteArray(0)
+            else u16(0) + u16(name.size + 5) + u16(name.size + 3) + byteArrayOf(0) + u16(name.size) + name
+        val ext = pad + sni                  // the name last, as the split tests need
+        val body = u16(0x0303) + ByteArray(32) + byteArrayOf(0) + u16(2) + u16(0x1301) + byteArrayOf(1, 0) + u16(ext.size) + ext
+        return byteArrayOf(1, (body.size ushr 16).toByte(), (body.size ushr 8).toByte(), body.size.toByte()) + body
+    }
+
+    /** [message] as TLS handshake records, a new record starting at each of [cuts]. */
+    private fun records(message: ByteArray, vararg cuts: Int): ByteArray {
+        val bounds = listOf(0) + cuts.toList() + listOf(message.size)
+        val out = ByteArrayOutputStream()
+        for (i in 0 until bounds.size - 1) {
+            val len = bounds[i + 1] - bounds[i]
+            out.write(byteArrayOf(0x16, 3, 1, (len ushr 8).toByte(), len.toByte()))
+            out.write(message, bounds[i], len)
+        }
+        return out.toByteArray()
+    }
+
     /** One TLS connection to a loopback server: whether the device got a RST, and what reached the server. */
     private fun sendClientHello(clientPort: Int, hello: ByteArray): Pair<Boolean, Int> {
         val serverSocket = ServerSocket(0, 1, InetAddress.getLoopbackAddress())

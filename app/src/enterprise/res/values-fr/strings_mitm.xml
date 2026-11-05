@@ -5,13 +5,16 @@
     <string name="mitm_consent_title">Activer l’inspection du trafic</string>
     <string name="mitm_consent_body">L’app interceptera et journalisera votre trafic HTTPS pour que vous puissiez examiner chaque requête et réponse sur cet appareil.\n\nAprès confirmation, l’app vous demandera d’installer un certificat CA. Il est nécessaire pour déchiffrer le HTTPS. Le certificat reste sur votre appareil et peut être supprimé à tout moment dans Paramètres → Sécurité → Certificats.</string>
     <string name="mitm_consent_confirm">Confirmer et installer le certificat</string>
+    <string name="mitm_consent_renew_title">Renouveler l’inspection du trafic</string>
+    <string name="mitm_consent_renew_body">Votre consentement à l’inspection HTTPS dure 90 jours et a pris fin. L’inspection est en pause jusqu’à votre décision.\n\nSi vous renouvelez, l’inspection continue pendant 90 jours de plus. Pour votre sécurité, l’app remplace aussi son certificat : Android vous demandera d’installer le nouveau, et l’ancien ne fonctionnera plus. Vous pourrez ensuite supprimer l’ancien dans Paramètres → Sécurité → Certificats.</string>
+    <string name="mitm_consent_renew_confirm">Renouveler et installer le certificat</string>
     <string name="mitm_cancel">Annuler</string>
     <string name="mitm_lock_title">Verrouillage de l’écran requis</string>
     <string name="mitm_lock_body">Android exige un verrouillage de l’écran (code, schéma ou mot de passe) avant d’installer des certificats CA.\n\nAllez dans :\nParamètres → Sécurité → Verrouillage de l’écran\n\nDéfinissez un code ou un mot de passe, puis revenez et touchez Installer.</string>
     <string name="mitm_open_settings">Ouvrir les Paramètres</string>
     <string name="mitm_install_title">Installer depuis les Paramètres</string>
     <string name="mitm_save_failed_title">Impossible d’enregistrer le certificat</string>
-    <string name="mitm_install_steps">Depuis Android 11, les certificats CA ne peuvent être installés que depuis l’app Paramètres, pas depuis une autre app.\n\nLe certificat a été enregistré dans Téléchargements sous le nom :\n%1$s\n\n1. Touchez Ouvrir les Paramètres (la page « Installer un certificat » s’ouvre)\n2. Touchez Certificat CA → Installer quand même\n3. Ouvrez Download et choisissez %1$s. Les anciens fichiers privacyguard_ca qui s’y trouvent viennent d’installations précédentes et ne fonctionnent plus.\n4. Revenez ici : la carte devient verte dès qu’Android lui fait confiance.\n\nSi les Paramètres ouvrent une autre page, recherchez « certificat CA » dans les Paramètres.</string>
+    <string name="mitm_install_steps">Depuis Android 11, les certificats CA ne peuvent être installés que depuis l’app Paramètres, pas depuis une autre app.\n\nLe certificat a été enregistré dans Téléchargements sous le nom :\n%1$s\n\n1. Touchez Ouvrir les Paramètres (la page « Installer un certificat » s’ouvre)\n2. Touchez Certificat CA → Installer quand même\n3. Ouvrez Download et choisissez %1$s. Les anciens fichiers CoreLock-CA et PrivacyGuard-CA qui s’y trouvent viennent d’installations précédentes et ne fonctionnent plus.\n4. Revenez ici : la carte devient verte dès qu’Android lui fait confiance.\n\nSi les Paramètres ouvrent une autre page, recherchez « certificat CA » dans les Paramètres.</string>
     <string name="mitm_save_failed_body">Le certificat n’a pas pu être écrit dans Téléchargements. Vérifiez l’espace libre et réessayez ; les détails figurent dans logcat sous la balise CaInstallHelper.</string>
     <string name="mitm_ok">OK</string>
     <string name="mitm_later">Plus tard</string>
@@ -39,9 +42,9 @@
     <string name="mitm_ca_ready_settings_desc">Android 11+ n’installe les certificats CA que depuis les Paramètres. Touchez Installer : le certificat est enregistré dans Téléchargements et vous recevez des instructions pas à pas.</string>
     <string name="mitm_ca_generating_desc">Première génération du CA. Cela prend quelques secondes.</string>
     <plurals name="mitm_stale_cas">
-        <item quantity="one">%d ancien certificat d’inspection est encore installé et ne fonctionne plus. Touchez Supprimer les anciens, ouvrez l’onglet Utilisateur et supprimez chaque « PrivacyGuard Enterprise CA » sauf le plus récent.</item>
-        <item quantity="many">%d anciens certificats d’inspection sont encore installés et ne fonctionnent plus. Touchez Supprimer les anciens, ouvrez l’onglet Utilisateur et supprimez chaque « PrivacyGuard Enterprise CA » sauf le plus récent.</item>
-        <item quantity="other">%d anciens certificats d’inspection sont encore installés et ne fonctionnent plus. Touchez Supprimer les anciens, ouvrez l’onglet Utilisateur et supprimez chaque « PrivacyGuard Enterprise CA » sauf le plus récent.</item>
+        <item quantity="one">%d ancien certificat d’inspection est encore installé et ne fonctionne plus. Touchez Supprimer les anciens, ouvrez l’onglet Utilisateur et supprimez chaque « PrivacyGuard Enterprise CA » et chaque « CoreLock HTTPS Inspection CA » sauf le plus récent.</item>
+        <item quantity="many">%d anciens certificats d’inspection sont encore installés et ne fonctionnent plus. Touchez Supprimer les anciens, ouvrez l’onglet Utilisateur et supprimez chaque « PrivacyGuard Enterprise CA » et chaque « CoreLock HTTPS Inspection CA » sauf le plus récent.</item>
+        <item quantity="other">%d anciens certificats d’inspection sont encore installés et ne fonctionnent plus. Touchez Supprimer les anciens, ouvrez l’onglet Utilisateur et supprimez chaque « PrivacyGuard Enterprise CA » et chaque « CoreLock HTTPS Inspection CA » sauf le plus récent.</item>
     </plurals>
     <string name="mitm_remove_old">Supprimer les anciens</string>
     <string name="mitm_regenerate">Régénérer</string>

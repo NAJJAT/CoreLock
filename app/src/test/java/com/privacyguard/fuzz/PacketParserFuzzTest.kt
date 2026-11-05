@@ -33,6 +33,13 @@ class PacketParserFuzzTest {
     private val dnsPointerLoop = u16(1) + u16(0x8180) + u16(0) + u16(1) + u16(0) + u16(0) +
         u16(0xC00C) + u16(5) + u16(1) + byteArrayOf(0, 0, 0, 60) + u16(2) + u16(0xC00C)
 
+    // HTTPS record (type 65): SvcPriority 1, TargetName, alpn=h2 (RFC 9460).
+    private val dnsHttps = u16(0x1234) + u16(0x8180) + u16(1) + u16(1) + u16(0) + u16(0) +
+        DnsPacket.encodeName("example.com") + u16(65) + u16(1) +
+        u16(0xC00C) + u16(65) + u16(1) + byteArrayOf(0, 0, 0, 60) +
+        DnsPacket.encodeName("cdn.example.net").let { t -> u16(2 + t.size + 7) + u16(1) + t } +
+        u16(1) + u16(3) + byteArrayOf(2, 'h'.code.toByte(), '2'.code.toByte())
+
     private val udpDns = u16(40000) + u16(53) + u16(8 + dnsQuery.size) + u16(0) + dnsQuery
 
     private val clientHello: ByteArray = run {
@@ -69,9 +76,9 @@ class PacketParserFuzzTest {
 
     @Test fun ipv6() = Fuzz.run("Ipv6Packet", listOf(ipv6Seed)) { Ipv6Packet.parse(it) }
 
-    @Test fun dns() = Fuzz.run("DnsPacket", listOf(dnsQuery, dnsResponse, dnsPointerLoop)) { raw ->
+    @Test fun dns() = Fuzz.run("DnsPacket", listOf(dnsQuery, dnsResponse, dnsPointerLoop, dnsHttps)) { raw ->
         // DnsHandler answers a blocked query by echoing its question back.
-        DnsPacket.parse(raw)?.let { DnsPacket.buildBlockedResponse(it) }
+        DnsPacket.parse(raw)?.let { it.cnameRecords; it.serviceTargets; DnsPacket.buildBlockedResponse(it) }
     }
 
     @Test fun tlsClientHello() = Fuzz.run("ClientHelloParser", listOf(clientHello)) {
