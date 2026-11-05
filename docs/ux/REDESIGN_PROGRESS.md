@@ -623,6 +623,18 @@ and Security systems 7 = Home 7 earlier the same morning). Screenshots: `regress
 Not seen on the emulator: the AD_SDK row (needs an app with a listed ad SDK; covered by unit
 tests); the device-lock prompt itself (debug builds stop at the integrity check).
 
+Languages, 2026-11-05 (display density lowered to reach the screens, because scrolling
+by swipe was not allowed in this session): Arabic, French and Dutch for Home, Activity,
+Settings, Analysis, Security systems, Security analysis and Statistics. RTL correct; no
+text cut; the counts agree (Arabic: Security systems 11 = Activity "11 blocked today").
+200 % at the real density: Home and Activity in English and French, nothing clipped (the
+Advanced screens can't be reached at 200 % without scrolling). Screenshots: `phase10\`.
+Seen, not changed: the threat timeline shows app names in the language active when the
+row was recorded (stored with the history, as in 1.0); the Statistics badge says "24 h"
+while its Blocked tile says "today".
+
+R8: `:app:minifyEnterpriseReleaseWithR8` passes (2026-11-05).
+
 Idle CPU, 60 s each, screen on and untouched: Activity 1.2 %, Home 1.1 %, Statistics 1.1 %,
 Security systems 1.1 % of one core (audit, release build: Home 42 %, Stats 68 %).
 
