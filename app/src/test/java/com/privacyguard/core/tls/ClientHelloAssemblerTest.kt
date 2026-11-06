@@ -114,9 +114,9 @@ class ClientHelloAssemblerTest {
                 else -> Unit
             }
         }
-        // Long chains of tiny records up to the cap.
-        val rnd = Random(20261105)
-        repeat(200) {
+        // Long chains of tiny records up to the cap; new seeds and more of them nightly.
+        val rnd = Random(20261105 + com.privacyguard.fuzz.Fuzz.seedOffset)
+        repeat(200 * com.privacyguard.fuzz.Fuzz.scale) {
             val cuts = (1 until msg.size).shuffled(rnd).take(rnd.nextInt(1, 60)).sorted().toIntArray()
             assertTrue(ClientHelloAssembler.assemble(records(msg, *cuts)) is Complete)
         }

@@ -51,6 +51,32 @@ class QuicFuzzTest {
         }
     }
 
+    /**
+     * The CRYPTO reassembler on its own (QuicSniTracker): mutated frame sequences, cut
+     * into up to four Initials of one flow and offered in order. No exception, and a
+     * released hello never carries more datagrams than the tracker may hold.
+     */
+    @Test
+    fun crypto_reassembly() {
+        val seeds = listOf(
+            crypto(0, chLarge.copyOfRange(0, 700)) + crypto(700, chLarge.copyOfRange(700, chLarge.size)),
+            crypto(900, chLarge.copyOfRange(900, chLarge.size)) + crypto(0, chLarge.copyOfRange(0, 900)),
+            crypto(0, chSmall) + crypto(0, chSmall),                                 // duplicate
+            crypto(0, chLarge.copyOfRange(0, 500)) + crypto(400, chLarge.copyOfRange(400, chLarge.size)),  // overlap
+        )
+        Fuzz.run("QuicSniTracker reassembly", seeds, iterations = 3_000) { frames ->
+            val tracker = QuicSniTracker<Int>(now = { 0L })
+            val parts = 1 + (frames.firstOrNull()?.toInt()?.and(3) ?: 0)
+            val size = (frames.size + parts - 1) / parts
+            for (i in 0 until parts) {
+                val piece = frames.copyOfRange(minOf(frames.size, i * size), minOf(frames.size, (i + 1) * size))
+                if (piece.isEmpty() || piece.size > 1_400) continue
+                val r = tracker.offer(7, initial(piece, pn = i), hold = true)
+                if (r is QuicSniTracker.Result.Hello) assertTrue(r.held.size <= QuicSniTracker.MAX_DATAGRAMS)
+            }
+        }
+    }
+
     @Test
     fun varints() {
         Fuzz.run("QuicInitial.readVarint", listOf(byteArrayOf(0x25), byteArrayOf(0x7b, 0xbd.toByte()), ByteArray(8) { 0xFF.toByte() })) { d ->

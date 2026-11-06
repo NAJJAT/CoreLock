@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** "Blocked today": unknown until the encrypted database answers, never a made-up 0. */
@@ -191,15 +192,25 @@ class HomeViewModel internal constructor(
         HomeLogic.stoppedBySystem(hero.state, hero.reason, exit)
     }
 
-    private data class SystemInputs(val checks: PhoneChecks, val backgroundRule: Boolean, val stoppedBySystem: Boolean)
+    /**
+     * After the update from 1.1: inspection needs the new certificate (one-time card).
+     * Re-read on resume, so it goes away once the user installed the certificate.
+     */
+    private val inspectionCertificate = MutableStateFlow(0)
+    private val inspectionCertificateDue: Flow<Boolean> = merge(resumed, inspectionCertificate).conflate().map {
+        com.privacyguard.vpn.interception.TlsInterceptionFactory.inspectionCertificateNoticeDue(getApplication())
+    }.catch { e -> if (e is CancellationException) throw e; Log.w(TAG, "Certificate check failed: ${e.javaClass.simpleName}"); emit(false) }
+        .flowOn(Dispatchers.IO)
+
+    private data class SystemInputs(val checks: PhoneChecks, val backgroundRule: Boolean, val stoppedBySystem: Boolean, val inspectionCertificate: Boolean)
 
     private val attention: Flow<HomeLogic.Attention?> = combine(
-        combine(phoneChecks, hasBackgroundRule.onStart { emit(false) }, stoppedBySystem, ::SystemInputs),
+        combine(phoneChecks, hasBackgroundRule.onStart { emit(false) }, stoppedBySystem, inspectionCertificateDue.onStart { emit(false) }, ::SystemInputs),
         homePrefs.batteryDismissed,
         newHighAlert.onStart { emit(null) },
         homePrefs.whatsNew,
         strictSuggestion.onStart { emit(null) },
-    ) { (checks, bgRule, bySystem), batteryDismissed, alert, whatsNew, strict ->
+    ) { (checks, bgRule, bySystem, certificate), batteryDismissed, alert, whatsNew, strict ->
         HomeLogic.attention(
             HomeLogic.AttentionInputs(
                 privateDnsHost = checks.privateDnsHost,
@@ -207,6 +218,7 @@ class HomeViewModel internal constructor(
                 battery = checks.battery,
                 batteryDismissed = batteryDismissed,
                 stoppedBySystem = bySystem,
+                inspectionCertificate = certificate,
                 newHighAlert = alert,
                 whatsNew = whatsNew,
                 strictSuggestion = strict,
@@ -236,6 +248,13 @@ class HomeViewModel internal constructor(
     fun markAlertsSeen(upTo: Long) = homePrefs.markAlertsSeen(upTo)
 
     fun dismissBattery() = homePrefs.dismissBattery()
+
+    fun dismissInspectionCertificate() {
+        viewModelScope.launch(Dispatchers.IO) {
+            com.privacyguard.vpn.interception.TlsInterceptionFactory.dismissInspectionCertificateNotice(getApplication())
+            inspectionCertificate.value++
+        }
+    }
 
     fun finishWhatsNew() = homePrefs.finishWhatsNew()
 

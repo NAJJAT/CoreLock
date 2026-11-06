@@ -418,7 +418,7 @@ A broken migration deletes the user's rules and history. Treat schema changes as
 | Unit (JVM) | Decision logic, parsers, rule matching, CSV escaping. |
 | Property tests (fixed seed) | DNS vs SNI consistency, rule precedence, normalization. |
 | Level matrix (`ProtectionLevelMatrixTest`) | Every level against pinned excerpts of the real lists (`src/test/resources/levels/`), through the service's own `BlocklistRepo.levelLists` and `NameBlockPolicy`. Regenerate the excerpts when a list or level changes; never edit them by hand. |
-| Malformed-input tests | Every parser: truncated, oversized, looping, random bytes. No crash, no hang. Our own fuzzer (`fuzz/Fuzz.kt`, fixed seeds, a few seconds on every pull request); QUIC targets mutate the decrypted frames and re-encrypt them (`QuicFuzzTest`). The nightly workflow runs them 50 times longer with a new seed. |
+| Malformed-input tests | Every parser: truncated, oversized, looping, random bytes. No crash, no hang. Our own fuzzer (`fuzz/Fuzz.kt`, fixed seeds, a few seconds on every pull request); QUIC targets mutate the decrypted frames and re-encrypt them (`QuicFuzzTest`: the Initial parser, the CRYPTO reassembler `QuicSniTracker`, and the gate's holding sequences); the TCP reassembler has its own (`ClientHelloAssemblerTest`). The nightly workflow runs them 50 times longer with a new seed. Jazzer (coverage-guided) is planned for 1.3 (owner, 2026-11-05). |
 | Security tests (`sectest/`) | Formula injection, disclosure of outbound hosts, exported components. |
 | Instrumented | Room migrations, service start/stop, Keystore. `LiveListsLevelTest` (nightly only, `liveLists=true`) uses the live lists and real lookups; it is skipped everywhere else. |
 | Manual device checks | Real apps at each level (Chrome, YouTube, messaging, video calls), Wi-Fi ↔ mobile switch, captive portal, Private DNS modes, battery and memory (`adb shell dumpsys meminfo com.privacyguard.app.enterprise`). |
@@ -448,7 +448,9 @@ Workflow: `.github/workflows/ci.yml`. Required checks on `main`:
 3. Room migration and instrumented tests (emulator)
 4. Secret scan (gitleaks)
 
-Not required checks: `.github/workflows/nightly.yml` (fuzz targets, 50x longer, new seed each night; and `LiveListsLevelTest` on an emulator: today's live lists through the app's download, level and DNS code, the one test allowed to use the network, opening an issue when it fails) `malware-snapshot.yml` (monthly pull request with a fresh malware fallback list), and `release-checks.yml` (on each published release: signer equals the README fingerprint, the release text shows each APK's SHA-256, and `SHA256SUMS.txt` is added; it never builds or signs).
+Not required checks: `.github/workflows/nightly.yml` (fuzz targets, 50x longer, new seed each night; and `LiveListsLevelTest` on an emulator: today's live lists through the app's download, level and DNS code, the one test allowed to use the network, opening an issue when it fails) `malware-snapshot.yml` (monthly pull request with a fresh malware fallback list), and `release-checks.yml` (on each published release: signer equals the README fingerprint, the release text shows each APK's SHA-256; `SHA256SUMS.txt` is a run artifact the owner attaches; read-only, it never builds, signs or uploads).
+
+Write permissions (owner, 2026-11-05): only `nightly.yml` `live-lists` (`issues: write`, to open or comment on the failure issue) and `malware-snapshot.yml` (`contents: write` + `pull-requests: write`, to push its branch and open the PR). Every other workflow and job is read-only. The owner reviews and merges every PR.
 
 Rules:
 - A red CI is a stop sign. Nothing merges on red.
@@ -467,7 +469,7 @@ The app (the `enterprise` flavor, the only one) is released as a signed APK on G
 2. Version: `versionCode` always increases by at least 1 (Android refuses updates otherwise); `versionName` follows semantic versioning (`1.0.0`, `1.0.1`, `1.1.0`). The first release is `versionName = "1.0.0"`, `versionCode = 1` (`app/build.gradle.kts`), tag `v1.0.0`. Git tag `vX.Y.Z` is created by the owner.
 3. Translations reviewed (`docs/TRANSLATION_REVIEW_*.md`).
 4. Owner builds and signs with the real key (never the agent).
-5. Release page contains: the APK, its **SHA-256 checksum**, the **signing certificate SHA-256 fingerprint** (same as in the README), release notes, and known limitations (§16). The `release-checks.yml` run must be green afterwards. Full list: `docs/RELEASE_CHECKLIST.md` (release and deploy checks; GitHub attestations are a team decision there).
+5. Release page contains: the APK, its **SHA-256 checksum**, the **signing certificate SHA-256 fingerprint** (same as in the README), release notes, and known limitations (§16). The `release-checks.yml` run must be green afterwards. Full list: `docs/RELEASE_CHECKLIST.md` (release and deploy checks; no GitHub attestations, owner's decision 2026-11-05, options B and C documented there).
 6. Release notes (`RELEASE_NOTES_X.Y.md`) in plain language: what's new, what's fixed, what can't be blocked, how to update.
 
 The agent can prepare everything except signing and publishing: version bump proposal, release notes, translation review file, changelog, and a checklist of what the owner must do.
@@ -498,7 +500,7 @@ Documentation is part of the product. Outdated docs in a security app are a secu
 
 - `docs/HOW_IT_WORKS.md` — deeper technical explanation of §5 for curious users and contributors.
 - `docs/BLOCKING_POLICY.md` — user-facing blocking policy: what each level blocks, what is exempt and why, what can't be blocked, how to allow-list and report. Update it in the same change as any list, level, exemption or precedence change. Issue forms in `.github/ISSUE_TEMPLATE/` link to it.
-- `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 are accepted (2026-10-25); 0007–0011 are proposed, 0012 is accepted (2026-10-28) 0013 is accepted (2026-11-04); 0014 and 0015 are proposed (2026-11-05). Never rewrite an accepted record; supersede it with a new one.
+- `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 are accepted (2026-10-25); 0007–0011 are proposed, 0012 is accepted (2026-10-28) 0013 is accepted (2026-11-04); 0014 is proposed and 0015 accepted (2026-11-05). Never rewrite an accepted record; supersede it with a new one.
 - `RELEASE_NOTES_X.Y.md`, `docs/TRANSLATION_REVIEW_X.Y.md`.
 - `SECURITY.md` — vulnerability reporting.
 
@@ -559,7 +561,7 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 
 - In-app ads in YouTube, Instagram, Snapchat, TikTok and Facebook can't be blocked without root: they come from the same hosts as the content. User-facing wording: `docs/BLOCKING_POLICY.md`.
 - At the DNS layer, Android's resolver makes the request, so per-app Allow rules and ad-SDK exemptions only work at the connection (SNI) layer.
-- Encrypted Client Hello (ECH) hides the real server name; only the outer name is visible. At Strict, an opt-in setting removes ECH keys from DNS answers (`EchStripper`, ADR 0015; default off until the team decides, to be reviewed when encrypted upstream DNS ships). It doesn't reach browsers with their own DoH or keys cached before it was turned on.
+- Encrypted Client Hello (ECH) hides the real server name; only the outer name is visible. At Strict, an opt-in setting removes ECH keys from DNS answers (`EchStripper`, ADR 0015; off by default, owner's decision 2026-11-05, to be reviewed when encrypted upstream DNS ships). It doesn't reach browsers with their own DoH or keys cached before it was turned on.
 - Apps using hardcoded IPs with no SNI can only be blocked per app.
 - On Android 7 to 9, a per-app rule can occasionally apply to the wrong app; Android 10 and newer are not affected.
 - The kill switch requires Android's Always-on VPN + lockdown.

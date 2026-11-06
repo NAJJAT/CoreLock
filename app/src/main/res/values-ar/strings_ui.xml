@@ -45,6 +45,8 @@
     <string name="ui_attention_usage_access">حظر التطبيقات في الخلفية يحتاج إلى إذن الوصول إلى بيانات الاستخدام.</string>
     <string name="ui_attention_battery_restricted">استخدام البطارية مقيّد، لذلك قد يوقف Android تطبيق CoreLock.</string>
     <string name="ui_attention_battery_optimized">بعض الهواتف توقف CoreLock لتوفير البطارية. اسمح له بالعمل في الخلفية.</string>
+    <string name="ui_attention_inspection_cert">يحتاج فحص HTTPS إلى شهادة CoreLock الجديدة. لن يُفحص شيء حتى تثبّتها. لم تعد الشهادة القديمة تعمل.</string>
+    <string name="ui_install_certificate">تثبيت الشهادة</string>
     <string name="ui_attention_alert">تنبيه جديد: %1$s</string>
     <string name="ui_open_alerts">افتح التنبيهات</string>
     <string name="ui_whats_new">تغيّرت أماكن بعض الأشياء. الإحصاءات وفحص HTTPS موجودة الآن في الإعدادات › متقدم.</string>

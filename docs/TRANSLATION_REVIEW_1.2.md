@@ -60,3 +60,16 @@ Certificate and file names stay in English (they are what Android shows).
 All Arabic, French and Dutch text above is machine-made: Arabic for the owner to check,
 French and Dutch for native speakers. The step-3 text was also wrong before: files were
 named "PrivacyGuard-CA-…", not "privacyguard_ca".
+
+## Decision 3: Home card after the update from 1.1 (`res/values*/strings_ui.xml`, 2 strings)
+
+Shown once on Home to users who had HTTPS inspection on in 1.1, until they install the new
+certificate or dismiss the card. Home is an everyday screen, so the certificate is not named
+(BannedWordsTest); the HTTPS-inspection screen names it.
+
+| Key | English | Arabic | French | Dutch |
+|---|---|---|---|---|
+| `ui_attention_inspection_cert` | HTTPS inspection needs CoreLock’s new certificate. Until you install it, nothing is inspected. The old certificate no longer works. | يحتاج فحص HTTPS إلى شهادة CoreLock الجديدة. لن يُفحص شيء حتى تثبّتها. لم تعد الشهادة القديمة تعمل. | L’inspection HTTPS a besoin du nouveau certificat de CoreLock. Tant que vous ne l’avez pas installé, rien n’est inspecté. L’ancien certificat ne fonctionne plus. | HTTPS-inspectie heeft het nieuwe certificaat van CoreLock nodig. Tot je het installeert, wordt niets geïnspecteerd. Het oude certificaat werkt niet meer. |
+| `ui_install_certificate` | Install certificate | تثبيت الشهادة | Installer le certificat | Certificaat installeren |
+
+Arabic, French and Dutch are machine-made.

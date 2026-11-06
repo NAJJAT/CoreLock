@@ -361,6 +361,11 @@ fun MitmScreen(onBack: (() -> Unit)? = null) {
     LaunchedEffect(Unit) {
         vm.installCaEvent.collect { startCaInstall() }
     }
+    // Opened from Home's "Install certificate" card (after the update from 1.1): install
+    // at once. With consent expired, the renewal dialog asks first and installs after it.
+    LaunchedEffect(Unit) {
+        if (com.privacyguard.vpn.mitm.CaUpgradeNotice.consumeInstallRequest() && uiState.isConsentValid) startCaInstall()
+    }
 
     Box(Modifier.fillMaxSize().background(CoreLockTheme.colors.background)) {
         when (val s = screen) {

@@ -28,6 +28,10 @@ object FlavorStartup {
         // The broadcast is not replayed, so pick up any policy the EMM changed
         // while the app was not running.
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            // Before anything can replace a 1.1 CA (the VPN's start, the MDM policy below);
+            // CaManager records the case too if it replaces the CA first.
+            runCatching { com.privacyguard.vpn.mitm.CaUpgradeNotice.checkAtStart(app) }
+                .onFailure { Log.w(TAG, "CA notice check failed: ${it.javaClass.simpleName}") }
             runCatching { ManagedConfigApplier.apply(app) }
                 .onFailure { Log.e(TAG, "Failed to apply managed configuration at startup", it) }
         }

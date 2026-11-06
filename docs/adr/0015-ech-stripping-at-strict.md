@@ -1,6 +1,6 @@
 # 0015. Optionally remove ECH keys from DNS answers at Strict
 
-- **Status:** Proposed (the default is a team decision; built off)
+- **Status:** Accepted (owner, 2026-11-05): built, and **off by default**
 - **Date:** 2026-11-05
 - **Commits:** none yet (implemented on branch `hardening-1.2`, not committed)
 - **Backlog:** hardening plan task 1.4; CLAUDE.md §16.1 (ECH limit).
@@ -41,7 +41,7 @@ doesn't use ECH.
    network can see these names too." Removing the key undoes ECH's privacy benefit
    against the network for those sites; the user decides.
 
-## The default: a team decision
+## The default: off (owner's decision, 2026-11-05)
 
 | Default | For | Against |
 |---|---|---|

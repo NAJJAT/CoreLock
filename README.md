@@ -185,7 +185,7 @@ Latest version: **1.1.0** ([release notes](RELEASE_NOTES_1.1.0.md)). Earlier: [1
    APK is signed with APK Signature Scheme v2 only.) From 1.2 the release page also
    has `SHA256SUMS.txt`: with it next to the APK, `sha256sum -c SHA256SUMS.txt` checks
    the file. An automatic check on each release confirms the APK is signed with the key
-   below before the file is added.
+   below.
 3. Open the APK. Android asks to allow installs from the app you used (browser or
    file manager): allow it for this install, then turn it off again.
 4. **Updating:** install the newer APK over the old one; your data stays. Android

@@ -4,8 +4,10 @@
 #   1. checks every APK on the release is signed with the key whose SHA-256 fingerprint
 #      is in the README at that tag, and fails loudly if not;
 #   2. checks the release text names each APK's SHA-256 (the owner copies it in by hand);
-#   3. adds SHA256SUMS.txt to the release, for `sha256sum -c`.
-# It never builds, signs, edits the release text or deletes anything. GitHub artifact
+#   3. makes SHA256SUMS.txt (for `sha256sum -c`) as a run artifact; the owner attaches it
+#      to the release.
+# Read-only (owner, 2026-11-05: write access only for the nightly issue and the
+# malware-snapshot PR). It never builds, signs, uploads to or edits the release. GitHub artifact
 # attestations are not made here: an attestation says "this workflow built this file",
 # and this workflow doesn't build the APK. See docs/RELEASE_CHECKLIST.md, "Attestations".
 name: Release checks
@@ -31,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: write        # upload SHA256SUMS.txt to the release; nothing else
+      contents: read         # download the release's APKs and read its text
     env:
       TAG: ${{ github.event.release.tag_name || inputs.tag }}
       GH_TOKEN: ${{ github.token }}
@@ -77,7 +79,12 @@ jobs:
               missing=1
             fi
           done < SHA256SUMS.txt
-          # Uploaded either way, so users can check the file; the red run tells the owner
-          # to fix the release text.
-          gh release upload "$TAG" SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
           exit $missing
+
+      - name: Keep SHA256SUMS.txt for the owner to attach
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: SHA256SUMS-${{ env.TAG }}
+          path: ${{ runner.temp }}/release/SHA256SUMS.txt
+          if-no-files-found: ignore

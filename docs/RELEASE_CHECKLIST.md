@@ -35,8 +35,10 @@ the agent prepares everything else. Tick each line, or write why it does not app
       the release notes and the known limits.
 - [ ] After publishing, the **Release checks** workflow (`.github/workflows/release-checks.yml`)
       is green. It checks the signer against the README at the tag and that the release
-      text shows each APK's SHA-256, and adds `SHA256SUMS.txt`. A red run means: don't
-      announce the release; fix the release text or the APK first.
+      text shows each APK's SHA-256, and keeps `SHA256SUMS.txt` as a run artifact. A red run
+      means: don't announce the release; fix the release text or the APK first.
+- [ ] Download the `SHA256SUMS-vX.Y.Z` artifact from that run and attach `SHA256SUMS.txt`
+      to the release (the workflow is read-only and can't upload it).
 
 ## 4. Deploy checks (after publishing)
 
@@ -48,7 +50,7 @@ the agent prepares everything else. Tick each line, or write why it does not app
 - [ ] First blocklist download succeeds on that phone (Settings › Advanced › Diagnostics).
 - [ ] Watch new issues for a week; a broken update is a reason for a quick X.Y.Z+1.
 
-## Attestations (decision for the team)
+## Attestations (decided: option A, owner 2026-11-05)
 
 GitHub artifact attestations (Sigstore, `actions/attest-build-provenance`) state that a
 file was **built** by a given workflow from a given commit. CoreLock's APK is built and
@@ -61,8 +63,9 @@ The options:
 | **B. Build in Actions, sign in Actions** | A real build provenance: this APK came from this commit, built by GitHub. | The signing key moves into GitHub secrets: a stolen repository token or a compromised action could sign a "CoreLock update". Against CLAUDE.md §1.2 today; needs the owner's explicit decision. New action (Sigstore) as a supply-chain dependency. |
 | **C. Build unsigned in Actions, attest that; owner signs the same bytes** | Provenance for the unsigned APK; the signed one differs only by the signature block. | Needs a reproducible build (same output on the owner's machine and in CI) and a check that the signed APK's contents equal the attested one. Not verified that the build is reproducible today. New action as in B. |
 
-Recommendation: **A for 1.2**, and test whether the build is reproducible (C) after it.
-Option B weakens the strongest control the app has (who can sign an update).
+**Decision (owner, 2026-11-05): A, no attestations.** B and C stay documented here for a
+later review. Option B weakens the strongest control the app has (who can sign an update);
+C first needs a reproducible build.
 
 ## Sideloading and Google developer verification
 

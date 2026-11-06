@@ -52,6 +52,9 @@ class MitmConfig(
             return p.getLong(KEY_CONSENT_TS, 0L) to p.getBoolean(KEY_CONSENT_BY_ORG, false)
         }
 
+        /** Inspection switched on (by the user or the MDM), consent aside. */
+        internal fun enabledIn(context: Context): Boolean = prefs(context).getBoolean(KEY_ENABLED, false)
+
         internal fun prefs(context: Context): SharedPreferences =
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 

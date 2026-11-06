@@ -73,6 +73,14 @@ class CaManager(private val context: Context) {
         private val initMutex = Mutex()
         private val _caCertFlow = MutableStateFlow<X509Certificate?>(null)
 
+        /** The stored CA certificate, without opening the Keystore (CaUpgradeNotice at start). */
+        internal fun storedCertificate(context: Context): X509Certificate? {
+            val b64 = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString(PREFS_KEY_CERT, null) ?: return null
+            return runCatching {
+                CertificateFactory.getInstance("X.509").generateCertificate(Base64.decode(b64, Base64.NO_WRAP).inputStream()) as X509Certificate
+            }.onFailure { Log.w(TAG, "storedCertificate: unreadable: ${it.javaClass.simpleName}") }.getOrNull()
+        }
+
         /** What [CaPolicy] needs from [cert]: subject CN and O, validity, path length. */
         internal fun infoOf(cert: X509Certificate): CaPolicy.CaInfo {
             val name = runCatching { X500Name.getInstance(cert.subjectX500Principal.encoded) }.getOrNull()
@@ -118,7 +126,10 @@ class CaManager(private val context: Context) {
                         // deleted, so the old certificate can sign nothing more; the CA card
                         // asks the user to remove it and to install the new one.
                         Log.w(TAG, "initialize: CA expired, outside policy or due — regenerating")
-                        val old = loadPersistedCert()!!.encoded
+                        val oldCert = loadPersistedCert()!!
+                        val old = oldCert.encoded
+                        // Before the replacement, while it can still be read (decision 3, 2026-11-05).
+                        CaUpgradeNotice.recordReplaced(context, oldCert)
                         deleteKey()
                         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().clear().apply()
                         generateAndPersist().also { ok ->

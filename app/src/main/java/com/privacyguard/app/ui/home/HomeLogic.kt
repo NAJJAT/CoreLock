@@ -107,6 +107,8 @@ object HomeLogic {
         val batteryDismissed: Boolean = false,
         /** Protection died with the app process and Android says the system killed it ([stoppedBySystem]). */
         val stoppedBySystem: Boolean = false,
+        /** After the update from 1.1: HTTPS inspection needs the new certificate (CaUpgradeNotice). */
+        val inspectionCertificate: Boolean = false,
         val newHighAlert: HighAlert? = null,
         val whatsNew: Boolean = false,
         val strictSuggestion: com.privacyguard.app.ui.dashboard.StrictSuggestion? = null,
@@ -122,6 +124,8 @@ object HomeLogic {
          * default) is shown only after the system really stopped protection, and can be dismissed.
          */
         data class Battery(val canDismiss: Boolean) : Attention
+        /** Inspection the user turned on stopped working until the new certificate is installed. */
+        data object InspectionCertificate : Attention
         data class NewAlert(val alert: HighAlert) : Attention
         data object WhatsNew : Attention
         data class Strict(val suggestion: com.privacyguard.app.ui.dashboard.StrictSuggestion) : Attention
@@ -131,7 +135,8 @@ object HomeLogic {
      * At most one card, the first that applies (§5.2): Private DNS → (stopped unexpectedly:
      * the hero shows it, in red with "Turn on", so no second card repeats it) → (malware in
      * the last hour: not stored per list yet, see the Phase 3 report) → Usage Access → battery
-     * → new high alert → what's new → recommendation (switch to Strict).
+     * → inspection certificate (after the update from 1.1) → new high alert → what's new →
+ * recommendation (switch to Strict).
      */
     fun attention(inputs: AttentionInputs): Attention? {
         inputs.privateDnsHost?.let { return Attention.PrivateDns(it) }
@@ -143,6 +148,7 @@ object HomeLogic {
                 if (inputs.stoppedBySystem && !inputs.batteryDismissed) return Attention.Battery(canDismiss = true)
             com.privacyguard.app.core.power.BatteryCheck.State.UNRESTRICTED -> {}
         }
+        if (inputs.inspectionCertificate) return Attention.InspectionCertificate
         inputs.newHighAlert?.let { return Attention.NewAlert(it) }
         if (inputs.whatsNew) return Attention.WhatsNew
         inputs.strictSuggestion?.let { return Attention.Strict(it) }

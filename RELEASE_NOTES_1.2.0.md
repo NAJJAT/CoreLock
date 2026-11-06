@@ -1,10 +1,7 @@
 # CoreLock 1.2.0
 
 <!-- DRAFT prepared on branch hardening-1.2 (2026-11-05). Before publishing:
-     - versionCode 3, versionName "1.2.0" in app/build.gradle.kts (not changed yet);
      - fill in <APK_SHA256> and the APK size;
-     - team decisions still open: ECH setting default (off here), the bundled malware
-       copy (+1.44 MiB), how 1.1 users are told about the new inspection certificate;
      - remove this comment. -->
 
 An update to 1.1.0 that makes protection harder to get around and lighter on memory. Install
@@ -42,8 +39,8 @@ it over 1.1.0: your rules, settings and history stay. One APK for Android 7.0 an
   its end, and where CoreLock manages the phone the new certificate replaces the old one
   automatically.
 - **New name: "CoreLock HTTPS Inspection CA".** After updating, CoreLock makes a new
-  certificate once. **If you used inspection in 1.1, install the new certificate** (the
-  HTTPS-inspection screen shows how) and remove "PrivacyGuard Enterprise CA" from
+  certificate once. **If you used inspection in 1.1, install the new certificate:** Home
+  shows a card with an "Install certificate" button until you do. Then remove "PrivacyGuard Enterprise CA" from
   Android's list of user certificates: it no longer works.
 - **More is hidden before anything is stored or sent.** Values in web addresses and forms
   are replaced by `[REDACTED]`, and content that is not text is kept only as its type
@@ -77,8 +74,7 @@ sha256sum -c SHA256SUMS.txt                       # with SHA256SUMS.txt from thi
 certutil -hashfile CoreLock-1.2.0.apk SHA256      # Windows
 ```
 
-An automatic check on this release confirmed the APK is signed with this key before
-`SHA256SUMS.txt` was added.
+An automatic check on this release confirmed the APK is signed with this key.
 
 ## Known limitations
 

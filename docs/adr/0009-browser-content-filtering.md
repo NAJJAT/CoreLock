@@ -219,6 +219,10 @@ relays must not slow the packet thread: the relay runs on its own threads today
   changes only through reviewed commits (Decision, step 2).
 - **Resolved (owner, 2026-10-28):** 90-day CA lifetime with rotation (Decision,
   step 6).
+- **Resolved (owner, 2026-11-05):** with MDM consent the CA is replaced 14 days before
+  its end (`CaPolicy.ORG_ROTATE_BEFORE_DAYS`). Users of 1.1 who had inspection on get
+  one Home card after the update with a button to install the new certificate
+  (`CaUpgradeNotice`).
 - **Resolved (owner, 2026-10-28):** the 3.46 µs (SNI) and 9.3 µs (QUIC) figures come
   from the release verification on the emulator, release build, October 2026; now
   recorded in CLAUDE.md §6.2 (Decision, step 5).
