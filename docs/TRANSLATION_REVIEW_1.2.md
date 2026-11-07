@@ -61,9 +61,9 @@ All Arabic, French and Dutch text above is machine-made: Arabic for the owner to
 French and Dutch for native speakers. The step-3 text was also wrong before: files were
 named "PrivacyGuard-CA-…", not "privacyguard_ca".
 
-## Decision 3: Home card after the update from 1.1 (`res/values*/strings_ui.xml`, 2 strings)
+## Decision 3: Home card after the update from 1.0.0 (`res/values*/strings_ui.xml`, 2 strings)
 
-Shown once on Home to users who had HTTPS inspection on in 1.1, until they install the new
+Shown once on Home to users who had HTTPS inspection on before the update (1.0.0; 1.1 was never published), until they install the new
 certificate or dismiss the card. Home is an everyday screen, so the certificate is not named
 (BannedWordsTest); the HTTPS-inspection screen names it.
 

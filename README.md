@@ -168,28 +168,32 @@ CoreLock is published only on
 [GitHub Releases](https://github.com/NAJJAT/CoreLock/releases), not on Google Play.
 It runs on Android 7.0 and newer (ARM phones, 64- and 32-bit).
 
-Latest version: **1.1.0** ([release notes](RELEASE_NOTES_1.1.0.md)). Earlier: [1.0.0](RELEASE_NOTES_1.0.md).
+Latest version: **1.2.0** ([release notes](RELEASE_NOTES_1.2.0.md)). Earlier: [1.0.0](RELEASE_NOTES_1.0.md).
+Versions 1.0.1 and 1.1.0 were never published; 1.2.0 updates 1.0.0 directly.
 
-1. On the phone, download the APK (`CoreLock-1.1.0.apk`) from the release page.
+1. On the phone, download the APK (`CoreLock-1.2.0.apk`) from the release page.
 2. **Check it before installing.** The release page lists the APK's SHA-256 and the
    signing certificate's SHA-256 fingerprint (also under [Security](#security)).
    On a computer with the Android SDK build-tools:
 
    ```bash
-   apksigner verify --print-certs CoreLock-1.1.0.apk   # certificate fingerprint
-   sha256sum CoreLock-1.1.0.apk                        # Linux / macOS
-   certutil -hashfile CoreLock-1.1.0.apk SHA256        # Windows
+   apksigner verify --print-certs CoreLock-1.2.0.apk   # certificate fingerprint
+   sha256sum CoreLock-1.2.0.apk                        # Linux / macOS
+   certutil -hashfile CoreLock-1.2.0.apk SHA256        # Windows
    ```
 
    Install only if both match. (`keytool -printcert -jarfile` does not work: the
-   APK is signed with APK Signature Scheme v2 only.) From 1.2 the release page also
+   APK is signed with APK Signature Scheme v2 only.) The release page also
    has `SHA256SUMS.txt`: with it next to the APK, `sha256sum -c SHA256SUMS.txt` checks
    the file. An automatic check on each release confirms the APK is signed with the key
    below.
 3. Open the APK. Android asks to allow installs from the app you used (browser or
    file manager): allow it for this install, then turn it off again.
-4. **Updating:** install the newer APK over the old one; your data stays. Android
-   refuses an APK signed with a different key.
+4. **Updating:** install the newer APK over the old one (1.2.0 installs over 1.0.0);
+   your data stays. Android refuses an APK signed with a different key. The first
+   start after the update takes a few seconds longer: CoreLock checks the lists 1.0.0
+   kept, once, and lets nothing through until then. If you used HTTPS
+   inspection in 1.0.0, install the new certificate from the card on Home.
 5. **Google's developer verification.** Google has announced that from 2027 Android
    may also check sideloaded apps against developers registered with Google. Nothing
    changes for installs today; what it will mean for CoreLock is in
@@ -288,7 +292,7 @@ CoreLock is not affiliated with or endorsed by AdGuard.
 
 Four tabs: **Home**, **Apps**, **Activity** and **Settings**. Expert screens are under
 Settings › Advanced. Every 1.0 screen is still there; where each moved is in
-[RELEASE_NOTES_1.1.0.md](RELEASE_NOTES_1.1.0.md) ("Where things moved").
+[RELEASE_NOTES_1.2.0.md](RELEASE_NOTES_1.2.0.md) ("Where things moved").
 
 | Screen | Contents |
 |---|---|

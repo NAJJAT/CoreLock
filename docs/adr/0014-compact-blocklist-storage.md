@@ -50,6 +50,15 @@ string per parent on the packet path, against CLAUDE.md §6.2.
    deleted on the next write. (A plain read rather than `FileChannel.map`: the file is a
    few MB, and a mapped file can't be replaced or deleted on every platform while mapped.)
 
+   *Note, 2026-11-07 (owner's decision for 1.2.0):* point 5 left two starts waiting for the
+   database (about 10 s on the emulator at Standard): the first after the update from
+   1.0.0, whose version-1 file was ignored, and a level changed while protection was off,
+   because only the level in use had a file. Now the version-1 file is read once at that
+   first start, checked like a downloaded list (`ListEntryValidator`, size and entry caps,
+   gzip checksum), and deleted whatever it held; and a list change writes the file of every
+   level (from the list worker, and from the service for any level still without one, on
+   IO). Writes go through a temporary file that is synced and renamed, one writer per file.
+
 ### Collisions
 
 Two different names with the same fingerprint would make the second one blocked when the

@@ -128,7 +128,23 @@ class LiveListsLevelTest {
         }
         val all = BlockLevel.values().toSet()
         expect("malware (TIF mini)", sample(BlocklistSource.HAGEZI_TIF_MINI), all)
-        expect("ads (Pro mini)", sample(BlocklistSource.HAGEZI_PRO_MINI), setOf(BlockLevel.STANDARD, BlockLevel.STRICT))
+        // About a fifth of Pro mini is also in TIF mini (21,580 of 105,275 names on
+        // 2026-11-06). Those are malware too, so they are rightly blocked at MINIMAL; the ad
+        // sample takes only names TIF mini doesn't cover. Checked against the raw download
+        // with a plain parent walk (both are wildcard lists), not the app's own filter.
+        val tif = live.getValue(BlocklistSource.HAGEZI_TIF_MINI).toHashSet()
+        fun inTif(name: String): Boolean {
+            var n = name
+            while (true) {
+                if (n in tif) return true
+                val dot = n.indexOf('.')
+                if (dot < 0) return false
+                n = n.substring(dot + 1)
+            }
+        }
+        val adsOnly = sample(BlocklistSource.HAGEZI_PRO_MINI, 2_000).filter { !inTif(it) }.take(300)
+        assertTrue("too few ad-only names in the sample: ${adsOnly.size}", adsOnly.size >= 200)
+        expect("ads (Pro mini)", adsOnly, setOf(BlockLevel.STANDARD, BlockLevel.STRICT))
         val proMini = live.getValue(BlocklistSource.HAGEZI_PRO_MINI).toHashSet()
         val standard = levels.getValue(BlockLevel.STANDARD).policy
         val strictOnly = sample(BlocklistSource.HAGEZI_PRO, 2_000).filter { it !in proMini && standard.reasonFor(it, null) == null }.take(300)

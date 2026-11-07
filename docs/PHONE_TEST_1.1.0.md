@@ -40,7 +40,7 @@ APK first, then 1.1.0 installed over it.
    apksigner verify --print-certs CoreLock-1.1.0.apk
    ```
    **Expected:** the 1.0.0 SHA-256 equals the one in `RELEASE_NOTES_1.0.md`; the 1.1.0
-   SHA-256 equals the one you will put in `RELEASE_NOTES_1.1.0.md` (`<APK_SHA256>`); for
+   SHA-256 equals the one in the notes of the version under test (`RELEASE_NOTES_1.2.0.md`, `<APK_SHA256>`); for
    both, "Signer #1 certificate SHA-256 digest" equals the fingerprint in the README
    (Security). **Fail (blocker):** any value differs.
 2. Start from 1.0.0. If any CoreLock or PrivacyGuard build is on the phone, uninstall

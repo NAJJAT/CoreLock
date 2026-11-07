@@ -131,11 +131,14 @@ class BlocklistRepo(
      * curated ad hosts from Standard up, and malware and phishing always. The service and
      * ProtectionLevelMatrixTest both use this, so the test checks what really runs.
      */
-    suspend fun levelLists(level: com.privacyguard.core.filter.FilterEngine.BlockLevel): LevelLists {
+    suspend fun levelLists(level: com.privacyguard.core.filter.FilterEngine.BlockLevel): LevelLists =
+        LevelLists(levelBlocked(level), domainsIn(setOf(CAT_MALWARE)))
+
+    /** [LevelLists.blocked] alone: the security list is the same at every level, so it is read once for all. */
+    suspend fun levelBlocked(level: com.privacyguard.core.filter.FilterEngine.BlockLevel): List<String> {
         val levels = com.privacyguard.core.filter.ProtectionLevels
-        val blocked = levelListDomains(level) +
+        return levelListDomains(level) +
             (if (levels.includesCuratedAdHosts(level)) com.privacyguard.app.core.blocklist.CuratedAdDomains.all else emptyList())
-        return LevelLists(blocked, domainsIn(setOf(CAT_MALWARE)))
     }
 
     /** Stored source keys that start with [prefix] (case-sensitive). */

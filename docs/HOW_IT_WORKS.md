@@ -189,12 +189,14 @@ IPv6 protocols are dropped and counted (Diagnostics shows the count). DNS over
 IPv6 to outside resolvers is dropped so apps use the tunnel's IPv4 resolver.
 
 **Start-up order.** Your rules and the blocklists are loaded *before* the tunnel
-opens, so no traffic is ever carried unfiltered. The blocklists come from a plain
-cache file of the last loaded lists (`app/core/blocklist/BlocklistCache.kt`;
-public lists only), which takes a few seconds. They are then reloaded from the
-database in the background, in case they changed while protection was off.
-Without a cache (the very first start) the tunnel waits for the database, about
-half a minute with the full lists.
+opens, so no traffic is ever carried unfiltered. The blocklists come from a start-up
+file per protection level (`app/core/blocklist/BlocklistCache.kt`; public lists only,
+written for every level whenever the lists change), which takes a few seconds. They are
+then reloaded from the database in the background, in case they changed while protection
+was off. The first start after the update from 1.0.0 reads 1.0.0's file once instead,
+checked like a downloaded list, then deletes it. Without any file (a damaged one, or
+lists never downloaded) the tunnel waits for the database: about 10 seconds on a test
+emulator at Standard, longer on a slow phone. Nothing passes meanwhile.
 
 ### 3.2 DNS
 
@@ -742,11 +744,11 @@ key, an optional certificate pin and an optional body signature (`SiemEndpoint.k
   phishing list shipped in the app (`assets/blocklists/hagezi-tif-mini.txt`, refreshed
   monthly by a pull request from `.github/workflows/malware-snapshot.yml`; its date is
   in Settings › Advanced › Diagnostics). The copy is parsed like a download and deleted
-  once the live list has downloaded. A download writes the start-up cache (the
+  once the live list has downloaded. A download writes the start-up file of every level (the
   fingerprint arrays, checked by length, order and checksum before use), so
-  later starts take a few seconds. Only a start whose cache is missing (for example
-  the first one after this cache was introduced) waits about half a minute for the
-  database.
+  later starts take a few seconds, also after a level change while protection was off.
+  Only a start without a usable file waits for the database (about 10 s on a test
+  emulator at Standard).
 - **Memory:** with all lists loaded the app used about 200–260 MB (PSS) on a test
   phone, about 68 MB of it Java heap, before the lists were stored as fingerprints
   (1.2). The new numbers are still to be measured on a phone.

@@ -91,8 +91,9 @@ object BlocklistManager {
                 retireReplacedSources(repo, succeededAtLeastOnce(times))
                 _size.value = repo.totalCount()
                 _lastUpdate.value = System.currentTimeMillis()
-                // With protection on, the VPN reloads and refreshes the start-up cache itself.
-                if (!com.privacyguard.platform.android.PrivacyVpnService.isRunning) runCatching { writeStartupCache(ctx, repo) }
+                // Every level, also with protection on: the VPN refreshes only the level it
+                // runs at, and a level changed later would otherwise start from the database.
+                runCatching { writeStartupCache(ctx, repo) }
                     .onFailure { android.util.Log.w("BlocklistManager", "Start-up cache not written: ${it.javaClass.simpleName}") }
                 // The running VPN keeps its own in-memory filter; tell it to reload.
                 com.privacyguard.app.data.repository.BlocklistSyncBus.publish()
@@ -212,14 +213,19 @@ object BlocklistManager {
     }
 
     /**
-     * Lists downloaded while protection was off: write the cache the next VPN start
-     * reads, so it does not wait half a minute for the encrypted database.
+     * The lists changed: write the start-up file of every level, so the next VPN start
+     * does not wait for the encrypted database, also at a level changed while protection
+     * was off. Runs in the caller's IO context (the list worker), never on the packet path.
+     * The malware list is the same at every level and is read once.
      */
-    private suspend fun writeStartupCache(ctx: Context, repo: BlocklistRepo) {
-        val level = com.privacyguard.core.filter.ProtectionLevels.parse(
-            com.privacyguard.app.data.local.preferences.SettingsPreferences.getInstance(ctx).protectionLevel.value)
-        val lists = repo.levelLists(level)
-        BlocklistCache.write(ctx, level.name, lists.blocked, lists.security)
+    internal suspend fun writeStartupCache(ctx: Context, repo: BlocklistRepo) = withContext(Dispatchers.IO) {
+        val security = com.privacyguard.vpn.firewall.DomainFilter().apply {
+            rebuild(repo.domainsIn(setOf(BlocklistRepo.CAT_MALWARE)))
+        }.fingerprints()
+        for (level in com.privacyguard.core.filter.FilterEngine.BlockLevel.values()) {
+            val blocked = com.privacyguard.vpn.firewall.DomainFilter().apply { rebuild(repo.levelBlocked(level)) }
+            BlocklistCache.write(ctx, level.name, blocked.fingerprints(), security)
+        }
     }
 
     private fun blocklistRepo(ctx: Context) = BlocklistRepo(

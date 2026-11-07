@@ -1,8 +1,10 @@
 # Phone test for 1.2.0: networks, vendors and battery
 
 Checks that only a real phone on a real network can answer, added for 1.2 (hardening plan,
-task 0.4). They come **on top of** `docs/PHONE_TEST_1.1.0.md`: run that checklist first (with
-the 1.2.0 APK in place of 1.1.0), then these.
+task 0.4). 1.1.0 was never published, so users update from the published **1.0.0** straight
+to 1.2.0. Run check 0 below first (the update path), then `docs/PHONE_TEST_1.1.0.md` from
+its section 2 on, with the 1.2.0 APK in place of 1.1.0 (its section 1 is replaced by check
+0), then checks A to G.
 
 **Who:** the owner, or a tester with the phones below. **Build:** the signed release APK
 that will be published, nothing else. Package: `com.privacyguard.app.enterprise`.
@@ -24,8 +26,70 @@ that will be published, nothing else. Package: `com.privacyguard.app.enterprise`
 | D | Any phone, two ordinary days |
 | E | A Wi-Fi network with a login page (hotel, café, train, airport) |
 | F | Any phone |
+| G | Any phone (do it right after check 0, and once more at the end) |
 
 ---
+
+### 0. Install the published 1.0.0, then update to 1.2.0
+
+1. Download the APK attached to the published **v1.0.0** release on GitHub and save it as
+   `release-1.0.0.apk`. Check both APKs before installing:
+   ```
+   certutil -hashfile release-1.0.0.apk SHA256
+   certutil -hashfile CoreLock-1.2.0.apk SHA256
+   apksigner verify --print-certs release-1.0.0.apk
+   apksigner verify --print-certs CoreLock-1.2.0.apk
+   ```
+   **Expected:** the 1.0.0 SHA-256 equals the one on the v1.0.0 release page; the 1.2.0
+   SHA-256 equals the one in `RELEASE_NOTES_1.2.0.md`; both certificate digests equal the
+   fingerprint in the README.
+2. Start from 1.0.0. If any CoreLock or PrivacyGuard build is on the phone, uninstall it
+   first (this deletes its data): `adb -s PHONE_ID uninstall com.privacyguard.app.enterprise`.
+   Then: `adb -s PHONE_ID install release-1.0.0.apk`. **Expected:** the app is called
+   PrivacyGuard and Settings › About shows 1.0.0.
+3. Give the update something to keep: go through onboarding, start protection at
+   **Standard**, let the lists download (Settings › Blocklists shows a count), browse for a
+   few minutes, add one Block rule (`example.net`) and one per-app Allow rule, change one
+   setting (for example notifications off). If you test HTTPS inspection: turn it on with
+   consent and install its certificate ("PrivacyGuard Enterprise CA").
+4. Note the time, then update: `adb -s PHONE_ID install -r CoreLock-1.2.0.apk`.
+   **Expected:** `Success`, without uninstalling. The app is now called **CoreLock**,
+   Settings › About shows 1.2.0, no onboarding, and the rules, the setting, the level and
+   the history from step 3 are all still there.
+5. Turn protection on (if Android's Always-on VPN restarted it, skip to check G and note
+   that). **Expected:** Home says protected; the one-time "Some things moved" card shows
+   once. With inspection from step 3: Home shows the "Install certificate" card until the
+   new "CoreLock HTTPS Inspection CA" is installed.
+
+**Fail (blocker):** install refused, onboarding shown again, or any rule, setting or
+history lost.
+
+### G. Time until filtering starts (new in 1.2)
+
+CoreLock lets no traffic through until its lists are loaded. It keeps a quick-start copy of
+the lists for every level. The **first start after updating from 1.0.0** reads 1.0.0's
+older copy once and checks every name like a download; a **level changed while protection
+is off** uses that level's copy. Without any usable copy it reads the encrypted database
+first. Measured on the test emulator with a debug build (2026-11-07): after the update
+7.5–8.0 s (9.8 s before this change), after a level change 1.8–2.1 s (9.7–10.0 s before),
+a normal start about 2 s, the database path about 10 s. The phone, with the release build,
+decides.
+
+1. Copy the probe to the phone once:
+   `adb -s PHONE_ID push tools/repro/startup-dns-wait.sh /data/local/tmp/`
+2. **First start after the update** (check 0, step 5): before turning protection on, run
+   `adb -s PHONE_ID shell sh /data/local/tmp/startup-dns-wait.sh`, then turn protection on
+   within 10 s. Wait for the line `RESULT: lookups waited N s`.
+3. **Level changed while off:** turn protection off, switch the level to **Strict**, run
+   the probe again and turn protection on. Then switch back to Standard the same way.
+4. **Normal start:** turn protection off and on again without changing anything, with the
+   probe running.
+5. Also by hand once, at step 2 or 3: count the seconds from tapping the switch until a
+   site you haven't opened today loads in Chrome.
+
+**Pass:** filtering active within **30 s** in steps 2, 3 and 5 (RESULT 30 s or less), and
+within 5 s in step 4. **Fail (blocker):** more than 30 s in any step. Write every number in
+the table, with the phone model.
 
 ### A. IPv6-only mobile data with 464XLAT
 
@@ -154,7 +218,7 @@ start, so nothing should break.
 
 1. Protection on at **Standard**. For 30 minutes use Chrome (ten sites, a login, a video),
    YouTube, WhatsApp, a banking app and two apps you use daily.
-   **Expected:** everything works as at 1.1.0.
+   **Expected:** everything works as at 1.0.0 (or with protection off).
 2. Settings › Advanced › Diagnostics › *Server-name blocking (SNI)*: note the second number
    ("Reset because their TLS start could not be read").
    **Expected:** 0, or a handful at most. If it is more than 10 after 30 minutes, note which
@@ -162,7 +226,7 @@ start, so nothing should break.
 3. Repeat step 1 for 10 minutes at **Strict**. **Expected:** the same.
 4. Switch to **Minimal**. **Expected:** the number no longer grows.
 
-**Fail (blocker):** an app or site works at 1.1.0 and stops working at Standard in 1.2.0.
+**Fail (blocker):** an app or site works at 1.0.0 (or with protection off) and stops working at Standard in 1.2.0.
 
 ---
 
@@ -173,6 +237,8 @@ APK SHA-256 (first 8): ________ Dates: ________
 
 | # | Check | Result (PASS / FAIL / SKIP) | Numbers and notes |
 |---|---|---|---|
+| 0 | Checksums and fingerprint; published 1.0.0, then 1.2.0 over it, data kept; cards once | | |
+| G | Filtering active within 30 s: first start after update, level changed while off, normal start | | After update: ___ s Strict: ___ s Standard: ___ s Normal: ___ s By hand: ___ s |
 | A | IPv6-only + 464XLAT: sites (one IPv4-only), voice and video call, IPv4-literal app | | Carrier: ___ CLAT interface: ___ |
 | B | Private DNS: warning on Home and before start, goes away in Automatic, pages load in all modes | | Ads seen with hostname mode: ___ |
 | C | Screen off 60 min and one night, Samsung and Xiaomi, true status if stopped | | Samsung: ___ Xiaomi: ___ |
