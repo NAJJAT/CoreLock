@@ -175,12 +175,12 @@ class TcpForwarderTest {
             }
             val key = SessionKey.of("10.0.0.2", port, "127.0.0.1", serverSocket.localPort, IpPacket.PROTO_TCP)
             forwarder.handle(key, segment(seq = 1_000, ack = 0, syn = true, window = 65_535))
-            val synAck = nextSegment()!!
+            val synAck = synAckFor(port)
             val hello = tlsClientHello(sni)
             forwarder.handle(key, segment(seq = 1_001, ack = (synAck.sequenceNumber + 1) and 0xFFFFFFFFL, ack_ = true, window = 65_535, data = hello))
             var sawRst = false
             val deadline = System.currentTimeMillis() + 3_000
-            while (System.currentTimeMillis() < deadline) { val s = nextSegment(500) ?: continue; if (s.flagRst) { sawRst = true; break } }
+            while (System.currentTimeMillis() < deadline) { val s = nextSegment(500, forPort = port) ?: continue; if (s.flagRst) { sawRst = true; break } }
             t.join(3_000); serverSocket.close()
             assertEquals("RST for $sni", blocked, sawRst)
             assertEquals("bytes at server for $sni", if (blocked) 0 else hello.size, got.size())
@@ -369,7 +369,7 @@ class TcpForwarderTest {
         try {
             val key = SessionKey.of("10.0.0.2", clientPort, "127.0.0.1", serverSocket.localPort, IpPacket.PROTO_TCP)
             forwarder.handle(key, segment(seq = 1_000, ack = 0, syn = true, window = 65_535))
-            val synAck = nextSegment()!!
+            val synAck = synAckFor(clientPort)
             var seq = 1_001L
             for (data in segments) {
                 forwarder.handle(key, segment(seq = seq, ack = (synAck.sequenceNumber + 1) and 0xFFFFFFFFL, ack_ = true, window = 65_535, data = data))
@@ -377,7 +377,7 @@ class TcpForwarderTest {
             }
             t.join(4_000)
             var sawRst = false
-            while (true) { val s = nextSegment(300) ?: break; if (s.flagRst) sawRst = true }
+            while (true) { val s = nextSegment(300, forPort = clientPort) ?: break; if (s.flagRst) sawRst = true }
             return sawRst to synchronized(got) { got.size() }
         } finally {
             serverSocket.close()
@@ -417,12 +417,12 @@ class TcpForwarderTest {
         try {
             val key = SessionKey.of("10.0.0.2", clientPort, "127.0.0.1", serverSocket.localPort, IpPacket.PROTO_TCP)
             forwarder.handle(key, segment(seq = 1_000, ack = 0, syn = true, window = 65_535))
-            val synAck = nextSegment()!!
+            val synAck = synAckFor(clientPort)
             forwarder.handle(key, segment(seq = 1_001, ack = (synAck.sequenceNumber + 1) and 0xFFFFFFFFL, ack_ = true, window = 65_535, data = hello))
             // The server read ends with the ClientHello, or with EOF once the session is reset.
             t.join(3_000)
             var sawRst = false
-            while (true) { val s = nextSegment(300) ?: break; if (s.flagRst) sawRst = true }
+            while (true) { val s = nextSegment(300, forPort = clientPort) ?: break; if (s.flagRst) sawRst = true }
             return sawRst to got.size()
         } finally {
             serverSocket.close()
@@ -442,10 +442,32 @@ class TcpForwarderTest {
 
     // ── helpers ──────────────────────────────────────────────────────────────
 
-    private fun nextSegment(timeoutMs: Long = 5_000): TcpPacket? {
-        val raw = injected.poll(timeoutMs, TimeUnit.MILLISECONDS) ?: return null
-        val ip = IpPacket.parse(raw) ?: return null
-        return TcpPacket.parse(ip)
+    /**
+     * The next segment the forwarder sent to the device, or, with [forPort], the next one
+     * for that device port. The test never ACKs the FIN that ends each connection, so the
+     * forwarder retransmits it (1 s, 2 s, 4 s ... up to 8 times) into the same queue. A
+     * test that opens several connections in a row must skip those: on Linux CI a stale
+     * FIN of an earlier connection was read as the next connection's SYN-ACK, its ACK
+     * number was wrong, and the data never reached the server.
+     */
+    private fun nextSegment(timeoutMs: Long = 5_000, forPort: Int? = null): TcpPacket? {
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs)
+        while (true) {
+            val left = deadline - System.nanoTime()
+            if (left <= 0) return null
+            val raw = injected.poll(left, TimeUnit.NANOSECONDS) ?: return null
+            val ip = IpPacket.parse(raw) ?: return null
+            val tcp = TcpPacket.parse(ip) ?: return null
+            if (forPort == null || tcp.destinationPort == forPort) return tcp
+        }
+    }
+
+    /** The SYN-ACK for the connection from device port [clientPort]. */
+    private fun synAckFor(clientPort: Int): TcpPacket {
+        val synAck = nextSegment(forPort = clientPort)
+        assertNotNull("no SYN-ACK for port $clientPort", synAck)
+        assertTrue("expected SYN-ACK for port $clientPort", synAck!!.flagSyn && synAck.flagAck)
+        return synAck
     }
 
     @Suppress("LocalVariableName")
