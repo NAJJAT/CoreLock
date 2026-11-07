@@ -259,4 +259,27 @@ class ClientHelloParserTest {
         // Keep only up to the random field start, missing some random bytes
         assertNull(ClientHelloParser.parse(bytes.copyOf(20)))
     }
+
+    /**
+     * Review finding (2026-11-07): a name length running past the end of the SNI extension
+     * must not let the next extension's bytes count as part of the name. Here the name
+     * "1.2" claims 4 bytes more, and the next extension's header (type 0x3a3a, length
+     * 0x3a3a) reads as "::::": "1.2::::" looked like an IPv6 literal, so a hello whose name
+     * can't be read was let through at Standard and Strict instead of being reset.
+     */
+    @Test
+    fun an_sni_length_past_its_extension_is_unreadable_not_an_ip_literal() {
+        val name = "1.2".toByteArray()
+        val entry = u8(0) + u16(name.size + 4) + name
+        val sniData = u16(entry.size) + entry
+        val sniExt = u16(0x0000) + u16(sniData.size) + sniData      // ends right after "1.2"
+        val extensions = sniExt + u16(0x3a3a) + u16(0x3a3a)
+        val body = u16(0x0303) + ByteArray(32) + u8(0) + u16(2) + u16(0x1301) + u8(1) + u8(0) +
+            u16(extensions.size) + extensions
+        val handshake = u8(0x01) + u24(body.size) + body
+        val hello = ClientHelloParser.parse(u8(0x16) + u16(0x0301) + u16(handshake.size) + handshake)
+        assertNotNull(hello)
+        assertTrue("the name is refused", hello!!.sniRejected)
+        assertTrue("and can't be read: it is not an IP literal", hello.sniUnreadable)
+    }
 }

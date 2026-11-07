@@ -12,6 +12,18 @@ import kotlin.random.Random
  */
 object Fuzz {
 
+    /**
+     * Iteration multiplier: 1 on every pull request (a few seconds in all), larger in the
+     * nightly job (`-Pprivacyguard.fuzz.scale=…`, `.github/workflows/nightly.yml`).
+     */
+    val scale: Int = System.getProperty("privacyguard.fuzz.scale")?.toIntOrNull()?.coerceIn(1, 1_000) ?: 1
+
+    /**
+     * Added to every RNG seed. 0 on pull requests, so they are reproducible; the nightly
+     * job uses its run number to try new inputs. A failure prints the seed it used.
+     */
+    val seedOffset: Long = System.getProperty("privacyguard.fuzz.seedOffset")?.toLongOrNull() ?: 0L
+
     private val INTERESTING_BYTES = intArrayOf(0x00, 0x01, 0x7F, 0x80, 0xFF, 0xC0, 0x3F)
     private val INTERESTING_SHORTS = intArrayOf(0x0000, 0x0001, 0x7FFF, 0x8000, 0xFFFF, 0xC00C)
 
@@ -22,8 +34,9 @@ object Fuzz {
         rngSeed: Long = 0x5EED,
         target: (ByteArray) -> Unit,
     ) {
-        val rng = Random(rngSeed)
-        for (i in 0 until iterations) {
+        val seed = rngSeed + seedOffset
+        val rng = Random(seed)
+        for (i in 0 until iterations.toLong() * scale) {
             val input = if (seeds.isEmpty() || rng.nextInt(10) == 0) {
                 rng.nextBytes(rng.nextInt(0, 2048))
             } else {
@@ -33,7 +46,7 @@ object Fuzz {
                 target(input)
             } catch (t: Throwable) {
                 throw AssertionError(
-                    "$name threw ${t::class.java.simpleName} at iteration $i (rngSeed=$rngSeed) " +
+                    "$name threw ${t::class.java.simpleName} at iteration $i (rngSeed=$seed, scale=$scale) " +
                         "for ${input.size}B input: ${input.toHex()}",
                     t,
                 )

@@ -14,7 +14,7 @@ class BlocklistDownloader {
         private const val READ_TIMEOUT = 60_000
         private const val MAX_RETRIES = 3
         // The largest supported list (OISD full) is ~10 MB; leave headroom, but bound it.
-        private const val MAX_LIST_BYTES = 32L * 1024 * 1024
+        internal const val MAX_LIST_BYTES = 32L * 1024 * 1024
     }
 
     suspend fun download(source: BlocklistSource): String? = withContext(Dispatchers.IO) {

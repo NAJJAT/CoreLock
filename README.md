@@ -168,25 +168,36 @@ CoreLock is published only on
 [GitHub Releases](https://github.com/NAJJAT/CoreLock/releases), not on Google Play.
 It runs on Android 7.0 and newer (ARM phones, 64- and 32-bit).
 
-Latest version: **1.1.0** ([release notes](RELEASE_NOTES_1.1.0.md)). Earlier: [1.0.0](RELEASE_NOTES_1.0.md).
+Latest version: **1.2.0** ([release notes](RELEASE_NOTES_1.2.0.md)). Earlier: [1.0.0](RELEASE_NOTES_1.0.md).
+Versions 1.0.1 and 1.1.0 were never published; 1.2.0 updates 1.0.0 directly.
 
-1. On the phone, download the APK (`CoreLock-1.1.0.apk`) from the release page.
+1. On the phone, download the APK (`CoreLock-1.2.0.apk`) from the release page.
 2. **Check it before installing.** The release page lists the APK's SHA-256 and the
    signing certificate's SHA-256 fingerprint (also under [Security](#security)).
    On a computer with the Android SDK build-tools:
 
    ```bash
-   apksigner verify --print-certs CoreLock-1.1.0.apk   # certificate fingerprint
-   sha256sum CoreLock-1.1.0.apk                        # Linux / macOS
-   certutil -hashfile CoreLock-1.1.0.apk SHA256        # Windows
+   apksigner verify --print-certs CoreLock-1.2.0.apk   # certificate fingerprint
+   sha256sum CoreLock-1.2.0.apk                        # Linux / macOS
+   certutil -hashfile CoreLock-1.2.0.apk SHA256        # Windows
    ```
 
    Install only if both match. (`keytool -printcert -jarfile` does not work: the
-   APK is signed with APK Signature Scheme v2 only.)
+   APK is signed with APK Signature Scheme v2 only.) The release page also
+   has `SHA256SUMS.txt`: with it next to the APK, `sha256sum -c SHA256SUMS.txt` checks
+   the file. An automatic check on each release confirms the APK is signed with the key
+   below.
 3. Open the APK. Android asks to allow installs from the app you used (browser or
    file manager): allow it for this install, then turn it off again.
-4. **Updating:** install the newer APK over the old one; your data stays. Android
-   refuses an APK signed with a different key.
+4. **Updating:** install the newer APK over the old one (1.2.0 installs over 1.0.0);
+   your data stays. Android refuses an APK signed with a different key. The first
+   start after the update takes a few seconds longer: CoreLock checks the lists 1.0.0
+   kept, once, and lets nothing through until then. If you used HTTPS
+   inspection in 1.0.0, install the new certificate from the card on Home.
+5. **Google's developer verification.** Google has announced that from 2027 Android
+   may also check sideloaded apps against developers registered with Google. Nothing
+   changes for installs today; what it will mean for CoreLock is in
+   [docs/GOOGLE_DEVELOPER_VERIFICATION.md](docs/GOOGLE_DEVELOPER_VERIFICATION.md).
 
 ## First setup
 
@@ -281,7 +292,7 @@ CoreLock is not affiliated with or endorsed by AdGuard.
 
 Four tabs: **Home**, **Apps**, **Activity** and **Settings**. Expert screens are under
 Settings › Advanced. Every 1.0 screen is still there; where each moved is in
-[RELEASE_NOTES_1.1.0.md](RELEASE_NOTES_1.1.0.md) ("Where things moved").
+[RELEASE_NOTES_1.2.0.md](RELEASE_NOTES_1.2.0.md) ("Where things moved").
 
 | Screen | Contents |
 |---|---|
@@ -544,9 +555,10 @@ SIEM code live in `src/enterprise`, the shared engine in `src/main`.
   and says why. Apps that pin certificates are passed through the same way. In
   practice inspection mostly reaches some browsers and apps built to allow it.
 - **Who can see the content:** it stays on the phone, in the encrypted database,
-  unless an administrator turns on SIEM shipping. Shipped events have personal
-  data removed from headers and text bodies, but not yet from URL query strings,
-  form data or binary bodies.
+  unless an administrator turns on SIEM shipping. Shipped events are always
+  redacted (see PII redaction below): personal data is removed from headers and
+  text bodies, values in URL query strings and form data are replaced, and binary
+  bodies are kept as type and size only.
 
 ---
 
@@ -564,11 +576,14 @@ SIEM code live in `src/enterprise`, the shared engine in `src/main`.
   - Turning inspection off deletes the signing key and tells the user how to
     remove the installed CA.
 - **PII redaction**: emails, card numbers, phone numbers, JWTs, bearer tokens
-  and sensitive JSON fields, in headers and text bodies. Anything sent to the
-  SIEM is always redacted this way; URL query strings, form data and binary
-  bodies are not redacted yet. The local payload log is redacted the same way
-  while `mitm_redact_pii` is on (the default); with it off, the inspector stores
-  exactly what left the phone.
+  and sensitive JSON fields, in headers and text bodies. Values in URL query
+  strings (also in Referer and Location headers) and in HTML form bodies become
+  `[REDACTED]`; a name is kept only when it looks like a field name and holds no
+  personal data (otherwise it is replaced too); bodies that are not text (images, files,
+  compressed or multipart data, HTTP/2 frames) are kept as type and size only.
+  Anything sent to the SIEM is always redacted this way. The local payload log is
+  redacted the same way while `mitm_redact_pii` is on (the default); with it off,
+  the inspector stores exactly what left the phone.
 - **SIEM shipping** happens automatically once 100 events are queued or a
   minute after the first one, and "Ship now" sends the same queue.
 - **Consent from MDM** (`mitm_consent_given`) is valid for as long as the
@@ -710,6 +725,11 @@ docs/  .github/
   - New fingerprints are accepted silently after an update; that is also when a
     malicious SDK could arrive.
   - QUIC (UDP/443) is not fingerprinted.
+- **Encrypted Client Hello (ECH)** hides the real server name of some browser
+  connections; CoreLock sees only a shared outer name. At Strict, an optional setting
+  (off by default) removes the ECH key from DNS answers so the real name is readable;
+  your network can then see it too. Details in
+  [docs/BLOCKING_POLICY.md](docs/BLOCKING_POLICY.md#5-limits-of-domain-level-blocking).
 - **Per-app rules on Android 7 to 9.** On these versions a per-app rule can
   occasionally apply to the wrong app. Android 10 and newer are not affected.
 - **Meta app events** share `graph.facebook.com` with login, so they cannot be
@@ -786,7 +806,7 @@ CoreLock downloads these lists at runtime; they are not shipped inside the APK.
 
 | Data | Author | License |
 |---|---|---|
-| DNS blocklists (Pro, Pro mini, Threat Intelligence Feeds mini, DoH, DoH IPs) | [HaGeZi](https://github.com/hagezi/dns-blocklists) | GPL-3.0 |
+| DNS blocklists (Pro, Pro mini, Threat Intelligence Feeds mini, DoH, DoH IPs); a copy of Threat Intelligence Feeds mini is bundled in the app for the time before the first download | [HaGeZi](https://github.com/hagezi/dns-blocklists) | GPL-3.0 |
 | OISD small | [OISD](https://oisd.nl), maintained by Stephan van Ruth ([repository](https://github.com/sjhgvr/oisd)) | GPL-3.0 |
 | Tracker list | [Exodus Privacy](https://reports.exodus-privacy.eu.org) | [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/) (contents: [DbCL 1.0](https://opendatacommons.org/licenses/dbcl/1-0/)) |
 

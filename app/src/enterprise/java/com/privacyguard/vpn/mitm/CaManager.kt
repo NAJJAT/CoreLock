@@ -13,6 +13,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x500.style.BCStyle
+import org.bouncycastle.asn1.x500.style.IETFUtils
 import org.bouncycastle.asn1.x509.BasicConstraints
 import org.bouncycastle.asn1.x509.Extension
 import org.bouncycastle.asn1.x509.KeyUsage
@@ -56,13 +58,9 @@ class CaManager(private val context: Context) {
     companion object {
         private const val TAG               = "CaManager"
         private const val KEY_ALIAS         = "privacyguard_enterprise_ca"
-        private const val CA_CN             = "PrivacyGuard Enterprise CA"
-        private const val CA_ORG            = "PrivacyGuard"
         private const val CA_COUNTRY        = "US"
-        // One year: a CA that can sign for any host should not outlive the need for it.
-        private const val CA_VALIDITY_DAYS  = 365
-        /** CAs from older builds were valid for 10 years; anything longer than this is replaced. */
-        private const val MAX_ACCEPTED_CA_LIFETIME_DAYS = 400L
+        // Name, lifetime (97 days) and rotation: CaPolicy (plan 2.3, ADR 0009).
+        private const val CA_VALIDITY_DAYS  = CaPolicy.VALIDITY_DAYS
         private const val PREFS_NAME        = "ca_manager_prefs"
         private const val PREFS_KEY_CERT    = "ca_cert_der_b64"
         private const val PREFS_KEY_SERIAL  = "ca_cert_serial"
@@ -74,6 +72,22 @@ class CaManager(private val context: Context) {
         // installed CA out of sync with the key that signs leaf certificates.
         private val initMutex = Mutex()
         private val _caCertFlow = MutableStateFlow<X509Certificate?>(null)
+
+        /** The stored CA certificate, without opening the Keystore (CaUpgradeNotice at start). */
+        internal fun storedCertificate(context: Context): X509Certificate? {
+            val b64 = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString(PREFS_KEY_CERT, null) ?: return null
+            return runCatching {
+                CertificateFactory.getInstance("X.509").generateCertificate(Base64.decode(b64, Base64.NO_WRAP).inputStream()) as X509Certificate
+            }.onFailure { Log.w(TAG, "storedCertificate: unreadable: ${it.javaClass.simpleName}") }.getOrNull()
+        }
+
+        /** What [CaPolicy] needs from [cert]: subject CN and O, validity, path length. */
+        internal fun infoOf(cert: X509Certificate): CaPolicy.CaInfo {
+            val name = runCatching { X500Name.getInstance(cert.subjectX500Principal.encoded) }.getOrNull()
+            fun attr(type: org.bouncycastle.asn1.ASN1ObjectIdentifier): String? =
+                name?.getRDNs(type)?.firstOrNull()?.first?.value?.let { IETFUtils.valueToString(it) }
+            return CaPolicy.CaInfo(attr(BCStyle.CN), attr(BCStyle.O), cert.notBefore.time, cert.notAfter.time, cert.basicConstraints)
+        }
     }
 
     // ── State ─────────────────────────────────────────────────────────────────
@@ -93,10 +107,11 @@ class CaManager(private val context: Context) {
      */
     suspend fun initialize(): Boolean = withContext(Dispatchers.IO) {
         initMutex.withLock {
-            if (_caCertFlow.value != null) {
-                Log.d(TAG, "initialize: already initialised, skipping")
-                return@withContext true
-            }
+            // Already loaded: still checked, so a consent renewed while the process runs
+            // rotates the CA before the install that follows the consent dialog.
+            val loaded = _caCertFlow.value
+            if (loaded != null && !mustReplace(loaded)) return@withContext true
+            if (loaded != null) _caCertFlow.value = null
 
             try {
                 val keyExists  = keystore.containsAlias(KEY_ALIAS)
@@ -105,13 +120,23 @@ class CaManager(private val context: Context) {
                 Log.d(TAG, "initialize: keyExists=$keyExists certExists=$certExists")
 
                 when {
-                    keyExists && certExists && !meetsPolicy(loadPersistedCert()!!) -> {
-                        // Expired, or issued by an older build (10-year lifetime, no
-                        // path-length limit). Replace it; the user reinstalls the new CA.
-                        Log.w(TAG, "initialize: CA expired or outside policy — regenerating")
+                    keyExists && certExists && mustReplace(loadPersistedCert()!!) -> {
+                        // Expired, made by an older build (longer lifetime, old name, no
+                        // path-length limit), or due for rotation (CaPolicy). The old key is
+                        // deleted, so the old certificate can sign nothing more; the CA card
+                        // asks the user to remove it and to install the new one.
+                        Log.w(TAG, "initialize: CA expired, outside policy or due — regenerating")
+                        val oldCert = loadPersistedCert()!!
+                        val old = oldCert.encoded
+                        // Before the replacement, while it can still be read (decision 3, 2026-11-05).
+                        CaUpgradeNotice.recordReplaced(context, oldCert)
                         deleteKey()
                         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().clear().apply()
-                        generateAndPersist()
+                        generateAndPersist().also { ok ->
+                            // A managed phone (MDM consent rotates every ~83 days): swap the
+                            // trusted certificate, or inspection stops when nobody installs it.
+                            if (ok) _caCertFlow.value?.let { com.privacyguard.mdm.DeviceAdminReceiver.replaceCaCertificate(context, old, it.encoded) }
+                        }
                     }
 
                     keyExists && certExists -> {
@@ -225,12 +250,9 @@ class CaManager(private val context: Context) {
         }
     }
 
-    private fun meetsPolicy(cert: X509Certificate): Boolean {
-        val now = System.currentTimeMillis()
-        if (cert.notAfter.time <= now) return false
-        val lifetimeDays = (cert.notAfter.time - cert.notBefore.time) / 86_400_000L
-        if (lifetimeDays > MAX_ACCEPTED_CA_LIFETIME_DAYS) return false
-        return cert.basicConstraints == 0
+    private fun mustReplace(cert: X509Certificate): Boolean {
+        val consent = MitmConfig.consentOf(context)
+        return CaPolicy.mustReplace(infoOf(cert), System.currentTimeMillis(), consent.first, consent.second)
     }
 
     // ── Private: key generation ───────────────────────────────────────────────
@@ -274,7 +296,7 @@ class CaManager(private val context: Context) {
         Log.d(TAG, "generateAndPersist: key generated — public=${keyPair.public.algorithm}")
 
         // Step 2 — build a proper CA cert via BouncyCastle, signed with the hardware key.
-        val dn   = X500Name("CN=$CA_CN, O=$CA_ORG, C=$CA_COUNTRY")
+        val dn   = X500Name("CN=${CaPolicy.CN}, O=${CaPolicy.ORG}, C=$CA_COUNTRY")
         val cert = JcaX509v3CertificateBuilder(
             /* issuer       */ dn,
             /* serial       */ serial,

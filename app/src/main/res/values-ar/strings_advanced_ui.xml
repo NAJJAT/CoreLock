@@ -25,6 +25,9 @@
     <string name="ui_net_dns_doh_note">عند تشغيل DNS المشفّر، يؤدي اختيار Cloudflare أو Google أو Quad9 إلى اختياره للبحث المشفّر أيضًا.</string>
     <string name="ui_net_quic">بروتوكول الويب السريع (QUIC)</string>
     <string name="ui_net_quic_sub">احظره ليرى CoreLock مزيدًا من الاتصالات</string>
+    <string name="ui_net_ech">قراءة الأسماء خلف Encrypted Client Hello</string>
+    <string name="ui_net_ech_sub">يتيح لـ CoreLock رؤية أسماء اتصالات المتصفح المشفّرة. ويمكن لشبكتك أيضًا أن ترى هذه الأسماء.</string>
+    <string name="ui_net_ech_strict_only">يعمل في مستوى الحماية الصارم فقط.</string>
     <string name="ui_net_weak_tls">التشفير القديم</string>
     <string name="ui_net_weak_tls_sub">احظر الاتصالات ذات الحماية القديمة</string>
     <string name="ui_net_cleartext">الاتصالات غير المشفّرة</string>
@@ -73,6 +76,7 @@
     <string name="ui_diag_battery">البطارية</string>
     <string name="ui_diag_battery_ok">غير مقيّد: لن يوقف Android الحماية لتوفير البطارية.</string>
     <string name="ui_diag_builtin">مدمجة: %1$s</string>
+    <string name="ui_diag_list_snapshot">%1$s (نسخة مدمجة من %2$s، تُستخدم حتى أول تنزيل)</string>
     <string name="ui_diag_list_count">%1$s: %2$s</string>
     <plurals name="ui_diag_names_n">
         <item quantity="zero">%1$s اسم</item>

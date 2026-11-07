@@ -77,8 +77,8 @@ android {
         applicationId = "com.privacyguard.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.2.0"
         buildConfigField("String", "APP_SIGNATURE_SHA256", "\"\"")
         buildConfigField("boolean", "IS_RELEASE_SIGNING_CONFIGURED", "false")
         buildConfigField("String", "APP_SIGNING_MODE", "\"Unknown\"")
@@ -158,6 +158,13 @@ android {
             isReturnDefaultValues = true
             // Robolectric tests read the app's strings (notifications, channels).
             isIncludeAndroidResources = true
+            // Fuzz length and seed: unset on pull requests (fixed, a few seconds); the
+            // nightly workflow passes larger values (-Pprivacyguard.fuzz.scale=…).
+            all { test ->
+                listOf("privacyguard.fuzz.scale", "privacyguard.fuzz.seedOffset").forEach { key ->
+                    project.findProperty(key)?.let { test.systemProperty(key, it) }
+                }
+            }
         }
     }
 

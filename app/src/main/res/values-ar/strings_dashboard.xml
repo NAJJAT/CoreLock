@@ -191,7 +191,7 @@
     <string name="dash_protection">الحماية</string>
     <string name="dash_per_second">%1$s/ث</string>
     <string name="dash_card_decrypt_on">فحص HTTPS مُفعَّل</string>
-    <string name="dash_card_decrypt_on_desc">التطبيقات التي تثق بشهادة PrivacyGuard يُفكّ تشفير محتوى HTTPS الخاص بها ويُحفظ على هذا الهاتف</string>
+    <string name="dash_card_decrypt_on_desc">التطبيقات التي تثق بشهادة CoreLock يُفكّ تشفير محتوى HTTPS الخاص بها ويُحفظ على هذا الهاتف</string>
     <string name="dash_status_decrypting">يفكّ التشفير</string>
     <string name="dash_payloads">المحتوى</string>
     <string name="dash_status_off">لا يفكّ التشفير</string>

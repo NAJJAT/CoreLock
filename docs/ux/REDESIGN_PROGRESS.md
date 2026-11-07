@@ -48,7 +48,7 @@ Owner's order (2026-11-04, after committing Phases 6–7 as `0db2431`), done wit
    3. /health; unit tests, lint, `:app:minifyEnterpriseReleaseWithR8` green. (/cso: skipped by
       the owner on 2026-11-04; do not install anything.)
    4. Release prep 1.1.0 (no signed APK): versionName 1.1.0 / versionCode 2;
-      `RELEASE_NOTES_1.1.0.md` (1.0.1 notes + redesign, user words, fingerprint,
+      `RELEASE_NOTES_1.1.0.md` (deleted 2026-11-07, merged into `RELEASE_NOTES_1.2.0.md`; 1.0.1 notes + redesign, user words, fingerprint,
       `<APK_SHA256>` placeholder, `CoreLock-1.1.0.apk`), `git rm RELEASE_NOTES_1.0.1.md` and fix
       links; `RELEASE_NOTES_1.0.md` restored from `v1.0.0` (+ fingerprint and published checksum
       23752350...94dd if missing, + "Superseded by 1.1.0. See RELEASE_NOTES_1.1.0.md." on top);
@@ -643,7 +643,7 @@ Security systems 1.1 % of one core (audit, release build: Home 42 %, Stats 68 %)
 
 - `app/build.gradle.kts`: versionName 1.1.0, versionCode 2 (1.0.1 was never published, so
   2 is still the next code after 1.0.0's 1).
-- `RELEASE_NOTES_1.1.0.md`: everything from the 1.0.1 notes plus the redesign in user words
+- `RELEASE_NOTES_1.1.0.md` (deleted 2026-11-07, merged into `RELEASE_NOTES_1.2.0.md`): everything from the 1.0.1 notes plus the redesign in user words
   ("What's new", "Where things moved"), the signing fingerprint, `<APK_SHA256>`, file name
   `CoreLock-1.1.0.apk`, known limitations kept (two added: a DNS answer Android already holds,
   and Pause's conditions).

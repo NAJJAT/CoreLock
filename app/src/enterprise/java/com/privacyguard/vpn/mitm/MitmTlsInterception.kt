@@ -43,10 +43,12 @@ class MitmTlsInterception(
         private const val CAPTURE_QUEUE = 4_096
         private const val MESSAGE_QUEUE = 256
         private const val MESSAGE_WORKERS = 2
+        private const val CA_CHECK_INTERVAL_MS = 3_600_000L
     }
 
     private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.privacyguard.vpn.WorkerGuard.coroutineHandler)
     private val caInitStarted = AtomicBoolean(false)
+    private val lastCaCheck = AtomicLong(0L)
 
     /** Chunks dropped because the capture worker fell behind (capture is best effort). */
     val droppedCaptures = AtomicLong(0)
@@ -98,12 +100,20 @@ class MitmTlsInterception(
         }
         if (pinningDetector.isPinned(ownerPackage, sni)) return false
         if (!mitmEngine.canIntercept(sni)) {
-            // Inspection is on but the CA does not exist yet: create it in the
-            // background and pass this connection through meanwhile.
+            // Inspection is on but the CA does not exist yet, or has expired: create it in
+            // the background and pass this connection through meanwhile. Cleared after
+            // every attempt, so a CA that expires later is replaced too.
             if (caInitStarted.compareAndSet(false, true)) {
-                coroutineScope.launch { if (!ensureCa()) caInitStarted.set(false) }
+                coroutineScope.launch { try { ensureCa() } finally { caInitStarted.set(false) } }
             }
             return false
+        }
+        // The CA lasts 97 days and the VPN can run longer: check it hourly, in the
+        // background, so it is replaced when due (CaPolicy) without a restart.
+        val now = System.currentTimeMillis()
+        val last = lastCaCheck.get()
+        if (now - last > CA_CHECK_INTERVAL_MS && lastCaCheck.compareAndSet(last, now)) {
+            coroutineScope.launch { ensureCa() }
         }
         return true
     }
@@ -263,11 +273,10 @@ class MitmTlsInterception(
             val parsed = payloadParser.parse(bytes, direction, session)
             val redacted = payloadParser.redactForExport(parsed)
             // "Redact PII" (on by default, MDM key mitm_redact_pii) applies to the
-            // local log as well: credentials and personal data are masked before
-            // they reach the database. Off, the inspector shows exactly what left
-            // the phone. The SIEM copy is always the redacted one, but redactForExport
-            // covers headers and UTF-8 text bodies only: the URL path and query, form
-            // fields the text scanners miss, and binary bodies are shipped as captured.
+            // local log as well: credentials, personal data, query and form values are
+            // masked and non-text bodies reduced to type and size before they reach
+            // the database. Off, the inspector shows exactly what left the phone. The
+            // SIEM copy is always the redacted one (redactForExport).
             val stored = if (mitmConfig.redactPii) redacted else parsed
 
             val headersJson = try {

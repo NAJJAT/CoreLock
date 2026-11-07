@@ -46,6 +46,8 @@
     <string name="ui_attention_usage_access">Blocking apps in the background needs Usage Access.</string>
     <string name="ui_attention_battery_restricted">Battery use is restricted, so Android can stop CoreLock.</string>
     <string name="ui_attention_battery_optimized">Some phones stop CoreLock to save battery. Let it run in the background.</string>
+    <string name="ui_attention_inspection_cert">HTTPS inspection needs CoreLock’s new certificate. Until you install it, nothing is inspected. The old certificate no longer works.</string>
+    <string name="ui_install_certificate">Install certificate</string>
     <string name="ui_attention_alert">New alert: %1$s</string>
     <string name="ui_open_alerts">Open alerts</string>
     <string name="ui_whats_new">Some things moved. Statistics and HTTPS inspection are now in Settings › Advanced.</string>

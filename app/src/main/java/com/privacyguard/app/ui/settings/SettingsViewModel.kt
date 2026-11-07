@@ -227,7 +227,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             DiagnosticCheck(
                 label = str(R.string.diag_sni),
                 status = DiagnosticStatus.PASS,
-                detail = str(R.string.diag_sni_detail, snapshot.sniBlocked),
+                detail = str(R.string.diag_sni_detail, snapshot.sniBlocked, snapshot.tlsUnreadableDropped),
             ),
             // Dropped QUIC is not a failure: the app falls back to TCP, where the SNI is checked.
             DiagnosticCheck(

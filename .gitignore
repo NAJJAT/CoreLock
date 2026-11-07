@@ -40,3 +40,6 @@ compile-log.txt
 
 # Local copies of agent skills: kept on disk, not in the repository.
 .skills/
+
+# Crash dumps written by Git Bash / MSYS tools on Windows.
+*.stackdump

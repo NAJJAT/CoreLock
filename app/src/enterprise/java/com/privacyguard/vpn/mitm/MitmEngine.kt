@@ -69,7 +69,9 @@ class MitmEngine(
      * failing in [intercept] afterwards costs the app a reset connection.)
      */
     fun canIntercept(domain: String): Boolean =
-        CertForger.isValidHostname(domain) && caManager.getCaCert() != null
+        // An expired CA is not used: apps would reject every certificate it signs. False
+        // here makes MitmTlsInterception call initialize(), which replaces it.
+        CertForger.isValidHostname(domain) && caManager.getCaCert().let { it != null && it.notAfter.time > System.currentTimeMillis() }
 
     /**
      * Intercept TLS traffic for a session.

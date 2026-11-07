@@ -30,9 +30,9 @@ every user since ADR 0006. What it does today:
 - The relay passes bytes through unchanged, except that it asks servers for
   gzip/deflate so bodies can be shown (`MitmEngine.kt:299-333`, rewrite at `:316`). It
   records payloads; it never blocks or changes a request.
-- The CA key is RSA-2048 in the Android Keystore, not exportable, valid 365 days, and
-  may only sign leaf certificates (`CaManager.kt:63`, `:245-293`, `pathLen 0` at
-  `:286-287`). It has no name constraints. It is deleted when the user switches
+- The CA key is RSA-2048 in the Android Keystore, not exportable, and may only sign
+  leaf certificates (`pathLen 0`). Since 1.2 the CA lasts 97 days and rotates with the
+  90-day consent (`CaPolicy.kt`, see "CA lifetime" below); up to 1.1 it lasted 365 days. It has no name constraints. It is deleted when the user switches
   inspection off (`MitmScreen.kt:448-451`) and, if MDM switched it off, at the next
   retention run (`FlavorRetention.kt:22-24`); deletion is `CaManager.kt:218-224`,
   `:344-347`.
@@ -153,14 +153,21 @@ relays must not slow the packet thread: the relay runs on its own threads today
   cannot copy it. Code running inside CoreLock's process can still use it to sign
   certificates. If it ever leaked, an attacker on the same network could decrypt that
   phone's HTTPS for every app that trusts user CAs, for up to 365 days.
-- **CA lifetime: 90 days with rotation** (owner's decision, 2026-10-28), instead of
-  today's 365 days (`CaManager.kt:63`). Before expiry a new CA is created, the user is
-  prompted to install it and to remove the old one, and the old key is deleted. This
-  limits a leaked key to at most 90 days.
-- **CA name** (owner's decision, 2026-11-03): the certificate is still called "PrivacyGuard
-  Enterprise CA" (`CaManager.kt`, `CertForger.kt`); it is renamed to CoreLock, together with
-  every text that names it, with the first 90-day rotation and under this review, not
-  before: the name is what users look for in Android's certificate list.
+- **CA lifetime: 90 days with rotation** (owner's decision, 2026-10-28; built in 1.2,
+  plan task 2.3, `CaPolicy.kt`). The CA lasts 97 days, a week more than the user's
+  90-day consent, so it never ends before the consent prompt. Renewing consent replaces
+  the CA at once, before the certificate install that follows the dialog: one prompt,
+  not two. With MDM consent (which does not expire) the CA is replaced 14 days before
+  its end, and on a phone where CoreLock is Device or Profile Owner the trusted
+  certificate is swapped too (only if the old one was installed). The old key is
+  deleted; the CA card counts the old certificate and asks the user to remove it. A
+  running VPN checks the CA hourly and never uses an expired one; site certificates
+  never outlive the CA. This limits a leaked key to at most 97 days.
+- **CA name** (owner's decision, 2026-11-03; done in 1.2): "CoreLock HTTPS Inspection CA"
+  (O=CoreLock), renamed with the first rotation; site certificates say O=CoreLock too.
+  The old name, "PrivacyGuard Enterprise CA", is still recognised: a CA with it is
+  replaced, and installed ones are counted as old so the user can remove them. Every
+  text that names the certificate names both.
 - **Further hardening, decided in the review:** name constraints are not usable (the
   CA must sign any host); delete the key immediately when MDM switches inspection
   off, not at the next retention run; show the CA fingerprint so the user can check it.
@@ -212,6 +219,10 @@ relays must not slow the packet thread: the relay runs on its own threads today
   changes only through reviewed commits (Decision, step 2).
 - **Resolved (owner, 2026-10-28):** 90-day CA lifetime with rotation (Decision,
   step 6).
+- **Resolved (owner, 2026-11-05):** with MDM consent the CA is replaced 14 days before
+  its end (`CaPolicy.ORG_ROTATE_BEFORE_DAYS`). Users of 1.1 who had inspection on get
+  one Home card after the update with a button to install the new certificate
+  (`CaUpgradeNotice`).
 - **Resolved (owner, 2026-10-28):** the 3.46 µs (SNI) and 9.3 µs (QUIC) figures come
   from the release verification on the emulator, release build, October 2026; now
   recorded in CLAUDE.md §6.2 (Decision, step 5).

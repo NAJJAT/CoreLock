@@ -78,7 +78,7 @@
         <item quantity="other">TCP and UDP over IPv6 go through the tunnel like IPv4. %d IPv6 packets of other protocols were dropped.</item>
     </plurals>
     <string name="diag_sni">Server-name blocking (SNI)</string>
-    <string name="diag_sni_detail">Connections stopped by their TLS server name since protection was turned on: %d</string>
+    <string name="diag_sni_detail">Connections stopped by their TLS server name since protection was turned on: %1$d. Reset because their TLS start could not be read (Standard and Strict): %2$d.</string>
     <string name="diag_quic">QUIC checks</string>
     <string name="diag_quic_detail">QUIC connections since protection was turned on. Stopped by their server name: %1$d. Dropped (the app then retries or uses TCP) because QUIC is blocked: %2$d, unreadable: %3$d, too many waiting: %4$d.</string>
     <string name="diag_block_rows">Blocked connection history</string>

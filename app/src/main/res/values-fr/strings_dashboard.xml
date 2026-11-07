@@ -152,7 +152,7 @@
     <string name="dash_protection">Protection</string>
     <string name="dash_per_second">%1$s/s</string>
     <string name="dash_card_decrypt_on">Inspection HTTPS activée</string>
-    <string name="dash_card_decrypt_on_desc">Pour les apps qui font confiance au certificat PrivacyGuard, le contenu HTTPS est déchiffré et stocké sur ce téléphone</string>
+    <string name="dash_card_decrypt_on_desc">Pour les apps qui font confiance au certificat CoreLock, le contenu HTTPS est déchiffré et stocké sur ce téléphone</string>
     <string name="dash_status_decrypting">Déchiffrement</string>
     <string name="dash_payloads">Contenus</string>
     <string name="dash_status_off">Aucun déchiffrement</string>

@@ -140,7 +140,7 @@
     <string name="dash_per_second">%1$s/s</string>
     <!-- HTTPS inspection state (enterprise) and the Strict suggestion -->
     <string name="dash_card_decrypt_on">HTTPS inspection is on</string>
-    <string name="dash_card_decrypt_on_desc">Apps that trust the PrivacyGuard certificate have their HTTPS content decrypted and stored on this phone</string>
+    <string name="dash_card_decrypt_on_desc">Apps that trust the CoreLock certificate have their HTTPS content decrypted and stored on this phone</string>
     <string name="dash_status_decrypting">Decrypting</string>
     <string name="dash_payloads">Payloads</string>
     <string name="dash_status_off">Not decrypting</string>

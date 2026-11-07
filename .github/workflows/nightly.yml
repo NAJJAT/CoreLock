@@ -1,0 +1,122 @@
+name: Nightly
+
+# Longer checks than a pull request can afford. Pull requests run every fuzz target
+# at a fixed seed for a few seconds (ci.yml); here they run 50 times longer, with a new
+# seed each night, so new inputs are tried. A failure prints the seed and the input
+# hex; turn it into a regression test.
+
+on:
+  schedule:
+    - cron: "41 2 * * *"   # every night, 02:41 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+# Actions are pinned to full commit SHAs, as in ci.yml.
+
+jobs:
+  fuzz:
+    name: Fuzz targets (long)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      # Every test class that runs a fuzz target; the scale only lengthens those.
+      - name: Fuzz targets, 50x, new seed
+        run: >
+          ./gradlew --no-daemon :app:testEnterpriseDebugUnitTest
+          -Pprivacyguard.fuzz.scale=50
+          -Pprivacyguard.fuzz.seedOffset=${{ github.run_number }}
+          --tests '*Fuzz*'
+          --tests '*ClientHelloAssemblerTest'
+          --tests '*DomainFilterEquivalenceTest'
+          --tests '*InspectionDosTest'
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nightly-fuzz-reports
+          path: app/build/reports/tests/
+          retention-days: 14
+
+  # Plan task 2.1: today's live lists on an emulator, through the app's own download,
+  # parsing, level and DNS code (LiveListsLevelTest). Not a pull-request check: a list
+  # can change any day without a code change. A failure opens (or updates) an issue.
+  live-lists:
+    name: Live lists on an emulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Live lists, every level, real lookups
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: >
+            ./gradlew --no-daemon :app:connectedEnterpriseDebugAndroidTest
+            -Pandroid.testInstrumentationRunnerArguments.liveLists=true
+            -Pandroid.testInstrumentationRunnerArguments.class=com.privacyguard.app.live.LiveListsLevelTest
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: live-lists-reports
+          path: app/build/reports/androidTests/
+          retention-days: 14
+
+      # One open issue at a time: a new failure adds a comment instead of a new issue.
+      - name: Report the failure as an issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Nightly live-list check failed"
+          body="The nightly live-list check failed: $RUN_URL (the test report is attached to the run)."
+          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi

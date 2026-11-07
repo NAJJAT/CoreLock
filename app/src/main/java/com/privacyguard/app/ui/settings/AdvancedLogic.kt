@@ -54,6 +54,8 @@ object AdvancedLogic {
     sealed interface StoredList {
         data class Named(val name: String) : StoredList
         data class BuiltIn(val category: BuiltInCategory) : StoredList
+        /** The copy of [name] bundled with the app, taken on [date] (yyyy-MM-dd), until the first download. */
+        data class Snapshot(val name: String, val date: String) : StoredList
         /** A key this version doesn't know (an older list): shown as stored rather than hidden. */
         data class Unknown(val key: String) : StoredList
     }
@@ -65,6 +67,7 @@ object AdvancedLogic {
      */
     fun storedList(key: String): StoredList {
         STORED_NAMES[key.lowercase()]?.let { return StoredList.Named(it) }
+        com.privacyguard.app.core.blocklist.MalwareSnapshot.dateInKey(key)?.let { return StoredList.Snapshot("HaGeZi TIF mini", it) }
         if (key.startsWith("BuiltIn-", ignoreCase = true)) {
             val category = when (key.substringAfter('-').lowercase()) {
                 "ads" -> BuiltInCategory.ADS

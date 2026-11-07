@@ -16,7 +16,7 @@
 
     <string name="lic_desc_apache">مكتبات من Google وJetBrains وSquare وغيرها، تُستخدم كلٌّ منها بموجب رخصة Apache 2.0.</string>
     <string name="lic_desc_psl">مضمّنة مع OkHttp.</string>
-    <string name="lic_desc_hagezi">قوائم Pro وPro mini وThreat Intelligence Feeds mini وDoH وعناوين IP لخوادم DoH.</string>
+    <string name="lic_desc_hagezi">قوائم Pro وPro mini وThreat Intelligence Feeds mini وDoH وعناوين IP لخوادم DoH. نسخة من Threat Intelligence Feeds mini مضمّنة في التطبيق، للفترة التي تسبق أول تنزيل.</string>
     <string name="lic_desc_oisd">يشرف عليها Stephan van Ruth.</string>
     <string name="lic_desc_exodus">أدوات التتبّع المعروفة، وتُستخدم لتسمية أداة التتبّع التي تقف وراء الاتصال.</string>
     <string name="lic_desc_rir">ملفاتها العامة «delegated-extended»، وقد حُوّلت إلى الجدول المضمّن الذي يُظهر بلد عنوان IP.</string>

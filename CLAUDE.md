@@ -124,7 +124,7 @@ Use this when designing or reviewing any change. If a change creates a new asset
 
 ### 3.2 Adversaries
 
-1. **Ad and tracker networks** — try to evade blocking (DoH, hardcoded resolvers, QUIC, CNAME cloaking, same-host serving).
+1. **Ad and tracker networks** — try to evade blocking (DoH, hardcoded resolvers, QUIC, CNAME cloaking, HTTPS/SVCB records pointing at a tracker, same-host serving).
 2. **Malicious apps on the same phone** — try to disable protection, abuse exported components, read our data, or talk to local listeners.
 3. **Network attackers** (public Wi-Fi, hostile ISP) — tamper with downloads (blocklists, tracker list), inject DNS.
 4. **Compromised list sources or mirrors** — supply chain.
@@ -148,14 +148,14 @@ Out of scope (state it honestly in docs): a rooted or fully compromised device, 
 | Threat | Mitigation in this codebase |
 |---|---|
 | Parser crash/hang from crafted packets (DoS) | Bounds-checked parsers, hard caps, no exceptions on the hot path, fuzz/property tests (§6.3). |
-| Ads evading DNS blocking (tampering) | Layers 2 and 3: DoH/DoT blocking, SNI and QUIC filtering, CNAME checks (§5). |
+| Ads evading DNS blocking (tampering) | Layers 2 and 3: DoH/DoT blocking, SNI and QUIC filtering, CNAME and HTTPS/SVCB target checks (§5). |
 | Poisoned or oversized blocklist | HTTPS sources only, size/line limits, strict parsing, last-known-good kept, built-in fallbacks (§5.6). |
 | Other apps toggling protection or reading data (elevation) | `exported="false"` by default, `BIND_VPN_SERVICE` on the service, no unauthenticated local listeners (§4). |
 | History leaked via backup, logs, screenshots (disclosure) | Encrypted DB, backup exclusion, no sensitive data in logs (§4, §7). |
 | Formula injection in CSV export | Escaping of all attacker-controlled fields, tested through the real export code (§4). |
 | Malicious update / key compromise (spoofing) | Signing key never in repo, published fingerprint, release checksum (§12). |
 | Supply-chain compromise | Pinned versions, Gradle dependency verification, OSV scan, secret scan in CI (§10, §11). |
-| HTTPS inspection abused: CA key leaves the phone, consent skipped, or inspection switched on by another app (disclosure, elevation) | Off by default; consent in-app or via MDM only; CA key never exported; key deleted when turned off. Reviewed in step 3 of the single-app change (2026-10-23). |
+| HTTPS inspection abused: CA key leaves the phone, consent skipped, or inspection switched on by another app (disclosure, elevation) | Off by default; consent in-app or via MDM only; CA key never exported; key deleted when turned off; since 1.2 the CA lasts 97 days and rotates with the 90-day consent, so a leaked key is worth at most that (`CaPolicy`, ADR 0009). Reviewed in step 3 of the single-app change (2026-10-23). |
 | Protection silently stopping | Notify the user when the tunnel drops; kill switch via Android's Always-on VPN + lockdown (§5.7). |
 
 ---
@@ -167,7 +167,7 @@ Out of scope (state it honestly in docs): a rooted or fully compromised device, 
 1. **Defense in depth.** No single layer is trusted to catch everything; that's why blocking has four layers.
 2. **Least privilege.** Request the minimum permissions; justify each one in the README permissions table. Components are not exported unless they must be.
 3. **Secure by default.** New settings default to the safer option unless that breaks normal use; say which you chose and why.
-4. **Fail closed in filtering, fail visibly in the service.** When the user chose STANDARD or STRICT and we can't read a connection's destination (unreadable QUIC Initial, incomplete ClientHello after the limits), we drop rather than let it through. When the engine itself stops, we never pretend it's still protecting: the notification and dashboard must show the true state.
+4. **Fail closed in filtering, fail visibly in the service.** When the user chose STANDARD or STRICT and we can't read a connection's destination (unreadable QUIC Initial; on TCP 443 a truncated, malformed or over-16 KB ClientHello, or an SNI that is not a name at all: `ClientHelloAssembler`, `ClientHello.sniUnreadable`, `TcpForwarder.failsClosed`), we drop rather than let it through. A complete ClientHello without SNI is not unreadable and passes; so does a single-label name or an IP literal (an intranet host), with its alert. A stream that doesn't open with a TLS record header (0x16, version 3.0–3.4) is not TLS at all (`ClientHelloAssembler.NotTls`) and is forwarded like other non-TLS traffic. When the engine itself stops, we never pretend it's still protecting: the notification and dashboard must show the true state.
 5. **Untrusted input everywhere.** Packets, downloads, intents, imported files and database rows written from network data are all attacker-controlled.
 6. **No custom crypto.** Android Keystore, SQLCipher, the platform TLS stack. Nothing hand-made.
 7. **Honest limits.** Never claim protection we can't deliver. Limits go in the UI and release notes (§16).
@@ -255,14 +255,14 @@ Owner attribution: the app that owns a connection is looked up by UID (cached pe
 
 | # | Layer | What it does | Main code | Why it exists |
 |---|---|---|---|---|
-| 1 | **DNS blocking** | Answers NXDOMAIN for blocked names; checks CNAME chains | `DnsHandler`, `DnsBlockDecision` | Cheapest and stops most ads and trackers before any connection exists. |
+| 1 | **DNS blocking** | Answers NXDOMAIN for blocked names; checks CNAME chains and HTTPS/SVCB targets | `DnsHandler`, `DnsBlockDecision` | Cheapest and stops most ads and trackers before any connection exists. |
 | 2 | **DNS-bypass prevention** | Drops DoT (port 853); blocks known DoH servers by domain and IP; forces apps through the chosen resolver | `DnsBypassGuard` | Without it, any app using encrypted DNS skips layer 1 completely. |
 | 3 | **Connection filtering by SNI** | Reads the server name from the TLS ClientHello (TCP) and the QUIC Initial (UDP); resets blocked connections | `TcpForwarder`, `QuicGate` | Catches hardcoded IPs, DNS cache hits and anything that slipped past DNS. |
 | 4 | **Per-app firewall** | Blocks an app entirely or only in background | firewall rules, `AppTracker` | Some apps can't be fixed by domain blocking; the user decides. |
 
 ### 5.3 One decision for every name
 
-All name decisions — DNS, CNAME, TCP SNI, QUIC SNI — go through **`NameBlockPolicy`**. The order is fixed:
+All name decisions — DNS, CNAME, HTTPS/SVCB target, TCP SNI, QUIC SNI — go through **`NameBlockPolicy`**. The order is fixed:
 
 1. **User Block** rule → blocked
 2. **Malware/phishing lists** → blocked, unless the user Allow rule has `overridesSecurity` (set only when the user confirmed the warning shown while creating it)
@@ -307,7 +307,7 @@ Rules:
 - HTTPS only, from an allow-listed set of sources; jsDelivr is the fallback mirror.
 - Enforce size and line limits; parse strictly; skip invalid lines; never crash on garbage.
 - **Replace an old list only after the new one downloaded and parsed successfully.** Keep last-known-good. A download with fewer than half the stored names of that list is refused and recorded (`BlocklistManager.storeDownloaded`, ADR 0011); a first download is never refused.
-- Every list has a built-in fallback so a first start without network still protects.
+- Every list has a built-in fallback so a first start without network still protects (malware: the bundled TIF mini copy, `MalwareSnapshot`).
 - Refresh (`BlocklistUpdateWorker`): first download at first start on any network; weekly on unmetered networks; any network once a list has had no success for 14 days (a daily job that downloads nothing otherwise); "Refresh now" anytime. Each list's last success is stored (`BlocklistUpdateTimes`), a run fetches only due lists, and any failed list makes the run retry, so a list can't stay missing.
 - Swapping lists at runtime is atomic (`FilterEngine.setRules`); a lookup never sees half a list.
 - Removed on purpose: StevenBlack, EasyList, EasyPrivacy, HaGeZi Light, URLhaus (dead). Don't re-add without discussing.
@@ -342,7 +342,7 @@ The packet path runs for every packet of every connection on the phone. A few mi
 - Never block the packet thread on I/O or on locks the UI might hold.
 - Statistics are aggregated in memory and written to Room in batches.
 - **Measure before and after** any hot-path change and report both numbers (µs per decision or per connection). Current reference (release verification, release build on the emulator, October 2026): SNI check ≈ 3.46 µs per connection (earlier ≈ 4.3 µs), QUIC gate ≈ 9.3 µs per new flow. A regression over ~10% needs a written justification.
-- **Memory:** blocklists dominate the heap (measured: MINIMAL ≈ 23 MB, STANDARD ≈ 31 MB, STRICT ≈ 44 MB). Don't add per-name objects. The planned direction is compact storage (64-bit fingerprints in a sorted `LongArray`).
+- **Memory:** blocklists used to dominate the heap (measured before 1.2: MINIMAL ≈ 23 MB, STANDARD ≈ 31 MB, STRICT ≈ 44 MB). Since 1.2 they are sorted 64-bit fingerprints (`DomainFilter`, `NameFingerprints`, ADR 0014): about 9 bytes per name on the JVM, against about 105 for the old string sets, and a lookup allocates nothing (`DomainFilterEquivalenceTest`). Don't add per-name objects, and don't hold list names as strings in the running service.
 - **UI:** observe Room `Flow`s. Don't add `while(true)` polling loops.
 - APK size is watched (release ≈ 6.1 MiB measured earlier for the old consumer build; a consumer release measured 7.13 MiB on 2026-10-23; the enterprise release measured **9.99 MiB** on 2026-10-25, and most of the growth is BouncyCastle, kept whole by a blanket R8 rule, see §16.2). Report the size when a change could affect it.
 
@@ -417,12 +417,13 @@ A broken migration deletes the user's rules and history. Treat schema changes as
 |---|---|
 | Unit (JVM) | Decision logic, parsers, rule matching, CSV escaping. |
 | Property tests (fixed seed) | DNS vs SNI consistency, rule precedence, normalization. |
-| Malformed-input tests | Every parser: truncated, oversized, looping, random bytes. No crash, no hang. |
+| Level matrix (`ProtectionLevelMatrixTest`) | Every level against pinned excerpts of the real lists (`src/test/resources/levels/`), through the service's own `BlocklistRepo.levelLists` and `NameBlockPolicy`. Regenerate the excerpts when a list or level changes; never edit them by hand. |
+| Malformed-input tests | Every parser: truncated, oversized, looping, random bytes. No crash, no hang. Our own fuzzer (`fuzz/Fuzz.kt`, fixed seeds, a few seconds on every pull request); QUIC targets mutate the decrypted frames and re-encrypt them (`QuicFuzzTest`: the Initial parser, the CRYPTO reassembler `QuicSniTracker`, and the gate's holding sequences); the TCP reassembler has its own (`ClientHelloAssemblerTest`). The nightly workflow runs them 50 times longer with a new seed. Jazzer (coverage-guided) is planned for 1.3 (owner, 2026-11-05). |
 | Security tests (`sectest/`) | Formula injection, disclosure of outbound hosts, exported components. |
-| Instrumented | Room migrations, service start/stop, Keystore. |
+| Instrumented | Room migrations, service start/stop, Keystore. `LiveListsLevelTest` (nightly only, `liveLists=true`) uses the live lists and real lookups; it is skipped everywhere else. |
 | Manual device checks | Real apps at each level (Chrome, YouTube, messaging, video calls), Wi-Fi ↔ mobile switch, captive portal, Private DNS modes, battery and memory (`adb shell dumpsys meminfo com.privacyguard.app.enterprise`). |
 
-Tests never touch the real network. Use fixtures.
+Tests never touch the real network. Use fixtures. The one exception is the nightly `LiveListsLevelTest` (plan task 2.1), which contacts only hosts the app already contacts.
 
 ---
 
@@ -447,6 +448,10 @@ Workflow: `.github/workflows/ci.yml`. Required checks on `main`:
 3. Room migration and instrumented tests (emulator)
 4. Secret scan (gitleaks)
 
+Not required checks: `.github/workflows/nightly.yml` (fuzz targets, 50x longer, new seed each night; and `LiveListsLevelTest` on an emulator: today's live lists through the app's download, level and DNS code, the one test allowed to use the network, opening an issue when it fails) `malware-snapshot.yml` (monthly pull request with a fresh malware fallback list), and `release-checks.yml` (on each published release: signer equals the README fingerprint, the release text shows each APK's SHA-256; `SHA256SUMS.txt` is a run artifact the owner attaches; read-only, it never builds, signs or uploads).
+
+Write permissions (owner, 2026-11-05): only `nightly.yml` `live-lists` (`issues: write`, to open or comment on the failure issue) and `malware-snapshot.yml` (`contents: write` + `pull-requests: write`, to push its branch and open the PR). Every other workflow and job is read-only. The owner reviews and merges every PR.
+
 Rules:
 - A red CI is a stop sign. Nothing merges on red.
 - When CI fails, **read the actual log first.** Reproduce locally (ideally with an empty cache), prove the root cause, then propose the smallest fix. Don't revert, pin or disable on a guess.
@@ -464,7 +469,7 @@ The app (the `enterprise` flavor, the only one) is released as a signed APK on G
 2. Version: `versionCode` always increases by at least 1 (Android refuses updates otherwise); `versionName` follows semantic versioning (`1.0.0`, `1.0.1`, `1.1.0`). The first release is `versionName = "1.0.0"`, `versionCode = 1` (`app/build.gradle.kts`), tag `v1.0.0`. Git tag `vX.Y.Z` is created by the owner.
 3. Translations reviewed (`docs/TRANSLATION_REVIEW_*.md`).
 4. Owner builds and signs with the real key (never the agent).
-5. Release page contains: the APK, its **SHA-256 checksum**, the **signing certificate SHA-256 fingerprint** (same as in the README), release notes, and known limitations (§16).
+5. Release page contains: the APK, its **SHA-256 checksum**, the **signing certificate SHA-256 fingerprint** (same as in the README), release notes, and known limitations (§16). The `release-checks.yml` run must be green afterwards. Full list: `docs/RELEASE_CHECKLIST.md` (release and deploy checks; no GitHub attestations, owner's decision 2026-11-05, options B and C documented there).
 6. Release notes (`RELEASE_NOTES_X.Y.md`) in plain language: what's new, what's fixed, what can't be blocked, how to update.
 
 The agent can prepare everything except signing and publishing: version bump proposal, release notes, translation review file, changelog, and a checklist of what the owner must do.
@@ -495,7 +500,7 @@ Documentation is part of the product. Outdated docs in a security app are a secu
 
 - `docs/HOW_IT_WORKS.md` — deeper technical explanation of §5 for curious users and contributors.
 - `docs/BLOCKING_POLICY.md` — user-facing blocking policy: what each level blocks, what is exempt and why, what can't be blocked, how to allow-list and report. Update it in the same change as any list, level, exemption or precedence change. Issue forms in `.github/ISSUE_TEMPLATE/` link to it.
-- `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 are accepted (2026-10-25); 0007–0011 are proposed, 0012 is accepted (2026-10-28) and 0013 is accepted (2026-11-04). Never rewrite an accepted record; supersede it with a new one.
+- `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 are accepted (2026-10-25); 0007–0011 are proposed, 0012 is accepted (2026-10-28) 0013 is accepted (2026-11-04); 0014 is proposed and 0015 accepted (2026-11-05). Never rewrite an accepted record; supersede it with a new one.
 - `RELEASE_NOTES_X.Y.md`, `docs/TRANSLATION_REVIEW_X.Y.md`.
 - `SECURITY.md` — vulnerability reporting.
 
@@ -556,7 +561,7 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 
 - In-app ads in YouTube, Instagram, Snapchat, TikTok and Facebook can't be blocked without root: they come from the same hosts as the content. User-facing wording: `docs/BLOCKING_POLICY.md`.
 - At the DNS layer, Android's resolver makes the request, so per-app Allow rules and ad-SDK exemptions only work at the connection (SNI) layer.
-- Encrypted Client Hello (ECH) hides the real server name; only the outer name is visible.
+- Encrypted Client Hello (ECH) hides the real server name; only the outer name is visible. At Strict, an opt-in setting removes ECH keys from DNS answers (`EchStripper`, ADR 0015; off by default, owner's decision 2026-11-05, to be reviewed when encrypted upstream DNS ships). It doesn't reach browsers with their own DoH or keys cached before it was turned on.
 - Apps using hardcoded IPs with no SNI can only be blocked per app.
 - On Android 7 to 9, a per-app rule can occasionally apply to the wrong app; Android 10 and newer are not affected.
 - The kill switch requires Android's Always-on VPN + lockdown.
@@ -568,8 +573,8 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 
 1. Per-app rules at the DNS layer (correlate DNS answers with later connections).
 2. Block counters: **"blocked today" is unified (2026-11-05, 1.1):** the notification, Home, Activity, Apps, Statistics, Security systems and the Ads screen all read `BlockStats.today` (local midnight to now); `BlockCountAgreementTest` checks it. Still open: SNI and QUIC counters (name blocks, QUIC blocked, unreadable, hold limit) are shown only in Settings › Advanced › Diagnostics and reset when protection restarts; dual-hop UDP drops aren't counted. Blocked rows are merged per minute since 2026-10-24 (`BlockRowGate`), so the stored numbers no longer grow with retries.
-3. Compact blocklist storage (64-bit fingerprints in a sorted `LongArray`) to cut STRICT memory from ~44 MB to a few MB.
-4. **Polling loops: done (2026-11-05, 1.1).** The 8 `while(true)` loops in AlertInbox, AppDetail, Connections, Dashboard, Settings and Statistics now reload when Room reports a change (`ui/DbChanges.kt`, at most every few seconds), and load errors show a banner with Try again instead of an empty `catch`. Idle CPU went from 42–68 % to about 1 % of a core on the emulator. Left: the HTTPS-inspection screen's 5 s status loop (`MitmViewModel.kt:125`, MITM code, §14.2) and empty catches in `MitmEngine.kt:331` and `UidMapper.kt:67`.
+3. **Done (2026-11-05, 1.2): compact blocklist storage** (ADR 0014, Proposed): fingerprints in sorted arrays for the DNS/SNI, security and known-tracker sets, and a binary start-up cache. Still to do: measure PSS per level on a phone and record it in §6.2. Remove this item once 1.2 ships.
+4. **Polling loops: done (2026-11-05, 1.1).** The 8 `while(true)` loops in AlertInbox, AppDetail, Connections, Dashboard, Settings and Statistics now reload when Room reports a change (`ui/DbChanges.kt`, at most every few seconds), and load errors show a banner with Try again instead of an empty `catch`. Idle CPU went from 42–68 % to about 1 % of a core on the emulator. Left: the HTTPS-inspection screen's 5 s status loop (`MitmViewModel.kt:125`, MITM code, §14.2) and empty catches in `MitmEngine.kt:333` and `UidMapper.kt:67`.
 5. Per-packet allocations on the hot path (`copyOfRange` per UDP packet, IP addresses parsed into Strings per packet in `PrivacyVpnService`); measure first (§6.2). After 1.0.
 6. Wi-Fi-only / mobile-data-only rules.
 7. Reassemble split ClientHellos on ports other than 443; add DoH lists to the start-up cache (~30 s gap while the encrypted DB loads).
@@ -577,7 +582,7 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 9. Narrow the BouncyCastle keep rule (`app/proguard-rules.pro`, `-keep class org.bouncycastle.** { *; }`). It keeps all 2,730 BouncyCastle classes in the release (a third of all 8,382 kept classes, including 326 post-quantum `pqc` classes), measured 2026-10-25. The comment's reason (lookup by class name) applies to the BC JCA provider, and the app never registers it: no `BouncyCastleProvider`, `addProvider` or `setProvider`; it only uses the X.509 builder classes to create the inspection CA (`CaManager`) and per-site certificates (`CertForger`). Estimated saving 2–3 MiB (not measured). Before merging: run certificate creation on a **release** (R8) build, not only debug. MITM-related, so it needs the extra security review (§4.2). After 1.0.
 10. **Before 1.0: measure Home and Stats CPU on the owner's phone.** With the screen on and nothing else happening, the release build used **42 %** of one core on Home and **68 %** on Stats (emulator, 2026-10-25: 2,500 and 4,079 CPU ticks per 60 s; other screens 71–115), almost all on Room IO threads, so it is likely the polling loops of item 4 re-running database queries. The emulator runs SQLCipher translated (ARM build on x86_64), so the phone number decides. **Above 10 % of a core on the phone, it is a 1.0 blocker.** Measure with `adb shell top -H -d 5 -p <pid>` or the `utime`+`stime` of `/proc/<pid>/task/*/stat` over 60 s, each screen open and still. (Numbered 10, not first, so the reference to item 9 in ADR 0006 stays right.)
 
-11. **For a later release: replace the placeholder malware fallback.** The built-in malware seed (`app/src/main/java/com/privacyguard/app/core/blocklist/BlocklistManager.kt:347-353`) is 5 test names (`malware.testcategory.com`, `command-and-control.example`, …), so a first start without network blocks no real malware at any level. That conflicts with §5.6 ("every list has a built-in fallback so a first start without network still protects"). Replace it with a real, credited fallback list (license checked per §2, credited in `OpenSourceNotices.kt` and the README).
+11. **Done (2026-11-05, 1.2): real malware fallback.** A HaGeZi TIF mini copy ships in `app/src/main/assets/blocklists/` (`MalwareSnapshot.kt`), used until the live list first downloads and then deleted; refreshed monthly by a pull request (`.github/workflows/malware-snapshot.yml`); credited. It adds 1.44 MiB to the APK. The 5 built-in malware test names stay as an end-to-end test. Remove this item once 1.2 ships.
 12. **Done (2026-10-28, in 1.0.0): `safebrowsing.googleapis.com` removed from Strict.** It was in the built-in telemetry seed; blocking it turned off Chrome's phishing and malware warnings. `BuiltInSeedTest` guards against it, or a parent such as `googleapis.com`, coming back. Remove this item once 1.0.0 ships.
 13. **Adblock-syntax parser, domain rules only** (ADR 0007, Proposed): `||domain^` lists and user rules with `$app`; list exceptions stay inside their own list.
 14. **AdGuard DNS filter as an optional list** (ADR 0008, Proposed): off by default, opt-in at Standard and Strict; after item 13 and ideally after item 3 (memory).
@@ -586,9 +591,8 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 17. **Blocklist update safety** (ADR 0011, Proposed): the half-size refusal is done (2026-10-28, `BlocklistManager.storeDownloaded`); still to do: show last update per list, count download failures instead of the empty catch.
 18. **Revisit DoH as the default upstream** (ADR 0012): DoH stays off by default because a DoH failure answers SERVFAIL with no fallback (`DnsHandler.kt:378`), which breaks captive portals and networks that block DoH. Revisit once a fallback or captive-portal handling exists.
 19. **For a later release: hardening from the October 2026 security review** (one line each; details stay with the owner):
-    - Harden TLS and QUIC name handling for incomplete or unreadable handshakes.
+    - **Done (1.2):** harden TLS and QUIC name handling for incomplete or unreadable handshakes (fail closed at Standard and Strict, §4.1 principle 4). Remove this line once 1.2 ships.
     - Cap the number of connections the engine tracks at once.
-    - Extend inspection redaction to URL query strings, form data and binary bodies (local log and SIEM).
     - Improve app attribution on Android 7–9 (the limit in §16.1): faster lookup, off the packet thread, errors counted.
     - Bound the SIEM queue's memory and back off between failed sends.
     - Bound the stored TLS fingerprint baseline.

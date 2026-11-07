@@ -141,6 +141,177 @@ class DnsHandlerTest {
         return out.toByteArray()
     }
 
+    // ── HTTPS / SVCB answers (RFC 9460, plan task 1.3) ───────────────────────
+
+    /**
+     * An HTTPS (65) or SVCB (64) record's TargetName sends the client to another name's
+     * servers, often with address hints so it never asks for that name's A/AAAA. A blocked
+     * target gets the CNAME answer: NXDOMAIN for the whole response, recorded as blocked.
+     */
+    @Test
+    fun https_record_pointing_at_a_blocked_name_is_answered_nxdomain() {
+        blockDomain("*.tracker.example")
+        val seen = mutableListOf<Pair<String, Boolean>>()
+        handler.queryListener = DnsHandler.QueryListener { _, d, b -> seen += d to b }
+        val cases = listOf(
+            Triple(65, 1, "x1.tracker.example") to true,     // ServiceMode
+            Triple(65, 0, "edge.tracker.example") to true,   // AliasMode
+            Triple(64, 1, "svc.tracker.example") to true,    // SVCB
+            Triple(65, 1, "edge.cdn.example") to false,      // not listed
+            Triple(65, 1, "") to false,                      // "." = the asked name itself
+        )
+        for ((case, blocked) in cases) {
+            val (type, priority, target) = case
+            val query = DnsPacket.parse(serviceQuery("www.news.example", type, id = 9))!!
+            val response = serviceResponse("www.news.example", type, priority, target, id = 9)
+            seen.clear()
+            val before = handler.svcbBlocked.get()
+            handler.injectDnsResponse(makeIp(), makeUdp(40_000, 53, ByteArray(0)), query, response, null)
+            assertEquals("blocked: type $type -> '$target'", blocked, seen.contains(target to true))
+            assertEquals("counted: type $type -> '$target'", if (blocked) 1L else 0L, handler.svcbBlocked.get() - before)
+        }
+    }
+
+    @Test
+    fun a_user_allow_for_the_asked_name_wins_over_its_https_target_like_cname() {
+        blockDomain("*.tracker.example")
+        filterEngine.addRule(FilterRule.allowDomain("www.news.example"))
+        val query = DnsPacket.parse(serviceQuery("www.news.example", 65, id = 3))!!
+        val response = serviceResponse("www.news.example", 65, 1, "x1.tracker.example", id = 3)
+        handler.injectDnsResponse(makeIp(), makeUdp(40_000, 53, ByteArray(0)), query, response, null)
+        assertEquals(0L, handler.svcbBlocked.get())
+    }
+
+    @Test
+    fun service_targets_are_read_from_https_and_svcb_records_only() {
+        val p = DnsPacket.parse(serviceResponse("a.example", 65, 1, "Target.Example", id = 1))!!
+        assertEquals(listOf("target.example"), p.serviceTargets)
+        assertEquals(emptyList<String>(), DnsPacket.parse(serviceResponse("a.example", 65, 1, "", id = 1))!!.serviceTargets)
+        assertEquals(emptyList<String>(), DnsPacket.parse(cnameResponse("a.example", "b.example"))!!.serviceTargets)
+        // A target that runs past its record is not read (rdata is 3 bytes, the name needs more).
+        val cut = serviceResponse("a.example", 65, 1, "long.target.example", id = 1, rdLenOverride = 3)
+        assertEquals(emptyList<String>(), DnsPacket.parse(cut)?.serviceTargets ?: emptyList<String>())
+    }
+
+    // ── ECH keys (plan task 1.4, ADR 0015) ────────────────────────────────────
+
+    /** A handler whose tunnel writes are captured; [strip] is the setting as the service passes it. */
+    private fun capturingHandler(strip: () -> Boolean): Pair<DnsHandler, java.util.concurrent.LinkedBlockingQueue<ByteArray>> {
+        val out = java.util.concurrent.LinkedBlockingQueue<ByteArray>()
+        val writer = TunWriter(object : TunWriter.PacketSink {
+            override val isOpen = true
+            override fun writePacket(packet: ByteArray): Boolean { out.put(packet); return true }
+        }).also { it.start() }
+        return DnsHandler(filterEngine = filterEngine, tunWriter = writer, protectSocket = { false },
+            protectTcpSocket = { false }, stripEch = strip) to out
+    }
+
+    /** The DNS payload of the packet the handler wrote (IPv4, 20 + 8 bytes of headers). */
+    private fun java.util.concurrent.LinkedBlockingQueue<ByteArray>.dnsWritten(): DnsPacket {
+        val packet = poll(5, java.util.concurrent.TimeUnit.SECONDS) ?: throw AssertionError("nothing written")
+        return DnsPacket.parse(packet.copyOfRange(28, packet.size)) ?: throw AssertionError("written answer doesn't parse")
+    }
+
+    /** [serviceResponse] with an ech parameter (key 5) after the others. */
+    private fun responseWithEch(name: String, id: Int): ByteArray {
+        val base = serviceResponse(name, 65, 1, "", id)
+        // The value happens to read as the name "abc": the unreadable test points at it.
+        val ech = byteArrayOf(0, 5, 0, 8, 3, 'a'.code.toByte(), 'b'.code.toByte(), 'c'.code.toByte(), 0, 9, 9, 9)
+        val rdLenAt = base.size - 18 - 2                  // rdata: 2 + 1 (".") + 15 of params
+        val rdLen = ((base[rdLenAt].toInt() and 0xFF) shl 8) or (base[rdLenAt + 1].toInt() and 0xFF)
+        return (base + ech).also { it[rdLenAt] = ((rdLen + ech.size) ushr 8).toByte(); it[rdLenAt + 1] = (rdLen + ech.size).toByte() }
+    }
+
+    private fun keysIn(record: com.privacyguard.core.packet.DnsRecord): List<Int> {
+        val r = record.rdata
+        var p = 3                                          // priority, "." target
+        val keys = mutableListOf<Int>()
+        while (p + 4 <= r.size) {
+            keys += ((r[p].toInt() and 0xFF) shl 8) or (r[p + 1].toInt() and 0xFF)
+            p += 4 + (((r[p + 2].toInt() and 0xFF) shl 8) or (r[p + 3].toInt() and 0xFF))
+        }
+        return keys
+    }
+
+    /**
+     * Review finding (2026-11-05): the asked name is allowed, only its HTTPS record points
+     * at a blocked name. NXDOMAIN said the allowed name doesn't exist (and some resolvers
+     * cache that for its A/AAAA lookups too); an empty answer only removes the record.
+     */
+    @Test
+    fun a_blocked_https_target_gets_an_empty_answer_not_nxdomain() {
+        blockDomain("*.tracker.example")
+        val (h, out) = capturingHandler { false }
+        val query = DnsPacket.parse(serviceQuery("www.news.example", 65, id = 24))!!
+        h.injectDnsResponse(makeIp(), makeUdp(40_000, 53, ByteArray(0)), query,
+            serviceResponse("www.news.example", 65, 1, "x1.tracker.example", id = 24), null)
+        val written = out.dnsWritten()
+        assertEquals("NOERROR", 0, written.responseCode)
+        assertEquals(0, written.answers.size)
+        assertEquals("www.news.example", written.queryName)
+        assertEquals(1L, h.svcbBlocked.get())
+    }
+
+    @Test
+    fun with_the_setting_on_the_ech_key_is_removed_before_the_app_sees_the_answer() {
+        val (h, out) = capturingHandler { true }
+        val query = DnsPacket.parse(serviceQuery("www.news.example", 65, id = 21))!!
+        assertTrue(h.injectDnsResponse(makeIp(), makeUdp(40_000, 53, ByteArray(0)), query, responseWithEch("www.news.example", 21), null))
+        val written = out.dnsWritten()
+        assertEquals(listOf(1, 4), keysIn(written.answers.single()))       // alpn and ipv4hint stay
+        assertEquals(1L, h.echKeysRemoved.get())
+    }
+
+    @Test
+    fun with_the_setting_off_the_answer_passes_unchanged() {
+        val (h, out) = capturingHandler { false }
+        val query = DnsPacket.parse(serviceQuery("www.news.example", 65, id = 22))!!
+        h.injectDnsResponse(makeIp(), makeUdp(40_000, 53, ByteArray(0)), query, responseWithEch("www.news.example", 22), null)
+        assertEquals(listOf(1, 4, 5), keysIn(out.dnsWritten().answers.single()))
+        assertEquals(0L, h.echKeysRemoved.get())
+    }
+
+    @Test
+    fun an_answer_that_cannot_be_rewritten_safely_becomes_an_empty_answer() {
+        val (h, out) = capturingHandler { true }
+        val query = DnsPacket.parse(serviceQuery("www.news.example", 65, id = 23))!!
+        // An extra record whose name points into the ech value: valid DNS (it reads "abc"),
+        // but once the key is removed that pointer would point at other bytes.
+        val base = responseWithEch("www.news.example", 23)
+        val echValueAt = base.size - 8
+        val extra = byteArrayOf(0xC0.toByte(), echValueAt.toByte(), 0, 1, 0, 1, 0, 0, 0, 60, 0, 4, 1, 2, 3, 4)
+        val response = (base + extra).also { it[11] = 1 }                // ARCOUNT = 1
+        assertEquals("abc", DnsPacket.parse(response)!!.additional.single().name)
+        h.injectDnsResponse(makeIp(), makeUdp(40_000, 53, ByteArray(0)), query, response, null)
+        val written = out.dnsWritten()
+        assertEquals(0, written.answers.size)
+        assertEquals(0, written.responseCode)
+        assertEquals(1L, h.echUnreadable.get())
+    }
+
+    /** A query for [name] of [type]. */
+    private fun serviceQuery(name: String, type: Int, id: Int): ByteArray {
+        val n = DnsPacket.encodeName(name)
+        return byteArrayOf((id ushr 8).toByte(), id.toByte(), 1, 0, 0, 1, 0, 0, 0, 0, 0, 0) + n +
+            byteArrayOf((type ushr 8).toByte(), type.toByte(), 0, 1)
+    }
+
+    /**
+     * A response with one [type] record: SvcPriority, TargetName ([target] "" = "."), then
+     * alpn=h2 and an ipv4hint, as real HTTPS records carry.
+     */
+    private fun serviceResponse(name: String, type: Int, priority: Int, target: String, id: Int, rdLenOverride: Int? = null): ByteArray {
+        val q = serviceQuery(name, type, id)
+        val t = if (target.isEmpty()) byteArrayOf(0) else DnsPacket.encodeName(target)
+        val params = byteArrayOf(0, 1, 0, 3, 2, 'h'.code.toByte(), '2'.code.toByte(), 0, 4, 0, 4, 93.toByte(), 184.toByte(), 216.toByte(), 34)
+        val rdata = byteArrayOf((priority ushr 8).toByte(), priority.toByte()) + t + (if (priority == 0) ByteArray(0) else params)
+        val rdLen = rdLenOverride ?: rdata.size
+        val header = q.copyOfRange(0, 2) + byteArrayOf(0x81.toByte(), 0x80.toByte(), 0, 1, 0, 1, 0, 0, 0, 0)
+        val answer = byteArrayOf(0xC0.toByte(), 12, (type ushr 8).toByte(), type.toByte(), 0, 1, 0, 0, 0, 60,
+            (rdLen ushr 8).toByte(), rdLen.toByte()) + rdata.copyOf(minOf(rdLen, rdata.size))
+        return header + q.copyOfRange(12, q.size) + answer
+    }
+
     // ── queryListener — blocked path ──────────────────────────────────────────
 
     @Test

@@ -130,6 +130,10 @@ fun HomeScreen(
                     is HomeLogic.Attention.PrivateDns -> PrivateDnsCheck.openSettings(context)
                     HomeLogic.Attention.UsageAccess -> AdPrivacyLinks.open(context, AdPrivacyLinks.usageAccess(context.packageName))
                     is HomeLogic.Attention.Battery -> BatteryCheck.openSettings(context)
+                    HomeLogic.Attention.InspectionCertificate -> {
+                        TlsInterceptionFactory.requestInspectionCertificateInstall()
+                        onOpenPayloads?.invoke()
+                    }
                     is HomeLogic.Attention.NewAlert -> { viewModel.markAlertsSeen(attention.alert.timestamp); onOpenAlerts() }
                     HomeLogic.Attention.WhatsNew -> { viewModel.finishWhatsNew(); onOpenStatistics() }
                     is HomeLogic.Attention.Strict -> viewModel.acceptStrict()
@@ -141,6 +145,7 @@ fun HomeScreen(
             onAttentionDismiss = { attention ->
                 when (attention) {
                     is HomeLogic.Attention.Battery -> viewModel.dismissBattery()
+                    HomeLogic.Attention.InspectionCertificate -> viewModel.dismissInspectionCertificate()
                     is HomeLogic.Attention.NewAlert -> viewModel.markAlertsSeen(attention.alert.timestamp)
                     HomeLogic.Attention.WhatsNew -> viewModel.finishWhatsNew()
                     is HomeLogic.Attention.Strict -> viewModel.dismissStrict(attention.suggestion.networkKey)
@@ -368,6 +373,11 @@ private fun HomeAttention(attention: HomeLogic.Attention, hasPayloads: Boolean, 
             stringResource(if (attention.canDismiss) R.string.ui_attention_battery_optimized else R.string.ui_attention_battery_restricted),
             openSettings, action, modifier,
             onDismiss = if (attention.canDismiss) dismiss else null,
+        )
+        HomeLogic.Attention.InspectionCertificate -> AttentionBanner(
+            stringResource(R.string.ui_attention_inspection_cert),
+            stringResource(R.string.ui_install_certificate), action, modifier,
+            onDismiss = dismiss,
         )
         is HomeLogic.Attention.NewAlert -> AttentionBanner(
             stringResource(R.string.ui_attention_alert, attention.alert.title),

@@ -12,6 +12,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
 import com.privacyguard.vpn.mitm.CaManager
+import com.privacyguard.vpn.mitm.CaPolicy
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.charset.StandardCharsets
@@ -38,7 +39,9 @@ class CaInstallHelper(
 
     companion object {
         private const val TAG = "CaInstallHelper"
-        private const val CA_FILE_PREFIX = "PrivacyGuard-CA-"
+        private const val CA_FILE_PREFIX = "CoreLock-CA-"
+        /** Exports of builds up to 1.1; removed with the new ones (plan 2.3). */
+        private const val LEGACY_FILE_PREFIX = "PrivacyGuard-CA-"
         private const val CA_MIME = "application/x-x509-ca-cert"
         private const val SETTINGS_PACKAGE = "com.android.settings"
     }
@@ -114,7 +117,7 @@ class CaInstallHelper(
         }
         return KeyChain.createInstallIntent().apply {
             putExtra(KeyChain.EXTRA_CERTIFICATE, der)
-            putExtra(KeyChain.EXTRA_NAME, "PrivacyGuard CA")
+            putExtra(KeyChain.EXTRA_NAME, CaPolicy.CN)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
     }
@@ -130,7 +133,7 @@ class CaInstallHelper(
         val cert = caManager.getCaCert() ?: return null
         return try {
             val cacheDir = File(context.cacheDir, "certs").also { it.mkdirs() }
-            val derFile  = File(cacheDir, "privacyguard_ca.der")
+            val derFile  = File(cacheDir, "corelock_ca.der")
             derFile.writeBytes(cert.encoded)
             Log.d(TAG, "getDerFileInstallIntent: wrote ${cert.encoded.size}B DER to ${derFile.absolutePath}")
             val uri = androidx.core.content.FileProvider.getUriForFile(
@@ -181,8 +184,8 @@ class CaInstallHelper(
         resolver.query(
             android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
             arrayOf(android.provider.MediaStore.Downloads._ID),
-            "${android.provider.MediaStore.Downloads.DISPLAY_NAME} LIKE ?",
-            arrayOf("$CA_FILE_PREFIX%"), null,
+            "${android.provider.MediaStore.Downloads.DISPLAY_NAME} LIKE ? OR ${android.provider.MediaStore.Downloads.DISPLAY_NAME} LIKE ?",
+            arrayOf("$CA_FILE_PREFIX%", "$LEGACY_FILE_PREFIX%"), null,
         )?.use { cursor ->
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(0)
@@ -237,7 +240,7 @@ class CaInstallHelper(
                 "PrivacyGuard",
             )
             if (!downloadsDir.exists()) downloadsDir.mkdirs()
-            downloadsDir.listFiles { f -> f.name.startsWith(CA_FILE_PREFIX) }?.forEach { it.delete() }
+            downloadsDir.listFiles { f -> f.name.startsWith(CA_FILE_PREFIX) || f.name.startsWith(LEGACY_FILE_PREFIX) }?.forEach { it.delete() }
             val caFile = File(downloadsDir, exportFileName())
             FileOutputStream(caFile).use { out ->
                 out.write(certPem.toByteArray(StandardCharsets.UTF_8))
@@ -278,7 +281,7 @@ class CaInstallHelper(
         return Intent(Intent.ACTION_SEND).apply {
             type = CA_MIME
             putExtra(Intent.EXTRA_STREAM, result.uri)
-            putExtra(Intent.EXTRA_SUBJECT, "PrivacyGuard CA Certificate")
+            putExtra(Intent.EXTRA_SUBJECT, "CoreLock CA Certificate")
             putExtra(Intent.EXTRA_TEXT,
                 "Install this file as a CA certificate to enable HTTPS payload inspection.")
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -324,18 +327,22 @@ class CaInstallHelper(
     }
 
     /**
-     * User-installed PrivacyGuard CAs that are not the current one. Their keys are
-     * gone (reinstall, or MITM switched off), so they can never sign again: they
-     * only confuse the user about which certificate is active and should be removed.
+     * User-installed CoreLock CAs that are not the current one, under the current name or
+     * the one of builds up to 1.1 ("PrivacyGuard Enterprise CA", CaPolicy.isOurs). Their
+     * keys are gone (rotation, reinstall, or inspection switched off), so they can never
+     * sign again: they only confuse the user about which certificate is active.
      */
     fun staleTrustedCaCount(): Int {
-        val ourCert = caManager.getCaCert() ?: return 0
+        val ourCert = caManager.getCaCert()
         return try {
             val keyStore = java.security.KeyStore.getInstance("AndroidCAStore").apply { load(null) }
             keyStore.aliases().asSequence()
                 .filter { it.startsWith("user:") }
                 .mapNotNull { keyStore.getCertificate(it) as? java.security.cert.X509Certificate }
-                .count { it.subjectX500Principal == ourCert.subjectX500Principal && !it.encoded.contentEquals(ourCert.encoded) }
+                .count { cert ->
+                    val info = CaManager.infoOf(cert)
+                    CaPolicy.isOurs(info.cn, info.org) && (ourCert == null || !cert.encoded.contentEquals(ourCert.encoded))
+                }
         } catch (e: Exception) {
             Log.w(TAG, "staleTrustedCaCount: unable to inspect AndroidCAStore: ${e.message}")
             0

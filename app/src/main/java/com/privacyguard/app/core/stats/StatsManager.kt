@@ -62,6 +62,8 @@ data class StatsSnapshot(
     val totalTrackersBlocked: Int                   = 0,
     /** TCP connections stopped by their TLS server name (SNI), not by DNS; part of [blockedToday]. */
     val sniBlocked:          Long                    = 0L,
+    /** TLS connections reset at Standard/Strict because their ClientHello could not be read. */
+    val tlsUnreadableDropped: Long                   = 0L,
     /** QUIC flows stopped by the server name in their Initial; part of [blockedToday]. */
     val quicNameBlocked:     Long                    = 0L,
     /** QUIC flows dropped because QUIC is blocked (setting, Strict default, inspection). */
@@ -101,6 +103,7 @@ object StatsManager {
     private val ipv6PacketsBlocked = AtomicLong()
     private val ipv6BytesBlocked = AtomicLong()
     private val sniBlocked = AtomicLong()
+    private val tlsUnreadableDropped = AtomicLong()
     private val quicNameBlocked = AtomicLong()
     private val quicOffDropped = AtomicLong()
     private val quicUnreadableDropped = AtomicLong()
@@ -132,6 +135,12 @@ object StatsManager {
     /** A TCP connection stopped by its server name; count it with [incrementBlocked] as well. */
     fun incrementSniBlocked() {
         sniBlocked.incrementAndGet()
+        schedulePublish()
+    }
+
+    /** A TLS connection reset because its ClientHello could not be read: not a block on a name. */
+    fun incrementTlsUnreadableDropped() {
+        tlsUnreadableDropped.incrementAndGet()
         schedulePublish()
     }
 
@@ -182,7 +191,7 @@ object StatsManager {
     }
 
     fun reset() {
-        listOf(blockedToday, trackersBlocked, totalPackets, dataSavedBytes, ipv6PacketsBlocked, ipv6BytesBlocked, sniBlocked, quicNameBlocked, quicOffDropped, quicUnreadableDropped, quicHoldLimitDropped, blockedRowsWritten, blockedRowsMerged)
+        listOf(blockedToday, trackersBlocked, totalPackets, dataSavedBytes, ipv6PacketsBlocked, ipv6BytesBlocked, sniBlocked, tlsUnreadableDropped, quicNameBlocked, quicOffDropped, quicUnreadableDropped, quicHoldLimitDropped, blockedRowsWritten, blockedRowsMerged)
             .forEach { it.set(0) }
         lists.value = StatsSnapshot()
         publishNow()
@@ -198,6 +207,7 @@ object StatsManager {
             ipv6BytesBlocked = ipv6BytesBlocked.get(),
             totalTrackersBlocked = trackersBlocked.get().toInt(),
             sniBlocked = sniBlocked.get(),
+            tlsUnreadableDropped = tlsUnreadableDropped.get(),
             quicNameBlocked = quicNameBlocked.get(),
             quicOffDropped = quicOffDropped.get(),
             quicUnreadableDropped = quicUnreadableDropped.get(),

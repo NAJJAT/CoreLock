@@ -1,4 +1,4 @@
-Superseded by 1.1.0. See [RELEASE_NOTES_1.1.0.md](RELEASE_NOTES_1.1.0.md).
+Superseded by 1.2.0 (1.0.1 and 1.1.0 were never published). See [RELEASE_NOTES_1.2.0.md](RELEASE_NOTES_1.2.0.md).
 
 # PrivacyGuard 1.0.0
 

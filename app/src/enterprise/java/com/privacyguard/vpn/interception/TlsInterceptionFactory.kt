@@ -35,6 +35,32 @@ object TlsInterceptionFactory {
     /** Decrypting only when switched on and consented to; either alone is not enough. */
     internal fun isInspectionActive(enabled: Boolean, consentValid: Boolean): Boolean = enabled && consentValid
 
+    /**
+     * Home's one-time card after the update from 1.1 (CaUpgradeNotice): inspection needs
+     * the new certificate. Reads the trust store, so call it off the main thread.
+     */
+    fun inspectionCertificateNoticeDue(context: Context): Boolean =
+        com.privacyguard.vpn.mitm.CaUpgradeNotice.due(context) { newCaTrusted(context) }
+
+    fun dismissInspectionCertificateNotice(context: Context) = com.privacyguard.vpn.mitm.CaUpgradeNotice.dismiss(context)
+
+    /** The card's button: the HTTPS-inspection screen it opens starts the install once. */
+    fun requestInspectionCertificateInstall() = com.privacyguard.vpn.mitm.CaUpgradeNotice.requestInstall()
+
+    /** The stored CA has the 1.2 name and Android trusts exactly it. */
+    private fun newCaTrusted(context: Context): Boolean {
+        val ca = CaManager.storedCertificate(context) ?: return false
+        val info = CaManager.infoOf(ca)
+        if (info.cn != com.privacyguard.vpn.mitm.CaPolicy.CN || info.org != com.privacyguard.vpn.mitm.CaPolicy.ORG) return false
+        return try {
+            val store = java.security.KeyStore.getInstance("AndroidCAStore").apply { load(null) }
+            store.aliases().asSequence().any { (store.getCertificate(it) as? java.security.cert.X509Certificate)?.encoded?.contentEquals(ca.encoded) == true }
+        } catch (e: Exception) {
+            Log.w(TAG, "newCaTrusted: trust store unreadable: ${e.javaClass.simpleName}")
+            false
+        }
+    }
+
     /** What the VPN notification and the dashboard tell the user (see [InspectionStatus]). */
     fun status(context: Context): InspectionStatus = MitmConfig.readStatus(context)
 

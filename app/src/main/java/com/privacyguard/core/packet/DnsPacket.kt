@@ -86,6 +86,11 @@ data class DnsPacket(
     val cnameRecords: List<String>
         get() = answers.filter { it.type == DnsRecord.TYPE_CNAME }.mapNotNull { it.rdataName }
 
+    /** TargetNames of HTTPS and SVCB answers (RFC 9460), lowercase; "." (the owner name) is left out. */
+    val serviceTargets: List<String>
+        get() = answers.filter { it.type == DnsRecord.TYPE_SVCB || it.type == DnsRecord.TYPE_HTTPS }
+            .mapNotNull { it.rdataName?.lowercase()?.takeIf { name -> name.isNotEmpty() } }
+
     override fun toString(): String {
         val qType = if (isQuery) "QUERY" else "RESP(${responseCode})"
         val name  = queryName ?: "(no question)"
@@ -149,9 +154,16 @@ data class DnsPacket(
                     val rdEnd = off2 + 10 + rdLen
                     if (rdEnd > data.size) return null
                     val rdata     = data.copyOfRange(off2 + 10, rdEnd)
-                    val rdataName = if (type == DnsRecord.TYPE_CNAME || type == DnsRecord.TYPE_NS ||
-                                        type == DnsRecord.TYPE_PTR)
-                        readName(data, off2 + 10)?.first else null
+                    val rdataName = when (type) {
+                        DnsRecord.TYPE_CNAME, DnsRecord.TYPE_NS, DnsRecord.TYPE_PTR ->
+                            readName(data, off2 + 10)?.first
+                        // SvcPriority (2 bytes), then TargetName. RFC 9460 forbids compressing
+                        // it; a pointer is still followed (readName bounds it), but the name
+                        // must end inside this record, or it is not read at all.
+                        DnsRecord.TYPE_SVCB, DnsRecord.TYPE_HTTPS -> if (rdLen < 3) null
+                            else readName(data, off2 + 12)?.takeIf { it.second <= rdEnd }?.first
+                        else -> null
+                    }
                     records += DnsRecord(name, type, clazz, ttl, rdata, rdataName)
                     offset = rdEnd
                 }
@@ -279,6 +291,14 @@ data class DnsPacket(
          */
         fun buildServfailResponse(query: DnsPacket): ByteArray = buildErrorResponse(query, RCODE_SERVFAIL)
 
+        /**
+         * An empty answer to [query] (NOERROR, no records): "this name has no records of
+         * that type". Clients go on with their other lookups; used where an answer can't
+         * be passed on (ADR 0015).
+         */
+        fun buildNoDataResponse(query: DnsPacket): ByteArray = buildErrorResponse(query, RCODE_NOERROR)
+
+        private const val RCODE_NOERROR = 0
         private const val RCODE_SERVFAIL = 2
         private const val RCODE_NXDOMAIN = 3
 
@@ -327,7 +347,7 @@ data class DnsRecord(
     val ttl:       Int,
     /** Raw RDATA bytes. */
     val rdata:     ByteArray,
-    /** Decoded name from RDATA (for CNAME / NS / PTR records). */
+    /** Decoded name from RDATA (CNAME / NS / PTR; the TargetName of SVCB / HTTPS). */
     val rdataName: String?,
 ) {
     override fun equals(other: Any?): Boolean {
@@ -348,6 +368,8 @@ data class DnsRecord(
         const val TYPE_TXT   = 16
         const val TYPE_AAAA  = 28
         const val TYPE_SRV   = 33
+        const val TYPE_SVCB  = 64
+        const val TYPE_HTTPS = 65
         const val CLASS_IN   = 1
     }
 }

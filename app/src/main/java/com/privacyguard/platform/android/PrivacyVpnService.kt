@@ -371,14 +371,17 @@ class PrivacyVpnService : VpnService() {
         blockCleartextRuleActive = hasBlockCleartextRule()
         filterEngine.blockLevel = parseBlockLevel(settings.protectionLevel.value)
         blocklistVersionLoaded = BlocklistSyncBus.version.value
-        // The last loaded lists, from a plain file, take a second or two; reading them
+        // The last loaded lists, from a fingerprint file (BlocklistCache), are read in one go; reading them
         // from the encrypted database takes about half a minute on a phone. The
         // database is read right after, in case the lists changed while protection was off.
-        val cached = runCatching { BlocklistCache.read(this, filterEngine.blockLevel.name) }.getOrNull()
+        // Once after the update from 1.0.0 the file is 1.0.0's (checked like a download).
+        // Any failure here means the database path below: slower, never less filtering.
+        val cached = runCatching { BlocklistCache.read(this, filterEngine.blockLevel.name) }
+            .onFailure { Log.w(TAG, "Start-up cache not read: ${it.javaClass.simpleName}") }
+            .getOrNull()
         if (cached != null) {
-            domainFilter.rebuild(cached.first)
-            securityFilter.rebuild(cached.second)
-            Log.i(TAG, "Blocklists from cache: ${domainFilter.size} names")
+            cached.applyTo(domainFilter, securityFilter)
+            Log.i(TAG, "Blocklists from ${if (cached.fromLegacyFile) "1.0 cache" else "cache"}: ${domainFilter.size} names")
             scope.launch { reloadBlocklists() }
         } else {
             reloadBlocklists()
@@ -504,6 +507,8 @@ class PrivacyVpnService : VpnService() {
             securityFilter = securityFilter,
             adSdkPolicy = com.privacyguard.app.adprivacy.AdSdkPolicy(enabled = { settings.adSdkBlockingEnabled.value }),
             dualVpnConfig = { settings.getDualVpnConfig() },
+            // ADR 0015: the setting applies at Strict only.
+            stripEch = { settings.stripEch.value && filterEngine.blockLevel == FilterEngine.BlockLevel.STRICT },
         ).also { h ->
             h.resolvedListener = DnsHandler.ResolvedListener { ip, hostname -> onDnsResolved(ip, hostname) }
             // Signs about the network itself: stored like DNS anomalies, owned by "network".
@@ -549,6 +554,9 @@ class PrivacyVpnService : VpnService() {
             dohBlocked = { session, sni -> dohClientHelloBlocked(sni, session.key, session.ownerPackage) },
             onDohBlocked = { recordBlock() },
             onSni = { session, sni, rejected -> onSniSeen(session, sni, rejected) },
+            // Same rule as QuicGate.failsClosed: an unreadable ClientHello is reset at Standard and Strict.
+            failsClosed = { filterEngine.blockLevel >= FilterEngine.BlockLevel.STANDARD },
+            onHelloUnreadable = { StatsManager.incrementTlsUnreadableDropped() },
         ).also { it.start() }
         udpForwarder = UdpForwarder(sessionTable, tunWriter, ::protect).also { it.start() }
 
@@ -613,9 +621,9 @@ class PrivacyVpnService : VpnService() {
     /** [newLevel]: a protection level change, set on the engine only once its lists loaded. */
     private suspend fun reloadBlocklists(newLevel: FilterEngine.BlockLevel? = null) = blocklistReloadLock.withLock {
         val level = newLevel ?: filterEngine.blockLevel
-        val blocked = blocklistRepo.levelListDomains(level) +
-            (if (com.privacyguard.core.filter.ProtectionLevels.includesCuratedAdHosts(level)) CuratedAdDomains.all else emptyList())
-        val security = blocklistRepo.domainsIn(setOf(com.privacyguard.app.data.repository.BlocklistRepo.CAT_MALWARE))
+        val lists = blocklistRepo.levelLists(level)
+        val blocked = lists.blocked
+        val security = lists.security
         domainFilter.rebuild(blocked)
         securityFilter.rebuild(security)
         // Encrypted DNS endpoints for the bypass guard, not DNS blocking (its built-in lists always apply).
@@ -624,12 +632,45 @@ class PrivacyVpnService : VpnService() {
             blocklistRepo.domainsIn(setOf(com.privacyguard.app.data.repository.BlocklistRepo.CAT_DOH_IP)),
         )
         filterEngine.blockLevel = level
-        runCatching { BlocklistCache.write(this, level.name, blocked, security) }
+        writeStartupCaches(level)
         Log.i(TAG, "Blocklists loaded: ${domainFilter.size} names at $level")
         // Risk scoring only, not blocking: load it after the tunnel is up. At startup
         // this read of every list held the tunnel back for minutes.
         scope.launch(Dispatchers.IO) {
-            runCatching { metadataEngine.knownTrackers = (blocklistRepo.domainsNotIn(com.privacyguard.app.data.repository.BlocklistRepo.BYPASS_CATEGORIES) + CuratedAdDomains.all).toSet() }
+            runCatching { metadataEngine.knownTrackers.rebuild(blocklistRepo.domainsNotIn(com.privacyguard.app.data.repository.BlocklistRepo.BYPASS_CATEGORIES) + CuratedAdDomains.all) }
+                .onFailure { Log.w(TAG, "Known trackers not loaded: ${it.javaClass.simpleName}") }
+        }
+    }
+
+    private val fillingLevelCaches = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    /**
+     * Writes the start-up file of [level] from the filters just loaded, then the file of
+     * any level that has none yet (after the update from 1.0.0, which kept only the level
+     * in use), so a level changed while protection is off starts without waiting for the
+     * database. Off the start path and the packet thread: the arrays are taken now (they
+     * are never changed once published), the files are written on IO.
+     */
+    private fun writeStartupCaches(level: FilterEngine.BlockLevel) {
+        val blocked = domainFilter.fingerprints()
+        val security = securityFilter.fingerprints()
+        scope.launch(Dispatchers.IO) {
+            runCatching { BlocklistCache.write(this@PrivacyVpnService, level.name, blocked, security) }
+                .onFailure { Log.w(TAG, "Start-up cache not written: ${it.javaClass.simpleName}") }
+            if (!fillingLevelCaches.compareAndSet(false, true)) return@launch
+            try {
+                for (other in FilterEngine.BlockLevel.values()) {
+                    if (other == level || BlocklistCache.exists(this@PrivacyVpnService, other.name)) continue
+                    ensureActive()
+                    // The malware list is the same at every level: only the level's own lists are read.
+                    runCatching {
+                        val otherBlocked = DomainFilter().apply { rebuild(blocklistRepo.levelBlocked(other)) }
+                        BlocklistCache.write(this@PrivacyVpnService, other.name, otherBlocked.fingerprints(), security)
+                    }.onFailure { Log.w(TAG, "Start-up cache not written: ${it.javaClass.simpleName}") }
+                }
+            } finally {
+                fillingLevelCaches.set(false)
+            }
         }
     }
 
