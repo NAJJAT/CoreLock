@@ -77,7 +77,9 @@ class ClientHelloAssemblerTest {
         val msg = message("bad.example.com")
         val cases = mapOf(
             "not a handshake record" to byteArrayOf(0x17, 3, 3, 0, 5, 1, 2, 3, 4, 5),
-            "not TLS version 3.x" to byteArrayOf(0x16, 2, 0, 0, 5, 1, 0, 0, 1, 0),
+            // A first record that isn't version 3.x is not TLS at all (NotTls, finding
+            // 2026-11-07): a_stream_that_only_starts_with_0x16_is_not_tls. A later one is:
+            "later record not version 3.x" to records(msg.copyOf(msg.size - 5)) + byteArrayOf(0x16, 2, 0, 0, 5) + ByteArray(5),
             "empty record" to byteArrayOf(0x16, 3, 1, 0, 0) + records(msg),
             "record over 16 KB" to byteArrayOf(0x16, 3, 1, 0x40, 0x01) + ByteArray(16_385),
             "not a ClientHello" to records(msg.copyOf().also { it[0] = 2 }),
@@ -120,5 +122,38 @@ class ClientHelloAssemblerTest {
             val cuts = (1 until msg.size).shuffled(rnd).take(rnd.nextInt(1, 60)).sorted().toIntArray()
             assertTrue(ClientHelloAssembler.assemble(records(msg, *cuts)) is Complete)
         }
+    }
+
+    /**
+     * Review finding (2026-11-07): the joined copy of a hello split over records got record
+     * version 0x0301 whatever the client sent, and the TLS classifier reads that version, so
+     * a split TLS 1.2 hello was classified as TLS 1.0 (weak TLS, blocked when that setting
+     * is on). The copy keeps the first record's version, as a single record does.
+     */
+    @Test
+    fun a_joined_hello_keeps_the_record_version_the_client_sent() {
+        val wire = records(message("split.example.com"), 40)
+        var pos = 0
+        while (pos + 5 <= wire.size) {
+            wire[pos + 2] = 3                                         // record version 3.3
+            pos += 5 + (((wire[pos + 3].toInt() and 0xFF) shl 8) or (wire[pos + 4].toInt() and 0xFF))
+        }
+        val r = ClientHelloAssembler.assemble(wire) as Complete
+        assertEquals("major", 3, r.record[1].toInt())
+        assertEquals("minor", 3, r.record[2].toInt())
+    }
+
+    /** 0x16 alone doesn't make a stream TLS: a record header needs version 3.x (finding 2026-11-07). */
+    @Test
+    fun a_stream_that_only_starts_with_0x16_is_not_tls() {
+        assertSame(ClientHelloAssembler.NotTls, ClientHelloAssembler.assemble(byteArrayOf(0x16, 0x47, 0x45, 0x54, 0x20, 0x2f)))
+        assertSame(ClientHelloAssembler.NotTls, ClientHelloAssembler.assemble(byteArrayOf(0x16, 0x02, 0x00, 0x00, 0x10)))
+        assertSame(ClientHelloAssembler.NotTls, ClientHelloAssembler.assemble(byteArrayOf(0x16, 0x03, 0x09, 0x00, 0x10)))
+        // One byte is not enough to tell; a TLS record whose later part is wrong is still TLS.
+        assertSame(NeedMore, ClientHelloAssembler.assemble(byteArrayOf(0x16)))
+        assertSame(Unreadable, ClientHelloAssembler.assemble(records(message("a.example")).let { it + byteArrayOf(0x17, 2, 0, 0, 1) }.let { w ->
+            // The first record claims a longer hello than it holds, the next one isn't a handshake record.
+            w.also { it[8] = 0x7f }
+        }))
     }
 }

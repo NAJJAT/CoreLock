@@ -35,6 +35,22 @@ class PayloadRedactionTest {
         assertEquals("/users/[EMAIL]/profile?[REDACTED]&[REDACTED]&[REDACTED]", p.urlPath)
     }
 
+    /**
+     * Review finding (2026-11-07): a key was kept as it was, so data put in the key position
+     * (an address, a JSON object, an encoded address) reached the SIEM. Only a key that looks
+     * like a field name and that the PII patterns leave alone is kept.
+     */
+    @Test
+    fun personal_data_in_query_and_form_keys_is_masked_too() {
+        val p = redacted("GET /c?john.doe@example.com=1&{\"phone\":\"+15551234567\"}=x&bob%40example.net=2&user_id=7 HTTP/1.1\r\nHost: example.com\r\n\r\n")
+        assertEquals("/c?[REDACTED]&[REDACTED]&[REDACTED]&user_id=[REDACTED]", p.urlPath)
+        val body = "carol@example.com=1&page=2"
+        val f = redacted("POST /f HTTP/1.1\r\nHost: example.com\r\nContent-Type: application/x-www-form-urlencoded\r\n" +
+            "Content-Length: ${body.length}\r\n\r\n$body")
+        assertEquals("[REDACTED]&page=[REDACTED]", f.body)
+        for (leak in listOf("john.doe", "5551234567", "bob%40", "carol@")) assertFalse(leak, everything(p).contains(leak) || everything(f).contains(leak))
+    }
+
     @Test
     fun a_form_body_keeps_its_keys_only() {
         val body = "username=alice&password=hunter2&note=Main+Street+12"

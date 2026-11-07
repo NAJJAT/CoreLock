@@ -555,9 +555,10 @@ SIEM code live in `src/enterprise`, the shared engine in `src/main`.
   and says why. Apps that pin certificates are passed through the same way. In
   practice inspection mostly reaches some browsers and apps built to allow it.
 - **Who can see the content:** it stays on the phone, in the encrypted database,
-  unless an administrator turns on SIEM shipping. Shipped events have personal
-  data removed from headers and text bodies, but not yet from URL query strings,
-  form data or binary bodies.
+  unless an administrator turns on SIEM shipping. Shipped events are always
+  redacted (see PII redaction below): personal data is removed from headers and
+  text bodies, values in URL query strings and form data are replaced, and binary
+  bodies are kept as type and size only.
 
 ---
 
@@ -577,7 +578,8 @@ SIEM code live in `src/enterprise`, the shared engine in `src/main`.
 - **PII redaction**: emails, card numbers, phone numbers, JWTs, bearer tokens
   and sensitive JSON fields, in headers and text bodies. Values in URL query
   strings (also in Referer and Location headers) and in HTML form bodies become
-  `[REDACTED]`, with the names kept; bodies that are not text (images, files,
+  `[REDACTED]`; a name is kept only when it looks like a field name and holds no
+  personal data (otherwise it is replaced too); bodies that are not text (images, files,
   compressed or multipart data, HTTP/2 frames) are kept as type and size only.
   Anything sent to the SIEM is always redacted this way. The local payload log is
   redacted the same way while `mitm_redact_pii` is on (the default); with it off,

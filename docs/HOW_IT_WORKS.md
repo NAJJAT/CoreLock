@@ -116,7 +116,10 @@ Say a news app opens `https://ads.example.net/pixel`.
    connection before a byte reaches the server. A complete hello with no SNI at all
    passes (IP-only TLS), and so does one whose SNI is a single-label name or an IP
    literal (an intranet host such as `wiki` or `10.0.0.5`): not standard, but it
-   hides nothing; it still raises the *Invalid server name* alert. These resets are only counted, in Settings › Diagnostics ›
+   hides nothing; it still raises the *Invalid server name* alert. A stream that does
+   not open with a TLS record header at all (0x16, then version 3.0 to 3.4) is not TLS
+   and is forwarded like any other non-TLS stream: another protocol on port 443 whose
+   first byte happens to be 0x16 is not reset. These resets are only counted, in Settings › Diagnostics ›
    Server-name blocking, never written as history rows (like unreadable QUIC). At
    Minimal such connections are forwarded as before.
    Encrypted DNS is checked here too: an SNI on the DoH lists (built in, plus

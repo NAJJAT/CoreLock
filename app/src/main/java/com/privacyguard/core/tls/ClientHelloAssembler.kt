@@ -30,6 +30,11 @@ object ClientHelloAssembler {
     /** Not a ClientHello, malformed, or larger than [MAX_BYTES]: its name can't be read. */
     data object Unreadable : Result
     /**
+     * The stream starts with 0x16 but not with a TLS record header (version 3.0 to 3.4), so
+     * it is not TLS at all: another protocol on the port, handled like any non-TLS stream.
+     */
+    data object NotTls : Result
+    /**
      * The whole ClientHello, as one TLS record [ClientHelloParser.parse] reads: the caller's
      * buffer itself when it is exactly one record holding the hello, else a joined copy.
      */
@@ -40,6 +45,11 @@ object ClientHelloAssembler {
         var have = 0         // handshake bytes in complete records so far
         var need = -1        // 4 + ClientHello length, once its header is in
         var records = 0
+        // Not TLS at all unless the stream opens with a record header: 0x16, version 3.0 to
+        // 3.4. A random-looking protocol on 443 starts with 0x16 once in 256 connections and
+        // must not be reset as an unreadable hello; a real server wouldn't take it as TLS.
+        if (buf.size >= 2 && buf[1].toInt() != 3) return NotTls
+        if (buf.size >= 3 && (buf[2].toInt() and 0xFF) > 4) return NotTls
         while (need < 0 || have < need) {
             if (buf.size - pos < 5) return needMoreOrUnreadable(buf)
             if ((buf[pos].toInt() and 0xFF) != 0x16 || buf[pos + 1].toInt() != 3) return Unreadable
@@ -80,7 +90,8 @@ object ClientHelloAssembler {
     /** The first [need] handshake bytes of [buf]'s records as one record (need ≤ MAX_RECORD). */
     private fun joined(buf: ByteArray, need: Int): ByteArray {
         val out = ByteArray(5 + need)
-        out[0] = 0x16; out[1] = 0x03; out[2] = 0x01
+        // The client's own record version, as in a single record: the TLS classifier reads it.
+        out[0] = 0x16; out[1] = buf[1]; out[2] = buf[2]
         out[3] = (need ushr 8).toByte(); out[4] = need.toByte()
         var pos = 0
         var at = 5

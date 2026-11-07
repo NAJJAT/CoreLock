@@ -33,13 +33,26 @@ internal object PayloadRedaction {
         val path = redactText(url.substring(0, pathEnd))
         if (q < 0 || (hash in 0 until q)) return path
         val queryEnd = if (hash > q) hash else url.length
-        return path + "?" + form(url, q + 1, queryEnd)
+        return path + "?" + form(url, q + 1, queryEnd, redactText)
     }
 
-    /** An `application/x-www-form-urlencoded` body (or a query) with every value replaced. */
-    fun form(text: String): String = form(text, 0, text.length)
+    /**
+     * An `application/x-www-form-urlencoded` body (or a query) with every value replaced.
+     * A key is kept only if it looks like a field name and [redactText] leaves it as it is;
+     * anything else in the key position (an address, JSON, percent-encoding) is data.
+     */
+    fun form(text: String, redactText: (String) -> String = { it }): String = form(text, 0, text.length, redactText)
 
-    private fun form(text: String, start: Int, end: Int): String {
+    /** Letters, digits and the separators field names use; '@', '%', quotes and braces are not. */
+    private fun looksLikeFieldName(text: String, from: Int, to: Int): Boolean {
+        for (k in from until to) {
+            val c = text[k]
+            if (!(c in 'a'..'z' || c in 'A'..'Z' || c in '0'..'9' || c == '_' || c == '-' || c == '.' || c == '[' || c == ']')) return false
+        }
+        return true
+    }
+
+    private fun form(text: String, start: Int, end: Int, redactText: (String) -> String): String {
         val out = StringBuilder(minOf(end - start, 4_096))
         var i = start
         var first = true
@@ -56,7 +69,9 @@ internal object PayloadRedaction {
                 while (k < amp) { if (text[k] == '=') { eq = k; break }; k++ }
                 when {
                     // "a=b": keep the key, hide the value.
-                    eq > i && eq - i <= MAX_KEY_CHARS -> out.append(text, i, eq).append('=').append(VALUE)
+                    eq > i && eq - i <= MAX_KEY_CHARS && looksLikeFieldName(text, i, eq) &&
+                        text.substring(i, eq).let { key -> redactText(key) == key } ->
+                        out.append(text, i, eq).append('=').append(VALUE)
                     // A bare item ("?john@example.com"), an empty key or an overlong one: all data.
                     else -> out.append(VALUE)
                 }

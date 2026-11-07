@@ -145,12 +145,14 @@ class DomainFilter {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * "*.Example.com." → ("example.com", true); null for an empty entry. Lower-cased char
-     * by char, as [NameFingerprints.of] does at lookup: String.lowercase() turns some
-     * characters into two ("İ"), and the fingerprints would then differ.
+     * "*.Example.com." → ("Example.com", true); null for an empty entry. Not lower-cased
+     * here: the name is only ever fingerprinted, and [NameFingerprints.of] lower-cases char
+     * by char, exactly as at lookup (String.lowercase() would turn some characters into
+     * two, "İ", and the fingerprints would differ). Copying each of ~500k names through a
+     * list of chars on every rebuild only cost time and garbage.
      */
     private fun normalize(domain: String): Pair<String, Boolean>? {
-        val d = domain.trim().map { Character.toLowerCase(it) }.joinToString("").trimEnd('.')
+        val d = domain.trim().trimEnd('.')
         if (d.isEmpty() || d == "*") return null
         return if (d.startsWith("*.")) d.substring(2).takeIf { it.isNotEmpty() }?.let { it to true }
         else d to false

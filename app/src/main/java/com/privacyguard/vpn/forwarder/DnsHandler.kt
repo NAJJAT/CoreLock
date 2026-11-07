@@ -569,7 +569,7 @@ class DnsHandler(
     val droppedQueries = AtomicLong(0)
     /** Answers turned into NXDOMAIN because a CNAME pointed at a blocked name. */
     val cnameBlocked   = AtomicLong(0)
-    /** Answers turned into NXDOMAIN because an HTTPS or SVCB record pointed at a blocked name. */
+    /** Answers replaced by an empty answer (no records) because an HTTPS or SVCB record pointed at a blocked name. */
     val svcbBlocked    = AtomicLong(0)
     /** ECH keys removed from HTTPS/SVCB answers (ADR 0015). */
     val echKeysRemoved = AtomicLong(0)

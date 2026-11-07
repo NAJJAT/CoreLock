@@ -152,7 +152,8 @@ object ClientHelloParser {
         p++
         if (p + 2 > end) return false
         val nameLen = readU16(data, p); p += 2
-        if (p + nameLen > data.size) return false
+        // Within this extension: past its end are the next extension's bytes, not the name.
+        if (p + nameLen > end) return false
         return com.privacyguard.core.utils.Hostnames.isLocalNameOrIpLiteral(data, p, nameLen)
     }
 

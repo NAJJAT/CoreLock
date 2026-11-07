@@ -230,7 +230,7 @@ class PayloadParser(
             payload.body == null -> null to payload.bodyEncoding
             unparsed -> PayloadRedaction.binarySummary(null, payload.sizeBytes) to REDACTED_ENCODING
             payload.bodyEncoding == "UTF-8" && type == "application/x-www-form-urlencoded" ->
-                PayloadRedaction.form(payload.body) to "UTF-8"
+                PayloadRedaction.form(payload.body) { piiRedactor.redact(it) } to "UTF-8"
             payload.bodyEncoding == "UTF-8" && type?.startsWith("multipart/") == true ->
                 PayloadRedaction.binarySummary(type, payload.sizeBytes) to REDACTED_ENCODING
             payload.bodyEncoding == "UTF-8" -> piiRedactor.redact(payload.body) to "UTF-8"

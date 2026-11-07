@@ -322,6 +322,28 @@ class TcpForwarderTest {
         assertEquals(List(5) { null }, seen)        // reported as rejected (alert), with no name
     }
 
+    /**
+     * Review finding (2026-11-07): a stream on 443 that isn't TLS but happens to start with
+     * 0x16 (about 1 in 256 for a random-looking protocol such as Shadowsocks) was reset at
+     * Standard as an "unreadable hello". Only a TLS record header (0x16, version 3.0 to 3.4)
+     * makes a stream TLS; anything else is forwarded like any other non-TLS stream. A real
+     * server would not take such bytes as TLS, so no hidden server name gets through.
+     */
+    @Test
+    fun at_standard_a_non_tls_stream_that_starts_like_a_handshake_goes_through() {
+        failClosedForwarder(failClosed = true)
+        val cases = listOf(
+            byteArrayOf(0x16, 0x47, 0x45, 0x54, 0x20) + ByteArray(60) { 0x41 },   // 0x16, then text
+            byteArrayOf(0x16, 0x02, 0x00, 0x00, 0x10) + ByteArray(40) { 7 },       // not version 3.x
+        )
+        for ((i, wire) in cases.withIndex()) {
+            val (sawRst, atServer) = sendSegments(40_260 + i, listOf(wire), expectBytes = wire.size)
+            assertEquals("RST for case $i", false, sawRst)
+            assertEquals("bytes at server for case $i", wire.size, atServer)
+        }
+        assertEquals(0L, forwarder.helloUnreadableDropped.get())
+    }
+
     @Test
     fun at_standard_a_complete_client_hello_without_sni_still_goes_through() {
         failClosedForwarder(failClosed = true)

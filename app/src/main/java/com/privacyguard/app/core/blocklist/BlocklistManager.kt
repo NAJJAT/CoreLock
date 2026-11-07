@@ -91,12 +91,14 @@ object BlocklistManager {
                 retireReplacedSources(repo, succeededAtLeastOnce(times))
                 _size.value = repo.totalCount()
                 _lastUpdate.value = System.currentTimeMillis()
+                // The running VPN keeps its own in-memory filter; tell it to reload first, so
+                // the new lists filter now and not after the start-up files below (a full
+                // database read per level).
+                com.privacyguard.app.data.repository.BlocklistSyncBus.publish()
                 // Every level, also with protection on: the VPN refreshes only the level it
                 // runs at, and a level changed later would otherwise start from the database.
                 runCatching { writeStartupCache(ctx, repo) }
                     .onFailure { android.util.Log.w("BlocklistManager", "Start-up cache not written: ${it.javaClass.simpleName}") }
-                // The running VPN keeps its own in-memory filter; tell it to reload.
-                com.privacyguard.app.data.repository.BlocklistSyncBus.publish()
             }
             outcome.toResult()
         } catch (e: Exception) {

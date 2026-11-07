@@ -384,6 +384,8 @@ class TcpForwarder(
                 }
                 is com.privacyguard.core.tls.ClientHelloAssembler.Complete -> helloRecord = assembled.record
                 com.privacyguard.core.tls.ClientHelloAssembler.Unreadable -> helloUnreadable = true
+                // Another protocol that starts with 0x16: forwarded and classified like any non-TLS stream.
+                com.privacyguard.core.tls.ClientHelloAssembler.NotTls -> {}
             }
             clientHelloBytes = buffered
             session.clientHelloBuf = ByteArray(0)
