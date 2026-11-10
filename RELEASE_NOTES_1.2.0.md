@@ -163,6 +163,11 @@ Notifications posted by 1.0 still open the right screen.
 - **Clearer texts about limits.** The app says that per-app rules can occasionally apply
   to the wrong app on Android 7 to 9, and what is and is not removed from HTTPS
   inspection events sent to an organisation's SIEM server.
+- **No more false "Signature mismatch".** 1.0.0 could report its own genuine signature as
+  a mismatch in Settings › Advanced › Diagnostics and then refused to export or import
+  rules, settings and history, or to clear history. The check now accepts the
+  fingerprint in any common format, and a release APK can no longer be built without a
+  valid one.
 - **Screens update by themselves** instead of re-reading the database every few seconds,
   and errors are shown instead of hidden.
 - Stored names with uncommon capital letters are matched the same way they are looked up.

@@ -36,7 +36,7 @@ import android.util.Log
  *
  * Zero payload decryption. All analysis is on DNS query names only.
  */
-class DnsHandler(
+class  DnsHandler(
     private val filterEngine:      FilterEngine,
     private val tunWriter:         TunWriter,
     private val anomalyDetector:   DnsAnomalyDetector = DnsAnomalyDetector(),

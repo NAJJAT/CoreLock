@@ -488,7 +488,9 @@ unsigned release fails.
    `release-signing.local.properties` (git-ignored). Fill in
    `PRIVACYGUARD_RELEASE_STORE_FILE`, `…_STORE_PASSWORD`, `…_KEY_ALIAS`,
    `…_KEY_PASSWORD` and `…_SIGNATURE_SHA256`. Gradle properties or environment
-   variables with the same names also work.
+   variables with the same names also work. `…_SIGNATURE_SHA256` is the 64-digit
+   hex value from step 2; case and colons don't matter, and the release build stops
+   if it is anything else.
 
 4. Build:
 

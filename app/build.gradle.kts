@@ -33,7 +33,14 @@ val releaseStoreFilePath = propertyEnvOrFile("PRIVACYGUARD_RELEASE_STORE_FILE")
 val releaseStorePassword = propertyEnvOrFile("PRIVACYGUARD_RELEASE_STORE_PASSWORD")
 val releaseKeyAlias = propertyEnvOrFile("PRIVACYGUARD_RELEASE_KEY_ALIAS")
 val releaseKeyPassword = propertyEnvOrFile("PRIVACYGUARD_RELEASE_KEY_PASSWORD")
+// AppSecurityMonitor compares against uppercase hex without separators. apksigner prints
+// lowercase and keytool prints colon-separated uppercase, so normalize here: a value pasted
+// in either form made 1.0.0 report "Signature mismatch" on genuine installs and block export,
+// import and clear history.
 val releaseSignatureSha256 = propertyEnvOrFile("PRIVACYGUARD_RELEASE_SIGNATURE_SHA256")
+    ?.replace(":", "")?.filterNot { it.isWhitespace() }?.uppercase()
+val releaseSignatureSha256Valid =
+    releaseSignatureSha256?.matches(Regex("^[0-9A-F]{64}$")) == true
 
 val releaseSigningConfigured = listOf(
     releaseStoreFilePath,
@@ -60,6 +67,13 @@ gradle.taskGraph.whenReady {
                 "PRIVACYGUARD_RELEASE_KEY_PASSWORD and PRIVACYGUARD_RELEASE_SIGNATURE_SHA256 " +
                 "(Gradle properties, environment, or release-signing.local.properties outside VCS). " +
                 "Blocked tasks: ${releaseArtifactTasks.joinToString { it.path }}"
+        )
+    }
+    if (releaseArtifactTasks.isNotEmpty() && !releaseSignatureSha256Valid) {
+        throw GradleException(
+            "PRIVACYGUARD_RELEASE_SIGNATURE_SHA256 must be the signing certificate's SHA-256: " +
+                "64 hex digits (colons and case don't matter). Otherwise the app reports its own " +
+                "genuine signature as a mismatch."
         )
     }
 }
