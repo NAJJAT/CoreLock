@@ -141,16 +141,25 @@ object AppSecurityMonitor {
             @Suppress("DEPRECATION")
             packageInfo.signatures?.map { it.toByteArray() }.orEmpty()
         }
-        if (signatures.isEmpty()) return false
-        val expected = BuildConfig.APP_SIGNATURE_SHA256
+        return signatureMatches(BuildConfig.APP_SIGNATURE_SHA256, signatures, BuildConfig.DEBUG)
+    }
+
+    /**
+     * True when one of [signers] (DER certificates) has the SHA-256 [expected].
+     * [expected] is compared case-insensitively and without colons or spaces: 1.0.0 compared
+     * it verbatim against uppercase hex, so a lowercase value (as apksigner prints it) made a
+     * genuine install report a mismatch and block export and import.
+     */
+    internal fun signatureMatches(expected: String, signers: List<ByteArray>, isDebugBuild: Boolean): Boolean {
+        if (signers.isEmpty()) return false
+        val want = expected.replace(":", "").filterNot { it.isWhitespace() }.uppercase()
         // Only debug builds may skip the check; release always carries the real hash.
-        if (expected.isBlank()) return BuildConfig.DEBUG
-        val normalized = signatures.map { bytes ->
+        if (want.isEmpty()) return isDebugBuild
+        return signers.any { bytes ->
             MessageDigest.getInstance("SHA-256")
                 .digest(bytes)
-                .joinToString("") { part -> "%02X".format(part) }
+                .joinToString("") { part -> "%02X".format(part) } == want
         }
-        return normalized.any { it == expected }
     }
 
     private fun readHardwareBackedKeystore(context: Context): Boolean {
