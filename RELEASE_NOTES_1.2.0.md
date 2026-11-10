@@ -1,10 +1,5 @@
 # CoreLock 1.2.0
 
-<!-- DRAFT prepared on branch hardening-1.2 (rewritten 2026-11-07 for users coming from
-     1.0.0: 1.0.1 and 1.1.0 were never published). Before publishing:
-     - fill in <APK_SHA256> and the APK size;
-     - remove this comment. -->
-
 The first update since 1.0.0: a new, simpler app around the same protection (planned as
 1.1), and protection that is harder to get around and lighter on memory (1.2). Install it
 over 1.0.0: your rules, settings and history stay. One APK for Android 7.0 and newer (ARM
@@ -168,6 +163,10 @@ Notifications posted by 1.0 still open the right screen.
   rules, settings and history, or to clear history. The check now accepts the
   fingerprint in any common format, and a release APK can no longer be built without a
   valid one.
+- **Wi-Fi counts as Wi-Fi again while protection is on.** On Android 10 and newer, 1.0.0
+  made Android treat every network as mobile data while protection ran, so apps that
+  wait for Wi-Fi (backups, photo uploads, app updates) did not start. Now the network
+  behind CoreLock decides: Wi-Fi is unmetered, mobile data stays metered.
 - **Screens update by themselves** instead of re-reading the database every few seconds,
   and errors are shown instead of hidden.
 - Stored names with uncommon capital letters are matched the same way they are looked up.
@@ -224,7 +223,8 @@ key as 1.0.0.
 
 ```
 Signing certificate SHA-256: caa82092caf86f9ce7d94f5b7c4a4476a3eb1a5bfa238f7b1d18cd85809bc430
-APK file SHA-256:            <APK_SHA256>
+APK file SHA-256:            bcf75c85b671a30f23ed5841f29fabea927559118e0cd04275fa826af360daa0
+APK file size:               12,232,204 bytes (11.7 MiB)
 ```
 
 On a computer with the Android SDK build-tools:

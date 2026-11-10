@@ -87,6 +87,18 @@ decides.
 5. Also by hand once, at step 2 or 3: count the seconds from tapping the switch until a
    site you haven't opened today loads in Chrome.
 
+Before you trust a RESULT, run the probe once with protection **already on** for a minute.
+If it reports slow lookups there too, the upstream resolver is slow or loses packets on
+this network (2026-11-10, Belgian ISP: about half of all lookups to 1.1.1.1 and 1.0.0.1
+took 6–12 s, also from a computer without CoreLock). RESULT then measures that, not the
+start. Use the time from the tap to the first fast lookup instead.
+
+Also note: if protection was on before the update, CoreLock turns it back on by itself
+about 3 s after `install -r` finishes (BootReceiver, MY_PACKAGE_REPLACED), before you can
+open the app. To measure step 2 with the probe, start the probe **before** `install -r`.
+If you missed it, take the time from the log (`adb -s PHONE_ID logcat -d`, from the
+process start to the end of the start-up list read) and say so in the table.
+
 **Pass:** filtering active within **30 s** in steps 2, 3 and 5 (RESULT 30 s or less), and
 within 5 s in step 4. **Fail (blocker):** more than 30 s in any step. Write every number in
 the table, with the phone model.
@@ -120,22 +132,25 @@ network.
 
 ### B. Private DNS (Android 9+)
 
-Private DNS set to a hostname makes Android send DNS past CoreLock, so DNS blocking
-(layer 1) is off; server-name blocking (layer 3) still works.
+Private DNS set to a hostname makes Android send every lookup as DNS over TLS (port 853)
+to that host. CoreLock blocks DNS over TLS (layer 2), and in hostname mode Android does not
+fall back, so names stop resolving while protection runs. The app must say so before it
+happens (README, First setup step 3).
 
 1. Android Settings › Network › Private DNS › **Private DNS provider hostname**,
    enter `dns.google`, save. Open CoreLock.
    **Expected:** Home shows the Private DNS warning, with a way to open the setting.
 2. Stop and start protection. **Expected:** the warning appears before protection
-   starts, not only afterwards.
-3. With protection on, open a site with ads in Chrome. **Expected:** pages load. Some ads
-   are still stopped (by server name); note how many fewer than with Private DNS off.
+   starts, not only afterwards ("Private DNS will stop DNS from working", with "Start
+   anyway" and "Open network settings").
+3. Tap "Start anyway", then open a site you haven't opened today in Chrome.
+   **Expected:** it does not load (lookups fail), and Home still shows the warning.
 4. Set Private DNS to **Automatic**. **Expected:** the warning is gone within a few seconds
    (no restart), pages load normally, ads are blocked as usual.
 5. Set Private DNS to **Off**. **Expected:** the same as Automatic.
 
-**Fail:** no warning in step 1 or 2, a warning that stays in step 4, or pages that stop
-loading in any mode.
+**Fail:** no warning in step 1 or 2, a warning that stays in step 4, or pages that do not
+load in Automatic or Off (steps 4 and 5).
 
 ### C. Screen off on Samsung and Xiaomi
 
@@ -240,7 +255,7 @@ APK SHA-256 (first 8): ________ Dates: ________
 | 0 | Checksums and fingerprint; published 1.0.0, then 1.2.0 over it, data kept; cards once | | |
 | G | Filtering active within 30 s: first start after update, level changed while off, normal start | | After update: ___ s Strict: ___ s Standard: ___ s Normal: ___ s By hand: ___ s |
 | A | IPv6-only + 464XLAT: sites (one IPv4-only), voice and video call, IPv4-literal app | | Carrier: ___ CLAT interface: ___ |
-| B | Private DNS: warning on Home and before start, goes away in Automatic, pages load in all modes | | Ads seen with hostname mode: ___ |
+| B | Private DNS: warning on Home and before start, lookups fail in hostname mode as warned, warning gone and pages load in Automatic and Off | | |
 | C | Screen off 60 min and one night, Samsung and Xiaomi, true status if stopped | | Samsung: ___ Xiaomi: ___ |
 | D | Battery, day without vs day with CoreLock | | Day 1: ___ % / ___ h (screen ___ h) Day 2: ___ % / ___ h (screen ___ h) |
 | E | Captive portal at Strict with lockdown, and without | | Network: ___ |

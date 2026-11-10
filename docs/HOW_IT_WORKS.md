@@ -180,7 +180,7 @@ QUIC depends on the protection level (`vpn/firewall/QuicGate.kt`):
 
 | Part | File | What it does |
 |---|---|---|
-| Service | `platform/android/PrivacyVpnService.kt` | Builds the tunnel (10.0.0.2/24 and fd00:1:fd00:1::2/64, resolver 10.0.0.1, default routes for IPv4 and IPv6), starts everything below, writes history. |
+| Service | `platform/android/PrivacyVpnService.kt` | Builds the tunnel (10.0.0.2/24 and fd00:1:fd00:1::2/64, resolver 10.0.0.1, default routes for IPv4 and IPv6; on Android 10+ marked not metered so it is metered exactly when the network under it is), starts everything below, writes history. |
 | Reader | `vpn/tunnel/TunReader.kt` | Reads packets from the TUN file descriptor, parses IPv4 and IPv6, hands them on. |
 | Writer | `vpn/tunnel/TunWriter.kt` | One queue and one thread that write packets back to apps (DNS answers, TCP data, UDP replies). |
 | TCP | `vpn/forwarder/TcpForwarder.kt` | A TCP state machine per connection: ends the app's connection locally and relays it over a real socket, with flow control and retransmission towards the app. |

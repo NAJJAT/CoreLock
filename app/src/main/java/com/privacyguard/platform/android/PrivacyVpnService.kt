@@ -476,6 +476,16 @@ class PrivacyVpnService : VpnService() {
             .addRoute("0.0.0.0", 0)
             .addRoute("::", 0)
             .setMtu(UdpForwarder.TUN_MTU)
+            .apply {
+                // From Android 10 the VPN of an app targeting API 29+ counts as metered
+                // unless it says otherwise (setMetered defaults to true). The tunnel then hid
+                // Wi-Fi from every app behind it: "Wi-Fi only" downloads, backups and updates
+                // waited, and our own weekly list refresh (UNMETERED) never ran while
+                // protection was on (Galaxy Note20, Android 13, 2026-11-10). false: Android
+                // takes meteredness from the underlying network (the default network, since
+                // none is set), so mobile data stays metered.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) setMetered(false)
+            }
             .establish()
             .also {
                 if (it == null) Log.e(TAG, "establish() returned null — VPN permission not granted")
