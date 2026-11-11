@@ -76,6 +76,7 @@
     <string name="ui_diag_lists">Blocklist details</string>
     <string name="ui_diag_list_updated">Downloaded %1$s</string>
     <string name="ui_diag_list_never">Not downloaded yet</string>
+    <string name="ui_diag_list_date_unknown">Loaded, date unknown until the next refresh</string>
     <string name="ui_diag_names">Names per list</string>
     <string name="ui_diag_battery">Battery</string>
     <string name="ui_diag_battery_ok">Unrestricted: Android won’t stop protection to save battery.</string>

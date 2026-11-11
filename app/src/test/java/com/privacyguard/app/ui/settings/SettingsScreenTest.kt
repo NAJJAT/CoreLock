@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -114,6 +115,13 @@ class SettingsScreenTest {
     fun blocklists_row_says_when_nothing_downloaded_yet() {
         show(SettingsHomeState(lists = SettingsLogic.ListsUpdated.Never))
         rule.onNodeWithText("Not downloaded yet. Built-in lists are used.").assertIsDisplayed()
+    }
+
+    @Test
+    fun blocklists_row_says_loaded_when_the_date_is_unknown() {
+        show(SettingsHomeState(lists = SettingsLogic.ListsUpdated.DateUnknown(someMissing = false)))
+        rule.onNodeWithText("Loaded, date unknown until the next refresh").assertIsDisplayed()
+        rule.onAllNodesWithText("Not downloaded yet. Built-in lists are used.").assertCountEquals(0)
     }
 
     @Test

@@ -400,6 +400,9 @@ private fun listsSubtitle(state: SettingsHomeState, now: Long): String = when {
     else -> when (val lists = state.lists) {
         null -> " "
         SettingsLogic.ListsUpdated.Never -> stringResource(R.string.ui_set_lists_never)
+        is SettingsLogic.ListsUpdated.DateUnknown -> stringResource(
+            if (lists.someMissing) R.string.ui_set_lists_date_unknown_some_missing else R.string.ui_set_lists_date_unknown,
+        )
         is SettingsLogic.ListsUpdated.At -> {
             val ago = relativeTime(lists.at, now)
             stringResource(if (lists.someMissing) R.string.ui_set_lists_some_missing else R.string.ui_set_lists_updated, ago)

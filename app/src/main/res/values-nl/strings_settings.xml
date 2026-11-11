@@ -61,6 +61,7 @@
     <string name="diag_private_dns_pre9">Niet beschikbaar vóór Android 9</string>
     <string name="diag_private_dns_strict">De strikte modus (%1$s) omzeilt de blokkeerlijst en wordt geblokkeerd; zet Privé-DNS op Uit of Automatisch</string>
     <string name="diag_private_dns_auto">Automatisch: valt terug op gefilterde DNS</string>
+    <string name="diag_private_dns_off_or_auto">Uit of Automatisch</string>
     <string name="diag_off">Uit</string>
     <string name="diag_diagnostics">Diagnose</string>
     <string name="diag_running">Netwerkcontroles worden uitgevoerd…</string>

@@ -72,6 +72,7 @@
     <string name="ui_diag_lists">تفاصيل قوائم الحظر</string>
     <string name="ui_diag_list_updated">نُزّلت %1$s</string>
     <string name="ui_diag_list_never">لم تُنزَّل بعد</string>
+    <string name="ui_diag_list_date_unknown">محمّلة، والتاريخ غير معروف حتى التحديث التالي</string>
     <string name="ui_diag_names">عدد الأسماء في كل قائمة</string>
     <string name="ui_diag_battery">البطارية</string>
     <string name="ui_diag_battery_ok">غير مقيّد: لن يوقف Android الحماية لتوفير البطارية.</string>

@@ -2,6 +2,7 @@ package com.privacyguard.app.ui.settings
 
 import androidx.annotation.StringRes
 import com.privacyguard.app.R
+import com.privacyguard.app.core.blocklist.BlocklistManager
 import com.privacyguard.app.core.blocklist.BlocklistSource
 import com.privacyguard.app.ui.theme.Appearance
 import com.privacyguard.app.vpn.KillSwitch
@@ -22,16 +23,40 @@ object SettingsLogic {
 
         /** [at]: the oldest success among the lists that succeeded, so "2 days ago" is true for every list. */
         data class At(val at: Long, val someMissing: Boolean) : ListsUpdated
+
+        /**
+         * A list is stored but has no time: 1.0.0 kept no per-list time, so after the update
+         * its lists are in use with no date until their first 1.2 download. Not "never".
+         */
+        data class DateUnknown(val someMissing: Boolean) : ListsUpdated
     }
 
     /**
      * The oldest, not the newest, success: if one list stopped updating, "Updated today"
-     * would hide it. A list that never succeeded is reported separately.
+     * would hide it. A list that never succeeded is reported separately. [stored]: per list,
+     * whether its downloaded names are in the database; a stored list without a time makes
+     * the oldest date unknown, so no date is claimed for it.
      */
-    fun listsUpdated(lastSuccess: List<Long>): ListsUpdated {
-        val done = lastSuccess.filter { it > 0 }
-        if (done.isEmpty()) return ListsUpdated.Never
-        return ListsUpdated.At(done.min(), someMissing = done.size < lastSuccess.size)
+    fun listsUpdated(lastSuccess: List<Long>, stored: List<Boolean> = List(lastSuccess.size) { false }): ListsUpdated {
+        require(stored.size == lastSuccess.size) { "one stored flag per list" }
+        val done = lastSuccess.count { it > 0 }
+        val undated = lastSuccess.indices.count { lastSuccess[it] <= 0 && stored[it] }
+        val missing = lastSuccess.size - done - undated
+        return when {
+            undated > 0 -> ListsUpdated.DateUnknown(someMissing = missing > 0)
+            done == 0 -> ListsUpdated.Never
+            else -> ListsUpdated.At(lastSuccess.filter { it > 0 }.min(), someMissing = missing > 0)
+        }
+    }
+
+    /**
+     * Per list, whether its own downloaded rows are stored ([counts]: stored names per
+     * source key, as the database groups them). The bundled malware copy and the built-in
+     * names have keys of their own, so they never count as the downloaded list.
+     */
+    fun storedFlags(lists: List<BlocklistSource>, counts: Map<String, Int>): List<Boolean> {
+        val byKey = counts.entries.groupBy({ it.key.lowercase() }, { it.value }).mapValues { it.value.sum() }
+        return lists.map { (byKey[BlocklistManager.sourceMetadata(it).first.lowercase()] ?: 0) > 0 }
     }
 
     /**

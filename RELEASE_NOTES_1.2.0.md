@@ -261,12 +261,19 @@ An automatic check on this release confirmed the APK is signed with this key.
   answers for a short time, so a site opened seconds before you block it can still load
   until that answer expires.
 - **Private DNS in hostname mode must be turned off.** With a hostname set ("strict"),
-  lookups bypass the filter and fail while the VPN runs. Use "Off" or "Automatic". The
+  every lookup fails while the VPN runs: Android then uses only that encrypted server,
+  which CoreLock blocks so the filter can't be skipped. Use "Off" or "Automatic". The
   app warns you on Home and in Diagnostics.
 - **Chrome's "Use secure DNS" must stay on automatic.** With a specific provider chosen
   (for example Cloudflare), Chrome sends lookups only to that encrypted server, which
   CoreLock blocks, and pages fail to load. In Chrome, open Settings › Privacy and
   security › Use secure DNS and choose "Use your current service provider".
+- **Some networks lose many lookups to the default DNS server.** CoreLock asks
+  Cloudflare (1.1.1.1, then 1.0.0.1) and, by design, no other company. On some internet
+  providers many of these lookups get lost, and pages load slowly or fail while
+  protection is on, but work with it off. If that happens, open Settings › Advanced ›
+  Network › DNS server and choose another server (Google or Quad9). A better fallback is
+  planned for a later version.
 - **QUIC at Strict.** QUIC is blocked by default at Strict, and unreadable QUIC is
   dropped at Standard and Strict. Apps fall back to TCP, which can make some connections
   a little slower to start.

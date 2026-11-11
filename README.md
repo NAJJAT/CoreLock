@@ -208,8 +208,9 @@ Versions 1.0.1 and 1.1.0 were never published; 1.2.0 updates 1.0.0 directly.
    app sends and stores. Everything else stays on the phone.
 2. **Protection level.** Standard is the default; see
    [Protection levels](#protection-levels).
-3. **Private DNS.** If Android's Private DNS is set to a hostname, lookups bypass the
-   filter and fail while protection runs. The app warns you on Home and before
+3. **Private DNS.** If Android's Private DNS is set to a hostname, every lookup fails
+   while protection runs (Android then uses only that encrypted server, which CoreLock
+   blocks so the filter can't be skipped). The app warns you on Home and before
    starting; set Private DNS to Off or Automatic.
 4. **Battery.** Setup warns you when Android restricts CoreLock in the background.
    Settings › Advanced › Diagnostics › Battery use shows whether Android may stop

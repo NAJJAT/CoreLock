@@ -8,6 +8,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import com.privacyguard.app.data.db.SourceStats
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -180,6 +181,17 @@ class AdvancedScreensTest {
         assertRows("Network diagnostics", "Private DNS", "App integrity", "Blocklist details", "HaGeZi Pro mini", "Not downloaded yet", "Battery", "Open battery settings")
         assertTrue(rule.onAllNodesWithText("Warn").fetchSemanticsNodes().isNotEmpty())
         assertTrue(rule.onAllNodesWithText("Fail").fetchSemanticsNodes().isNotEmpty())
+    }
+
+    @Test
+    fun diagnostics_says_loaded_for_a_list_kept_from_1_0_0_without_a_date() {
+        val state = DiagnosticsState(
+            listTimes = listOf(BlocklistSource.HAGEZI_PRO_MINI to 0L, BlocklistSource.HAGEZI_PRO to 0L),
+            namesPerList = listOf(SourceStats("Hagezi-Pro-mini", 120_000)),
+        )
+        show { DiagnosticsContent(state, DiagnosticsActions(), now = 10_000_000L) }
+        assertRows("HaGeZi Pro mini", "Loaded, date unknown until the next refresh", "HaGeZi Pro", "Not downloaded yet")
+        assertEquals(1, rule.onAllNodesWithText("Loaded, date unknown until the next refresh").fetchSemanticsNodes().size)
     }
 
     @Test

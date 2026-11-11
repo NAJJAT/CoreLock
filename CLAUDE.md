@@ -292,7 +292,7 @@ Invariants:
 - DoH servers are blocked by domain (HaGeZi DoH list) and by IP (HaGeZi DoH-IP list), with a built-in fallback list when downloads fail.
 - Downloaded DoH **IPs** are decided at the ClientHello, not at the TCP SYN. **Why:** many DoH IPs are shared CDN addresses; deciding at SYN would block unrelated sites.
 - A user Allow rule overrides a DoH block (the user may run their own DoH server).
-- If Android's **Private DNS** is set to a specific hostname, it bypasses our resolver. The app warns on the dashboard and before starting protection.
+- If Android's **Private DNS** is set to a specific hostname ("strict"), Android sends every lookup over DNS over TLS to that host on port 853. The tunnel drops port 853, and in this mode Android doesn't fall back to plain DNS, so **lookups fail** for every app while protection runs; they are not bypassed (checked on a phone, 2026-11-10). In "Automatic" mode Android falls back to plain DNS, which goes through our resolver. The app warns on Home and before starting protection. Diagnostics reads the mode from Android's setting (`PrivateDnsCheck.mode`), not from whether DoT is in use.
 
 ### 5.6 Blocklists (supply chain)
 
@@ -500,7 +500,7 @@ Documentation is part of the product. Outdated docs in a security app are a secu
 
 - `docs/HOW_IT_WORKS.md` — deeper technical explanation of §5 for curious users and contributors.
 - `docs/BLOCKING_POLICY.md` — user-facing blocking policy: what each level blocks, what is exempt and why, what can't be blocked, how to allow-list and report. Update it in the same change as any list, level, exemption or precedence change. Issue forms in `.github/ISSUE_TEMPLATE/` link to it.
-- `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 are accepted (2026-10-25); 0007–0011 are proposed, 0012 is accepted (2026-10-28) 0013 is accepted (2026-11-04); 0014 is proposed and 0015 accepted (2026-11-05). Never rewrite an accepted record; supersede it with a new one.
+- `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 are accepted (2026-10-25); 0007–0011 are proposed, 0012 is accepted (2026-10-28) 0013 is accepted (2026-11-04); 0014 is proposed and 0015 accepted (2026-11-05); 0016 is proposed (2026-11-11, for 1.3). Never rewrite an accepted record; supersede it with a new one.
 - `RELEASE_NOTES_X.Y.md`, `docs/TRANSLATION_REVIEW_X.Y.md`.
 - `SECURITY.md` — vulnerability reporting.
 
@@ -604,6 +604,7 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
     - Harden storage of packet captures.
     - Harden DNS and TLS parsers for remaining edge cases.
     - Show refused list downloads (shrink guard, item 17) in Settings › Diagnostics, with a way to accept a list that legitimately got smaller.
+20. **Upstream DNS fallback** (ADR 0016, Proposed, 1.3): on a path that loses many queries to the chosen server (the owner's ISP lost ~50 % to 1.1.1.1 and 1.0.0.1, 2026-11-10), lookups fail after 6 s. Steps: retry both addresses of the same provider faster (no privacy cost), show upstream timeouts in Diagnostics, then an opt-in fallback to the network's own resolver (off by default, never with DoH).
 
 When you finish a backlog item, propose removing it here in the same change.
 

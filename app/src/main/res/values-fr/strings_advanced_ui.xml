@@ -72,6 +72,7 @@
     <string name="ui_diag_lists">Détails des listes de blocage</string>
     <string name="ui_diag_list_updated">Téléchargée %1$s</string>
     <string name="ui_diag_list_never">Pas encore téléchargée</string>
+    <string name="ui_diag_list_date_unknown">Chargée, date inconnue jusqu’à la prochaine actualisation</string>
     <string name="ui_diag_names">Noms par liste</string>
     <string name="ui_diag_battery">Batterie</string>
     <string name="ui_diag_battery_ok">Sans restriction : Android n’arrêtera pas la protection pour économiser la batterie.</string>

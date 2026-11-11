@@ -61,6 +61,7 @@
     <string name="diag_private_dns_pre9">Not available before Android 9</string>
     <string name="diag_private_dns_strict">Strict mode (%1$s) bypasses the blocklist and is blocked; set Private DNS to Off or Automatic</string>
     <string name="diag_private_dns_auto">Automatic: falls back to filtered DNS</string>
+    <string name="diag_private_dns_off_or_auto">Off or Automatic</string>
     <string name="diag_off">Off</string>
     <string name="diag_diagnostics">Diagnostics</string>
     <string name="diag_running">Running network checks…</string>

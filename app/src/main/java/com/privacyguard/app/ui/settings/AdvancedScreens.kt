@@ -517,11 +517,19 @@ fun DiagnosticsContent(state: DiagnosticsState, actions: DiagnosticsActions, now
         }
 
         group("lists", R.string.ui_diag_lists) {
-            state.listTimes.forEach { (source, at) ->
+            // A list kept from 1.0.0 is stored without a time: loaded, not "not downloaded".
+            val stored = remember(state.listTimes, state.namesPerList) {
+                SettingsLogic.storedFlags(state.listTimes.map { it.first }, state.namesPerList.associate { it.source to it.count })
+            }
+            state.listTimes.forEachIndexed { i, (source, at) ->
                 CheckRow(
                     AdvancedLogic.listName(source),
-                    if (at > 0) DiagnosticStatus.PASS else DiagnosticStatus.WARN,
-                    if (at > 0) stringResource(R.string.ui_diag_list_updated, relativeTime(at, now)) else stringResource(R.string.ui_diag_list_never),
+                    if (at > 0 || stored[i]) DiagnosticStatus.PASS else DiagnosticStatus.WARN,
+                    when {
+                        at > 0 -> stringResource(R.string.ui_diag_list_updated, relativeTime(at, now))
+                        stored[i] -> stringResource(R.string.ui_diag_list_date_unknown)
+                        else -> stringResource(R.string.ui_diag_list_never)
+                    },
                 )
             }
             Note(stringResource(R.string.set_domains_loaded, java.text.NumberFormat.getIntegerInstance().format(state.totalNames)), Modifier.padding(horizontal = spacing.l, vertical = spacing.m))

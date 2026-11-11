@@ -7,6 +7,8 @@
     <string name="ui_set_lists_updated">Mises à jour %1$s</string>
     <string name="ui_set_lists_some_missing">Mises à jour %1$s. Certaines listes ne sont pas encore téléchargées.</string>
     <string name="ui_set_lists_never">Pas encore téléchargées. Les listes intégrées sont utilisées.</string>
+    <string name="ui_set_lists_date_unknown">Chargées, date inconnue jusqu’à la prochaine actualisation</string>
+    <string name="ui_set_lists_date_unknown_some_missing">Chargées, date inconnue jusqu’à la prochaine actualisation. Certaines listes ne sont pas encore téléchargées.</string>
     <string name="ui_set_kill_switch">Coupure d’urgence</string>
     <string name="ui_set_ks_on">Activée : pas d’internet sans CoreLock</string>
     <string name="ui_set_ks_off">Désactivée</string>

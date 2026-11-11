@@ -7,6 +7,8 @@
     <string name="ui_set_lists_updated">Bijgewerkt %1$s</string>
     <string name="ui_set_lists_some_missing">Bijgewerkt %1$s. Sommige lijsten zijn nog niet gedownload.</string>
     <string name="ui_set_lists_never">Nog niet gedownload. De ingebouwde lijsten worden gebruikt.</string>
+    <string name="ui_set_lists_date_unknown">Geladen, datum onbekend tot de volgende vernieuwing</string>
+    <string name="ui_set_lists_date_unknown_some_missing">Geladen, datum onbekend tot de volgende vernieuwing. Sommige lijsten zijn nog niet gedownload.</string>
     <string name="ui_set_kill_switch">Noodstop</string>
     <string name="ui_set_ks_on">Aan: geen internet zonder CoreLock</string>
     <string name="ui_set_ks_off">Uit</string>

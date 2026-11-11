@@ -72,6 +72,7 @@
     <string name="ui_diag_lists">Details van blokkeerlijsten</string>
     <string name="ui_diag_list_updated">Gedownload %1$s</string>
     <string name="ui_diag_list_never">Nog niet gedownload</string>
+    <string name="ui_diag_list_date_unknown">Geladen, datum onbekend tot de volgende vernieuwing</string>
     <string name="ui_diag_names">Namen per lijst</string>
     <string name="ui_diag_battery">Batterij</string>
     <string name="ui_diag_battery_ok">Onbeperkt: Android stopt de bescherming niet om batterij te sparen.</string>

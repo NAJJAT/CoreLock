@@ -65,6 +65,7 @@
     <string name="diag_private_dns_pre9">غير متاح قبل Android 9</string>
     <string name="diag_private_dns_strict">الوضع الصارم (%1$s) يتجاوز قائمة الحظر ولذلك يُحظر؛ اضبط DNS الخاص على «إيقاف» أو «تلقائي»</string>
     <string name="diag_private_dns_auto">تلقائي: يعود إلى DNS المفلتر</string>
+    <string name="diag_private_dns_off_or_auto">متوقف أو تلقائي</string>
     <string name="diag_off">متوقف</string>
     <string name="diag_diagnostics">التشخيص</string>
     <string name="diag_running">جارٍ تشغيل فحوص الشبكة…</string>

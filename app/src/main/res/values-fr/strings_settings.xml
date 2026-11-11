@@ -62,6 +62,7 @@
     <string name="diag_private_dns_pre9">Indisponible avant Android 9</string>
     <string name="diag_private_dns_strict">Le mode strict (%1$s) contourne la liste de blocage et est bloqué ; réglez le DNS privé sur Désactivé ou Automatique</string>
     <string name="diag_private_dns_auto">Automatique : revient au DNS filtré</string>
+    <string name="diag_private_dns_off_or_auto">Désactivé ou Automatique</string>
     <string name="diag_off">Désactivé</string>
     <string name="diag_diagnostics">Diagnostic</string>
     <string name="diag_running">Tests réseau en cours…</string>

@@ -8,6 +8,8 @@
     <string name="ui_set_lists_updated">Updated %1$s</string>
     <string name="ui_set_lists_some_missing">Updated %1$s. Some lists haven’t downloaded yet.</string>
     <string name="ui_set_lists_never">Not downloaded yet. Built-in lists are used.</string>
+    <string name="ui_set_lists_date_unknown">Loaded, date unknown until the next refresh</string>
+    <string name="ui_set_lists_date_unknown_some_missing">Loaded, date unknown until the next refresh. Some lists haven’t downloaded yet.</string>
     <string name="ui_set_kill_switch">Kill switch</string>
     <string name="ui_set_ks_on">On: no internet without CoreLock</string>
     <string name="ui_set_ks_off">Off</string>

@@ -6,6 +6,7 @@ import com.privacyguard.app.R
 import android.content.pm.PackageManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.privacyguard.app.core.network.PrivateDnsCheck
 import com.privacyguard.app.core.power.BatteryCheck
 import com.privacyguard.app.core.security.AppSecurityMonitor
 import com.privacyguard.app.core.security.SecurityPosture
@@ -125,16 +126,23 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             ?.filter { cm.getNetworkCapabilities(it)?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN) == false }
             ?.mapNotNull { cm.getLinkProperties(it) }
             .orEmpty()
-        val strict = props.firstOrNull { !it.privateDnsServerName.isNullOrBlank() }
-        return when {
-            strict != null -> DiagnosticCheck(
-                str(R.string.diag_private_dns), DiagnosticStatus.WARN,
-                str(R.string.diag_private_dns_strict, strict.privateDnsServerName.orEmpty()),
+        val strictHost = props.firstNotNullOfOrNull { it.privateDnsServerName?.takeIf { name -> name.isNotBlank() } }
+        val app = getApplication<android.app.Application>()
+        val mode = PrivateDnsCheck.mode(
+            setting = PrivateDnsCheck.setting(app),
+            hostnameOnLink = strictHost != null,
+            activeOnLink = props.any { it.isPrivateDnsActive },
+        )
+        val label = str(R.string.diag_private_dns)
+        return when (mode) {
+            PrivateDnsCheck.Mode.HOSTNAME -> DiagnosticCheck(
+                label, DiagnosticStatus.WARN,
+                // Set but not on the network yet: the setting holds the hostname.
+                str(R.string.diag_private_dns_strict, strictHost ?: PrivateDnsCheck.setting(app, "private_dns_specifier").orEmpty()),
             )
-            props.any { it.isPrivateDnsActive } -> DiagnosticCheck(
-                str(R.string.diag_private_dns), DiagnosticStatus.PASS, str(R.string.diag_private_dns_auto),
-            )
-            else -> DiagnosticCheck(str(R.string.diag_private_dns), DiagnosticStatus.PASS, str(R.string.diag_off))
+            PrivateDnsCheck.Mode.AUTOMATIC -> DiagnosticCheck(label, DiagnosticStatus.PASS, str(R.string.diag_private_dns_auto))
+            PrivateDnsCheck.Mode.OFF -> DiagnosticCheck(label, DiagnosticStatus.PASS, str(R.string.diag_off))
+            PrivateDnsCheck.Mode.OFF_OR_AUTOMATIC -> DiagnosticCheck(label, DiagnosticStatus.PASS, str(R.string.diag_private_dns_off_or_auto))
         }
     }
 

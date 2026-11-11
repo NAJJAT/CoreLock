@@ -73,3 +73,20 @@ certificate or dismiss the card. Home is an everyday screen, so the certificate 
 | `ui_install_certificate` | Install certificate | تثبيت الشهادة | Installer le certificat | Certificaat installeren |
 
 Arabic, French and Dutch are machine-made.
+
+## Phone-test fixes (2026-11-11): list dates after the update, Private DNS mode (4 strings)
+
+After the update from 1.0.0 the lists are loaded but have no per-list date (1.0.0 kept
+none); Settings and Diagnostics now say so instead of "Not downloaded yet". Diagnostics
+can now say "Off or Automatic" when Android doesn't tell which.
+
+| Key | English | Arabic | French | Dutch |
+|---|---|---|---|---|
+| `ui_set_lists_date_unknown` (`strings_settings_ui.xml`) | Loaded, date unknown until the next refresh | محمّلة، والتاريخ غير معروف حتى التحديث التالي | Chargées, date inconnue jusqu’à la prochaine actualisation | Geladen, datum onbekend tot de volgende vernieuwing |
+| `ui_set_lists_date_unknown_some_missing` (`strings_settings_ui.xml`) | Loaded, date unknown until the next refresh. Some lists haven’t downloaded yet. | محمّلة، والتاريخ غير معروف حتى التحديث التالي. بعض القوائم لم تُنزَّل بعد. | Chargées, date inconnue jusqu’à la prochaine actualisation. Certaines listes ne sont pas encore téléchargées. | Geladen, datum onbekend tot de volgende vernieuwing. Sommige lijsten zijn nog niet gedownload. |
+| `ui_diag_list_date_unknown` (`strings_advanced_ui.xml`, one list) | Loaded, date unknown until the next refresh | محمّلة، والتاريخ غير معروف حتى التحديث التالي | Chargée, date inconnue jusqu’à la prochaine actualisation | Geladen, datum onbekend tot de volgende vernieuwing |
+| `diag_private_dns_off_or_auto` (`strings_settings.xml`) | Off or Automatic | متوقف أو تلقائي | Désactivé ou Automatique | Uit of Automatisch |
+
+Arabic, French and Dutch are machine-made. French uses the plural (“Chargées”, the lists)
+in Settings and the singular (“Chargée”, one list) in Diagnostics, like the existing
+“Téléchargée”.

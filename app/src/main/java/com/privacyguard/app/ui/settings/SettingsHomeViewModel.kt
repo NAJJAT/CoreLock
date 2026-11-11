@@ -140,7 +140,8 @@ class SettingsHomeViewModel(app: Application) : AndroidViewModel(app) {
     fun refresh() {
         viewModelScope.launch {
             val lists = withContext(Dispatchers.IO) {
-                SettingsLogic.listsUpdated(SettingsLogic.DOWNLOADED_LISTS.map { times.lastSuccess(it) })
+                val sources = SettingsLogic.DOWNLOADED_LISTS
+                SettingsLogic.listsUpdated(sources.map { times.lastSuccess(it) }, SettingsLogic.storedFlags(sources, storedCounts()))
             }
             system.value = SystemState(
                 lockdown = KillSwitch.lockdownStatus,
@@ -148,6 +149,20 @@ class SettingsHomeViewModel(app: Application) : AndroidViewModel(app) {
                 lists = lists,
             )
         }
+    }
+
+    /**
+     * Stored names per list. Unreadable (database still opening, or failed): no list counts
+     * as stored, which shows the old wording rather than claiming lists are loaded.
+     */
+    private suspend fun storedCounts(): Map<String, Int> = try {
+        com.privacyguard.app.data.db.AppDatabase.getInstance(getApplication()).blocklistDao()
+            .getStatsBySource().associate { it.source to it.count }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.w(TAG, "List counts failed: ${e.javaClass.simpleName}")
+        emptyMap()
     }
 
     fun setLevel(level: String) = prefs.setProtectionLevel(level)

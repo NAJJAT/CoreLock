@@ -75,6 +75,9 @@ fun BlocklistsContent(state: SettingsHomeState, onBack: () -> Unit, onRefresh: (
         val updated = when (val lists = state.lists) {
             null -> null
             SettingsLogic.ListsUpdated.Never -> stringResource(R.string.ui_set_lists_never)
+            is SettingsLogic.ListsUpdated.DateUnknown -> stringResource(
+                if (lists.someMissing) R.string.ui_set_lists_date_unknown_some_missing else R.string.ui_set_lists_date_unknown,
+            )
             is SettingsLogic.ListsUpdated.At -> stringResource(
                 if (lists.someMissing) R.string.ui_set_lists_some_missing else R.string.ui_set_lists_updated,
                 relativeTime(lists.at, now),
@@ -84,7 +87,8 @@ fun BlocklistsContent(state: SettingsHomeState, onBack: () -> Unit, onRefresh: (
             title = NumberFormat.getIntegerInstance().format(state.listNames),
             label = stringResource(R.string.ui_lists_names),
             subtitle = if (state.listsUpdating) stringResource(R.string.ui_lists_refreshing) else updated,
-            good = state.lists is SettingsLogic.ListsUpdated.At,
+            // DateUnknown: the lists are loaded and filtering; only their age is unknown.
+            good = state.lists is SettingsLogic.ListsUpdated.At || state.lists is SettingsLogic.ListsUpdated.DateUnknown,
             modifier = Modifier.testTag(TAG_LISTS_STATUS),
         )
         // Disabled while a download runs: a second tap would only restart it.

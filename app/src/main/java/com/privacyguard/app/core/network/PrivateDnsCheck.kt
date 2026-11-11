@@ -24,6 +24,36 @@ object PrivateDnsCheck {
 
     private const val TAG = "PrivateDnsCheck"
 
+    /** Android's Private DNS setting, as Diagnostics shows it. */
+    enum class Mode { OFF, AUTOMATIC, HOSTNAME, OFF_OR_AUTOMATIC }
+
+    /**
+     * The mode from Android's setting (`private_dns_mode`: off, opportunistic, hostname),
+     * or, when it can't be read, from the real network. `isPrivateDnsActive` alone is not
+     * the setting: in Automatic it is true only when DNS over TLS works on that network,
+     * so Automatic with a resolver without DoT looked "Off". Off and Automatic without
+     * DoT look the same on the network, so without the setting it says both.
+     */
+    fun mode(setting: String?, hostnameOnLink: Boolean, activeOnLink: Boolean): Mode = when {
+        hostnameOnLink -> Mode.HOSTNAME
+        else -> when (setting?.trim()?.lowercase(java.util.Locale.ROOT)) {
+            "hostname" -> Mode.HOSTNAME
+            "opportunistic" -> Mode.AUTOMATIC
+            "off" -> Mode.OFF
+            else -> if (activeOnLink) Mode.AUTOMATIC else Mode.OFF_OR_AUTOMATIC
+        }
+    }
+
+    /**
+     * Android's `Settings.Global.PRIVATE_DNS_MODE` (hidden, readable by apps), or null when
+     * unset or unreadable. Unset means Android's default, which an OEM may change, so it is
+     * not guessed here. [key]: also used for `private_dns_specifier`, the hostname.
+     */
+    fun setting(context: Context, key: String = "private_dns_mode"): String? =
+        runCatching { Settings.Global.getString(context.contentResolver, key) }
+            .onFailure { Log.w(TAG, "Private DNS setting not readable: ${it.javaClass.simpleName}") }
+            .getOrNull()?.takeIf { it.isNotBlank() }
+
     /**
      * The Private DNS hostname set on the device's real network (not the VPN), or null
      * when Private DNS is off or Automatic, or below Android 9 (no Private DNS).
