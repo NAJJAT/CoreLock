@@ -183,7 +183,7 @@ Versions 1.0.1 and 1.1.0 were never published; 1.2.0 updates 1.0.0 directly.
    ```
 
    For 1.2.0 the APK SHA-256 is
-   `bcf75c85b671a30f23ed5841f29fabea927559118e0cd04275fa826af360daa0`.
+   `299663f8e7119656630572c3e67d7c22b1a7153b0bebb19de4a9c3acca10b26e`.
    Install only if both match. (`keytool -printcert -jarfile` does not work: the
    APK is signed with APK Signature Scheme v2 only.) The release page also
    has `SHA256SUMS.txt`: with it next to the APK, `sha256sum -c SHA256SUMS.txt` checks

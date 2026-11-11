@@ -223,8 +223,8 @@ key as 1.0.0.
 
 ```
 Signing certificate SHA-256: caa82092caf86f9ce7d94f5b7c4a4476a3eb1a5bfa238f7b1d18cd85809bc430
-APK file SHA-256:            bcf75c85b671a30f23ed5841f29fabea927559118e0cd04275fa826af360daa0
-APK file size:               12,232,204 bytes (11.7 MiB)
+APK file SHA-256:            299663f8e7119656630572c3e67d7c22b1a7153b0bebb19de4a9c3acca10b26e
+APK file size:               12,234,900 bytes (11.7 MiB)
 ```
 
 On a computer with the Android SDK build-tools:
@@ -297,3 +297,4 @@ An automatic check on this release confirmed the APK is signed with this key.
   without root.** They come from the same servers as the content, so blocking them by
   name would break the app. What CoreLock blocks, and what it can't, is explained in
   [docs/BLOCKING_POLICY.md](https://github.com/NAJJAT/CoreLock/blob/main/docs/BLOCKING_POLICY.md).
+- French and Dutch texts are machine-translated; corrections are welcome through an issue.
