@@ -405,6 +405,11 @@ class PrivacyVpnService : VpnService() {
 
         sessionTable = SessionTable()
         sessionTable.addListener(SessionLifecycleListener())
+        // Refusals and early closes at the session limits are counted for Diagnostics.
+        sessionTable.limitListener = object : SessionTable.LimitListener {
+            override fun onRefused(key: com.privacyguard.core.session.SessionKey) = StatsManager.recordConnectionRefusedAtLimit()
+            override fun onEvicted(key: com.privacyguard.core.session.SessionKey) = StatsManager.recordUdpSessionEvicted()
+        }
 
         ctMonitor = CtMonitor(baseline = com.privacyguard.core.tls.SharedPrefsCtBaselineStore(this)) { domain, entries ->
             val detail = entries.firstOrNull()?.let { "issuer: ${it.issuerName.take(60)}" }

@@ -58,7 +58,7 @@ class DnsAnomalyDetector {
 
     fun analyze(pkg: String?, domain: String): List<Anomaly> {
         // PrivacyGuard's own lookups (CT checks, blocklist downloads, DoH) are not app behaviour.
-        if (isOwnHost(domain) || (pkg != null && pkg.startsWith(OWN_PACKAGE_PREFIX))) return emptyList()
+        if (isOwnHost(domain) || com.privacyguard.core.utils.OwnApp.isOwnPackage(pkg)) return emptyList()
         totalAnalyzed.incrementAndGet()
         // Same "Unknown" as unattributed DNS rows, so the UI labels it "Unknown app".
         val pkgKey = pkg?.takeIf { it.isNotBlank() } ?: "Unknown"
@@ -192,7 +192,6 @@ class DnsAnomalyDetector {
         const val SAME_LOOKUP_MS = 1_000L
         // One alert per app and host per day (per app for a burst).
         const val REPORT_COOLDOWN_MS = 24L * 60L * 60_000L
-        private const val OWN_PACKAGE_PREFIX = "com.privacyguard.app"
         /** Hosts PrivacyGuard itself contacts; see CtMonitor, BlocklistSource, DnsHandler, ExodusUpdater. */
         private val OWN_HOSTS = listOf(
             "crt.sh", "oisd.nl", "raw.githubusercontent.com", "cdn.jsdelivr.net",

@@ -98,7 +98,9 @@ object ClientHelloParser {
         while (pos + 4 <= extEnd) {
             val eType = readU16(data, pos); pos += 2
             val eLen = readU16(data, pos); pos += 2
-            val eEnd = (pos + eLen).coerceAtMost(data.size)
+            // Inside the extensions block, as a server reads it: bytes past its declared end
+            // belong to no extension (the fuzzer found a name read from there).
+            val eEnd = (pos + eLen).coerceAtMost(extEnd)
             extTypes += eType
             when (eType) {
                 0x0000 -> {
@@ -140,7 +142,9 @@ object ClientHelloParser {
         p++
         if (p + 2 > end) return null
         val nameLen = readU16(data, p); p += 2
-        if (p + nameLen > data.size) return null
+        // Within this extension, as a server reads it: past its end are the next extension's
+        // bytes, and a name read there is one the server never sees (it refuses the hello).
+        if (p + nameLen > end) return null
         // Attacker-chosen: only a real hostname is kept (no bidi text, HTML, IP literal).
         return com.privacyguard.core.utils.Hostnames.validSni(data, p, nameLen)
     }

@@ -92,6 +92,12 @@
     <string name="diag_quic_detail">اتصالات QUIC منذ تشغيل الحماية. أُوقفت بسبب اسم الخادم: %1$d. رُفضت (يعيد التطبيق المحاولة أو يستخدم TCP) لأن QUIC محظور: %2$d، غير مقروءة: %3$d، أكثر من اللازم في الانتظار: %4$d.</string>
     <string name="diag_block_rows">سجل الاتصالات المحظورة</string>
     <string name="diag_block_rows_detail">محاولات الاتصال المحظورة منذ تشغيل الحماية: %1$d. سُجّلت في السجل: %2$d. محاولات متكررة إلى الوجهة نفسها خلال دقيقة، احتُسبت ولم تُسجَّل مرة أخرى: %3$d.</string>
+    <string name="diag_limits">حدود الأمان للاتصالات</string>
+    <string name="diag_limits_detail">منذ تشغيل الحماية. حزم مجزّأة أُسقطت (تُخفي التطبيق والمنفذ اللذين تتبعهما): %1$d. اتصالات جديدة رُفضت لأن عدد الاتصالات المفتوحة كان كبيرًا جدًا: %2$d. اتصالات خاملة أُغلقت مبكرًا لإفساح المجال: %3$d.</string>
+    <string name="diag_unknown_app">اتصالات من تطبيق غير معروف</string>
+    <string name="diag_unknown_app_detail">اتصالات منذ تشغيل الحماية تعذّر تحديد تطبيقها: %1$d. لا يمكن تطبيق قواعدك الخاصة بتطبيق معيّن عليها؛ أما قواعد المواقع والعناوين فتبقى سارية.</string>
+    <string name="diag_inspection_limit">حدّ فحص HTTPS</string>
+    <string name="diag_inspection_limit_detail">اتصالات مُرّرت دون فك التشفير لأن الفحص بلغ حدّه: %1$d. بقي الحظر حسب اسم الموقع ساريًا.</string>
     <string name="diag_inventory">جرد التطبيقات</string>
     <plurals name="diag_inventory_detail">
         <item quantity="zero">لا يوجد تطبيق يستخدم الشبكة</item>

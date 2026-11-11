@@ -282,4 +282,32 @@ class ClientHelloParserTest {
         assertTrue("the name is refused", hello!!.sniRejected)
         assertTrue("and can't be read: it is not an IP literal", hello.sniUnreadable)
     }
+    /** A ClientHello whose extensions block is exactly [extensions]. */
+    private fun helloWithExtensions(extensions: ByteArray): ByteArray {
+        val body = byteArrayOf(0x03, 0x03) + ByteArray(32) + byteArrayOf(0, 0, 2, 0x13, 0x01, 1, 0) +
+            byteArrayOf((extensions.size ushr 8).toByte(), extensions.size.toByte()) + extensions
+        val hs = byteArrayOf(0x01, 0, (body.size ushr 8).toByte(), body.size.toByte()) + body
+        return byteArrayOf(0x16, 0x03, 0x01, (hs.size ushr 8).toByte(), hs.size.toByte()) + hs
+    }
+
+    // A server reads a name only inside its own extension. If the name's length runs past
+    // the extension, the server refuses the hello; reading on into the next extension
+    // gave the filter a name the server never sees. Such a hello is unreadable (dropped at
+    // Standard and Strict), never a name.
+    @Test
+    fun sni_whose_length_runs_past_its_extension_is_unreadable_not_a_name() {
+        val name = "evil.example.com".toByteArray()   // its first 4 bytes double as the next extension's header
+        val sniExt = byteArrayOf(0x00, 0x00, 0x00, 0x05, 0x00, 0x13, 0x00, 0x00, name.size.toByte())
+        val hello = ClientHelloParser.parse(helloWithExtensions(sniExt + name))!!
+        assertNull(hello.sni)
+        assertTrue(hello.sniRejected)
+        assertTrue(hello.sniUnreadable)
+    }
+
+    @Test
+    fun sni_that_ends_exactly_at_its_extension_end_is_read() {
+        val name = "news.example.org".toByteArray()
+        val ext = byteArrayOf(0x00, 0x00, 0x00, (name.size + 5).toByte(), 0x00, (name.size + 3).toByte(), 0x00, 0x00, name.size.toByte()) + name
+        assertEquals("news.example.org", ClientHelloParser.parse(helloWithExtensions(ext))!!.sni)
+    }
 }

@@ -1,7 +1,6 @@
 package com.privacyguard.vpn.forwarder
 
 import android.util.Log
-import com.privacyguard.app.BuildConfig
 import com.privacyguard.core.metadata.EncryptionStatus
 import com.privacyguard.core.packet.IpPacket
 import com.privacyguard.core.packet.Ipv6Packet
@@ -210,7 +209,12 @@ class TcpForwarder(
             // A different initial sequence number: the port was reused. Start over.
             sessionTable.remove(key)
         }
-        val session = sessionTable.getOrCreate(key, uid = ownerUid, ownerPackage = ownerPackage)
+        // At the session limits the connection is refused before a socket is opened: a
+        // reset, so the app fails at once instead of waiting (fail closed, counted).
+        val session = sessionTable.tryCreate(key, uid = ownerUid, ownerPackage = ownerPackage) ?: run {
+            sendRst(key, tcp)
+            return
+        }
         session.lastDeviceSeq = tcp.sequenceNumber
         session.deviceWindow = tcp.windowSize
 
@@ -580,8 +584,7 @@ class TcpForwarder(
     }
 
     private fun isPrivacyGuardTraffic(ownerPackage: String?): Boolean {
-        return ownerPackage == BuildConfig.APPLICATION_ID ||
-                ownerPackage?.startsWith("com.privacyguard.app") == true
+        return com.privacyguard.core.utils.OwnApp.isOwnPackage(ownerPackage)
     }
 
     /**

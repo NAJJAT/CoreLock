@@ -256,6 +256,10 @@ class QuicSniTracker<K : Any>(private val now: () -> Long = System::currentTimeM
         }
         for (c in frames) {
             if (c.offset > MAX_BYTES || flow.bytes + c.data.size > MAX_BYTES) { remove(key); return Result.Unreadable }
+            // Overlapping frames must carry the same bytes. When they differ, which version
+            // counts is the server's choice, so a name read from either may not be the one
+            // it acts on: unreadable (dropped at Standard and Strict), never a guess.
+            if (conflicts(flow, c.offset, c.data)) { remove(key); return Result.Unreadable }
             if (flow.chunks.putIfAbsent(c.offset, c.data) == null) flow.bytes += c.data.size
         }
         val hello = assemble(flow)
@@ -309,6 +313,24 @@ class QuicSniTracker<K : Any>(private val now: () -> Long = System::currentTimeM
 
     @Synchronized
     fun forget(key: K) { remove(key) }
+
+    /**
+     * True when [data] at [offset] differs from a held chunk in any byte they share. A
+     * flow holds a few chunks within MAX_BYTES, so this is a short scan per new frame.
+     */
+    private fun conflicts(flow: Flow, offset: Long, data: ByteArray): Boolean {
+        val end = offset + data.size
+        for ((o, held) in flow.chunks) {
+            val from = maxOf(o, offset)
+            val to = minOf(o + held.size, end)
+            var i = from
+            while (i < to) {
+                if (held[(i - o).toInt()] != data[(i - offset).toInt()]) return true
+                i++
+            }
+        }
+        return false
+    }
 
     /** The ClientHello once the stream from offset 0 holds the whole message. */
     private fun assemble(flow: Flow): ClientHello? {

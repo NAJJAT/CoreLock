@@ -107,6 +107,9 @@ class Session(
     // ─────────────────────────────────────────────────────────────────────────
 
     @Volatile var lastActivityAt: Long = createdAt
+
+    /** The app whose per-app slot (SessionTable.Limits) this session holds; ownerUid may be filled in later. */
+    internal val limitUid: Int = ownerUid
     @Volatile var isClosing: Boolean = false
     @Volatile var isClosed: Boolean = false
 

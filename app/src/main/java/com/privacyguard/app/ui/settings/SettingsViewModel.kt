@@ -251,6 +251,24 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 detail = str(R.string.diag_block_rows_detail, snapshot.blockedRowsWritten + snapshot.blockedRowsMerged,
                     snapshot.blockedRowsWritten, snapshot.blockedRowsMerged),
             ),
+            // Fragments and refusals at the limits are fail-closed drops, not failures.
+            DiagnosticCheck(
+                label = str(R.string.diag_limits),
+                status = DiagnosticStatus.PASS,
+                detail = str(R.string.diag_limits_detail, snapshot.fragmentsDropped,
+                    snapshot.connectionsRefusedAtLimit, snapshot.udpSessionsEvicted),
+            ),
+            // Allowed on purpose (blocking them breaks system traffic); shown so the gap is visible.
+            DiagnosticCheck(
+                label = str(R.string.diag_unknown_app),
+                status = DiagnosticStatus.PASS,
+                detail = str(R.string.diag_unknown_app_detail, snapshot.unknownOwnerAllowed),
+            ),
+            DiagnosticCheck(
+                label = str(R.string.diag_inspection_limit),
+                status = DiagnosticStatus.PASS,
+                detail = str(R.string.diag_inspection_limit_detail, snapshot.inspectionAtLimit),
+            ),
             DiagnosticCheck(
                 label = str(R.string.diag_inventory),
                 status = if (installedNetworkApps > 0) DiagnosticStatus.PASS else DiagnosticStatus.WARN,

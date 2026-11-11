@@ -128,40 +128,48 @@ class TunReader(
                 try { PcapWriter.write(raw) } catch (e: Exception) { Log.e(TAG, "pcap error: ${e.javaClass.simpleName}") }
             }
 
-            val version = (buf[0].toInt() ushr 4) and 0xF
-            when (version) {
-                4 -> {
-                    val packet = try { IpPacket.parse(raw) } catch (_: Exception) { null }
-                    if (packet == null) { droppedMalformed.incrementAndGet(); continue }
-                    // Fragments are dropped, never parsed: a later fragment has no
-                    // TCP/UDP header, and fragmentation is a classic way past port,
-                    // SNI and DNS filters. The local stack honours PMTU, so apps
-                    // recover by sending smaller packets.
-                    if (!packet.isUnfragmented) { droppedFragments.incrementAndGet(); continue }
-                    totalPacketsRead.incrementAndGet()
-                    for (handler in handlers) {
-                        try { handler.onPacket(packet) }
-                        catch (e: Exception) {
-                            Log.e(TAG, "handler error: ${e.javaClass.simpleName}")
-                            handlerExceptions.incrementAndGet()
-                        }
-                    }
-                }
-                6 -> {
-                    totalPacketsRead.incrementAndGet()
-                    for (handler in ipv6Handlers) {
-                        try { handler.onIpv6Packet(raw) }
-                        catch (e: Exception) {
-                            Log.e(TAG, "ipv6 handler error: ${e.javaClass.simpleName}")
-                            handlerExceptions.incrementAndGet()
-                        }
-                    }
-                }
-                else -> droppedUnsupported.incrementAndGet()
-            }
+            dispatch(raw)
         }
 
         running.set(false)
         Log.i(TAG, "TunReader stopped — packets=${totalPacketsRead.get()} bytes=${totalBytesRead.get()}")
+    }
+
+    /** One packet read from the TUN: parsed, checked and handed to the handlers (the read loop and tests). */
+    internal fun dispatch(raw: ByteArray) {
+        when ((raw[0].toInt() ushr 4) and 0xF) {
+            4 -> {
+                val packet = try { IpPacket.parse(raw) } catch (_: Exception) { null }
+                if (packet == null) { droppedMalformed.incrementAndGet(); return }
+                // Fragments are dropped, never parsed: a later fragment has no
+                // TCP/UDP header, and fragmentation is a classic way past port,
+                // SNI and DNS filters. The local stack honours PMTU, so apps
+                // recover by sending smaller packets. Counted for Diagnostics.
+                if (!packet.isUnfragmented) {
+                    droppedFragments.incrementAndGet()
+                    com.privacyguard.app.core.stats.StatsManager.recordFragmentDropped()
+                    return
+                }
+                totalPacketsRead.incrementAndGet()
+                for (handler in handlers) {
+                    try { handler.onPacket(packet) }
+                    catch (e: Exception) {
+                        Log.e(TAG, "handler error: ${e.javaClass.simpleName}")
+                        handlerExceptions.incrementAndGet()
+                    }
+                }
+            }
+            6 -> {
+                totalPacketsRead.incrementAndGet()
+                for (handler in ipv6Handlers) {
+                    try { handler.onIpv6Packet(raw) }
+                    catch (e: Exception) {
+                        Log.e(TAG, "ipv6 handler error: ${e.javaClass.simpleName}")
+                        handlerExceptions.incrementAndGet()
+                    }
+                }
+            }
+            else -> droppedUnsupported.incrementAndGet()
+        }
     }
 }

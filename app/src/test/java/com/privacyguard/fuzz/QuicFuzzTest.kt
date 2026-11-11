@@ -105,13 +105,20 @@ class QuicFuzzTest {
             val out = java.io.ByteArrayOutputStream()
             repeat(rng.nextInt(1, 4)) {
                 val (off, data) = pieces.random(rng)
-                val offset = when (rng.nextInt(6)) {
-                    0 -> rng.nextInt(0, 20_000)                       // past the cap, or a gap
-                    1 -> off + rng.nextInt(-50, 50).coerceAtLeast(-off)   // overlap
-                    else -> off
+                // Conflicting bytes now end a flow, so the mix keeps most frames honest:
+                // otherwise few flows would live long enough to reach the deep states.
+                when (rng.nextInt(12)) {
+                    0 -> out.write(crypto(rng.nextInt(0, 20_000), data))  // past the cap, or a gap
+                    1, 3, 4 -> {
+                        // A true overlap: the bytes of the hello at the shifted offset.
+                        val o = (off + rng.nextInt(-50, 50)).coerceIn(0, chLarge.size - 1)
+                        out.write(crypto(o, chLarge.copyOfRange(o, minOf(chLarge.size, o + data.size))))
+                    }
+                    // A conflicting overlap: another piece's bytes at a shifted offset (dropped).
+                    2 -> out.write(crypto(off + rng.nextInt(-50, 50).coerceAtLeast(-off), data))
+                    5 -> out.write(crypto(off, rng.nextBytes(data.size)))   // garbage at the right offset
+                    else -> out.write(crypto(off, data))
                 }
-                val body = if (rng.nextInt(5) == 0) rng.nextBytes(data.size) else data
-                out.write(crypto(offset, body))
             }
             return out.toByteArray()
         }

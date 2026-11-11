@@ -76,6 +76,16 @@ data class StatsSnapshot(
     val blockedRowsWritten:  Long                    = 0L,
     /** Blocked connection attempts merged into that row: retries within BlockRowGate.WINDOW_MS. */
     val blockedRowsMerged:   Long                    = 0L,
+    /** IPv4 fragments dropped before parsing (a later fragment has no port to check). */
+    val fragmentsDropped:    Long                    = 0L,
+    /** New connections refused because the engine tracks as many as it may (fail closed). */
+    val connectionsRefusedAtLimit: Long              = 0L,
+    /** Idle UDP sessions closed early to make room for a new one. */
+    val udpSessionsEvicted:  Long                    = 0L,
+    /** New connections whose app could not be found; per-app rules can't apply to them. */
+    val unknownOwnerAllowed: Long                    = 0L,
+    /** Connections passed through without decryption because inspection was at its limit. */
+    val inspectionAtLimit:   Long                    = 0L,
     val activeConnections:   List<ActiveConnectionInfo> = emptyList(),
     val recentActivity:      List<ActivityInfo>     = emptyList(),
     val topTrackers:         List<TrackerInfo>       = emptyList(),
@@ -110,6 +120,11 @@ object StatsManager {
     private val quicHoldLimitDropped = AtomicLong()
     private val blockedRowsWritten = AtomicLong()
     private val blockedRowsMerged = AtomicLong()
+    private val fragmentsDropped = AtomicLong()
+    private val connectionsRefusedAtLimit = AtomicLong()
+    private val udpSessionsEvicted = AtomicLong()
+    private val unknownOwnerAllowed = AtomicLong()
+    private val inspectionAtLimit = AtomicLong()
 
     /** Lists (connections, activity, per-app stats); counter fields here are unused. */
     private val lists = MutableStateFlow(StatsSnapshot())
@@ -177,6 +192,21 @@ object StatsManager {
         schedulePublish()
     }
 
+    /** An IPv4 fragment dropped by the TUN reader. */
+    fun recordFragmentDropped() { fragmentsDropped.incrementAndGet(); schedulePublish() }
+
+    /** A new connection refused at the session limits. */
+    fun recordConnectionRefusedAtLimit() { connectionsRefusedAtLimit.incrementAndGet(); schedulePublish() }
+
+    /** An idle UDP session closed to make room. */
+    fun recordUdpSessionEvicted() { udpSessionsEvicted.incrementAndGet(); schedulePublish() }
+
+    /** A new connection allowed although its app is unknown. */
+    fun recordUnknownOwnerAllowed() { unknownOwnerAllowed.incrementAndGet(); schedulePublish() }
+
+    /** A connection passed through undecrypted because inspection was at its limit. */
+    fun recordInspectionAtLimit() { inspectionAtLimit.incrementAndGet(); schedulePublish() }
+
     fun recordPacket(bytes: Long) {
         totalPackets.incrementAndGet()
         dataSavedBytes.addAndGet(bytes)
@@ -191,7 +221,8 @@ object StatsManager {
     }
 
     fun reset() {
-        listOf(blockedToday, trackersBlocked, totalPackets, dataSavedBytes, ipv6PacketsBlocked, ipv6BytesBlocked, sniBlocked, tlsUnreadableDropped, quicNameBlocked, quicOffDropped, quicUnreadableDropped, quicHoldLimitDropped, blockedRowsWritten, blockedRowsMerged)
+        listOf(blockedToday, trackersBlocked, totalPackets, dataSavedBytes, ipv6PacketsBlocked, ipv6BytesBlocked, sniBlocked, tlsUnreadableDropped, quicNameBlocked, quicOffDropped, quicUnreadableDropped, quicHoldLimitDropped, blockedRowsWritten, blockedRowsMerged,
+            fragmentsDropped, connectionsRefusedAtLimit, udpSessionsEvicted, unknownOwnerAllowed, inspectionAtLimit)
             .forEach { it.set(0) }
         lists.value = StatsSnapshot()
         publishNow()
@@ -214,6 +245,11 @@ object StatsManager {
             quicHoldLimitDropped = quicHoldLimitDropped.get(),
             blockedRowsWritten = blockedRowsWritten.get(),
             blockedRowsMerged = blockedRowsMerged.get(),
+            fragmentsDropped = fragmentsDropped.get(),
+            connectionsRefusedAtLimit = connectionsRefusedAtLimit.get(),
+            udpSessionsEvicted = udpSessionsEvicted.get(),
+            unknownOwnerAllowed = unknownOwnerAllowed.get(),
+            inspectionAtLimit = inspectionAtLimit.get(),
         )
     }
 

@@ -4,6 +4,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * The central connection registry.
@@ -26,7 +27,34 @@ class SessionTable(
     private val udpTimeoutMs: Long = 30 * 1_000L,
     /** How often the reaper runs (default 15 seconds). */
     private val reaperIntervalMs: Long = 15 * 1_000L,
+    /** How many sessions may exist at once: see [Limits]. */
+    private val limits: Limits = Limits(),
 ) {
+    /**
+     * Each session holds a socket. Without a bound, one app sending to many ports used up
+     * the process's file descriptors and every connection on the phone failed. Normal
+     * browsing peaked near 120 sessions (14 heavy pages open, emulator, 2026-11-11), so
+     * these leave a wide margin. [maxPerApp] counts TCP and UDP together, so one app
+     * can't take every slot.
+     */
+    data class Limits(
+        val maxTcp: Int = 4_096,
+        val maxUdp: Int = 4_096,
+        val maxPerApp: Int = 1_024,
+    )
+
+    /** Told when a new flow is refused at a limit, or an idle UDP session closed to make room. */
+    interface LimitListener {
+        fun onRefused(key: SessionKey)
+        fun onEvicted(key: SessionKey)
+    }
+
+    @Volatile var limitListener: LimitListener? = null
+
+    private val tcpCount = AtomicInteger()
+    private val udpCount = AtomicInteger()
+    private val perApp = ConcurrentHashMap<Int, AtomicInteger>()
+
     // ─────────────────────────────────────────────────────────────────────────
     // Storage
     // ─────────────────────────────────────────────────────────────────────────
@@ -69,12 +97,75 @@ class SessionTable(
      * @param ownerPackage  package name of the owning app.
      * @return the new or existing [Session].
      */
-    fun getOrCreate(key: SessionKey, uid: Int = -1, ownerPackage: String? = null): Session {
-        return sessions.getOrPut(key) {
-            val session = Session(key = key, ownerUid = uid, ownerPackage = ownerPackage)
-            listeners.forEach { it.onSessionCreated(session) }
-            session
+    fun getOrCreate(key: SessionKey, uid: Int = -1, ownerPackage: String? = null): Session =
+        sessions[key] ?: insert(key, uid, ownerPackage)
+
+    /**
+     * Like [getOrCreate], within [limits]. At a limit the oldest idle UDP sessions in that
+     * scope are closed to make room (never TCP: that would cut a live connection); if none
+     * can be, returns null and the caller refuses the flow (fail closed). Only the TUN
+     * reader thread creates sessions, so the check and the insert don't race each other.
+     */
+    fun tryCreate(key: SessionKey, uid: Int = -1, ownerPackage: String? = null): Session? {
+        sessions[key]?.let { return it }
+        val udp = key.protocol == SessionKey.PROTO_UDP
+        val protoCount = if (udp) udpCount else tcpCount
+        val protoMax = if (udp) limits.maxUdp else limits.maxTcp
+        if (protoCount.get() >= protoMax && !(udp && makeRoom(forUid = null))) return refuse(key)
+        if (appCount(uid) >= limits.maxPerApp && !makeRoom(forUid = uid)) return refuse(key)
+        return insert(key, uid, ownerPackage)
+    }
+
+    private fun refuse(key: SessionKey): Session? {
+        limitListener?.onRefused(key)
+        return null
+    }
+
+    private fun appCount(uid: Int): Int = perApp[uid]?.get() ?: 0
+
+    private fun insert(key: SessionKey, uid: Int, ownerPackage: String?): Session {
+        var created = false
+        val session = sessions.computeIfAbsent(key) {
+            created = true
+            Session(key = key, ownerUid = uid, ownerPackage = ownerPackage)
         }
+        if (created) {
+            (if (key.protocol == SessionKey.PROTO_UDP) udpCount else tcpCount).incrementAndGet()
+            perApp.getOrPut(uid) { AtomicInteger() }.incrementAndGet()
+            listeners.forEach { it.onSessionCreated(session) }
+        }
+        return session
+    }
+
+    /** Bookkeeping for a session that just left the map (called once per session). */
+    private fun released(session: Session) {
+        (if (session.key.protocol == SessionKey.PROTO_UDP) udpCount else tcpCount).decrementAndGet()
+        perApp[session.limitUid]?.decrementAndGet()
+    }
+
+    /**
+     * Closes up to [EVICT_BATCH] of the oldest UDP sessions idle for at least [MIN_IDLE_MS]
+     * ([forUid]'s only, or any app's when null). A batch, so a flood at the limit scans
+     * the table once per batch instead of once per packet. True when one was closed.
+     */
+    private fun makeRoom(forUid: Int?): Boolean {
+        val now = System.currentTimeMillis()
+        val idle = sessions.values.filter {
+            it.key.protocol == SessionKey.PROTO_UDP && (forUid == null || it.limitUid == forUid) &&
+                now - it.lastActivityAt >= MIN_IDLE_MS
+        }
+        if (idle.isEmpty()) return false
+        var closed = 0
+        for (s in idle.sortedBy { it.lastActivityAt }.take(EVICT_BATCH)) {
+            if (sessions.remove(s.key, s)) {
+                released(s)
+                s.close()
+                listeners.forEach { it.onSessionClosed(s) }
+                limitListener?.onEvicted(s.key)
+                closed++
+            }
+        }
+        return closed > 0
     }
 
     /**
@@ -83,6 +174,7 @@ class SessionTable(
      */
     fun remove(key: SessionKey) {
         val session = sessions.remove(key) ?: return
+        released(session)
         session.close()
         listeners.forEach { it.onSessionClosed(session) }
     }
@@ -184,6 +276,7 @@ class SessionTable(
             val timeout = if (key.protocol == SessionKey.PROTO_UDP) udpTimeoutMs else tcpTimeoutMs
             if (session.isClosed || session.isClosing || session.isTimedOut(timeout)) {
                 iterator.remove()
+                released(session)
                 session.close()
                 listeners.forEach { it.onSessionClosed(session) }
                 evicted++
@@ -204,6 +297,9 @@ class SessionTable(
         stopReaper()
         val snapshot = sessions.values.toList()
         sessions.clear()
+        tcpCount.set(0)
+        udpCount.set(0)
+        perApp.clear()
         snapshot.forEach { session ->
             session.close()
             listeners.forEach { it.onSessionClosed(session) }
@@ -240,4 +336,10 @@ class SessionTable(
     }
 
     override fun toString(): String = "SessionTable(active=${sessions.size})"
+
+    private companion object {
+        /** A UDP session quiet this long may be closed to make room. */
+        const val MIN_IDLE_MS = 5_000L
+        const val EVICT_BATCH = 64
+    }
 }

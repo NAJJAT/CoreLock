@@ -117,4 +117,27 @@ class QuicInitialTest {
         assertFalse("short header / TURN ChannelData", QuicInitial.isLongHeader(shortHeader()))
         assertFalse("too short", QuicInitial.isLongHeader(byteArrayOf(0xC0.toByte(), 0, 0)))
     }
+    // Overlapping CRYPTO frames must agree. When they don't, which bytes count is up to
+    // the server, so a name read from one version may not be the one the server acts on:
+    // the flow is unreadable (dropped at Standard and Strict), never one of the two names.
+    private val chA = clientHello("ads.tracker.com")
+    private val chB = clientHello("cdn.example.com")   // same length: everything else lines up
+
+    @Test fun overlapping_frames_with_different_bytes_are_unreadable() {
+        val r = QuicSniTracker<String>().offer("f", initial(crypto(0, chA) + crypto(10, chB.copyOfRange(10, chB.size)), pn = 0))
+        assertEquals(QuicSniTracker.Result.Unreadable, r)
+    }
+
+    @Test fun conflicting_frames_at_the_same_offset_are_unreadable() {
+        val t = QuicSniTracker<String>()
+        val firstPart = chA.copyOfRange(0, 60)
+        assertEquals(QuicSniTracker.Result.Pending, t.offer("f", initial(crypto(0, firstPart), pn = 0)))
+        val r = t.offer("f", initial(crypto(0, chB.copyOfRange(0, 60)) + crypto(60, chB.copyOfRange(60, chB.size)), pn = 1))
+        assertEquals(QuicSniTracker.Result.Unreadable, r)
+    }
+
+    @Test fun overlapping_frames_with_the_same_bytes_are_fine() {
+        val r = QuicSniTracker<String>().offer("f", initial(crypto(0, chA.copyOfRange(0, 50)) + crypto(30, chA.copyOfRange(30, chA.size)), pn = 0))
+        assertEquals("ads.tracker.com", (r as QuicSniTracker.Result.Hello).hello.sni)
+    }
 }
