@@ -23,6 +23,9 @@ Before 1.3.0 a Block rule matched only the exact name you typed.
   doesn't allow the restart (it stops restarting an app that crashed several times in a
   short time), the notification stays up. Tap it, or open CoreLock, to turn protection back
   on.
+- **For protection without gaps, turn on Always-on VPN with "Block connections without
+  VPN"** for CoreLock in Android's VPN settings: then nothing leaves the phone unfiltered
+  while CoreLock restarts.
 - **Home warns you when notifications are off.** Without notifications CoreLock can't tell
   you that protection stopped. The card opens Android's notification settings for
   CoreLock.
