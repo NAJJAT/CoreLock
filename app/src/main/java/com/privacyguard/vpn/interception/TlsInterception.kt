@@ -27,6 +27,9 @@ interface TlsInterception {
      */
     fun intercept(session: Session, clientPort: Int): Int
 
+    /** [shouldIntercept] said yes, but the redirect could not start: free what it reserved. */
+    fun interceptNotStarted() {}
+
     /** Records that [sni] rejected interception, so it is passed through next time. */
     fun markPinned(sni: String)
 

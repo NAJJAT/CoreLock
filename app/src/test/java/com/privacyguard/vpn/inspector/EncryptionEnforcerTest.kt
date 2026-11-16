@@ -59,4 +59,35 @@ class EncryptionEnforcerTest {
         assertEquals(EncryptionStatus.UNKNOWN, enforcer.inspectUdp(byteArrayOf(0xC0.toByte(), 0x12, 0x34, 0x56, 0x78, 0, 0)))  // unknown version
         assertEquals(EncryptionStatus.UNKNOWN, enforcer.inspectUdp(ByteArray(3)))
     }
+
+    /**
+     * A minimal ClientHello: [record] is the version in the record header, [client] the
+     * handshake's client_version. No extensions, so no supported_versions.
+     */
+    private fun hello(record: Int, client: Int): ByteArray {
+        val body = byteArrayOf((client ushr 8).toByte(), client.toByte()) + ByteArray(32) +
+            byteArrayOf(0, 0, 2, 0x00, 0x2F, 1, 0, 0, 0)   // no session id, 1 suite, null compression, no extensions
+        val hs = byteArrayOf(0x01, 0, (body.size ushr 8).toByte(), body.size.toByte()) + body
+        return byteArrayOf(0x16, (record ushr 8).toByte(), record.toByte(), (hs.size ushr 8).toByte(), hs.size.toByte()) + hs
+    }
+
+    // The record header often says 3.1 for compatibility (RFC 8446 §5.1): the version the
+    // client offers is client_version in the handshake (or supported_versions).
+    @Test
+    fun tls12_client_with_a_compatibility_record_version_is_not_weak() {
+        val r = enforcer.inspect(443, hello(record = 0x0301, client = 0x0303))
+        assertEquals(EncryptionStatus.TLS_1_2, r.encryptionStatus)
+    }
+
+    @Test
+    fun tls10_client_is_weak_whatever_the_record_says() {
+        assertEquals(EncryptionStatus.WEAK_TLS, enforcer.inspect(443, hello(record = 0x0303, client = 0x0301)).encryptionStatus)
+        assertEquals(EncryptionStatus.WEAK_TLS, enforcer.inspect(443, hello(record = 0x0301, client = 0x0302)).encryptionStatus)
+    }
+
+    @Test
+    fun a_hello_cut_before_client_version_is_tls_of_unknown_version_not_weak() {
+        val cut = hello(record = 0x0301, client = 0x0301).copyOf(9)
+        assertEquals(EncryptionStatus.TLS, enforcer.inspect(443, cut).encryptionStatus)
+    }
 }

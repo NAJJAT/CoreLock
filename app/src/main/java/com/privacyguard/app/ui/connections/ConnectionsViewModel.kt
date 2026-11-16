@@ -4,7 +4,6 @@ import android.app.Application
 import com.privacyguard.app.R
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.privacyguard.app.BuildConfig
 import com.privacyguard.app.core.geoip.GeoIpResolver
 import com.privacyguard.app.core.geoip.GeoResult
 import com.privacyguard.app.core.stats.StatsManager
@@ -229,8 +228,7 @@ class ConnectionsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun isPrivacyGuardPackage(packageName: String?): Boolean {
-        return packageName == BuildConfig.APPLICATION_ID ||
-                packageName?.startsWith("com.privacyguard.app") == true
+        return com.privacyguard.core.utils.OwnApp.isOwnPackage(packageName)
     }
 
     fun setFilter(filter: ConnectionFilter) {

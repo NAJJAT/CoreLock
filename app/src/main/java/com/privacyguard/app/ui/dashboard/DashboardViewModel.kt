@@ -255,7 +255,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             pcapStoppedAtLimit = PcapWriter.stoppedAtLimit,
             throughputBytesPerSec = snapshot.throughputBytesPerSec,
             // Same rows as the Traffic tab it opens, which hides PrivacyGuard's own sessions.
-            activeConnectionCount = snapshot.activeConnections.count { !it.packageName.startsWith("com.privacyguard.app") },
+            activeConnectionCount = snapshot.activeConnections.count { !com.privacyguard.core.utils.OwnApp.isOwnPackage(it.packageName) },
             protectionLevel = prefs.protectionLevel.value,
         )
     }

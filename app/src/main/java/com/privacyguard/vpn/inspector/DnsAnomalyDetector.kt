@@ -47,23 +47,22 @@ class DnsAnomalyDetector {
     @Volatile var anomalyListener: AnomalyListener? = null
 
     val totalAnalyzed     = AtomicLong(0)
-    val totalNewDomains   = AtomicLong(0)
     val detectedAnomalies = AtomicLong(0)
 
     // Per-package query tracking: pkg -> list of (timestamp, domain)
     private val queryHistory = ConcurrentHashMap<String, ArrayDeque<Pair<Long, String>>>(32)
-    private val seenDomains  = ConcurrentHashMap.newKeySet<String>()
+    // There used to be a set of every distinct name looked up since the tunnel started, kept
+    // only for a count no screen showed. It grew without bound (one random-name flood could
+    // fill the heap) and held browsing history that "Clear all data" did not reach.
     // "pkg|domain|type" -> when it was last reported (see REPORT_COOLDOWN_MS).
     private val lastReported = ConcurrentHashMap<String, Long>()
 
     fun analyze(pkg: String?, domain: String): List<Anomaly> {
         // PrivacyGuard's own lookups (CT checks, blocklist downloads, DoH) are not app behaviour.
-        if (isOwnHost(domain) || (pkg != null && pkg.startsWith(OWN_PACKAGE_PREFIX))) return emptyList()
+        if (isOwnHost(domain) || com.privacyguard.core.utils.OwnApp.isOwnPackage(pkg)) return emptyList()
         totalAnalyzed.incrementAndGet()
         // Same "Unknown" as unattributed DNS rows, so the UI labels it "Unknown app".
         val pkgKey = pkg?.takeIf { it.isNotBlank() } ?: "Unknown"
-
-        if (seenDomains.add(domain)) totalNewDomains.incrementAndGet()
 
         val anomalies = mutableListOf<Anomaly>()
         val now = System.currentTimeMillis()
@@ -164,6 +163,15 @@ class DnsAnomalyDetector {
         }
         if (lastReported.size > MAX_TRACKED_REPORTS) {
             lastReported.entries.removeIf { now - it.value >= REPORT_COOLDOWN_MS }
+            // All still inside the cooldown (a flood of new random names): drop the oldest
+            // down to half the cap, so this sort runs once per ~2,500 new keys, not per
+            // lookup. A dropped key can alert again in memory; the database still keeps the
+            // same alert to once a day (DnsAnomalyDao).
+            if (lastReported.size > MAX_TRACKED_REPORTS) {
+                lastReported.entries.sortedBy { it.value }
+                    .take(lastReported.size - MAX_TRACKED_REPORTS / 2)
+                    .forEach { lastReported.remove(it.key, it.value) }
+            }
         }
 
         detectedAnomalies.addAndGet(fresh.size.toLong())
@@ -178,7 +186,11 @@ class DnsAnomalyDetector {
     private fun isKnownCdn(domain: String): Boolean =
         CDN_SUFFIXES.any { domain == it || domain.endsWith(".$it") }
 
-    fun seenDomainCount(): Int = seenDomains.size
+    /** For tests: de-duplication keys held in memory. */
+    internal fun trackedReportCount(): Int = lastReported.size
+
+    /** For tests: query names held in memory, over all apps. */
+    internal fun heldNameCount(): Int = queryHistory.values.sumOf { it.size }
 
     companion object {
         const val HIGH_ENTROPY_THRESHOLD = 3.4
@@ -192,7 +204,6 @@ class DnsAnomalyDetector {
         const val SAME_LOOKUP_MS = 1_000L
         // One alert per app and host per day (per app for a burst).
         const val REPORT_COOLDOWN_MS = 24L * 60L * 60_000L
-        private const val OWN_PACKAGE_PREFIX = "com.privacyguard.app"
         /** Hosts PrivacyGuard itself contacts; see CtMonitor, BlocklistSource, DnsHandler, ExodusUpdater. */
         private val OWN_HOSTS = listOf(
             "crt.sh", "oisd.nl", "raw.githubusercontent.com", "cdn.jsdelivr.net",
@@ -204,7 +215,7 @@ class DnsAnomalyDetector {
             val d = domain.lowercase().trimEnd('.')
             return OWN_HOSTS.any { d == it || d.endsWith(".$it") }
         }
-        private const val MAX_TRACKED_REPORTS = 5_000
+        internal const val MAX_TRACKED_REPORTS = 5_000
         private val CDN_SUFFIXES = listOf(
             "cloudfront.net", "akamaiedge.net", "akamaihd.net", "akamai.net", "edgekey.net",
             "fastly.net", "azureedge.net", "azurefd.net", "cloudflare.net", "amazonaws.com",

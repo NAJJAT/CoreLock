@@ -60,10 +60,15 @@ class EncryptionEnforcer {
         if (data.size < 6) return Result(EncryptionStatus.TLS, null, null)
         if (!isTlsClientHello(data)) return Result(EncryptionStatus.TLS, null, null)
 
-        val major = data[1].toInt() and 0xFF
-        val minor = data[2].toInt() and 0xFF
+        // The version the client offers is client_version in the handshake (bytes 9-10:
+        // 5 record header, 1 type, 3 length), not the record header's, which clients set
+        // to 3.1 for compatibility (RFC 8446 §5.1). Reading the record version made TLS 1.2
+        // clients look weak. A hello cut before it has no known version.
+        if (data.size < 11) return Result(EncryptionStatus.TLS, null, null)
+        val major = data[9].toInt() and 0xFF
+        val minor = data[10].toInt() and 0xFF
 
-        val recordVersion = when {
+        val helloVersion = when {
             major == 3 && minor == 4 -> TlsVersion.TLS_1_3
             major == 3 && minor == 3 -> TlsVersion.TLS_1_2
             major == 3 && minor == 2 -> TlsVersion.TLS_1_1
@@ -73,7 +78,7 @@ class EncryptionEnforcer {
 
         val sni = extractSni(data)
         val hasTls13 = hasTls13SupportedVersions(data)
-        val finalVersion = if (hasTls13) TlsVersion.TLS_1_3 else recordVersion
+        val finalVersion = if (hasTls13) TlsVersion.TLS_1_3 else helloVersion
 
         val encStatus = when (finalVersion) {
             TlsVersion.TLS_1_3 -> EncryptionStatus.TLS_1_3

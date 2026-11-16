@@ -166,6 +166,17 @@ class HomeScreenTest {
     }
 
     @Test
+    fun notifications_off_is_a_real_problem_with_a_way_to_fix_it() {
+        val opened = mutableListOf<HomeLogic.Attention>()
+        show(on.copy(attention = HomeLogic.Attention.Notifications), HomeActions(onAttentionAction = { opened += it }))
+        rule.onNodeWithTag(TAG_ATTENTION).performScrollTo()
+        rule.onNodeWithText("Notifications are off", substring = true).assertExists()
+        rule.onNodeWithContentDescription("Dismiss").assertDoesNotExist()
+        rule.onNodeWithText("Open settings").performClick()
+        assertEquals(listOf<HomeLogic.Attention>(HomeLogic.Attention.Notifications), opened)
+    }
+
+    @Test
     fun https_inspection_is_never_silent_on_home() {
         show(on, inspection = InspectionStatus.ON)
         rule.onNodeWithText("HTTPS inspection is on").assertExists()

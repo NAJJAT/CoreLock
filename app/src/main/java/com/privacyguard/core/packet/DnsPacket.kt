@@ -155,8 +155,10 @@ data class DnsPacket(
                     if (rdEnd > data.size) return null
                     val rdata     = data.copyOfRange(off2 + 10, rdEnd)
                     val rdataName = when (type) {
+                        // The name must end inside its record: read on, it took the next record's
+                        // bytes and gave a target the record does not hold.
                         DnsRecord.TYPE_CNAME, DnsRecord.TYPE_NS, DnsRecord.TYPE_PTR ->
-                            readName(data, off2 + 10)?.first
+                            readName(data, off2 + 10)?.takeIf { it.second <= rdEnd }?.first
                         // SvcPriority (2 bytes), then TargetName. RFC 9460 forbids compressing
                         // it; a pointer is still followed (readName bounds it), but the name
                         // must end inside this record, or it is not read at all.
@@ -203,8 +205,11 @@ data class DnsPacket(
             var jumped  = false
             var endPos  = -1
             var jumps   = 0
+            var wireLen = 1   // the final zero byte
 
-            while (pos < data.size) {
+            while (true) {
+                // Ran off the end without the zero byte: truncated, not a name.
+                if (pos >= data.size) return null
                 val len = data[pos].toInt() and 0xFF
 
                 when {
@@ -223,19 +228,26 @@ data class DnsPacket(
                         jumped = true
                         if (++jumps > 10) return null   // loop guard
                     }
+                    // 64-191 (prefixes 01 and 10) are reserved forms, not label lengths (RFC 1035 §4.1.4).
+                    len > MAX_LABEL -> return null
                     else -> {
                         // Regular label
                         val end = pos + 1 + len
                         if (end > data.size) return null
+                        // RFC 1035 §2.3.4: 255 bytes on the wire at most, pointers followed.
+                        wireLen += 1 + len
+                        if (wireLen > MAX_NAME_WIRE) return null
                         labels += String(data, pos + 1, len, Charsets.US_ASCII)
                         pos = end
                     }
                 }
             }
 
-            if (endPos == -1) endPos = pos + 1
             return Pair(labels.joinToString("."), endPos)
         }
+
+        private const val MAX_LABEL = 63
+        private const val MAX_NAME_WIRE = 255
 
         /**
          * Encodes a domain name into DNS wire-format labels.

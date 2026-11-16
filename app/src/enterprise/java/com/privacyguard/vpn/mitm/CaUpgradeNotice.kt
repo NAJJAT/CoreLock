@@ -13,6 +13,10 @@ import java.security.cert.X509Certificate
  * Pending is set from two places, whichever runs first after the update: the app's start
  * ([checkAtStart], the 1.1 CA is still stored) and [CaManager] replacing the 1.1 CA
  * ([recordReplaced]). The rules are pure, so they are tested on the JVM.
+ *
+ * The same card also follows any later rotation that could not move Android's trust to
+ * the new CA ([onRotated], known item 16): without Device or Profile Owner rights the app
+ * can't install a CA itself, and inspection must never stop without the user knowing.
  */
 object CaUpgradeNotice {
 
@@ -37,6 +41,15 @@ object CaUpgradeNotice {
     /** [CaManager] just replaced [oldCa]. */
     internal fun onReplaced(state: State, inspectionOn: Boolean, oldCa: CaPolicy.CaInfo): State =
         if (state == State.NONE && inspectionOn && isLegacy(oldCa)) State.PENDING else state
+
+    /**
+     * A rotation replaced the CA ([CaManager]). [trustMoved]: the organisation's rights let
+     * the app install the new CA in place of the old one. Otherwise the new CA is not
+     * trusted and nothing is inspected until it is installed, so the card comes back, also
+     * after an earlier one was dismissed.
+     */
+    internal fun onRotated(state: State, inspectionOn: Boolean, trustMoved: Boolean): State =
+        if (inspectionOn && !trustMoved) State.PENDING else state
 
     /** Shown while pending, inspection is on, and Android doesn't trust the new CA yet. */
     fun show(state: State, inspectionOn: Boolean, newCaTrusted: Boolean): Boolean =
@@ -69,6 +82,12 @@ object CaUpgradeNotice {
         val before = read(context)
         val after = onReplaced(before, inspectionOn(context), CaManager.infoOf(oldCa))
         if (after != before) { write(context, after); Log.i(TAG, "Notice pending: the 1.1 CA was replaced") }
+    }
+
+    internal fun recordRotated(context: Context, trustMoved: Boolean) {
+        val before = read(context)
+        val after = onRotated(before, inspectionOn(context), trustMoved)
+        if (after != before) { write(context, after); Log.i(TAG, "Notice pending: rotated CA is not trusted yet") }
     }
 
     /** For Home, off the main thread: true while the card should show. */

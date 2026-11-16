@@ -32,5 +32,5 @@
     <string name="rule_block_cleartext_app">حظر الاتصالات غير المشفّرة لـ %1$s</string>
     <string name="rule_block_background_app">حظر %1$s في الخلفية</string>
     <string name="rules_ip_invalid">أدخل عنوان IPv4 أو نطاقًا، مثل 1.2.3.4 أو 10.0.0.0/8. قواعد IPv6 غير مدعومة بعد.</string>
-    <string name="rules_domain_exact">يطابق هذا الاسم بالضبط. اكتب *.example.com لتشمل example.com وكل النطاقات الفرعية.</string>
+    <string name="rules_domain_exact">الحظر يشمل هذا الاسم وكل نطاقاته الفرعية. السماح يشمل هذا الاسم بالضبط فقط؛ اكتب *.example.com للسماح بكل النطاقات الفرعية.</string>
 </resources>

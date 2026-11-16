@@ -237,6 +237,11 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 status = DiagnosticStatus.PASS,
                 detail = str(R.string.diag_sni_detail, snapshot.sniBlocked, snapshot.tlsUnreadableDropped),
             ),
+            DiagnosticCheck(
+                label = str(R.string.diag_http),
+                status = DiagnosticStatus.PASS,
+                detail = str(R.string.diag_http_detail, snapshot.httpNameBlocked, snapshot.httpUnreadableDropped),
+            ),
             // Dropped QUIC is not a failure: the app falls back to TCP, where the SNI is checked.
             DiagnosticCheck(
                 label = str(R.string.diag_quic),
@@ -250,6 +255,31 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 status = DiagnosticStatus.PASS,
                 detail = str(R.string.diag_block_rows_detail, snapshot.blockedRowsWritten + snapshot.blockedRowsMerged,
                     snapshot.blockedRowsWritten, snapshot.blockedRowsMerged),
+            ),
+            // Fragments and refusals at the limits are fail-closed drops, not failures.
+            DiagnosticCheck(
+                label = str(R.string.diag_limits),
+                status = DiagnosticStatus.PASS,
+                detail = str(R.string.diag_limits_detail, snapshot.fragmentsDropped,
+                    snapshot.connectionsRefusedAtLimit, snapshot.udpSessionsEvicted),
+            ),
+            // Allowed on purpose (blocking them breaks system traffic); shown so the gap is visible.
+            DiagnosticCheck(
+                label = str(R.string.diag_unknown_app),
+                status = DiagnosticStatus.PASS,
+                detail = str(R.string.diag_unknown_app_detail, snapshot.unknownOwnerAllowed),
+            ),
+            DiagnosticCheck(
+                label = str(R.string.diag_inspection_limit),
+                status = DiagnosticStatus.PASS,
+                detail = str(R.string.diag_inspection_limit_detail, snapshot.inspectionAtLimit),
+            ),
+            // Errors the engine handled (F-12): counted instead of silently swallowed.
+            DiagnosticCheck(
+                label = str(R.string.diag_handled_errors),
+                status = if (snapshot.listDownloadErrors + snapshot.ownerLookupErrors > 0) DiagnosticStatus.WARN else DiagnosticStatus.PASS,
+                detail = str(R.string.diag_handled_errors_detail, snapshot.listDownloadErrors,
+                    snapshot.ownerLookupErrors, snapshot.inspectionCloseErrors),
             ),
             DiagnosticCheck(
                 label = str(R.string.diag_inventory),

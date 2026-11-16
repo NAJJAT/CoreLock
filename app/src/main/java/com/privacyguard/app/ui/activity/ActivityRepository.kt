@@ -1,7 +1,6 @@
 package com.privacyguard.app.ui.activity
 
 import android.content.Context
-import com.privacyguard.app.BuildConfig
 import com.privacyguard.app.R
 import com.privacyguard.app.core.tracker.DomainClassifier
 import com.privacyguard.app.core.tracker.DomainPurpose
@@ -306,7 +305,7 @@ class ActivityRepository(private val context: Context) : RuleStore {
     fun configDatabase(): ConfigDatabase = configDb
 
     private fun isOwnPackage(pkg: String?): Boolean =
-        pkg == BuildConfig.APPLICATION_ID || pkg?.startsWith("com.privacyguard.app") == true
+        com.privacyguard.core.utils.OwnApp.isOwnPackage(pkg)
 
     companion object {
         private const val MALWARE_CACHE_MAX = 2_000

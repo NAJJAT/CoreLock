@@ -135,14 +135,20 @@ class HomeViewModel internal constructor(
     }.flowOn(Dispatchers.IO)
 
     /**
-     * What the phone's settings say: read again on every resume (battery and Usage Access
+     * What the phone's settings say: read again on every resume (battery, notifications and Usage Access
      * change only in system screens), and when Private DNS changes while Home is visible.
      */
-    private data class PhoneChecks(val privateDnsHost: String?, val battery: BatteryCheck.State, val hasUsageAccess: Boolean)
+    private data class PhoneChecks(
+        val privateDnsHost: String?,
+        val battery: BatteryCheck.State,
+        val hasUsageAccess: Boolean,
+        val notificationsBlocked: Boolean,
+    )
 
     private val phoneChecks: Flow<PhoneChecks> = merge(resumed, privateDnsChanges).conflate().map {
         val context = getApplication<Application>()
-        PhoneChecks(readPrivateDns(context), BatteryCheck.state(context), usageAccess.hasUsageAccess())
+        PhoneChecks(readPrivateDns(context), BatteryCheck.state(context), usageAccess.hasUsageAccess(),
+            com.privacyguard.app.core.notify.NotificationCheck.isBlocked(context))
     }.flowOn(Dispatchers.Default)
 
     /** Background-only rules need Usage Access to know what is in the foreground. */
@@ -217,6 +223,7 @@ class HomeViewModel internal constructor(
                 usageAccessMissingForRule = bgRule && !checks.hasUsageAccess,
                 battery = checks.battery,
                 batteryDismissed = batteryDismissed,
+                notificationsBlocked = checks.notificationsBlocked,
                 stoppedBySystem = bySystem,
                 inspectionCertificate = certificate,
                 newHighAlert = alert,

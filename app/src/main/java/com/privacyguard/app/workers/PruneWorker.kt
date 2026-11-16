@@ -42,6 +42,14 @@ class PruneWorker(
         internal const val MAX_DNS_QUERIES = 500_000
         // Bodies can be up to the MITM max payload size (32 KB by default).
         internal const val MAX_PAYLOADS = 5_000
+        /**
+         * TLS fingerprint baseline (F-13). It is a baseline, not history, so it outlives
+         * history retention: a fingerprint is dropped after half a year unseen. Apps rarely
+         * use more than a handful; the caps bound a hostile app that varies its hello.
+         */
+        internal const val FINGERPRINT_RETENTION_DAYS = 180L
+        internal const val MAX_FINGERPRINTS_PER_APP = 50
+        internal const val MAX_FINGERPRINTS = 20_000
         // Rows per delete transaction; small enough that ConnectionLogger's inserts
         // are not held off for long.
         internal const val BATCH_SIZE = 10_000
@@ -89,6 +97,8 @@ class PruneWorker(
             maxConnections: Int = MAX_CONNECTIONS,
             maxDnsQueries: Int = MAX_DNS_QUERIES,
             maxPayloads: Int = MAX_PAYLOADS,
+            maxFingerprintsPerApp: Int = MAX_FINGERPRINTS_PER_APP,
+            maxFingerprints: Int = MAX_FINGERPRINTS,
             batchSize: Int = BATCH_SIZE,
         ) {
             val cutoff = now - retentionDays.toLong() * DAY_MS
@@ -116,6 +126,11 @@ class PruneWorker(
             db.sensorEventDao().pruneOld(cutoff)
             db.dnsAnomalyDao().deleteOlderThan(cutoff)
             db.connectionProfileDao().deleteOlderThan(cutoff)
+
+            val fingerprints = db.tlsBaselineDao()
+            fingerprints.deleteFingerprintsNotSeenSince(now - FINGERPRINT_RETENTION_DAYS * DAY_MS)
+            fingerprints.trimFingerprintsPerApp(maxFingerprintsPerApp)
+            fingerprints.capFingerprints(maxFingerprints)
         }
 
         /**

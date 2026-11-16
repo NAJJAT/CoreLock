@@ -53,7 +53,10 @@ class ProtectionWatcherTest {
         val alarm = alarms.scheduledAlarms.single()
         assertEquals(AlarmManager.ELAPSED_REALTIME_WAKEUP, alarm.type)
         assertTrue("exact", alarm.isAllowWhileIdle)
-        assertNull("no notification when a restart is coming", stoppedNotification())
+        // Told even when a restart is coming: Android may refuse to start the new process
+        // after repeated crashes, and then nothing else would say it (V-18, 2026-11-16).
+        // The restarted service removes the notice.
+        assertNotNull("protection is off until the restart", stoppedNotification())
     }
 
     @Test

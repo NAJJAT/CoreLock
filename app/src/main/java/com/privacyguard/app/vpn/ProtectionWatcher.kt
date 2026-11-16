@@ -20,8 +20,8 @@ import android.util.Log
  * as the foreground service, and hands it a token [Binder]. The watcher links to the
  * token's death: when the VPN process dies, the binder driver calls
  * [android.os.IBinder.DeathRecipient.binderDied] in the watcher within milliseconds,
- * and [ProtectionWatchdog.onProtectionProcessDied] arms one exact alarm that starts
- * protection again (or posts "Protection stopped" when it cannot).
+ * and [ProtectionWatchdog.onProtectionProcessDied] posts "Protection stopped" and arms
+ * one exact alarm that starts protection again (the restart removes the notice).
  *
  * The `:watchdog` process does nothing else: PrivacyGuardApplication skips its
  * setup there (no database, SQLCipher, Keystore, blocklists or workers), and this

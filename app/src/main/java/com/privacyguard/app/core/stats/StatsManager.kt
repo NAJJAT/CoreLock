@@ -76,6 +76,26 @@ data class StatsSnapshot(
     val blockedRowsWritten:  Long                    = 0L,
     /** Blocked connection attempts merged into that row: retries within BlockRowGate.WINDOW_MS. */
     val blockedRowsMerged:   Long                    = 0L,
+    /** IPv4 fragments dropped before parsing (a later fragment has no port to check). */
+    val fragmentsDropped:    Long                    = 0L,
+    /** New connections refused because the engine tracks as many as it may (fail closed). */
+    val connectionsRefusedAtLimit: Long              = 0L,
+    /** Idle UDP sessions closed early to make room for a new one. */
+    val udpSessionsEvicted:  Long                    = 0L,
+    /** New connections whose app could not be found; per-app rules can't apply to them. */
+    val unknownOwnerAllowed: Long                    = 0L,
+    /** Connections passed through without decryption because inspection was at its limit. */
+    val inspectionAtLimit:   Long                    = 0L,
+    /** Failed list download attempts (network, server or parse error); the run retries. */
+    val listDownloadErrors:  Long                    = 0L,
+    /** Owner lookups that failed with an error (not simply "no match"). */
+    val ownerLookupErrors:   Long                    = 0L,
+    /** Errors while closing an HTTPS-inspection relay (both sides are still closed). */
+    val inspectionCloseErrors: Long                  = 0L,
+    /** Cleartext HTTP requests stopped by their site name (F-8); counted with blocks as well. */
+    val httpNameBlocked:     Long                    = 0L,
+    /** Cleartext HTTP requests reset because their site name could not be trusted (Standard, Strict). */
+    val httpUnreadableDropped: Long                  = 0L,
     val activeConnections:   List<ActiveConnectionInfo> = emptyList(),
     val recentActivity:      List<ActivityInfo>     = emptyList(),
     val topTrackers:         List<TrackerInfo>       = emptyList(),
@@ -110,6 +130,16 @@ object StatsManager {
     private val quicHoldLimitDropped = AtomicLong()
     private val blockedRowsWritten = AtomicLong()
     private val blockedRowsMerged = AtomicLong()
+    private val fragmentsDropped = AtomicLong()
+    private val connectionsRefusedAtLimit = AtomicLong()
+    private val udpSessionsEvicted = AtomicLong()
+    private val unknownOwnerAllowed = AtomicLong()
+    private val inspectionAtLimit = AtomicLong()
+    private val listDownloadErrors = AtomicLong()
+    private val ownerLookupErrors = AtomicLong()
+    private val inspectionCloseErrors = AtomicLong()
+    private val httpNameBlocked = AtomicLong()
+    private val httpUnreadableDropped = AtomicLong()
 
     /** Lists (connections, activity, per-app stats); counter fields here are unused. */
     private val lists = MutableStateFlow(StatsSnapshot())
@@ -177,6 +207,36 @@ object StatsManager {
         schedulePublish()
     }
 
+    /** An IPv4 fragment dropped by the TUN reader. */
+    fun recordFragmentDropped() { fragmentsDropped.incrementAndGet(); schedulePublish() }
+
+    /** A new connection refused at the session limits. */
+    fun recordConnectionRefusedAtLimit() { connectionsRefusedAtLimit.incrementAndGet(); schedulePublish() }
+
+    /** An idle UDP session closed to make room. */
+    fun recordUdpSessionEvicted() { udpSessionsEvicted.incrementAndGet(); schedulePublish() }
+
+    /** A new connection allowed although its app is unknown. */
+    fun recordUnknownOwnerAllowed() { unknownOwnerAllowed.incrementAndGet(); schedulePublish() }
+
+    /** A connection passed through undecrypted because inspection was at its limit. */
+    fun recordInspectionAtLimit() { inspectionAtLimit.incrementAndGet(); schedulePublish() }
+
+    /** A list download attempt that failed (counted per attempt). */
+    fun recordListDownloadError() { listDownloadErrors.incrementAndGet(); schedulePublish() }
+
+    /** An owner lookup that failed with an error. */
+    fun recordOwnerLookupError() { ownerLookupErrors.incrementAndGet(); schedulePublish() }
+
+    /** An error while closing an inspection relay. */
+    fun recordInspectionCloseError() { inspectionCloseErrors.incrementAndGet(); schedulePublish() }
+
+    /** A cleartext HTTP request stopped by its site name; count it with [incrementBlocked] as well. */
+    fun incrementHttpNameBlocked() { httpNameBlocked.incrementAndGet(); schedulePublish() }
+
+    /** A cleartext HTTP request reset because its name could not be read: not a block on a name. */
+    fun incrementHttpUnreadableDropped() { httpUnreadableDropped.incrementAndGet(); schedulePublish() }
+
     fun recordPacket(bytes: Long) {
         totalPackets.incrementAndGet()
         dataSavedBytes.addAndGet(bytes)
@@ -191,7 +251,9 @@ object StatsManager {
     }
 
     fun reset() {
-        listOf(blockedToday, trackersBlocked, totalPackets, dataSavedBytes, ipv6PacketsBlocked, ipv6BytesBlocked, sniBlocked, tlsUnreadableDropped, quicNameBlocked, quicOffDropped, quicUnreadableDropped, quicHoldLimitDropped, blockedRowsWritten, blockedRowsMerged)
+        listOf(blockedToday, trackersBlocked, totalPackets, dataSavedBytes, ipv6PacketsBlocked, ipv6BytesBlocked, sniBlocked, tlsUnreadableDropped, quicNameBlocked, quicOffDropped, quicUnreadableDropped, quicHoldLimitDropped, blockedRowsWritten, blockedRowsMerged,
+            fragmentsDropped, connectionsRefusedAtLimit, udpSessionsEvicted, unknownOwnerAllowed, inspectionAtLimit,
+            listDownloadErrors, ownerLookupErrors, inspectionCloseErrors, httpNameBlocked, httpUnreadableDropped)
             .forEach { it.set(0) }
         lists.value = StatsSnapshot()
         publishNow()
@@ -214,6 +276,16 @@ object StatsManager {
             quicHoldLimitDropped = quicHoldLimitDropped.get(),
             blockedRowsWritten = blockedRowsWritten.get(),
             blockedRowsMerged = blockedRowsMerged.get(),
+            fragmentsDropped = fragmentsDropped.get(),
+            connectionsRefusedAtLimit = connectionsRefusedAtLimit.get(),
+            udpSessionsEvicted = udpSessionsEvicted.get(),
+            unknownOwnerAllowed = unknownOwnerAllowed.get(),
+            inspectionAtLimit = inspectionAtLimit.get(),
+            listDownloadErrors = listDownloadErrors.get(),
+            ownerLookupErrors = ownerLookupErrors.get(),
+            inspectionCloseErrors = inspectionCloseErrors.get(),
+            httpNameBlocked = httpNameBlocked.get(),
+            httpUnreadableDropped = httpUnreadableDropped.get(),
         )
     }
 

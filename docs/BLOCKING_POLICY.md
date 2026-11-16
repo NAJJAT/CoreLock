@@ -43,6 +43,12 @@ decision, so a name blocked at one point cannot slip through another:
      be read. QUIC that cannot be read is dropped; the app then retries over TCP,
      where the name can be checked.
    - Other traffic on the same port (video calls, VPNs) is never touched.
+   - **Unencrypted web requests (HTTP)** name their site too. Since 1.3 CoreLock reads
+     that name and resets the connection if it is blocked, with the same decision. At
+     Standard and Strict, a request whose site name can't be trusted (two different
+     names, or a request start too large to read) is reset.
+   - **Connections that are already open** are checked again by their name about once a
+     second, so a new Block rule or list update also stops them, not only new ones.
 4. **Per-app rules.** You can block an app completely, or only while it is in the
    background.
 
@@ -142,9 +148,15 @@ consequences:
   ads served from the site's own domain, pop-ups drawn by a page.
 - **Apps that connect to a fixed IP address without naming a server.** These can only
   be stopped by blocking the app, or by an IP rule.
+- **IPv6 addresses in your rules.** Address rules accept IPv4 addresses and ranges only.
+  Connections to an IPv6 address are still checked by name and by app.
 - **Traffic while protection is off.** If the tunnel stops (for example after a
   crash), traffic is not filtered unless Android's *Always-on VPN* with *Block
   connections without VPN* is on.
+- **After a restart, before you first unlock the phone.** CoreLock can only start after
+  the first unlock (its encrypted data is locked until then). Traffic sent before that
+  is not filtered, unless Android's *Always-on VPN* with *Block connections without VPN*
+  is on for CoreLock: Android then holds all traffic until CoreLock is running.
 
 If you want fewer ads on websites, use a browser with a content blocker, for example
 Firefox with uBlock Origin, alongside CoreLock.
@@ -156,9 +168,12 @@ Firefox with uBlock Origin, alongside CoreLock.
   telemetry is Strict-only, and why login, push and deep-link servers are kept open
   (section 4).
 - **Allow as narrowly as possible.** When something breaks, allow the one name that
-  is needed (`api.example.com`), not the whole domain (`*.example.com`). A rule for a
-  plain name matches only that exact name; `*.example.com` matches `example.com` and
-  every name under it.
+  is needed (`api.example.com`), not the whole domain (`*.example.com`). An **Allow**
+  rule for a plain name matches only that exact name; `*.example.com` matches
+  `example.com` and every name under it. A **Block** rule for a plain name blocks that
+  name and every name under it (since 1.3): blocking `example.com` also blocks
+  `www.example.com`. To keep one subdomain open, add an Allow rule for it
+  (`www.example.com`); being longer, it wins over the Block.
 - **One decision, in a fixed order.** For every name, at DNS and at the connection:
   1. Your **Block** rule: blocked.
   2. **Malware and phishing list**: blocked, unless your Allow rule was created after

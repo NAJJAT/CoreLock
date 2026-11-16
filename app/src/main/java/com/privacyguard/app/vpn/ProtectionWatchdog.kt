@@ -86,19 +86,21 @@ object ProtectionWatchdog {
      */
     fun onProtectionProcessDied(context: Context) {
         endDeadService(context)
-        if (!canScheduleExact(context)) {
-            // No restart is possible from the background: say so now, not later.
-            com.privacyguard.platform.android.NotificationHelper(context).postProtectionStopped()
-            return
-        }
+        // Protection is off from now on, so say so now, whatever comes next. The restart
+        // below runs in a new main process, and Android may never start one: after a few
+        // crashes in a row it marks the app "crashed too many times" and refuses to start
+        // it for the alarm, so the receiver that would post this never runs (V-18, API 37
+        // emulator, 2026-11-16: no notification at all). This process is frozen seconds
+        // later, so it can't wait and see either. A successful restart removes the notice
+        // when the service starts (PrivacyVpnService.startVpn), about 6 s later.
+        com.privacyguard.platform.android.NotificationHelper(context).postProtectionStopped()
+        // No restart is possible from the background without exact alarms.
+        if (!canScheduleExact(context)) return
         val am = context.getSystemService(AlarmManager::class.java) ?: return
         runCatching {
             am.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime() + RESTART_DELAY_MS, pending(context, REQUEST_RESTART))
-        }.onFailure {
-            Log.w(TAG, "restart alarm failed: ${it.javaClass.simpleName}")
-            com.privacyguard.platform.android.NotificationHelper(context).postProtectionStopped()
-        }
+        }.onFailure { Log.w(TAG, "restart alarm failed: ${it.javaClass.simpleName}") }
     }
 
     /**

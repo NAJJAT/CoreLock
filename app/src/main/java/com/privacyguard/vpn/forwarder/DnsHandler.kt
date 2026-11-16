@@ -36,7 +36,7 @@ import android.util.Log
  *
  * Zero payload decryption. All analysis is on DNS query names only.
  */
-class  DnsHandler(
+class DnsHandler(
     private val filterEngine:      FilterEngine,
     private val tunWriter:         TunWriter,
     private val anomalyDetector:   DnsAnomalyDetector = DnsAnomalyDetector(),
@@ -589,9 +589,7 @@ class  DnsHandler(
 
     data class AnomalyStats(
         val totalAnalyzed:    Long,
-        val totalNewDomains:  Long,
         val detectedAnomalies: Long,
-        val seenDomains:      Int,
     )
 
     fun stats() = Stats(
@@ -601,9 +599,7 @@ class  DnsHandler(
         upstreamErrors = upstreamErrors.get(),
         anomalyStats   = AnomalyStats(
             totalAnalyzed     = anomalyDetector.totalAnalyzed.get(),
-            totalNewDomains   = anomalyDetector.totalNewDomains.get(),
             detectedAnomalies = anomalyDetector.detectedAnomalies.get(),
-            seenDomains       = anomalyDetector.seenDomainCount(),
         ),
         upstreamDns    = upstreamDns,
     )

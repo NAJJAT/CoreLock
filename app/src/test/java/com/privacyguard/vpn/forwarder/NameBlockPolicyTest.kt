@@ -162,7 +162,10 @@ class NameBlockPolicyTest {
         fun ruleMatches(r: FilterRule): Boolean {
             if (r.matchPackage != null && r.matchPackage != pkg) return false
             val p = r.matchDomain!!
-            return if (p.startsWith("*.")) covers(p, host) else host == p
+            // ADR 0017: a user Block for a name covers its subdomains; an Allow stays exact.
+            return if (p.startsWith("*.")) covers(p, host)
+            else if (r.action == FilterRule.Action.DENY && r.source == FilterRule.Source.USER) covers(p, host)
+            else host == p
         }
         // FilterEngine's order, written out: priority, then app-specific before every app,
         // exact before wildcard and longer wildcard before shorter, then Block before Allow.

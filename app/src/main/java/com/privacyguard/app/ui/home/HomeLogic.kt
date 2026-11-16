@@ -105,6 +105,8 @@ object HomeLogic {
         val battery: com.privacyguard.app.core.power.BatteryCheck.State =
             com.privacyguard.app.core.power.BatteryCheck.State.UNRESTRICTED,
         val batteryDismissed: Boolean = false,
+        /** Notifications or the alerts channel are off: "Protection stopped" can't be shown (NotificationCheck). */
+        val notificationsBlocked: Boolean = false,
         /** Protection died with the app process and Android says the system killed it ([stoppedBySystem]). */
         val stoppedBySystem: Boolean = false,
         /** After the update from 1.1: HTTPS inspection needs the new certificate (CaUpgradeNotice). */
@@ -124,6 +126,8 @@ object HomeLogic {
          * default) is shown only after the system really stopped protection, and can be dismissed.
          */
         data class Battery(val canDismiss: Boolean) : Attention
+        /** Without notifications nothing can say that protection stopped (N-4). Not dismissable. */
+        data object Notifications : Attention
         /** Inspection the user turned on stopped working until the new certificate is installed. */
         data object InspectionCertificate : Attention
         data class NewAlert(val alert: HighAlert) : Attention
@@ -135,7 +139,7 @@ object HomeLogic {
      * At most one card, the first that applies (§5.2): Private DNS → (stopped unexpectedly:
      * the hero shows it, in red with "Turn on", so no second card repeats it) → (malware in
      * the last hour: not stored per list yet, see the Phase 3 report) → Usage Access → battery
-     * → inspection certificate (after the update from 1.1) → new high alert → what's new →
+     * → notifications off → inspection certificate (after the update from 1.1) → new high alert → what's new →
  * recommendation (switch to Strict).
      */
     fun attention(inputs: AttentionInputs): Attention? {
@@ -148,6 +152,7 @@ object HomeLogic {
                 if (inputs.stoppedBySystem && !inputs.batteryDismissed) return Attention.Battery(canDismiss = true)
             com.privacyguard.app.core.power.BatteryCheck.State.UNRESTRICTED -> {}
         }
+        if (inputs.notificationsBlocked) return Attention.Notifications
         if (inputs.inspectionCertificate) return Attention.InspectionCertificate
         inputs.newHighAlert?.let { return Attention.NewAlert(it) }
         if (inputs.whatsNew) return Attention.WhatsNew

@@ -405,6 +405,11 @@ class PrivacyVpnService : VpnService() {
 
         sessionTable = SessionTable()
         sessionTable.addListener(SessionLifecycleListener())
+        // Refusals and early closes at the session limits are counted for Diagnostics.
+        sessionTable.limitListener = object : SessionTable.LimitListener {
+            override fun onRefused(key: com.privacyguard.core.session.SessionKey) = StatsManager.recordConnectionRefusedAtLimit()
+            override fun onEvicted(key: com.privacyguard.core.session.SessionKey) = StatsManager.recordUdpSessionEvicted()
+        }
 
         ctMonitor = CtMonitor(baseline = com.privacyguard.core.tls.SharedPrefsCtBaselineStore(this)) { domain, entries ->
             val detail = entries.firstOrNull()?.let { "issuer: ${it.issuerName.take(60)}" }
@@ -560,13 +565,16 @@ class PrivacyVpnService : VpnService() {
                 inspectTlsClientHello(bytes, session.ownerUid, session.ownerPackage ?: appTracker.packageForUid(session.ownerUid))
             },
             nameBlocked = { pkg, host -> dnsHandler.blockReasonFor(host, pkg) },
-            onSniBlocked = { _, _ -> recordSniBlock() },
+            onSniBlocked = { session, _ ->
+                if (session.blockSource == com.privacyguard.core.session.BlockSource.HTTP) recordHttpNameBlock() else recordSniBlock()
+            },
             dohBlocked = { session, sni -> dohClientHelloBlocked(sni, session.key, session.ownerPackage) },
             onDohBlocked = { recordBlock() },
             onSni = { session, sni, rejected -> onSniSeen(session, sni, rejected) },
             // Same rule as QuicGate.failsClosed: an unreadable ClientHello is reset at Standard and Strict.
             failsClosed = { filterEngine.blockLevel >= FilterEngine.BlockLevel.STANDARD },
             onHelloUnreadable = { StatsManager.incrementTlsUnreadableDropped() },
+            onHttpUnreadable = { StatsManager.incrementHttpUnreadableDropped() },
         ).also { it.start() }
         udpForwarder = UdpForwarder(sessionTable, tunWriter, ::protect).also { it.start() }
 
@@ -1002,7 +1010,13 @@ class PrivacyVpnService : VpnService() {
 
     /** Records the app and screen state once, and any hostname DNS already gave this address. */
     private fun onSessionOpened(session: Session, pkg: String?) {
-        if (!session.appStateCaptured) captureStartState(session, pkg)
+        if (!session.appStateCaptured) {
+            // Once per connection (a retransmitted SYN comes here again). Allowed on purpose,
+            // since blocking unknown owners would break system traffic (F-16), but counted
+            // and shown in Diagnostics so the gap in per-app rules is visible.
+            if (session.ownerUid < 0) StatsManager.recordUnknownOwnerAllowed()
+            captureStartState(session, pkg)
+        }
         session.filterCheckedAt = System.currentTimeMillis()
         if (session.resolvedHostname == null) {
             hostByIp[session.key.destinationIp]?.let { session.resolvedHostname = it }
@@ -1022,8 +1036,22 @@ class PrivacyVpnService : VpnService() {
             session.ownerUid, pkg, null, session.key.destinationIp, session.key.destinationPort,
             session.key.protocol, isBackground = isKnownBackground(pkg),
         )
-        if (decision.isBlocked) onBlocked(decision, pkg, session.key.destinationIp)
-        return decision.isBlocked
+        if (decision.isBlocked) {
+            onBlocked(decision, pkg, session.key.destinationIp)
+            return true
+        }
+        // And by its name (F-9): a Block rule or list update added after the connection
+        // opened applies to it too, with the same decision a new connection would get.
+        val source = com.privacyguard.vpn.forwarder.NameRecheck.sourceFor(session) { name, p -> dnsHandler.blockReasonFor(name, p) }
+            ?: return false
+        session.blockSource = source
+        session.blocked = true
+        when (source) {
+            com.privacyguard.core.session.BlockSource.QUIC -> recordQuicNameBlock()
+            com.privacyguard.core.session.BlockSource.HTTP -> recordHttpNameBlock()
+            else -> recordSniBlock()
+        }
+        return true
     }
 
     /** Collapses the record types and retries of one DNS lookup into one stored row. */
@@ -1209,6 +1237,11 @@ class PrivacyVpnService : VpnService() {
     private fun recordSniBlock() {
         recordBlock()
         StatsManager.incrementSniBlocked()
+    }
+
+    private fun recordHttpNameBlock() {
+        recordBlock()
+        StatsManager.incrementHttpNameBlocked()
     }
 
     private fun recordQuicNameBlock() {

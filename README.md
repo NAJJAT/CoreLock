@@ -215,6 +215,8 @@ Versions 1.0.1 and 1.1.0 were never published; 1.2.0 updates 1.0.0 directly.
 4. **Battery.** Setup warns you when Android restricts CoreLock in the background.
    Settings › Advanced › Diagnostics › Battery use shows whether Android may stop
    protection in the background, and opens the battery settings.
+   **Notifications.** Allow them when CoreLock asks: "Protection stopped" is a
+   notification. While they are off, Home shows a card that opens their settings.
 5. **Kill switch.** In Android's VPN settings turn on **Always-on VPN** for
    CoreLock, and optionally **Block connections without VPN**. Only Android can
    block traffic once the tunnel is gone.
@@ -762,6 +764,16 @@ docs/  .github/
   Other apps with a fixed encrypted-DNS provider may fail the same way.
 - **Large DNS answers** need DNS over TCP, which the tunnel does not offer, so
   answers that do not fit in a 4 KB UDP reply fail.
+- **Address rules are IPv4 only.** IPv6 connections are still checked by name and by app.
+- **Fragmented UDP is dropped.** UDP datagrams larger than the tunnel's packet size
+  arrive in fragments, which carry no port to match an app or rule, so CoreLock drops
+  them (counted in Settings › Diagnostics). Apps that rely on such large datagrams fail.
+- **Before the first unlock after a restart** CoreLock is not running yet. Turn on
+  Android's Always-on VPN with *Block connections without VPN* so nothing leaves the
+  phone unfiltered until it starts.
+- **HTTPS inspection on a managed phone without Device or Profile Owner rights:** when
+  the inspection certificate is renewed, CoreLock can't install the new one itself.
+  Until it is installed, connections pass through undecrypted and Home says so.
 - **The JA3 watch-list is small and unverified;** treat matches as hints.
 - **Translations need native review.**
 - **The debug build's integrity check** expects a specific debug certificate;

@@ -44,6 +44,7 @@
     <string name="ui_couldnt_load">Chargement impossible</string>
     <string name="ui_attention_usage_access">Bloquer des applis en arrière-plan nécessite l\'accès aux données d\'utilisation.</string>
     <string name="ui_attention_battery_restricted">L\'utilisation de la batterie est limitée : Android peut arrêter CoreLock.</string>
+    <string name="ui_attention_notifications">Les notifications sont désactivées. Si la protection s\'arrête, CoreLock ne pourra pas vous prévenir.</string>
     <string name="ui_attention_battery_optimized">Certains téléphones arrêtent CoreLock pour économiser la batterie. Autorisez-le à fonctionner en arrière-plan.</string>
     <string name="ui_attention_inspection_cert">L’inspection HTTPS a besoin du nouveau certificat de CoreLock. Tant que vous ne l’avez pas installé, rien n’est inspecté. L’ancien certificat ne fonctionne plus.</string>
     <string name="ui_install_certificate">Installer le certificat</string>

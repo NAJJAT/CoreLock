@@ -368,6 +368,81 @@ class TcpForwarderTest {
         assertEquals(0L, forwarder.helloUnreadableDropped.get())
     }
 
+    // ── Cleartext HTTP: the site name in the request (F-8) ─────────────────
+
+    private fun http(s: String) = s.toByteArray(Charsets.ISO_8859_1)
+
+    @Test
+    fun a_cleartext_request_for_a_blocked_name_is_reset_and_never_reaches_the_server() {
+        failClosedForwarder(failClosed = true)
+        val blocked = http("GET /pixel HTTP/1.1\r\nHost: ADS.example.com:80\r\nAccept: */*\r\n\r\n")
+        val (rst, at) = sendSegments(40_300, listOf(blocked), expectBytes = 1)
+        assertTrue(rst)
+        assertEquals(0, at)
+        val allowed = http("GET / HTTP/1.1\r\nHost: news.example.org\r\n\r\n")
+        val (rst2, at2) = sendSegments(40_301, listOf(allowed), expectBytes = allowed.size)
+        assertEquals(false, rst2)
+        assertEquals(allowed.size, at2)
+        assertEquals(1L, forwarder.httpNameBlocked.get())
+        assertEquals(0L, forwarder.sniBlocked.get())
+    }
+
+    @Test
+    fun a_request_split_across_segments_is_buffered_and_decided() {
+        failClosedForwarder(failClosed = true)
+        val req = http("GET /a HTTP/1.1\r\nUser-Agent: " + "u".repeat(2_000) + "\r\nHost: ads.example.com\r\n\r\n")
+        val (rst, at) = sendSegments(40_310, req.toList().chunked(600).map { it.toByteArray() }, expectBytes = 1)
+        assertTrue(rst)
+        assertEquals(0, at)
+        val ok = http("POST /a HTTP/1.1\r\nHost: news.example.org\r\nContent-Length: 4\r\n\r\nbody")
+        val (rst2, at2) = sendSegments(40_311, ok.toList().chunked(10).map { it.toByteArray() }, expectBytes = ok.size)
+        assertEquals(false, rst2)
+        assertEquals(ok.size, at2)
+    }
+
+    @Test
+    fun the_request_target_name_counts_not_only_the_host_header() {
+        failClosedForwarder(failClosed = true)
+        val proxyForm = http("GET http://ads.example.com/x HTTP/1.1\r\n\r\n")
+        val (rst, at) = sendSegments(40_320, listOf(proxyForm), expectBytes = 1)
+        assertTrue(rst)
+        assertEquals(0, at)
+    }
+
+    @Test
+    fun at_standard_a_request_whose_name_cant_be_trusted_is_reset() {
+        failClosedForwarder(failClosed = true)
+        val cases = listOf(
+            "two Host headers" to http("GET / HTTP/1.1\r\nHost: news.example.org\r\nHost: ads.example.com\r\n\r\n"),
+            "target and Host disagree" to http("GET http://ads.example.com/ HTTP/1.1\r\nHost: news.example.org\r\n\r\n"),
+            "header block over the cap" to http("GET / HTTP/1.1\r\nX: " + "p".repeat(9_000) + "\r\nHost: news.example.org\r\n\r\n"),
+        )
+        for ((i, case) in cases.withIndex()) {
+            val (what, wire) = case
+            val (rst, at) = sendSegments(40_330 + i, wire.toList().chunked(1_400).map { it.toByteArray() }, expectBytes = 1)
+            assertTrue("RST for $what", rst)
+            assertEquals("bytes at server for $what", 0, at)
+        }
+        assertEquals(3L, forwarder.httpUnreadableDropped.get())
+    }
+
+    @Test
+    fun requests_without_a_name_and_other_protocols_go_through() {
+        failClosedForwarder(failClosed = true)
+        val cases = listOf(
+            http("GET / HTTP/1.0\r\n\r\n"),
+            http("GET / HTTP/1.1\r\nHost: 93.184.216.34\r\n\r\n"),
+            http("SSH-2.0-OpenSSH_9.6\r\n"),
+            http("EHLO mail.example\r\n"),
+        )
+        for ((i, wire) in cases.withIndex()) {
+            val (rst, at) = sendSegments(40_340 + i, listOf(wire), expectBytes = wire.size)
+            assertEquals("RST for case $i", false, rst)
+            assertEquals("bytes at server for case $i", wire.size, at)
+        }
+        assertEquals(0L, forwarder.httpUnreadableDropped.get() + forwarder.httpNameBlocked.get())
+    }
+
     /**
      * One connection: [segments] are sent in order after the handshake. Returns whether the
      * device got a RST and how many bytes reached the server (read until [expectBytes] or end of stream).

@@ -12,7 +12,7 @@ How lists are updated in 1.0.0 (`app/src/main/java/com/privacyguard/...`):
 | What | Where |
 |---|---|
 | Two periodic jobs, scheduled at every app start with `KEEP`: weekly on unmetered network with battery not low, and daily on any network for lists with no success for 14 days | `BlocklistUpdateWorker.kt:54-90`, called from `PrivacyGuardApplication` |
-| A one-time job on any network at first start (no malware rows yet) and from Settings › Refresh now, unique with `REPLACE` | `BlocklistManager.kt:53-54`, `SettingsScreen.kt:500`, `BlocklistUpdateWorker.kt:92-103` |
+| A one-time job on any network at first start (no malware rows yet) and from Settings › Refresh now, unique with `REPLACE` | `BlocklistManager.kt:53-54`, `SettingsHomeViewModel.kt:188` (Refresh now; file:line references checked 2026-11-16), `BlocklistUpdateWorker.kt:92-103` |
 | Each list's last success stored on its own (SharedPreferences `blocklist_updates`); a run fetches only lists due, and a stored time in the future counts as due | `BlocklistUpdateTimes.kt:13-34`, `BlocklistManager.kt:123-147` |
 | A failed list makes the run fail, so WorkManager retries (exponential from 1 h); successful lists keep their new time | `BlocklistManager.kt:112-113`, `BlocklistUpdateWorker.kt:76`, `:128-131` |
 | HTTPS only, redirects off, final URL checked, 32 MB cap with a counting stream, timeouts, 3 attempts, jsDelivr mirror for HaGeZi | `BlocklistDownloader.kt:15-68`, `BlocklistSource.kt:5` |

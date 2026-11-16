@@ -50,6 +50,9 @@ class MitmTlsInterception(
     private val caInitStarted = AtomicBoolean(false)
     private val lastCaCheck = AtomicLong(0L)
 
+    /** Connections being decrypted right now, at most [MitmEngine.MAX_PARALLEL_INSPECTIONS]. */
+    private val slots = InspectionSlots(MitmEngine.MAX_PARALLEL_INSPECTIONS)
+
     /** Chunks dropped because the capture worker fell behind (capture is best effort). */
     val droppedCaptures = AtomicLong(0)
 
@@ -115,11 +118,25 @@ class MitmTlsInterception(
         if (now - last > CA_CHECK_INTERVAL_MS && lastCaCheck.compareAndSet(last, now)) {
             coroutineScope.launch { ensureCa() }
         }
-        return true
+        return admitForInspection()
+    }
+
+    /**
+     * Last step of [shouldIntercept]: takes an inspection slot. With none free the
+     * connection goes to its server undecrypted (its name was already checked), counted
+     * and shown in Diagnostics. The slot is given back when [intercept] ends, or by
+     * [interceptNotStarted].
+     */
+    internal fun admitForInspection(): Boolean {
+        if (slots.tryReserve()) return true
+        com.privacyguard.app.core.stats.StatsManager.recordInspectionAtLimit()
+        return false
     }
 
     override fun intercept(session: Session, clientPort: Int): Int =
-        mitmEngine.intercept(session, clientPort) { dir, bytes, sess -> capture(dir, bytes, sess) }
+        mitmEngine.intercept(session, clientPort, onDone = slots.releaseOnce()) { dir, bytes, sess -> capture(dir, bytes, sess) }
+
+    override fun interceptNotStarted() = slots.release()
 
     override fun markPinned(sni: String) = pinningDetector.markAsPinned(sni)
 

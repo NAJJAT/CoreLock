@@ -23,7 +23,7 @@ object LocalDataEraser {
     )
     val KEPT_TABLES = listOf("blocklist")
 
-    /** The running VPN registers here to drop what it holds in memory. */
+    /** The running VPN (and the SIEM queue, N-2) registers here to drop what it holds in memory. */
     fun interface Listener { fun onDataCleared() }
     private val listeners = CopyOnWriteArrayList<Listener>()
     fun register(l: Listener) { listeners += l }
@@ -37,7 +37,7 @@ object LocalDataEraser {
         deleteTables(db)
         // The VPN saves its in-memory profiles every few minutes; one save may already
         // have been under way. Reset memory, then delete again so nothing comes back.
-        listeners.forEach { runCatching { it.onDataCleared() } }
+        notifyListeners()
         deleteTables(db)
         com.privacyguard.app.core.pcap.PcapWriter.forgetLastCapture()
         // PCAPs, reports and CSV exports: plaintext copies of history.
@@ -47,6 +47,12 @@ object LocalDataEraser {
         // Deleted rows stay in free pages until the file is rewritten.
         runCatching { db.openHelper.writableDatabase.execSQL("VACUUM") }
         Unit
+    }
+
+    /** Each in-memory holder drops what it has; one failing must not keep the others. */
+    internal fun notifyListeners() = listeners.forEach { l ->
+        runCatching { l.onDataCleared() }
+            .onFailure { android.util.Log.w("LocalDataEraser", "a listener failed: ${it.javaClass.simpleName}") }
     }
 
     private fun deleteTables(db: AppDatabase) {

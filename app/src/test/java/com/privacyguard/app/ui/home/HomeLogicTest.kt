@@ -82,6 +82,7 @@ class HomeLogicTest {
         privateDnsHost = "dns.example",
         usageAccessMissingForRule = true,
         battery = BatteryCheck.State.RESTRICTED,
+        notificationsBlocked = true,
         inspectionCertificate = true,
         newHighAlert = alert,
         whatsNew = true,
@@ -92,13 +93,14 @@ class HomeLogicTest {
     fun only_the_first_problem_that_applies_is_shown_in_spec_order() {
         var inputs = everything
         val seen = mutableListOf<HomeLogic.Attention?>()
-        repeat(8) {
+        repeat(9) {
             val a = HomeLogic.attention(inputs)
             seen += a
             inputs = when (a) {
                 is HomeLogic.Attention.PrivateDns -> inputs.copy(privateDnsHost = null)
                 HomeLogic.Attention.UsageAccess -> inputs.copy(usageAccessMissingForRule = false)
                 is HomeLogic.Attention.Battery -> inputs.copy(battery = BatteryCheck.State.UNRESTRICTED)
+                HomeLogic.Attention.Notifications -> inputs.copy(notificationsBlocked = false)
                 HomeLogic.Attention.InspectionCertificate -> inputs.copy(inspectionCertificate = false)
                 is HomeLogic.Attention.NewAlert -> inputs.copy(newHighAlert = null)
                 HomeLogic.Attention.WhatsNew -> inputs.copy(whatsNew = false)
@@ -111,6 +113,8 @@ class HomeLogicTest {
                 HomeLogic.Attention.PrivateDns("dns.example"),
                 HomeLogic.Attention.UsageAccess,
                 HomeLogic.Attention.Battery(canDismiss = false),
+                // N-4: without notifications, nothing can say that protection stopped.
+                HomeLogic.Attention.Notifications,
                 // Plan 2.3 follow-up: after the update from 1.1, inspection needs the new CA.
                 HomeLogic.Attention.InspectionCertificate,
                 HomeLogic.Attention.NewAlert(alert),

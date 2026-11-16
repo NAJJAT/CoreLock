@@ -7,7 +7,15 @@ import kotlinx.coroutines.withContext
 import java.net.URL
 import javax.net.ssl.HttpsURLConnection
 
-class BlocklistDownloader {
+/**
+ * [open] and [retryDelayMs] are seams for tests (no network in unit tests).
+ */
+class BlocklistDownloader internal constructor(
+    private val open: (String) -> HttpsURLConnection,
+    private val retryDelayMs: (attempt: Int) -> Long,
+) {
+
+    constructor() : this({ URL(it).openConnection() as HttpsURLConnection }, { 2000L * (it + 1) })
 
     companion object {
         private const val CONNECT_TIMEOUT = 30_000
@@ -35,12 +43,12 @@ class BlocklistDownloader {
         null
     }
 
-    private suspend fun <T> downloadFrom(url: String, parse: (Sequence<String>) -> T): T? {
+    internal suspend fun <T> downloadFrom(url: String, parse: (Sequence<String>) -> T): T? {
         if (!url.startsWith("https://", ignoreCase = true)) return null
 
         repeat(MAX_RETRIES) { attempt ->
             try {
-                val connection = URL(url).openConnection() as HttpsURLConnection
+                val connection = open(url)
                 connection.connectTimeout = CONNECT_TIMEOUT
                 connection.readTimeout = READ_TIMEOUT
                 connection.requestMethod = "GET"
@@ -55,17 +63,26 @@ class BlocklistDownloader {
                     }
                     if (connection.contentLengthLong > MAX_LIST_BYTES) {
                         connection.disconnect()
+                        com.privacyguard.app.core.stats.StatsManager.recordListDownloadError()
                         return null
                     }
                     return com.privacyguard.app.core.utils.CappedInputStream(connection.inputStream, MAX_LIST_BYTES)
                         .bufferedReader(Charsets.UTF_8).useLines(parse)
                 }
                 connection.disconnect()
+                com.privacyguard.app.core.stats.StatsManager.recordListDownloadError()   // HTTP error status
             } catch (_: com.privacyguard.app.core.utils.ResponseTooLargeException) {
+                com.privacyguard.app.core.stats.StatsManager.recordListDownloadError()
                 return null   // retrying will not make it smaller
-            } catch (_: Exception) {
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e   // the worker was stopped: stop now, don't retry or count it
+            } catch (e: Exception) {
+                // Network, server or parse error: count it (shown in Diagnostics) and retry.
+                // The class name only: the message can hold the URL.
+                com.privacyguard.app.core.stats.StatsManager.recordListDownloadError()
+                android.util.Log.w("BlocklistDownloader", "list download attempt failed: ${e.javaClass.simpleName}")
             }
-            delay(2000L * (attempt + 1))
+            delay(retryDelayMs(attempt))
         }
 
         return null

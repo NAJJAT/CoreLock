@@ -60,6 +60,26 @@ class CaUpgradeNoticeTest {
         assertEquals(PENDING, CaUpgradeNotice.atStart(PENDING, inspectionOn = true, storedCa = current))
     }
 
+    /**
+     * Known item 16: a rotation that could not move Android's trust to the new CA (no
+     * Device or Profile Owner rights) must not stop inspection silently. The card comes
+     * back for every such rotation, also after an earlier one was dismissed.
+     */
+    @Test
+    fun a_rotation_that_could_not_move_trust_shows_the_notice_again() {
+        for (before in CaUpgradeNotice.State.values()) {
+            assertEquals(PENDING, CaUpgradeNotice.onRotated(before, inspectionOn = true, trustMoved = false))
+        }
+    }
+
+    @Test
+    fun a_rotation_that_moved_trust_or_with_inspection_off_shows_nothing() {
+        for (before in CaUpgradeNotice.State.values()) {
+            assertEquals(before, CaUpgradeNotice.onRotated(before, inspectionOn = true, trustMoved = true))
+            assertEquals(before, CaUpgradeNotice.onRotated(before, inspectionOn = false, trustMoved = false))
+        }
+    }
+
     @Test
     fun stored_values_round_trip_and_unknown_ones_read_as_none() {
         for (s in CaUpgradeNotice.State.values()) assertEquals(s, CaUpgradeNotice.State.parse(s.stored))

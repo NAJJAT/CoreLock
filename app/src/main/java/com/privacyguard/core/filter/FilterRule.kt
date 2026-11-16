@@ -105,6 +105,9 @@ data class FilterRule(
     /** [matchDomain] normalized once: rules are matched against every lookup and connection. */
     private val domainPattern: String? = matchDomain?.let { normalizeName(it) }
 
+    /** A user Block rule for a name also covers its subdomains (ADR 0017). */
+    private val blockCoversSubdomains: Boolean = action == Action.DENY && source == Source.USER
+
     // ── Specificity: among rules of equal priority the more specific one is checked
     // first (FilterEngine), so "Block ads.example.com" beats "Allow *.example.com" and
     // "Block app A" beats an every-app "Allow google.com". Fixed per rule.
@@ -138,7 +141,13 @@ data class FilterRule(
         // skipped a rule for "tracker.example" while the blocklists still matched it.
         if (p == "*") return true
         val c = normalizeName(candidate)
-        if (!p.startsWith("*.")) return c == p
+        if (!p.startsWith("*.")) {
+            if (c == p) return true
+            // ADR 0017: a user Block for a name covers its subdomains, as the blocklists
+            // do; Allow rules stay exact. Whole labels only ("badexample.com" is not one).
+            return blockCoversSubdomains && c.length > p.length &&
+                c[c.length - p.length - 1] == '.' && c.regionMatches(c.length - p.length, p, 0, p.length)
+        }
         // "*.example.com" covers example.com and its subdomains; compared in place,
         // without building the suffix strings.
         val baseLen = p.length - 2

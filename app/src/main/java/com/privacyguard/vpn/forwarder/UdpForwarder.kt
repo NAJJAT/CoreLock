@@ -164,6 +164,9 @@ class UdpForwarder(
     }
 
     private fun createSession(key: SessionKey, ownerUid: Int, ownerPackage: String?): Session? {
+        // The slot first, the socket second: at the limits the flow is dropped (fail
+        // closed, counted by the table's listener) before any file descriptor is used.
+        sessionTable.tryCreate(key, uid = ownerUid, ownerPackage = ownerPackage) ?: return null
         var channel: DatagramChannel? = null
         return try {
             channel = DatagramChannel.open()

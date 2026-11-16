@@ -43,7 +43,7 @@ object UidMapper {
         return -1
     }
 
-    private fun scanProcFile(file: File, srcPort: Int, ignoredUid: Int?): Int {
+    internal fun scanProcFile(file: File, srcPort: Int, ignoredUid: Int?): Int {
         if (!file.exists() || !file.canRead()) return -1
         val portHex = "%04X".format(srcPort)
         try {
@@ -64,7 +64,11 @@ object UidMapper {
                     line = reader.readLine()
                 }
             }
-        } catch (_: Exception) { /* permission denied, or parse error */ }
+        } catch (_: Exception) {
+            // Permission denied or a read error: the owner stays unknown (-1), counted and
+            // shown in Diagnostics. No log: this runs on the packet thread (§6.2).
+            com.privacyguard.app.core.stats.StatsManager.recordOwnerLookupError()
+        }
         return -1
     }
 }

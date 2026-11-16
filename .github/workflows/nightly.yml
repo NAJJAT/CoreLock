@@ -68,6 +68,10 @@ jobs:
       issues: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # This job's token can write issues; don't leave it in .git/config for the
+          # Gradle build and its plugins. Only the last step uses it, through GH_TOKEN.
+          persist-credentials: false
 
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:

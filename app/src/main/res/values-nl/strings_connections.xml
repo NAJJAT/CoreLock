@@ -24,6 +24,7 @@
     <string name="conn_blocked_by_dns">DNS-blokkeerlijst: antwoord ‘naam niet gevonden’</string>
     <string name="conn_blocked_by_sni">Servernaam (SNI): een geblokkeerde naam, bereikt zonder DNS</string>
     <string name="conn_blocked_by_quic">QUIC-servernaam: een geblokkeerde naam, bereikt zonder DNS</string>
+    <string name="conn_blocked_by_http">Sitenaam in een onversleuteld verzoek: een geblokkeerde naam, bereikt zonder DNS</string>
     <string name="conn_blocked_by_doh">Versleutelde DNS-server: zou de blokkeerlijst omzeilen</string>
     <string name="conn_blocked_by_dot">DNS via TLS (poort 853): zou de blokkeerlijst omzeilen</string>
     <string name="conn_up_down">%1$s verzonden · %2$s ontvangen</string>

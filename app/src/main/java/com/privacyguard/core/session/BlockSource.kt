@@ -28,6 +28,8 @@ enum class BlockSource {
     DOH,
     /** DNS over TLS / QUIC (port 853), which would skip the blocklist. */
     DOT,
+    /** The site name of a cleartext HTTP request (target or Host header) is blocked: reached without our DNS. */
+    HTTP,
     ;
 
     companion object {
