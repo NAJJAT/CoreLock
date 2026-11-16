@@ -80,6 +80,8 @@
     </plurals>
     <string name="diag_sni">Blokkeren op servernaam (SNI)</string>
     <string name="diag_sni_detail">Verbindingen gestopt op hun TLS-servernaam sinds de bescherming aanstaat: %1$d. Verbroken omdat hun TLS-begin onleesbaar was (Standaard en Streng): %2$d.</string>
+    <string name="diag_http">Blokkeren op sitenaam (onversleuteld web)</string>
+    <string name="diag_http_detail">Onversleutelde webverzoeken gestopt op hun sitenaam sinds de bescherming aanstaat: %1$d. Verbroken omdat hun sitenaam niet leesbaar was (Standaard en Streng): %2$d.</string>
     <string name="diag_quic">QUIC-controles</string>
     <string name="diag_quic_detail">QUIC-verbindingen sinds de bescherming aanstaat. Gestopt op hun servernaam: %1$d. Weggegooid (de app probeert opnieuw of gebruikt TCP) omdat QUIC geblokkeerd is: %2$d, onleesbaar: %3$d, te veel wachtend: %4$d.</string>
     <string name="diag_block_rows">Geschiedenis van geblokkeerde verbindingen</string>
@@ -90,6 +92,8 @@
     <string name="diag_unknown_app_detail">Verbindingen sinds de bescherming aanstaat waarvan de app niet herkend werd: %1$d. Je regels voor één app gelden er niet voor; regels voor sites en adressen wel.</string>
     <string name="diag_inspection_limit">Limiet van HTTPS-inspectie</string>
     <string name="diag_inspection_limit_detail">Verbindingen doorgegeven zonder ontsleuteling omdat de inspectie op haar limiet zat: %1$d. Blokkeren op sitenaam gold nog steeds.</string>
+    <string name="diag_handled_errors">Afgehandelde fouten</string>
+    <string name="diag_handled_errors_detail">Sinds de bescherming aanstaat. Mislukte pogingen om lijsten te downloaden (ze worden opnieuw geprobeerd): %1$d. Mislukte app-herkenningen (de app staat als onbekend): %2$d. HTTPS-inspectieverbindingen die niet netjes sloten: %3$d.</string>
     <string name="diag_inventory">App-overzicht</string>
     <plurals name="diag_inventory_detail">
         <item quantity="one">%d app met netwerktoegang zichtbaar</item>

@@ -115,7 +115,7 @@ internal fun buildLeafCertificate(
         .addRDN(BCStyle.OU, "HTTPS Inspection")
         .addRDN(BCStyle.CN, domain)
         .build()
-    val serialNumber = BigInteger(64, SecureRandom())
+    val serialNumber = CertSerial.next()
     val notBefore = Date(System.currentTimeMillis() - 86400000)
     // Never past the CA's own end: the CA lasts 97 days now (CaPolicy), and a leaf
     // outliving its issuer only fails later, with a less clear error.

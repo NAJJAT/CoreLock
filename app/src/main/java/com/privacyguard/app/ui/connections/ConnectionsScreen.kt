@@ -326,6 +326,7 @@ private fun ConnectionDetailDialog(
                         com.privacyguard.core.session.BlockSource.QUIC -> R.string.conn_blocked_by_quic
                         com.privacyguard.core.session.BlockSource.DOH -> R.string.conn_blocked_by_doh
                         com.privacyguard.core.session.BlockSource.DOT -> R.string.conn_blocked_by_dot
+                        com.privacyguard.core.session.BlockSource.HTTP -> R.string.conn_blocked_by_http
                     }))
                 }
 

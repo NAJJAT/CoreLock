@@ -82,6 +82,8 @@
     </plurals>
     <string name="diag_sni">Blocage par nom de serveur (SNI)</string>
     <string name="diag_sni_detail">Connexions arrêtées par leur nom de serveur TLS depuis l’activation de la protection : %1$d. Réinitialisées car leur début TLS était illisible (Standard et Strict) : %2$d.</string>
+    <string name="diag_http">Blocage par nom de site (web non chiffré)</string>
+    <string name="diag_http_detail">Requêtes web non chiffrées arrêtées par leur nom de site depuis l’activation de la protection : %1$d. Réinitialisées car leur nom de site était illisible (Standard et Strict) : %2$d.</string>
     <string name="diag_quic">Contrôles QUIC</string>
     <string name="diag_quic_detail">Connexions QUIC depuis l’activation de la protection. Arrêtées par leur nom de serveur : %1$d. Rejetées (l’app réessaie ou passe par TCP) car QUIC est bloqué : %2$d, illisibles : %3$d, trop en attente : %4$d.</string>
     <string name="diag_block_rows">Historique des connexions bloquées</string>
@@ -92,6 +94,8 @@
     <string name="diag_unknown_app_detail">Connexions depuis l’activation de la protection dont l’app n’a pas pu être identifiée : %1$d. Vos règles pour une app précise ne peuvent pas s’y appliquer ; les règles de sites et d’adresses, si.</string>
     <string name="diag_inspection_limit">Limite de l’inspection HTTPS</string>
     <string name="diag_inspection_limit_detail">Connexions transmises sans déchiffrement car l’inspection avait atteint sa limite : %1$d. Le blocage par nom de site s’est appliqué quand même.</string>
+    <string name="diag_handled_errors">Erreurs gérées</string>
+    <string name="diag_handled_errors_detail">Depuis l’activation de la protection. Tentatives de téléchargement de listes échouées (elles sont réessayées) : %1$d. Identifications d’app échouées (l’app apparaît comme inconnue) : %2$d. Connexions d’inspection HTTPS mal fermées : %3$d.</string>
     <string name="diag_inventory">Inventaire des apps</string>
     <plurals name="diag_inventory_detail">
         <item quantity="one">%d app avec accès réseau visible</item>

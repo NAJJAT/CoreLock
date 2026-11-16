@@ -36,6 +36,7 @@ class BannedWordsTest {
         "conn_blocked_by_quic" to "Activity › Technical details › Stopped by",
         "conn_blocked_by_doh" to "Activity › Technical details › Stopped by",
         "conn_blocked_by_dot" to "Activity › Technical details › Stopped by",
+        "conn_blocked_by_http" to "Activity › Technical details › Stopped by",
         "appd_dns" to "App detail › Technical details",
         "appd_top_dns" to "App detail › Technical details",
         "appd_no_dns" to "App detail › Technical details",

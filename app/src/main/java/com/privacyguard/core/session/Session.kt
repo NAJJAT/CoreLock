@@ -141,7 +141,12 @@ class Session(
     @Volatile var quicSniChecked: Boolean = false
 
     /** Best-effort hostname: SNI preferred, DNS-resolved as fallback (or first, on a mismatch). */
-    val hostname: String? get() = if (sniMismatch) resolvedHostname ?: tlsSni else tlsSni ?: resolvedHostname
+    val hostname: String? get() = when {
+        // Stopped by its HTTP Host: that is the name the user must see.
+        blockSource == BlockSource.HTTP && httpHost != null -> httpHost
+        sniMismatch -> resolvedHostname ?: tlsSni
+        else -> tlsSni ?: resolvedHostname ?: httpHost
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Encryption Metadata (no decryption required)
@@ -220,6 +225,12 @@ class Session(
 
     /** First TLS record from the device, buffered until complete (TcpForwarder only). */
     @Volatile var clientHelloBuf: ByteArray = ByteArray(0)
+
+    /** Start of a cleartext HTTP request, buffered until its header block ends (TcpForwarder only). */
+    @Volatile var httpHeadBuf: ByteArray = ByteArray(0)
+
+    /** Site name from a cleartext HTTP request (target or Host header); see HttpRequestHost. */
+    @Volatile var httpHost: String? = null
 
     /** Opaque per-session state owned by the TlsInterception implementation. */
     @Volatile var captureState: Any? = null

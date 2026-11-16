@@ -7,11 +7,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.net.URI
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.util.concurrent.LinkedBlockingQueue
 
 // FIXED: Queued event model for SIEM shipping with all required fields
 data class ShipEvent(
@@ -29,7 +31,9 @@ data class ShipEvent(
     val headers: Map<String, String>,
     val body: String?,
     val bodyEncoding: String,
-    val piiRedacted: Boolean
+    val piiRedacted: Boolean,
+    /** [SiemEndpoint.tag] of the endpoint set when it was queued (null: none); it is sent only there. */
+    val endpointTag: String? = null,
 )
 
 /**
@@ -41,17 +45,28 @@ data class ShipEvent(
  * Thread Safety: Uses a thread-safe BlockingQueue; shipping runs in a background
  * coroutine scope separate from the VPN packet-processing thread.
  */
-class PayloadShipper private constructor(
-    private val config: MitmConfig
+class PayloadShipper @androidx.annotation.VisibleForTesting internal constructor(
+    private val config: MitmConfig,
+    private val clock: () -> Long = System::currentTimeMillis,
+    /** Uploads one batch; true on a 2xx answer. A seam for tests (no network in unit tests). */
+    private val sender: ((endpoint: URI, pin: SiemEndpoint.Pin, json: String) -> Boolean)? = null,
 ) {
     companion object {
         private const val TAG = "PayloadShipper"
         private const val MAX_QUEUE_SIZE = 1_000
+        /**
+         * The queue's bound in bytes (F-5). One event can carry a body of up to the payload
+         * limit, so 1,000 events alone could hold about a gigabyte.
+         */
+        internal const val MAX_QUEUE_BYTES = 8L * 1024 * 1024
         private const val HTTP_TIMEOUT_SECONDS = 15L
         /** Ship as soon as this many events are waiting... */
         private const val SHIP_THRESHOLD = 100
         /** ...or this long after the first one was queued. */
         private const val SHIP_DELAY_MS = 60_000L
+        /** After a failed upload, automatic retries wait this long, doubling up to [MAX_BACKOFF_MS]. */
+        internal const val MIN_BACKOFF_MS = 30_000L
+        internal const val MAX_BACKOFF_MS = 30L * 60 * 1000
 
         @Volatile private var INSTANCE: PayloadShipper? = null
 
@@ -64,16 +79,41 @@ class PayloadShipper private constructor(
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: PayloadShipper(MitmConfig(context.applicationContext)).also { INSTANCE = it }
             }
+
+        /** A rough upper bound of an event's size in memory (UTF-16 strings plus overhead). */
+        internal fun estimateBytes(e: ShipEvent): Long {
+            var chars = e.sessionId.length + e.destinationIp.length + (e.ownerPackage?.length ?: 0) +
+                (e.sniHostname?.length ?: 0) + (e.method?.length ?: 0) + (e.urlPath?.length ?: 0) +
+                (e.body?.length ?: 0) + e.bodyEncoding.length
+            for ((k, v) in e.headers) chars += k.length + v.length + 16
+            return 256L + 2L * chars
+        }
     }
 
-    private val queue = LinkedBlockingQueue<ShipEvent>(MAX_QUEUE_SIZE)
+    // Guarded by [lock]: the queue and its byte count change together.
+    private val lock = Any()
+    private val queue = ArrayDeque<ShipEvent>()
+    private var queuedBytes = 0L
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.privacyguard.vpn.WorkerGuard.coroutineHandler)
     private val shipScheduled = AtomicBoolean(false)
     private val shipping = AtomicBoolean(false)
+    private val failures = AtomicInteger(0)
+    private val nextAttempt = AtomicLong(0L)
+
+    /**
+     * Sending is allowed only while all three hold: inspection on, consent valid, SIEM
+     * shipping on. Checked when an event is queued AND again when it would be sent, so
+     * events queued under consent are never sent after it was withdrawn or expired.
+     */
+    private fun shippingAllowed(): Boolean =
+        config.shipToSiem && config.isEnabled && config.isConsentValid()
+
+    private fun currentTag(): String? = SiemEndpoint.validate(config.siemEndpoint)?.let { SiemEndpoint.tag(it) }
 
     /**
      * Enqueue a parsed payload for deferred SIEM shipping.
-     * If the queue is full the event is dropped and a warning is logged.
+     * If the queue is full (in events or bytes) the event is dropped and a warning is logged.
      */
     fun enqueue(
         parsed: ParsedPayload,
@@ -84,7 +124,7 @@ class PayloadShipper private constructor(
         sniHostname: String?,
     ) {
         // The local log is the database; this queue exists only for the SIEM.
-        if (!config.shipToSiem) return
+        if (!shippingAllowed()) return
 
         val event = ShipEvent(
             sessionId = sessionId,
@@ -101,30 +141,44 @@ class PayloadShipper private constructor(
             headers = parsed.headers,
             body = parsed.body,
             bodyEncoding = parsed.bodyEncoding,
-            piiRedacted = parsed.piiRedacted
+            piiRedacted = parsed.piiRedacted,
+            endpointTag = currentTag(),
         )
 
-        if (!queue.offer(event)) {
+        val size = estimateBytes(event)
+        val queuedNow = synchronized(lock) {
+            if (queue.size >= MAX_QUEUE_SIZE || queuedBytes + size > MAX_QUEUE_BYTES) -1
+            else { queue.addLast(event); queuedBytes += size; queue.size }
+        }
+        if (queuedNow < 0) {
             Log.w(TAG, "Queue full — dropping SIEM event")
             return
         }
-        if (queue.size >= SHIP_THRESHOLD) {
-            shipNow()
+        if (queuedNow >= SHIP_THRESHOLD) {
+            shipIfDue()
         } else if (shipScheduled.compareAndSet(false, true)) {
             scope.launch {
                 delay(SHIP_DELAY_MS)
                 shipScheduled.set(false)
-                shipNow()
+                shipIfDue()
             }
         }
     }
 
-    /**
-     * Drain the queue and ship all pending events to the configured SIEM endpoint.
-     * No-op if SIEM shipping is disabled or endpoint is blank.
-     */
-    fun shipNow() {
-        if (!config.shipToSiem) return
+    /** "Ship now" from the screen: tries at once, even while a retry is waiting. */
+    fun shipNow() = ship(manual = true)
+
+    /** Automatic trigger: does nothing until the backoff after a failed upload has passed. */
+    internal fun shipIfDue() = ship(manual = false)
+
+    private fun ship(manual: Boolean) {
+        if (!shippingAllowed()) {
+            // Inspection off, consent gone, or shipping off: what is queued is never sent.
+            val dropped = synchronized(lock) { queue.size.also { queue.clear(); queuedBytes = 0 } }
+            if (dropped > 0) Log.i(TAG, "SIEM shipping not allowed now; dropped $dropped queued events")
+            return
+        }
+        if (!manual && clock() < nextAttempt.get()) return
         // HTTPS only: the batch holds decrypted payloads and the request carries the bearer token.
         val endpoint = SiemEndpoint.validate(config.siemEndpoint) ?: run {
             if (config.siemEndpoint.isNotBlank()) Log.w(TAG, "SIEM endpoint rejected: must be an https:// URL")
@@ -139,8 +193,15 @@ class PayloadShipper private constructor(
 
         // One upload at a time; a failed batch goes back to the queue for the next try.
         if (!shipping.compareAndSet(false, true)) return
+        val tag = SiemEndpoint.tag(endpoint)
         val events = mutableListOf<ShipEvent>()
-        queue.drainTo(events)
+        var foreign = 0
+        synchronized(lock) {
+            for (e in queue) if (e.endpointTag == tag) events += e else foreign++
+            queue.clear(); queuedBytes = 0
+        }
+        // Queued for another endpoint (or before one was set): never sent anywhere else.
+        if (foreign > 0) Log.w(TAG, "Dropped $foreign SIEM events queued for a different endpoint")
         if (events.isEmpty()) {
             shipping.set(false)
             return
@@ -149,40 +210,81 @@ class PayloadShipper private constructor(
         scope.launch {
             try {
                 val json = buildJsonBatch(events)
-                val body = json.toRequestBody("application/json".toMediaType())
-                val apiKey = config.siemApiKey
-                val requestBuilder = Request.Builder()
-                    .url(endpoint.toString())
-                    .post(body)
-                    .header("Authorization", "Bearer $apiKey")
-                    .header("Content-Type", "application/json")
-                SiemEndpoint.signature(json, config.siemSigningKey, apiKey)?.let {
-                    requestBuilder.header(SiemEndpoint.SIGNATURE_HEADER, it)
+                val ok = try {
+                    (sender ?: ::upload)(endpoint, pin, json)
+                } catch (e: Exception) {
+                    Log.e(TAG, "SIEM ship failed: ${e.javaClass.simpleName}")
+                    false
                 }
-
-                val response = SiemEndpoint.client(endpoint.host, pin, HTTP_TIMEOUT_SECONDS, HTTP_TIMEOUT_SECONDS).newCall(requestBuilder.build()).execute()
-                if (response.isSuccessful) {
-                    Log.i(TAG, "Shipped ${events.size} events — HTTP ${response.code}")
+                if (ok) {
+                    Log.i(TAG, "Shipped ${events.size} events")
+                    failures.set(0)
+                    nextAttempt.set(0L)
                 } else {
-                    Log.e(TAG, "Failed to ship ${events.size} events — HTTP ${response.code}")
-                    events.forEach { queue.offer(it) }
+                    requeue(events)
+                    scheduleRetry()
                 }
-                response.close()
-            } catch (e: Exception) {
-                Log.e(TAG, "SIEM ship failed, re-queuing ${events.size} events: ${e.javaClass.simpleName}")
-                events.forEach { queue.offer(it) }
             } finally {
                 shipping.set(false)
             }
         }
     }
 
+    /** Puts a failed batch back in front, oldest first, within the same bounds. */
+    private fun requeue(events: List<ShipEvent>) = synchronized(lock) {
+        for (e in events.asReversed()) {
+            val size = estimateBytes(e)
+            if (queue.size >= MAX_QUEUE_SIZE || queuedBytes + size > MAX_QUEUE_BYTES) continue
+            queue.addFirst(e); queuedBytes += size
+        }
+    }
+
+    /** Doubles the wait after each failure in a row, from [MIN_BACKOFF_MS] up to [MAX_BACKOFF_MS]. */
+    private fun scheduleRetry() {
+        val n = failures.incrementAndGet().coerceAtMost(20)
+        val wait = (MIN_BACKOFF_MS shl (n - 1).coerceAtMost(16)).coerceAtMost(MAX_BACKOFF_MS)
+        nextAttempt.set(clock() + wait)
+        Log.w(TAG, "SIEM upload failed; next automatic try in ${wait / 1000} s")
+        scope.launch {
+            delay(wait)
+            shipIfDue()
+        }
+    }
+
+    private fun upload(endpoint: URI, pin: SiemEndpoint.Pin, json: String): Boolean {
+        val body = json.toRequestBody("application/json".toMediaType())
+        val apiKey = config.siemApiKey
+        val requestBuilder = Request.Builder()
+            .url(endpoint.toString())
+            .post(body)
+            .header("Authorization", "Bearer $apiKey")
+            .header("Content-Type", "application/json")
+        SiemEndpoint.signature(json, config.siemSigningKey, apiKey)?.let {
+            requestBuilder.header(SiemEndpoint.SIGNATURE_HEADER, it)
+        }
+        SiemEndpoint.client(endpoint.host, pin, HTTP_TIMEOUT_SECONDS, HTTP_TIMEOUT_SECONDS)
+            .newCall(requestBuilder.build()).execute().use { response ->
+                if (!response.isSuccessful) Log.e(TAG, "SIEM upload refused — HTTP ${response.code}")
+                return response.isSuccessful
+            }
+    }
+
     /** Number of events currently waiting to be shipped. */
-    fun pendingCount(): Int = queue.size
+    fun pendingCount(): Int = synchronized(lock) { queue.size }
+
+    /** Estimated bytes the queued events hold. */
+    @androidx.annotation.VisibleForTesting
+    internal fun pendingBytes(): Long = synchronized(lock) { queuedBytes }
+
+    @androidx.annotation.VisibleForTesting
+    internal fun nextAttemptAt(): Long = nextAttempt.get()
+
+    @androidx.annotation.VisibleForTesting
+    internal fun isShipping(): Boolean = shipping.get()
 
     /** The queued events, oldest first, without taking them (tests check what would be sent). */
     @androidx.annotation.VisibleForTesting
-    internal fun pendingEvents(): List<ShipEvent> = queue.toList()
+    internal fun pendingEvents(): List<ShipEvent> = synchronized(lock) { queue.toList() }
 
     /** The JSON a batch of [events] is sent as. */
     @androidx.annotation.VisibleForTesting

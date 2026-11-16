@@ -271,12 +271,12 @@ All name decisions — DNS, CNAME, HTTPS/SVCB target, TCP SNI, QUIC SNI — go t
 
 **Why this order:** the user's explicit Block always wins. Malware sits above user Allow so a mistaken Allow can't expose the user to a known phishing site without a warning; only an informed, confirmed choice (`overridesSecurity`) lets it through. Ads sit below user Allow so the user can always fix a broken site.
 
-**Which user rule applies** (`FilterEngine`, `ORDER`): all user rules share `HIGH_PRIORITY`; then the more specific rule wins (app + destination before app only before destination only; exact name/IP before wildcard/range, longer before shorter; more conditions before fewer); between equally specific rules, **Block wins** (owner's decision, 2026-10-23). Every screen that creates a user rule must use `HIGH_PRIORITY`, or that rule silently loses to every matching Allow.
+**Which user rule applies** (`FilterEngine`, `ORDER`): all user rules share `HIGH_PRIORITY`; then the more specific rule wins (app + destination before app only before destination only; exact name/IP before wildcard/range, longer before shorter; more conditions before fewer); between equally specific rules, **Block wins** (owner's decision, 2026-10-23). A user Block rule for a plain name also covers its subdomains; Allow rules stay exact (ADR 0017, owner's decision 2026-11-11, 1.3); a rule's rank still comes from how it is written. Every screen that creates a user rule must use `HIGH_PRIORITY`, or that rule silently loses to every matching Allow.
 
 Invariants:
 - **Never add a second matching path.** If DNS and SNI disagree, a name blocked in one layer leaks through the other. The property test (fixed seed `20261021`) checks DNS and SNI against a model of this order; keep it, and keep its seed.
 - **Normalize every name** before matching: lowercase, remove the trailing dot. `ads.example.com.` once bypassed user rules because of a trailing dot. This also applies in `FilterRule.domainMatches`.
-- **Every block records a `BlockSource`** (`DNS`, `SNI`, `QUIC`, `DOH`, `DOT`) and is counted, so "Stopped by" in the connection details is always true. DNS blocks are rows in `dns_queries`, whose source is implied (no column). TCP SNI and QUIC SNI stay separate values. QUIC drops that are not a decision on a name (QUIC blocked, unreadable, hold limit) are counters only, never rows: apps retry them by the hundred. Blocked connection rows are merged per app, host, port, protocol and source in fixed 60 s windows (`BlockRowGate`); every attempt is still counted (written + merged, Settings › Diagnostics), so counters stay exact. A new `BlockSource` value needs no migration (the column is text; unknown values read as null).
+- **Every block records a `BlockSource`** (`DNS`, `SNI`, `QUIC`, `DOH`, `DOT`, `HTTP` for the site name of a cleartext request, since 1.3) and is counted, so "Stopped by" in the connection details is always true. DNS blocks are rows in `dns_queries`, whose source is implied (no column). TCP SNI and QUIC SNI stay separate values. QUIC drops that are not a decision on a name (QUIC blocked, unreadable, hold limit) are counters only, never rows: apps retry them by the hundred. Blocked connection rows are merged per app, host, port, protocol and source in fixed 60 s windows (`BlockRowGate`); every attempt is still counted (written + merged, Settings › Diagnostics), so counters stay exact. A new `BlockSource` value needs no migration (the column is text; unknown values read as null).
 
 ### 5.4 QUIC (`QuicGate`)
 
@@ -500,7 +500,7 @@ Documentation is part of the product. Outdated docs in a security app are a secu
 
 - `docs/HOW_IT_WORKS.md` — deeper technical explanation of §5 for curious users and contributors.
 - `docs/BLOCKING_POLICY.md` — user-facing blocking policy: what each level blocks, what is exempt and why, what can't be blocked, how to allow-list and report. Update it in the same change as any list, level, exemption or precedence change. Issue forms in `.github/ISSUE_TEMPLATE/` link to it.
-- `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 are accepted (2026-10-25); 0007–0011 are proposed, 0012 is accepted (2026-10-28) 0013 is accepted (2026-11-04); 0014 is proposed and 0015 accepted (2026-11-05); 0016 is proposed (2026-11-11, for 1.3). Never rewrite an accepted record; supersede it with a new one.
+- `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 are accepted (2026-10-25); 0007–0011 are proposed, 0012 is accepted (2026-10-28) 0013 is accepted (2026-11-04); 0014 is proposed and 0015 accepted (2026-11-05); 0016 is proposed (2026-11-11, for 1.3); 0017 is proposed (2026-11-13, for 1.3). Never rewrite an accepted record; supersede it with a new one.
 - `RELEASE_NOTES_X.Y.md`, `docs/TRANSLATION_REVIEW_X.Y.md`.
 - `SECURITY.md` — vulnerability reporting.
 
@@ -563,6 +563,10 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 - At the DNS layer, Android's resolver makes the request, so per-app Allow rules and ad-SDK exemptions only work at the connection (SNI) layer.
 - Encrypted Client Hello (ECH) hides the real server name; only the outer name is visible. At Strict, an opt-in setting removes ECH keys from DNS answers (`EchStripper`, ADR 0015; off by default, owner's decision 2026-11-05, to be reviewed when encrypted upstream DNS ships). It doesn't reach browsers with their own DoH or keys cached before it was turned on.
 - Apps using hardcoded IPs with no SNI can only be blocked per app.
+- Address rules are IPv4 only (owner's decision 2026-11-11: documented, not built).
+- IPv4 fragments are dropped (a later fragment has no port to match), so apps that send UDP datagrams larger than the tunnel's packet size fail; counted in Diagnostics.
+- Before the first unlock after a restart the app is not running (not direct-boot aware); only Always-on VPN with lockdown keeps traffic from leaving unfiltered until it starts.
+- HTTPS inspection on a managed phone without Device or Profile Owner rights: a CA rotation can't move trust, so inspection passes through until the new CA is installed; Home shows a card (`CaUpgradeNotice.onRotated`).
 - On Android 7 to 9, a per-app rule can occasionally apply to the wrong app; Android 10 and newer are not affected.
 - The kill switch requires Android's Always-on VPN + lockdown.
 - HTTPS inspection reaches few apps: most apps on Android 7+ ignore user-installed CAs or pin certificates, so they stay metadata-only.
@@ -574,7 +578,7 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 1. Per-app rules at the DNS layer (correlate DNS answers with later connections).
 2. Block counters: **"blocked today" is unified (2026-11-05, 1.1):** the notification, Home, Activity, Apps, Statistics, Security systems and the Ads screen all read `BlockStats.today` (local midnight to now); `BlockCountAgreementTest` checks it. Still open: SNI and QUIC counters (name blocks, QUIC blocked, unreadable, hold limit) are shown only in Settings › Advanced › Diagnostics and reset when protection restarts; dual-hop UDP drops aren't counted. Blocked rows are merged per minute since 2026-10-24 (`BlockRowGate`), so the stored numbers no longer grow with retries.
 3. **Done (2026-11-05, 1.2): compact blocklist storage** (ADR 0014, Proposed): fingerprints in sorted arrays for the DNS/SNI, security and known-tracker sets, and a binary start-up cache. Still to do: measure PSS per level on a phone and record it in §6.2. Remove this item once 1.2 ships.
-4. **Polling loops: done (2026-11-05, 1.1).** The 8 `while(true)` loops in AlertInbox, AppDetail, Connections, Dashboard, Settings and Statistics now reload when Room reports a change (`ui/DbChanges.kt`, at most every few seconds), and load errors show a banner with Try again instead of an empty `catch`. Idle CPU went from 42–68 % to about 1 % of a core on the emulator. Left: the HTTPS-inspection screen's 5 s status loop (`MitmViewModel.kt:125`, MITM code, §14.2) and empty catches in `MitmEngine.kt:333` and `UidMapper.kt:67`.
+4. **Polling loops: done (2026-11-05, 1.1).** The 8 `while(true)` loops in AlertInbox, AppDetail, Connections, Dashboard, Settings and Statistics now reload when Room reports a change (`ui/DbChanges.kt`, at most every few seconds), and load errors show a banner with Try again instead of an empty `catch`. Idle CPU went from 42–68 % to about 1 % of a core on the emulator. Left: the HTTPS-inspection screen's 5 s status loop (`MitmViewModel.kt:125`, MITM code, §14.2). The empty catches in `MitmEngine` and `UidMapper` were replaced in the 1.3 bug-fix round (counted, shown in Diagnostics › Handled errors).
 5. Per-packet allocations on the hot path (`copyOfRange` per UDP packet, IP addresses parsed into Strings per packet in `PrivacyVpnService`); measure first (§6.2). After 1.0.
 6. Wi-Fi-only / mobile-data-only rules.
 7. Reassemble split ClientHellos on ports other than 443; add DoH lists to the start-up cache (~30 s gap while the encrypted DB loads).
@@ -588,19 +592,13 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 14. **AdGuard DNS filter as an optional list** (ADR 0008, Proposed): off by default, opt-in at Standard and Strict; after item 13 and ideally after item 3 (memory).
 15. **Content filtering in browsers through HTTPS inspection** (ADR 0009, Proposed, includes `$removeparam`): design only; needs a security review before code.
 16. **Show why a name was blocked and allow it in one tap** (ADR 0010, Proposed): list name at display time, "Allow this name" with the existing malware warning.
-17. **Blocklist update safety** (ADR 0011, Proposed): the half-size refusal is done (2026-10-28, `BlocklistManager.storeDownloaded`); still to do: show last update per list, count download failures instead of the empty catch.
+17. **Blocklist update safety** (ADR 0011, Proposed): the half-size refusal is done (2026-10-28, `BlocklistManager.storeDownloaded`); still to do: show last update per list. Download failures are counted since the 1.3 bug-fix round (Diagnostics › Handled errors).
 18. **Revisit DoH as the default upstream** (ADR 0012): DoH stays off by default because a DoH failure answers SERVFAIL with no fallback (`DnsHandler.kt:378`), which breaks captive portals and networks that block DoH. Revisit once a fallback or captive-portal handling exists.
 19. **For a later release: hardening from the October 2026 security review** (one line each; details stay with the owner):
     - **Done (1.2):** harden TLS and QUIC name handling for incomplete or unreadable handshakes (fail closed at Standard and Strict, §4.1 principle 4). Remove this line once 1.2 ships.
-    - Cap the number of connections the engine tracks at once.
-    - Improve app attribution on Android 7–9 (the limit in §16.1): faster lookup, off the packet thread, errors counted.
-    - Bound the SIEM queue's memory and back off between failed sends.
-    - Bound the stored TLS fingerprint baseline.
+    - **Done (1.3, bug-fix round, 2026-11-11/13):** cap the connections the engine tracks; bound the SIEM queue and back off between failed sends; bound the TLS fingerprint baseline; check SIEM destination and consent again at send time; name checks for cleartext HTTP; re-check open connections by name; replace the empty catches in the inspection engine, the list downloader and the owner lookup. Remove this line once 1.3 ships.
+    - Improve app attribution on Android 7–9 (the limit in §16.1): faster lookup, off the packet thread (errors are counted since 1.3).
     - Bound and protect the Certificate Transparency monitor's stored data.
-    - Check SIEM destination and consent again at send time.
-    - Apply name checks to more connection types.
-    - Re-check open connections when rules change.
-    - Replace the remaining empty catch blocks in the inspection engine and the list downloader.
     - Harden storage of packet captures.
     - Harden DNS and TLS parsers for remaining edge cases.
     - Show refused list downloads (shrink guard, item 17) in Settings › Diagnostics, with a way to accept a list that legitimately got smaller.

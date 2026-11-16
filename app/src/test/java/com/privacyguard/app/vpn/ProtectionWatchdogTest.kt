@@ -165,8 +165,10 @@ class ProtectionWatchdogTest {
             ProtectionWatchdog.onProtectionProcessDied(context)
 
             assertNull("exact alarms $exact", protectionOnNotification())
-            // Without exact alarms no restart is possible, and the user is told.
-            assertEquals("exact alarms $exact", !exact, stoppedNotification() != null)
+            // Told at once either way: with exact alarms the restart needs a new process,
+            // which Android may refuse after repeated crashes (V-18, 2026-11-16). A restart
+            // that works removes the notice when the service starts.
+            assertNotNull("exact alarms $exact", stoppedNotification())
             notifications.cancelAll()
         }
     }

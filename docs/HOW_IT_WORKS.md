@@ -133,7 +133,18 @@ Say a news app opens `https://ads.example.net/pixel`.
    match DNS*, and the connection is recorded under the DNS name. The ClientHello
    is also fingerprinted (JA3 and JA4), checked for weak
    cipher suites, and compared with the app's learned TLS baseline (section 5.3).
-   For plain HTTP the request line marks the connection as *cleartext*.
+   For plain HTTP the request line marks the connection as *cleartext*, and the site
+   name is read from the request: the target's host when it is a full URL (or
+   CONNECT's host), else the `Host` header (`core/http/HttpRequestHost.kt`; header block
+   up to 8 KB, buffered across segments). It gets the same decision as an SNI; a
+   blocked one resets the connection, recorded as stopped by *Site name in an
+   unencrypted request*. At Standard and Strict a request whose name can't be trusted
+   (two Host headers, a target and Host that disagree, a header block over 8 KB, or a
+   Host that is no hostname) is reset and counted. A request with no name (HTTP/1.0,
+   an address) passes.
+   About once a second the service checks open connections again (`NameRecheck`): by
+   app and address rules, and by the SNI or HTTP site name they sent, so a new Block
+   rule or list update also ends connections already running.
 7. **Close.** When the connection ends, one row is written to the `connections`
    table: app, hostname (valid SNI, else the DNS name for that address, else the IP),
    bytes each way, duration, encryption, whether the app was on screen and whether
@@ -300,8 +311,10 @@ A source or category you switch off in Ad privacy stays off at every level.
    that SDK's own company's app, and keeps login, push and deep-link hosts open
    even when a list contains them.
 
-Rules match the exact name you type. Write `*.example.com` to cover
-`example.com` and every subdomain. Rules for IPv6 addresses are not supported;
+A Block rule for a name also blocks every subdomain (since 1.3, ADR 0017). An Allow
+rule matches the exact name you type; write `*.example.com` to allow `example.com`
+and every subdomain. Rule order is unchanged: a longer Allow (`www.example.com`) wins
+over a shorter Block (`example.com`). Rules for IPv6 addresses are not supported;
 the dialog says so.
 
 ### 4.3 Connection rules
@@ -569,7 +582,12 @@ a rule already covers, gets none. Dismissed suggestions stay dismissed.
 Tunnel state, kill switch, Private DNS, a test lookup, **upstream DNS** (the
 running VPN does one real lookup over its own path), external IP (opt-in, asks
 api.ipify.org), DNS leak check, IPv6 packets dropped, installed apps with internet
-access, packets captured.
+access, packets captured. Since 1.3 also: connection safety limits (fragments dropped,
+connections refused at the 4,096 TCP / 4,096 UDP / 1,024 per app limits, idle UDP
+closed to make room), connections from an unknown app, the HTTPS-inspection limit,
+site-name blocking for unencrypted web requests, and handled errors (failed list
+download attempts, failed app lookups, inspection connections that did not close
+cleanly). These counters start at zero when protection is turned on.
 
 ### Payloads (enterprise only)
 
@@ -680,18 +698,39 @@ to install it in the same step, so there is one prompt every 90 days. The old ke
 deleted, so the old certificate can sign nothing more; the CA card counts it and asks
 you to remove it. With the organisation's consent (MDM), the CA is replaced 14 days
 before its end and, where CoreLock is Device or Profile Owner and the old one was
-installed, the new certificate replaces the old one in Android's list. A CA made by an
+installed, the new certificate replaces the old one in Android's list. Where it is not
+(no Device or Profile Owner rights), CoreLock cannot install the new certificate itself:
+inspection passes connections through undecrypted until the new certificate is
+installed, and Home shows a card that says so and offers the install. Inspection never
+stops without that notice. A CA made by an
 older version (longer lifetime or the old name) is replaced at the next start. Site
 certificates last 30 days and never past the CA's end.
 
 **SIEM**: inspected payload records are queued and sent to the configured
-endpoint in batches (100 events or 60 seconds; the queue is held in memory only), only over HTTPS, with a bearer API
+endpoint in batches (100 events or 60 seconds; the queue is held in memory only and
+bounded at 1,000 events and 8 MB), only over HTTPS, with a bearer API
 key, an optional certificate pin and an optional body signature (`SiemEndpoint.kt`).
+Before each upload CoreLock checks again that inspection is on, consent is valid and
+SIEM shipping is on; if not, the queue is dropped unsent. Each record goes only to the
+endpoint that was set when it was queued (a changed endpoint never receives older
+records). After a failed upload, automatic retries wait 30 seconds, then twice as long
+each time up to 30 minutes; "Ship now" tries at once. At most 32 connections are
+decrypted at the same time; more are passed through undecrypted (their name is still
+checked) and counted in Settings › Diagnostics.
 
 ---
 
 ## 9. Known limits
 
+- **Address rules are IPv4 only.** A rule for an IPv6 address or range can't be made;
+  IPv6 connections are still checked by name and by app.
+- **Large UDP datagrams that Android splits into fragments are dropped.** A later
+  fragment carries no port, so it can't be matched to an app or rule; CoreLock drops
+  every fragment and counts it (Settings › Diagnostics). Apps that send UDP datagrams
+  larger than the tunnel's packet size fail; most apps keep theirs smaller.
+- **Before the first unlock after a restart** CoreLock is not running (its encrypted
+  data is locked). Only Android's Always-on VPN with *Block connections without VPN*
+  keeps traffic from leaving unfiltered until then.
 - **Encrypted content is not visible** unless HTTPS inspection is on and the app
   trusts user certificates (most apps on Android 7+ do not). CoreLock sees who, when, how much and how it is encrypted.
 - **Attribution is best effort.** DNS lookups are made by Android's resolver, not
@@ -730,15 +769,20 @@ key, an optional certificate pin and an optional body signature (`SiemEndpoint.k
   "Automatic restart after a crash", at most 3 restarts in 30 minutes). Nothing
   is scheduled while protection is healthy; a non-wakeup backup alarm covers the
   case where both processes die. Exact alarms need "Alarms & reminders" access
-  (not pre-granted on Android 14+); without it, or past the restart limit, the
-  user gets "Protection stopped" instead. Either way the dead service's
+  (not pre-granted on Android 14+). The watcher posts "Protection stopped" the
+  moment the VPN process dies, and a restart that works removes it when the
+  service starts (about 6 s on an API 37 emulator, 16 November 2026); without
+  exact alarms, past the restart limit, or when Android refuses the restart, it
+  stays up and a tap starts protection again. Notifications must be allowed for
+  this; with them denied, a crash ends protection silently. Either way the dead service's
   "Protection on" notification is removed at once: Android kept it up for about
   a minute after a crash (and the app may not remove it itself while Android
   still counts the service as running), so the watcher stops the dead service's
   record first. Measured on an API 37 emulator, 25 October 2026: removed 12–54 ms
   after the kill, with and without a restart. Not covered: Force stop, and an app that
   Android marked as "crashed too many times", which Android itself will not
-  start in the background until the user opens it. The start fails closed: the
+  start in the background until the user opens it or taps the notice. A crash
+  soon after a restart was enough for that on the emulator. The start fails closed: the
   tunnel takes every route first and is read only once the filters are loaded.
   (This design replaced a 30-second deadman alarm on 15 October 2026 and has
   only been unit-tested so far; see docs/security-test-2026-10-14.md.)
@@ -761,7 +805,8 @@ key, an optional certificate pin and an optional body signature (`SiemEndpoint.k
   Android reports it, and as "not checked" while protection is off or before
   Android 10.
 - **Dual-hop carries TCP only** (section 4.4).
-- **Rules:** exact names unless written `*.name`; no IPv6 rules.
+- **Rules:** Allow rules match exact names unless written `*.name`; Block rules also
+  cover subdomains; no IPv6 rules.
 - **Weak-cipher alerts** are about what an app *offers*, which old libraries do
   even when the server picks a strong suite.
 - **JA3 threat matching** uses 35 published hashes. JA3 values are shared by many

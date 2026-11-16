@@ -58,7 +58,6 @@ data class MitmUiState(
     val searchQuery: String = "",
     val isLoading: Boolean = false,
     val mitmStatus: String = "IDLE",
-    val mitmStatusMessage: String = "MITM idle",
     val mitmStatusDomain: String? = null,
     val methodFilter: String? = null,
     val showFlaggedOnly: Boolean = false,
@@ -105,7 +104,6 @@ class MitmViewModel(
                 _uiState.update {
                     it.copy(
                         mitmStatus = status.state,
-                        mitmStatusMessage = status.message,
                         mitmStatusDomain = status.domain
                     )
                 }

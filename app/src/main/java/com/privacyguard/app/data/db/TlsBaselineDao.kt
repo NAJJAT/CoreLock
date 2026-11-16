@@ -42,4 +42,25 @@ interface TlsBaselineDao {
 
     @Query("SELECT * FROM tls_fingerprints WHERE packageName = :pkg ORDER BY firstSeen")
     suspend fun fingerprintsFor(pkg: String): List<TlsFingerprintEntity>
+
+    // ── Retention (PruneWorker, F-13): no schema change, DELETE only ──────
+
+    @Query("DELETE FROM tls_fingerprints WHERE lastSeen < :cutoff")
+    suspend fun deleteFingerprintsNotSeenSince(cutoff: Long)
+
+    /** Keeps each app's [maxPerApp] most recently seen fingerprints (ties broken by id). */
+    @Query("""
+        DELETE FROM tls_fingerprints WHERE id IN (
+            SELECT f.id FROM tls_fingerprints f WHERE (
+                SELECT COUNT(*) FROM tls_fingerprints g
+                WHERE g.uid = f.uid AND g.packageName = f.packageName
+                  AND (g.lastSeen > f.lastSeen OR (g.lastSeen = f.lastSeen AND g.id > f.id))
+            ) >= :maxPerApp
+        )
+    """)
+    suspend fun trimFingerprintsPerApp(maxPerApp: Int)
+
+    /** Keeps the [max] most recently seen fingerprints of all apps. */
+    @Query("DELETE FROM tls_fingerprints WHERE id NOT IN (SELECT id FROM tls_fingerprints ORDER BY lastSeen DESC, id DESC LIMIT :max)")
+    suspend fun capFingerprints(max: Int)
 }

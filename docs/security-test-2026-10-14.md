@@ -220,6 +220,35 @@ There is a Settings switch "Automatic restart after a crash", which asks for Ala
 reminders access. The full crash matrix and an overnight battery measurement still have
 to be run with it.
 
+Run on 2026-11-16 (branch `bug-fixes`, debug build, API 37 emulator `Medium_Phone_API_37.0`;
+Power saving off, no Always-on, no lockdown; Standard). Tunnel = a `tun` interface present,
+polled every ~0.2 s:
+
+| Fault | Exact alarms | Result |
+|---|---|---|
+| `am crash <VPN pid>` | allowed | watcher saw the death at +0.06 s; tunnel back at **+6.6 s** (alarm delivered ~5 s after the death, then 1.3 s to `establish()`) |
+| `kill -9` (like a low-memory kill) | allowed | tunnel back at **+6.4 s** |
+| TUN reader failure (`FAIL_WORKER`) | n/a | tunnel rebuilt in the same process in 45 ms (`tun0` → `tun1`) |
+| 3rd crash in 30 min | allowed | tunnel back at +6.5 s; DNS filtering checked after the restarts (a tracker name NXDOMAIN, others resolve) |
+| A crash soon after a restart | allowed | Android: "crashed too many times, killing! Reason: crashed quickly", and it refuses to start the app for the restart alarm; tunnel not back |
+| Any crash | **not** allowed (Android 14+ default) | no restart, by design; "Protection stopped" posted |
+| `am crash <package>` | allowed | hits the `:watchdog` process, not the VPN; Android restarts the watcher after 1 s and protection keeps running |
+
+Found and fixed on this run: when Android refused the restart, **no notification at all**
+was shown. "Protection stopped" was posted only by the restart alarm's receiver, in a new
+main process that Android would not start, and the `:watchdog` process is frozen ~10 s
+after the death. The watcher now posts "Protection stopped" at the moment of death, and the
+restarted service removes it: shown at +0.4–0.6 s, removed at +6.7 s on a working restart,
+still shown when Android refused. Tapping it started protection again in 3 s, even while
+Android had the app marked as crashed. (`ProtectionWatchdog.onProtectionProcessDied`; the
+updated `ProtectionWatchdogTest.process_death_removes_protection_on_at_once` fails without
+the change.)
+
+Still open: with notifications denied (Android 13+ asks; the emulator install had them
+off), a crash ends protection with no signal at all; the app does not warn that
+notifications are off. Not run: Power saving on, lockdown on, the overnight battery
+measurement, and the phone.
+
 ### Always-on turned off in Android settings
 
 When Always-on is turned off, Android revokes the VPN (`onRevoke`), and protection stops.

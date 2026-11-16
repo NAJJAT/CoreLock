@@ -20,10 +20,13 @@ import java.security.cert.X509Certificate
 import javax.net.ssl.*
 import com.privacyguard.vpn.mitm.PinningDetector
 
-// ADDED: runtime status surfaced to the UI so empty payload lists can explain why.
+/**
+ * Runtime status surfaced to the UI so empty payload lists can explain why. The screen
+ * shows a translated text for each [state] (strings_mitm.xml, mitm_st_*); there is no
+ * English message here, so nothing untranslated or host-specific reaches the screen.
+ */
 data class MitmRuntimeStatus(
     val state: String = "IDLE",
-    val message: String = "MITM idle",
     val domain: String? = null,
     val timestamp: Long = System.currentTimeMillis(),
 )
@@ -51,6 +54,14 @@ class MitmEngine(
     companion object {
         private const val TAG = "MitmEngine"
         private const val BUFFER_SIZE = 32768
+        /**
+         * Connections decrypted at once (F-4). A busy page opens a few dozen; above this
+         * they pass through undecrypted, counted. Each one holds up to 3 blocking threads
+         * (accept and handshake, then one relay per direction), so the pool below is
+         * sized for it and never starves.
+         */
+        const val MAX_PARALLEL_INSPECTIONS = 32
+        private const val POOL_THREADS = MAX_PARALLEL_INSPECTIONS * 3
         // ADDED
         private val _statusFlow = MutableStateFlow(MitmRuntimeStatus())
         // ADDED
@@ -59,9 +70,30 @@ class MitmEngine(
         /** Only TcpForwarder's own loopback socket, identified by its bound source port. */
         internal fun isExpectedPeer(address: InetAddress?, port: Int, expectedClientPort: Int): Boolean =
             address != null && address.isLoopbackAddress && expectedClientPort > 0 && port == expectedClientPort
+
+        /** Closes both relay sides, each on its own: a failing first close must not leave the second open. */
+        internal fun closeBoth(a: java.io.Closeable, b: java.io.Closeable) {
+            for (c in arrayOf(a, b)) {
+                try {
+                    c.close()
+                } catch (e: Exception) {
+                    com.privacyguard.app.core.stats.StatsManager.recordInspectionCloseError()
+                    Log.d(TAG, "relay close failed: ${e.javaClass.simpleName}")
+                }
+            }
+        }
     }
 
-    private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + com.privacyguard.vpn.WorkerGuard.coroutineHandler)
+    // Its own threads, not Dispatchers.IO: relays block a thread each for the life of a
+    // connection, and on the shared pool they stalled database writes and the VPN
+    // service. Idle threads end after 30 s.
+    private val executor = java.util.concurrent.ThreadPoolExecutor(
+        POOL_THREADS, POOL_THREADS, 30L, java.util.concurrent.TimeUnit.SECONDS,
+        java.util.concurrent.LinkedBlockingQueue(),
+        { r -> Thread(r, "mitm-relay").apply { isDaemon = true } },
+    ).apply { allowCoreThreadTimeOut(true) }
+    private val dispatcher = executor.asCoroutineDispatcher()
+    private val coroutineScope = CoroutineScope(dispatcher + SupervisorJob() + com.privacyguard.vpn.WorkerGuard.coroutineHandler)
 
     /**
      * Cheap pre-check, before a session is moved off its real server: a host we
@@ -89,11 +121,30 @@ class MitmEngine(
      * @param session The VPN session (already classified as TLS)
      * @param expectedClientPort source port of TcpForwarder's loopback socket
      * @param onPayload Callback for each payload chunk (direction, bytes, session)
+     * @param onDone runs exactly once when this interception is over (its slot is freed),
+     *   whether it was skipped, failed or ran to the end
      * @return local port the MITM server is listening on, or -1 if interception was skipped/failed
      */
     fun intercept(
         session: Session,
         expectedClientPort: Int,
+        onDone: () -> Unit = {},
+        onPayload: (direction: String, bytes: ByteArray, session: Session) -> Unit
+    ): Int {
+        val port = try {
+            startInterception(session, expectedClientPort, onDone, onPayload)
+        } catch (e: Exception) {
+            Log.w(TAG, "MITM start failed: ${e.javaClass.simpleName}")
+            -1
+        }
+        if (port < 0) onDone()   // nothing was launched, so nothing else will call it
+        return port
+    }
+
+    private fun startInterception(
+        session: Session,
+        expectedClientPort: Int,
+        onDone: () -> Unit,
         onPayload: (direction: String, bytes: ByteArray, session: Session) -> Unit
     ): Int {
         val domain = session.tlsSni ?: return -1
@@ -114,7 +165,6 @@ class MitmEngine(
             Log.d(TAG, "Skipping MITM for pinned domain: $domain")
             _statusFlow.value = MitmRuntimeStatus(
                 state = "PINNED_BYPASS",
-                message = "Pinned app/domain bypassed interception",
                 domain = domain,
                 timestamp = System.currentTimeMillis(),
             )
@@ -141,7 +191,6 @@ class MitmEngine(
             try {
                 _statusFlow.value = MitmRuntimeStatus(
                     state = "STARTING",
-                    message = "Waiting for device on port $localPort",
                     domain = domain,
                     timestamp = System.currentTimeMillis(),
                 )
@@ -153,7 +202,6 @@ class MitmEngine(
                 Log.w(TAG, "MITM device connection timed out")
                 _statusFlow.value = MitmRuntimeStatus(
                     state = "TIMEOUT",
-                    message = "Timed out waiting for the app to connect to the local MITM socket",
                     domain = domain,
                     timestamp = System.currentTimeMillis(),
                 )
@@ -163,14 +211,13 @@ class MitmEngine(
                 Log.e(TAG, "MITM interception failed: ${e.javaClass.simpleName}")
                 _statusFlow.value = MitmRuntimeStatus(
                     state = "ERROR",
-                    message = e.message ?: e::class.java.simpleName,
                     domain = domain,
                     timestamp = System.currentTimeMillis(),
                 )
                 session.isMitmIntercepted = false
                 serverSocket.runCatching { close() }
             }
-        }
+        }.invokeOnCompletion { onDone() }   // also runs if the scope was already cancelled
 
         return localPort
     }
@@ -181,7 +228,7 @@ class MitmEngine(
         serverSocket: SSLServerSocket,
         expectedClientPort: Int,
         onPayload: (String, ByteArray, Session) -> Unit
-    ) = withContext(Dispatchers.IO) {
+    ) = withContext(dispatcher) {
 
         serverSocket.use {
             // 1. Accept the device connection FIRST — TcpForwarder connects to this port
@@ -241,7 +288,6 @@ class MitmEngine(
 
                 _statusFlow.value = MitmRuntimeStatus(
                     state = "ACTIVE",
-                    message = "Interception active",
                     domain = domain,
                     timestamp = System.currentTimeMillis(),
                 )
@@ -271,7 +317,6 @@ class MitmEngine(
                 awaitAll(deviceToServer, serverToDevice)
                 _statusFlow.value = MitmRuntimeStatus(
                     state = "IDLE",
-                    message = "MITM idle",
                     domain = domain,
                     timestamp = System.currentTimeMillis(),
                 )
@@ -327,10 +372,7 @@ class MitmEngine(
         } catch (e: Exception) {
             Log.d(TAG, "Relay interrupted: ${e.message}")
         } finally {
-            try {
-                from.close()
-                to.close()
-            } catch (e: Exception) { }
+            closeBoth(from, to)
         }
     }
 
@@ -410,15 +452,9 @@ class MitmEngine(
         // "…SSLV3_ALERT_CERTIFICATE_UNKNOWN") vary too much to match reliably, so pass the
         // host through from now on regardless of the exact alert.
         pinningDetector.markAsPinned(domain)
-        val who = if (e.deviceSide) "${session.ownerPackage ?: "app"} rejected the PrivacyGuard certificate"
-                  else "upstream TLS to $domain failed"
         Log.w(TAG, "MITM handshake failed (${if (e.deviceSide) "device" else "upstream"} side) — passing this host through: ${e.cause?.javaClass?.simpleName}")
         _statusFlow.value = MitmRuntimeStatus(
             state = "HANDSHAKE_FAILED",
-            message = if (e.deviceSide)
-                "$who (certificate pinning or user CAs not trusted) — $domain will be passed through without decryption"
-            else
-                "$who — $domain will be passed through without decryption",
             domain = domain,
             timestamp = System.currentTimeMillis(),
         )
@@ -427,6 +463,7 @@ class MitmEngine(
 
     fun shutdown() {
         coroutineScope.cancel()
+        executor.shutdown()
         certForger.clearCache()
     }
 }

@@ -18,7 +18,7 @@ every user since ADR 0006. What it does today:
 
 - It is off by default and needs both the switch and a recorded consent
   (`TlsInterceptionFactory.kt:36`, `MitmTlsInterception.kt:93-96`). The organisation's
-  MDM can give consent (`ManagedConfigurationProvider.kt:62-63`). The VPN notification
+  MDM can give consent (`ManagedConfigApplier`, `ManagedConfigurationProvider.kt:62-63`). The VPN notification
   and the dashboard show when it is on (`TlsInterceptionFactory.kt:38-44`,
   `PrivacyVpnService.kt:283-286`).
 - The name decision happens **before** inspection, so decrypting a connection never

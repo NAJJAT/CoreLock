@@ -78,6 +78,8 @@ class TcpForwarder(
     private val failsClosed: () -> Boolean = { true },
     // A connection was reset by failsClosed (counter only, never a row). Packet thread.
     private val onHelloUnreadable: (() -> Unit)? = null,
+    // A cleartext HTTP request reset by failsClosed because its name could not be trusted. Packet thread.
+    private val onHttpUnreadable: (() -> Unit)? = null,
     // Reads the first bytes on every port as TLS, not only 443. Only tests set it
     // (their loopback servers listen on random ports).
     private val tlsOnEveryPort: Boolean = false,
@@ -123,6 +125,9 @@ class TcpForwarder(
     val sniBlocked = AtomicLong(0)
     // TLS connections reset because their ClientHello could not be read (fail closed).
     val helloUnreadableDropped = AtomicLong(0)
+    /** Cleartext HTTP requests reset for their site name (F-8), and for a name that could not be read. */
+    val httpNameBlocked = AtomicLong(0)
+    val httpUnreadableDropped = AtomicLong(0)
     val mitmInterceptedCount = AtomicLong(0)
     val retransmittedSegments = AtomicLong(0)
 
@@ -394,6 +399,45 @@ class TcpForwarder(
             clientHelloBytes = buffered
             session.clientHelloBuf = ByteArray(0)
         }
+
+        // ── Cleartext HTTP: the site name in the request (F-8) ─────────────
+        // A blocked name reached over plain HTTP without our DNS gets the same decision
+        // as a TLS server name (nameBlocked = NameBlockPolicy; no second check). The
+        // header block is buffered up to HttpRequestHost.MAX_HEADER_BYTES. A request
+        // whose name can't be trusted (over the cap, two Host headers, a target and Host
+        // that disagree) is reset at Standard and Strict, like an unreadable ClientHello.
+        if (helloRecord == null && !helloUnreadable && !session.isMitmIntercepted && payload.isNotEmpty() &&
+            (session.httpHeadBuf.isNotEmpty() || (payload[0] >= 0x41 && payload[0] <= 0x5A))) {   // 'A'..'Z': a method's first letter
+            val buffered = if (session.httpHeadBuf.isEmpty()) clientHelloBytes else session.httpHeadBuf + payload
+            val request = com.privacyguard.core.http.HttpRequestHost.read(buffered)
+            if (request == com.privacyguard.core.http.HttpRequestHost.Result.NeedMore) {
+                session.httpHeadBuf = buffered            // keep buffering, ACK, wait
+                sendAckToDevice(session, payload.size)
+                return true
+            }
+            session.httpHeadBuf = ByteArray(0)
+            clientHelloBytes = buffered
+            if (request == com.privacyguard.core.http.HttpRequestHost.Result.Unreadable && failsClosed()) {
+                httpUnreadableDropped.incrementAndGet()
+                runCatching { onHttpUnreadable?.invoke() }
+                    .onFailure { Log.w(TAG, "Unreadable request listener failed: ${it.javaClass.simpleName}") }
+                resetSession(session)
+                return true
+            }
+            if (request is com.privacyguard.core.http.HttpRequestHost.Result.Host) {
+                session.httpHost = request.name
+                val reason = nameBlocked?.invoke(session.ownerPackage, request.name)
+                if (reason != null) {
+                    httpNameBlocked.incrementAndGet()
+                    session.blockSource = com.privacyguard.core.session.BlockSource.HTTP
+                    session.blocked = true
+                    runCatching { onSniBlocked?.invoke(session, reason) }
+                        .onFailure { Log.w(TAG, "HTTP block listener failed: ${it.javaClass.simpleName}") }
+                    resetSession(session)
+                    return true
+                }
+            }
+        }
         val hello = helloRecord?.let { com.privacyguard.core.tls.ClientHelloParser.parse(it) }
 
         // Fail closed (plan 0.2): at STANDARD and STRICT a TLS connection must show the
@@ -468,10 +512,12 @@ class TcpForwarder(
         }
 
         if (sni != null && isTlsPort(key.destinationPort) && !session.isMitmIntercepted &&
-            interception.shouldIntercept(session.ownerUid, session.ownerPackage, sni) &&
-            redirectToMitm(session, clientHelloBytes, sni)) {
-            sendAckToDevice(session, payload.size)
-            return true
+            interception.shouldIntercept(session.ownerUid, session.ownerPackage, sni)) {
+            if (redirectToMitm(session, clientHelloBytes, sni)) {
+                sendAckToDevice(session, payload.size)
+                return true
+            }
+            interception.interceptNotStarted()   // nothing started: give back its inspection slot
         }
 
         if (result.encryptionStatus == EncryptionStatus.CLEARTEXT ||

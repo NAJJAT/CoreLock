@@ -21,14 +21,11 @@ import org.bouncycastle.asn1.x509.KeyUsage
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
-import java.math.BigInteger
 import java.security.cert.CertificateFactory
 import java.security.KeyPairGenerator
 import java.security.KeyStore
-import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.Date
-import kotlin.math.absoluteValue
 
 /**
  * Manages the local CA key/cert pair used by the MITM engine.
@@ -135,7 +132,11 @@ class CaManager(private val context: Context) {
                         generateAndPersist().also { ok ->
                             // A managed phone (MDM consent rotates every ~83 days): swap the
                             // trusted certificate, or inspection stops when nobody installs it.
-                            if (ok) _caCertFlow.value?.let { com.privacyguard.mdm.DeviceAdminReceiver.replaceCaCertificate(context, old, it.encoded) }
+                            val moved = ok && _caCertFlow.value?.let {
+                                com.privacyguard.mdm.DeviceAdminReceiver.replaceCaCertificate(context, old, it.encoded)
+                            } == true
+                            // Not moved (no Device or Profile Owner rights): Home says so (known item 16).
+                            if (ok) CaUpgradeNotice.recordRotated(context, trustMoved = moved)
                         }
                     }
 
@@ -267,7 +268,7 @@ class CaManager(private val context: Context) {
     private fun generateAndPersist(): Boolean {
         // Step 1 — generate the RSA key pair inside AndroidKeyStore hardware.
         // KeyGenParameterSpec creates a placeholder cert automatically; we ignore it.
-        val serial = BigInteger.valueOf(SecureRandom().nextLong().absoluteValue)
+        val serial = CertSerial.next()
         val now    = System.currentTimeMillis()
 
         Log.d(TAG, "generateAndPersist: generating RSA-2048 key in AndroidKeyStore")

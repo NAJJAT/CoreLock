@@ -419,6 +419,7 @@ private fun stoppedByLabel(source: BlockSource): Int = when (source) {
     BlockSource.QUIC -> R.string.conn_blocked_by_quic
     BlockSource.DOH -> R.string.conn_blocked_by_doh
     BlockSource.DOT -> R.string.conn_blocked_by_dot
+    BlockSource.HTTP -> R.string.conn_blocked_by_http
 }
 
 @Composable

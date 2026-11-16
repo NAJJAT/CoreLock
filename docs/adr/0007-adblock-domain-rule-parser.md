@@ -139,6 +139,10 @@ in CLAUDE.md §6.2 before merging.
 
 ## Consequences
 
+- Note (2026-11-16): since ADR 0017 a plain user Block rule already covers its
+  subdomains, while Allow rules stay exact. `||example.com^` could therefore be stored
+  as Block `example.com`; `@@||example.com^` still needs `*.example.com`. Re-check the
+  user-rule table above against ADR 0017 before building this.
 - Lists in adblock syntax become usable without any page-content support.
 - One more parser to fuzz: malformed-input tests (truncated, oversized, binary,
   mixed encodings, every rejected shape) and a property test that a list's exception

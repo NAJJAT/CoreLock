@@ -20,5 +20,5 @@
     <string name="rule_block_cleartext_app">Block unencrypted connections of %1$s</string>
     <string name="rule_block_background_app">Block %1$s in the background</string>
     <string name="rules_ip_invalid">Enter an IPv4 address or range, like 1.2.3.4 or 10.0.0.0/8. IPv6 rules are not supported yet.</string>
-    <string name="rules_domain_exact">Matches this exact name. Write *.example.com to include example.com and every subdomain.</string>
+    <string name="rules_domain_exact">Block covers this name and every subdomain. Allow covers this exact name only; write *.example.com to allow every subdomain.</string>
 </resources>

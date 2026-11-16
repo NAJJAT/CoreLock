@@ -20,5 +20,5 @@
     <string name="rule_block_cleartext_app">Onversleutelde verbindingen van %1$s blokkeren</string>
     <string name="rule_block_background_app">%1$s op de achtergrond blokkeren</string>
     <string name="rules_ip_invalid">Voer een IPv4-adres of -bereik in, zoals 1.2.3.4 of 10.0.0.0/8. IPv6-regels worden nog niet ondersteund.</string>
-    <string name="rules_domain_exact">Komt alleen overeen met deze exacte naam. Schrijf *.example.com om example.com en alle subdomeinen mee te nemen.</string>
+    <string name="rules_domain_exact">Blokkeren geldt voor deze naam en alle subdomeinen. Toestaan geldt alleen voor deze exacte naam; schrijf *.example.com om alle subdomeinen toe te staan.</string>
 </resources>
