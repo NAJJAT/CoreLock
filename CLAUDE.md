@@ -378,7 +378,7 @@ A broken migration deletes the user's rules and history. Treat schema changes as
 - **RTL:** use `start`/`end`, never `left`/`right`; mirror directional icons; test long translations (French and Dutch are often 30% longer).
 - **Accessibility:** content descriptions on icons, touch targets ≥ 48 dp, sufficient contrast, works with large font sizes and TalkBack.
 - **Honest UI:** never show "protected" when the tunnel isn't running. Show what was blocked and why ("Stopped by").
-- **Warnings come before reliance:** Private DNS in hostname mode, missing Usage Access (needed for background-only rules), battery optimization — shown when the user enables the feature, not buried in settings.
+- **Warnings come before reliance:** Private DNS in hostname mode, missing Usage Access (needed for background-only rules), battery optimization, notifications off (nothing could say that protection stopped; Home card since 1.3) — shown when the user enables the feature, not buried in settings.
 - Every screen handles loading, empty and error states.
 
 ---
@@ -500,7 +500,7 @@ Documentation is part of the product. Outdated docs in a security app are a secu
 
 - `docs/HOW_IT_WORKS.md` — deeper technical explanation of §5 for curious users and contributors.
 - `docs/BLOCKING_POLICY.md` — user-facing blocking policy: what each level blocks, what is exempt and why, what can't be blocked, how to allow-list and report. Update it in the same change as any list, level, exemption or precedence change. Issue forms in `.github/ISSUE_TEMPLATE/` link to it.
-- `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 are accepted (2026-10-25); 0007–0011 are proposed, 0012 is accepted (2026-10-28) 0013 is accepted (2026-11-04); 0014 is proposed and 0015 accepted (2026-11-05); 0016 is proposed (2026-11-11, for 1.3); 0017 is proposed (2026-11-13, for 1.3). Never rewrite an accepted record; supersede it with a new one.
+- `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 are accepted (2026-10-25); 0007–0011 are proposed, 0012 is accepted (2026-10-28) 0013 is accepted (2026-11-04); 0014 is proposed and 0015 accepted (2026-11-05); 0016 is proposed (2026-11-11, for 1.3); 0017 is accepted (2026-11-16, 1.3). Never rewrite an accepted record; supersede it with a new one.
 - `RELEASE_NOTES_X.Y.md`, `docs/TRANSLATION_REVIEW_X.Y.md`.
 - `SECURITY.md` — vulnerability reporting.
 

@@ -44,6 +44,7 @@
     <string name="ui_couldnt_load">Kon niet laden</string>
     <string name="ui_attention_usage_access">Apps op de achtergrond blokkeren heeft toegang tot gebruiksgegevens nodig.</string>
     <string name="ui_attention_battery_restricted">Batterijgebruik is beperkt, dus Android kan CoreLock stoppen.</string>
+    <string name="ui_attention_notifications">Meldingen staan uit. Als de bescherming stopt, kan CoreLock je niet waarschuwen.</string>
     <string name="ui_attention_battery_optimized">Sommige telefoons stoppen CoreLock om batterij te sparen. Laat het op de achtergrond werken.</string>
     <string name="ui_attention_inspection_cert">HTTPS-inspectie heeft het nieuwe certificaat van CoreLock nodig. Tot je het installeert, wordt niets geïnspecteerd. Het oude certificaat werkt niet meer.</string>
     <string name="ui_install_certificate">Certificaat installeren</string>

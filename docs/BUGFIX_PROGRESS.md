@@ -107,3 +107,27 @@ used before that.
   pass); lint 0 errors (27 warnings, none on changed lines); R8 passed; androidTest compiles.
 - Hot path (quiet machine, 5 runs): SNI check 3.37-4.08 µs, median 3.41 (baseline 3.39); QUIC
   gate 9.45-9.92 µs (baseline 9.56). No regression.
+
+### 2026-11-16, owner's decisions on N-2 and N-4 (after fba0909)
+
+- N-4: Home card while notifications or the alerts channel are off ("Notifications are off.
+  If protection stops, CoreLock can't warn you."), not dismissable, button opens Android's
+  notification settings for CoreLock (`NotificationCheck`). Tests first: NotificationCheckTest,
+  HomeLogicTest (card order), HomeScreenTest; without the logic 4 tests fail. Checked on the
+  emulator: card shown with notifications revoked, button opens AppNotificationSettings, card
+  gone after allowing them again. Strings in 4 languages (machine translations, in
+  TRANSLATION_REVIEW_1.3).
+- N-2: "Clear all data" empties the SIEM queue in memory, and a batch being uploaded at that
+  moment is not put back if its upload fails. SiemQueueClearTest: 2 of 2 fail without it.
+- ADR 0017 accepted. Version 1.3.0 / versionCode 4. RELEASE_NOTES_1.3.0 finished for users
+  (generic wording for security fixes; `<APK_SHA256>` and `<APK_SIZE>` left for the owner).
+- Lint: 27 warnings, the same 27 (same types) as on a0ab4a1 when run today; the 27th against
+  the earlier note of 26 is TrustAllX509TrustManager reported inside the BouncyCastle jar
+  (bcpkix-jdk18on-1.86), not in our code and not new in this branch.
+- Checks: 1,296 unit tests, 0 failures; lint 0 errors; R8 passed; androidTest compiles.
+- V-18 second run on the emulator (docs/security-test-2026-10-14.md): Power saving on, tunnel
+  back at +7.3 s; lockdown on, back at +6.8 s with 0 of 45 TCP probes through; without
+  lockdown 43 of 43 went out unfiltered during the gap (the documented kill-switch limit);
+  restart refused by Android under lockdown: 0 of 447 through, notice stayed up. Android's
+  "crashed quickly" window is about 2 minutes. Emulator restored afterwards (no Always-on,
+  Power saving off). Still open: overnight battery and the phone. Docs only; no code change.

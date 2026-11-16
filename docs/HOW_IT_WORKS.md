@@ -774,7 +774,8 @@ checked) and counted in Settings › Diagnostics.
   service starts (about 6 s on an API 37 emulator, 16 November 2026); without
   exact alarms, past the restart limit, or when Android refuses the restart, it
   stays up and a tap starts protection again. Notifications must be allowed for
-  this; with them denied, a crash ends protection silently. Either way the dead service's
+  this; with them off, a crash ends protection silently, so Home shows a card
+  while they are off (`NotificationCheck`, 1.3). Either way the dead service's
   "Protection on" notification is removed at once: Android kept it up for about
   a minute after a crash (and the app may not remove it itself while Android
   still counts the service as running), so the watcher stops the dead service's
@@ -782,7 +783,7 @@ checked) and counted in Settings › Diagnostics.
   after the kill, with and without a restart. Not covered: Force stop, and an app that
   Android marked as "crashed too many times", which Android itself will not
   start in the background until the user opens it or taps the notice. A crash
-  soon after a restart was enough for that on the emulator. The start fails closed: the
+  within about 2 minutes of the previous one was enough for that on the emulator. The start fails closed: the
   tunnel takes every route first and is read only once the filters are loaded.
   (This design replaced a 30-second deadman alarm on 15 October 2026 and has
   only been unit-tested so far; see docs/security-test-2026-10-14.md.)

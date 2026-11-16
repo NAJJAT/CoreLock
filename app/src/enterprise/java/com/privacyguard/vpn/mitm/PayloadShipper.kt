@@ -77,7 +77,11 @@ class PayloadShipper @androidx.annotation.VisibleForTesting internal constructor
          */
         fun getInstance(context: Context): PayloadShipper =
             INSTANCE ?: synchronized(this) {
-                INSTANCE ?: PayloadShipper(MitmConfig(context.applicationContext)).also { INSTANCE = it }
+                INSTANCE ?: PayloadShipper(MitmConfig(context.applicationContext)).also { shipper ->
+                    INSTANCE = shipper
+                    // Lives as long as the process, like the shipper: never unregistered.
+                    com.privacyguard.app.data.repository.LocalDataEraser.register { shipper.clearAll() }
+                }
             }
 
         /** A rough upper bound of an event's size in memory (UTF-16 strings plus overhead). */
@@ -94,6 +98,8 @@ class PayloadShipper @androidx.annotation.VisibleForTesting internal constructor
     private val lock = Any()
     private val queue = ArrayDeque<ShipEvent>()
     private var queuedBytes = 0L
+    // Guarded by [lock]: bumped by [clearAll], so a failed batch taken before it is not requeued.
+    private var generation = 0L
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.privacyguard.vpn.WorkerGuard.coroutineHandler)
     private val shipScheduled = AtomicBoolean(false)
@@ -196,9 +202,11 @@ class PayloadShipper @androidx.annotation.VisibleForTesting internal constructor
         val tag = SiemEndpoint.tag(endpoint)
         val events = mutableListOf<ShipEvent>()
         var foreign = 0
+        var batchGeneration = 0L
         synchronized(lock) {
             for (e in queue) if (e.endpointTag == tag) events += e else foreign++
             queue.clear(); queuedBytes = 0
+            batchGeneration = generation
         }
         // Queued for another endpoint (or before one was set): never sent anywhere else.
         if (foreign > 0) Log.w(TAG, "Dropped $foreign SIEM events queued for a different endpoint")
@@ -221,7 +229,7 @@ class PayloadShipper @androidx.annotation.VisibleForTesting internal constructor
                     failures.set(0)
                     nextAttempt.set(0L)
                 } else {
-                    requeue(events)
+                    requeue(events, batchGeneration)
                     scheduleRetry()
                 }
             } finally {
@@ -230,8 +238,9 @@ class PayloadShipper @androidx.annotation.VisibleForTesting internal constructor
         }
     }
 
-    /** Puts a failed batch back in front, oldest first, within the same bounds. */
-    private fun requeue(events: List<ShipEvent>) = synchronized(lock) {
+    /** Puts a failed batch back in front, oldest first, within the same bounds; not after a clear. */
+    private fun requeue(events: List<ShipEvent>, batchGeneration: Long) = synchronized(lock) {
+        if (generation != batchGeneration) return@synchronized
         for (e in events.asReversed()) {
             val size = estimateBytes(e)
             if (queue.size >= MAX_QUEUE_SIZE || queuedBytes + size > MAX_QUEUE_BYTES) continue
@@ -270,6 +279,18 @@ class PayloadShipper @androidx.annotation.VisibleForTesting internal constructor
     }
 
     /** Number of events currently waiting to be shipped. */
+    /**
+     * "Clear all data" (N-2): the queue holds decrypted payloads, which are history too.
+     * Drops it, and bumps [generation] so a batch being uploaded right now is not put back
+     * if its upload fails.
+     */
+    fun clearAll() {
+        val dropped = synchronized(lock) { queue.size.also { queue.clear(); queuedBytes = 0; generation++ } }
+        failures.set(0)
+        nextAttempt.set(0L)
+        if (dropped > 0) Log.i(TAG, "Local data cleared; dropped $dropped queued SIEM events")
+    }
+
     fun pendingCount(): Int = synchronized(lock) { queue.size }
 
     /** Estimated bytes the queued events hold. */

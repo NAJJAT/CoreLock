@@ -1,6 +1,6 @@
 # 0017. User Block rules cover subdomains; Allow rules stay exact
 
-- **Status:** Proposed (decision by the owner, 2026-11-11; for 1.3)
+- **Status:** Accepted (owner, 2026-11-16; decided 2026-11-11; ships in 1.3.0)
 - **Date:** 2026-11-13
 - **Commits:** none yet
 

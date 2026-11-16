@@ -47,3 +47,12 @@ subdomains (ADR 0017).
 | Key | English | Arabic | French | Dutch |
 |---|---|---|---|---|
 | `rules_domain_exact` | Block covers this name and every subdomain. Allow covers this exact name only; write *.example.com to allow every subdomain. | الحظر يشمل هذا الاسم وكل نطاقاته الفرعية. السماح يشمل هذا الاسم بالضبط فقط؛ اكتب *.example.com للسماح بكل النطاقات الفرعية. | Bloquer couvre ce nom et tous ses sous-domaines. Autoriser couvre seulement ce nom exact ; écrivez *.example.com pour autoriser tous les sous-domaines. | Blokkeren geldt voor deze naam en alle subdomeinen. Toestaan geldt alleen voor deze exacte naam; schrijf *.example.com om alle subdomeinen toe te staan. |
+
+## Home: notifications are off (`res/values*/strings_ui.xml`, 1 new string)
+
+Home attention card, shown while CoreLock's notifications (or its alerts channel) are off.
+Its button is the existing "Open settings".
+
+| Key | English | Arabic | French | Dutch |
+|---|---|---|---|---|
+| `ui_attention_notifications` | Notifications are off. If protection stops, CoreLock can’t warn you. | الإشعارات متوقفة. إذا توقفت الحماية، لن يستطيع CoreLock تنبيهك. | Les notifications sont désactivées. Si la protection s’arrête, CoreLock ne pourra pas vous prévenir. | Meldingen staan uit. Als de bescherming stopt, kan CoreLock je niet waarschuwen. |

@@ -244,10 +244,26 @@ Android had the app marked as crashed. (`ProtectionWatchdog.onProtectionProcessD
 updated `ProtectionWatchdogTest.process_death_removes_protection_on_at_once` fails without
 the change.)
 
-Still open: with notifications denied (Android 13+ asks; the emulator install had them
-off), a crash ends protection with no signal at all; the app does not warn that
-notifications are off. Not run: Power saving on, lockdown on, the overnight battery
-measurement, and the phone.
+With notifications denied (Android 13+ asks; the emulator install had them off), a crash
+ends protection with no signal at all. Since the same round Home shows a card while
+notifications or the alerts channel are off (N-4, `NotificationCheck`).
+
+Second run, same day and emulator, 1.3.0 debug build (with the notice fix). Leaks: while no
+`tun` existed, a TCP connect to 1.1.1.1:80 from the shell every ~0.15 s (`nc -z`); ICMP is
+no probe, the tunnel does not carry it. One crash each, more than 2 minutes apart:
+
+| Power saving | Always-on + lockdown | Result |
+|---|---|---|
+| On | Off | notice at +0.9 s; tunnel back at **+7.3 s** (cab6edc: +25.7 s) |
+| Off | On | tunnel back at **+6.8 s**; **0 of 45** probes connected; notice removed |
+| Off | Off | tunnel back at +6.9 s; **43 of 43** probes connected unfiltered (no lockdown: expected, README kill switch) |
+| Off | On, restart refused by Android | not back in 60 s; **0 of 447** probes connected; notice stayed up |
+
+- With Always-on and lockdown set, Android itself started protection at boot.
+- Android's "crashed quickly" refusal also came 81 s after the previous crash: its window
+  is about 2 minutes, so two crashes within 2 minutes stop automatic restarts.
+
+Not run: the overnight battery measurement, and the phone.
 
 ### Always-on turned off in Android settings
 

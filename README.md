@@ -215,6 +215,8 @@ Versions 1.0.1 and 1.1.0 were never published; 1.2.0 updates 1.0.0 directly.
 4. **Battery.** Setup warns you when Android restricts CoreLock in the background.
    Settings › Advanced › Diagnostics › Battery use shows whether Android may stop
    protection in the background, and opens the battery settings.
+   **Notifications.** Allow them when CoreLock asks: "Protection stopped" is a
+   notification. While they are off, Home shows a card that opens their settings.
 5. **Kill switch.** In Android's VPN settings turn on **Always-on VPN** for
    CoreLock, and optionally **Block connections without VPN**. Only Android can
    block traffic once the tunnel is gone.

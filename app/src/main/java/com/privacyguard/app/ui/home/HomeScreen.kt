@@ -130,6 +130,7 @@ fun HomeScreen(
                     is HomeLogic.Attention.PrivateDns -> PrivateDnsCheck.openSettings(context)
                     HomeLogic.Attention.UsageAccess -> AdPrivacyLinks.open(context, AdPrivacyLinks.usageAccess(context.packageName))
                     is HomeLogic.Attention.Battery -> BatteryCheck.openSettings(context)
+                    HomeLogic.Attention.Notifications -> com.privacyguard.app.core.notify.NotificationCheck.openSettings(context)
                     HomeLogic.Attention.InspectionCertificate -> {
                         TlsInterceptionFactory.requestInspectionCertificateInstall()
                         onOpenPayloads?.invoke()
@@ -150,7 +151,7 @@ fun HomeScreen(
                     HomeLogic.Attention.WhatsNew -> viewModel.finishWhatsNew()
                     is HomeLogic.Attention.Strict -> viewModel.dismissStrict(attention.suggestion.networkKey)
                     // Real problems can't be dismissed (no close button is shown for them).
-                    is HomeLogic.Attention.PrivateDns, HomeLogic.Attention.UsageAccess -> {}
+                    is HomeLogic.Attention.PrivateDns, HomeLogic.Attention.UsageAccess, HomeLogic.Attention.Notifications -> {}
                 }
             },
         ),
@@ -374,6 +375,9 @@ private fun HomeAttention(attention: HomeLogic.Attention, hasPayloads: Boolean, 
             openSettings, action, modifier,
             onDismiss = if (attention.canDismiss) dismiss else null,
         )
+        // A real problem: no dismiss, like Private DNS (N-4).
+        HomeLogic.Attention.Notifications ->
+            AttentionBanner(stringResource(R.string.ui_attention_notifications), openSettings, action, modifier)
         HomeLogic.Attention.InspectionCertificate -> AttentionBanner(
             stringResource(R.string.ui_attention_inspection_cert),
             stringResource(R.string.ui_install_certificate), action, modifier,
