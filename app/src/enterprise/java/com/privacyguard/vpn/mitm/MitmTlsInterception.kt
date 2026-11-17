@@ -94,7 +94,7 @@ class MitmTlsInterception(
     override val blockQuic: Boolean
         get() = mitmConfig.isEnabled && mitmConfig.blockQuicWhenMitm
 
-    // PrivacyGuard's own requests (blocklist and tracker updates, SIEM shipping)
+    // CoreLock's own requests (blocklist and tracker updates, SIEM shipping)
     // are never inspected: the app does not trust its own CA, so they would fail.
     // Recognised by our exact UID: a package name can be imitated (V-11).
     override fun shouldIntercept(ownerUid: Int, ownerPackage: String?, sni: String): Boolean {

@@ -194,7 +194,7 @@ class Session(
     @Volatile var appStateCaptured: Boolean = false
 
     /**
-     * Set when PrivacyGuard ended this session on purpose (a rule, a cleartext policy,
+     * Set when CoreLock ended this session on purpose (a rule, a cleartext policy,
      * a DoH endpoint). The closed session is then logged as a blocked attempt even if
      * it never moved a byte.
      */

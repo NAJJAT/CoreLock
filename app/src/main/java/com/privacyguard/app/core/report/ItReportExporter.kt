@@ -30,8 +30,8 @@ object ItReportExporter {
     ): ItReportFiles {
         val outputDir = File(context.filesDir, "exports/reports").apply { mkdirs() }
         val stamp = System.currentTimeMillis()
-        val jsonFile = File(outputDir, "privacyguard-report-$stamp.json")
-        val pdfFile = File(outputDir, "privacyguard-report-$stamp.pdf")
+        val jsonFile = File(outputDir, "corelock-report-$stamp.json")
+        val pdfFile = File(outputDir, "corelock-report-$stamp.pdf")
         val behavior = BehaviorDnaAnalyzer.summarizeAll(profiles)
         val allowed = connections.filter { !it.wasBlocked }
         val privacyScore = PrivacyScoreCalculator.calculate(allowed, profiles, blocklistDomains)

@@ -99,7 +99,7 @@ class CaInstallHelper(
 
     /**
      * Returns an Intent that opens the system credential installer with the
-     * PrivacyGuard CA pre-loaded. Only works for CA certs on Android 10 and below.
+     * CoreLock CA pre-loaded. Only works for CA certs on Android 10 and below.
      *
      * Returns null if the CA has not been generated yet (call CaManager.initialize() first).
      */

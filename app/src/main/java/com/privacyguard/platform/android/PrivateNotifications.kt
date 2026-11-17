@@ -5,7 +5,7 @@ import androidx.core.app.NotificationCompat
 import com.privacyguard.app.R
 
 /**
- * The only way PrivacyGuard builds a notification (V-09). Alerts name apps and
+ * The only way CoreLock builds a notification (V-09). Alerts name apps and
  * hosts, so every notification is VISIBILITY_PRIVATE with a public version that
  * says nothing but "unlock to see": on a locked phone where the user chose to hide
  * sensitive notification content, that is all that shows.

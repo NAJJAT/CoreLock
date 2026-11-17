@@ -8,7 +8,7 @@ import java.io.File
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
- * "Clear all collected data" in Settings: everything PrivacyGuard has recorded about
+ * "Clear all collected data" in Settings: everything CoreLock has recorded about
  * this phone's traffic, on disk and in the running VPN.
  *
  * Kept: settings, your rules, and the downloaded blocklists (they are not history,

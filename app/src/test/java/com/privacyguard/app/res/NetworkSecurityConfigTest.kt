@@ -9,7 +9,7 @@ import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
- * PrivacyGuard's own connections: no cleartext (Android 7.0 to 8.1 allow it by default)
+ * CoreLock's own connections: no cleartext (Android 7.0 to 8.1 allow it by default)
  * and only system CAs, so a user-installed CA cannot read blocklist or SIEM traffic.
  */
 class NetworkSecurityConfigTest {

@@ -27,7 +27,7 @@ import java.nio.ByteBuffer
  * │         ↓ send / ↑ recv                          │
  * │   [ Android VPN Service / TUN interface ]        │
  * │         ↓ read / ↑ write (this class)            │
- * │   [ PrivacyGuard VPN Engine ]                    │
+ * │   [ CoreLock VPN Engine ]                        │
  * │         ↓ forward / inspect / block              │
  * │   [ Real Internet sockets ]                      │
  * └──────────────────────────────────────────────────┘

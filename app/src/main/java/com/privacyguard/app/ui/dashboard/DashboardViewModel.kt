@@ -254,7 +254,7 @@ class DashboardViewModel(app: Application) : AndroidViewModel(app) {
             pcapPath = PcapWriter.getCurrentFilePath() ?: PcapWriter.lastCapture(getApplication())?.absolutePath,
             pcapStoppedAtLimit = PcapWriter.stoppedAtLimit,
             throughputBytesPerSec = snapshot.throughputBytesPerSec,
-            // Same rows as the Traffic tab it opens, which hides PrivacyGuard's own sessions.
+            // Same rows as the Traffic tab it opens, which hides CoreLock's own sessions.
             activeConnectionCount = snapshot.activeConnections.count { !com.privacyguard.core.utils.OwnApp.isOwnPackage(it.packageName) },
             protectionLevel = prefs.protectionLevel.value,
         )

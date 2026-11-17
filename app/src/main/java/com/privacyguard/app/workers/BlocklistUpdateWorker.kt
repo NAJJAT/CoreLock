@@ -20,7 +20,7 @@
  *
  * Sources: see BlocklistSource and docs/architecture/HOW_IT_WORKS.md §3.5.
  *
- * @author PrivacyGuard Engineering Team
+ * @author CoreLock Engineering Team
  * @since 1.0.0
  */
 

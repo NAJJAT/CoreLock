@@ -58,7 +58,7 @@ class DnsAnomalyDetector {
     private val lastReported = ConcurrentHashMap<String, Long>()
 
     fun analyze(pkg: String?, domain: String): List<Anomaly> {
-        // PrivacyGuard's own lookups (CT checks, blocklist downloads, DoH) are not app behaviour.
+        // CoreLock's own lookups (CT checks, blocklist downloads, DoH) are not app behaviour.
         if (isOwnHost(domain) || com.privacyguard.core.utils.OwnApp.isOwnPackage(pkg)) return emptyList()
         totalAnalyzed.incrementAndGet()
         // Same "Unknown" as unattributed DNS rows, so the UI labels it "Unknown app".
@@ -204,7 +204,7 @@ class DnsAnomalyDetector {
         const val SAME_LOOKUP_MS = 1_000L
         // One alert per app and host per day (per app for a burst).
         const val REPORT_COOLDOWN_MS = 24L * 60L * 60_000L
-        /** Hosts PrivacyGuard itself contacts; see CtMonitor, BlocklistSource, DnsHandler, ExodusUpdater. */
+        /** Hosts CoreLock itself contacts; see CtMonitor, BlocklistSource, DnsHandler, ExodusUpdater. */
         private val OWN_HOSTS = listOf(
             "crt.sh", "oisd.nl", "raw.githubusercontent.com", "cdn.jsdelivr.net",
             "cloudflare-dns.com", "dns.google", "dns.quad9.net",

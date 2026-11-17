@@ -39,7 +39,7 @@ object BatteryCheck {
     }
 
     /**
-     * Opens PrivacyGuard's own app info (Battery is one tap from there on every version),
+     * Opens CoreLock's own app info (Battery is one tap from there on every version),
      * else the list of optimized apps, else Settings.
      */
     fun openSettings(context: Context) {

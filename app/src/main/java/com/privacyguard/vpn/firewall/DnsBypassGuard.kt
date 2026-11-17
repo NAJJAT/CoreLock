@@ -19,7 +19,7 @@ package com.privacyguard.vpn.firewall
  *    server name passes and only DoH names, or no name at all, are stopped.
  *
  * A user Allow rule lets a DoH endpoint through (port 853 stays closed).
- * PrivacyGuard's own DoH upstream uses protected sockets that bypass the tunnel, so it
+ * CoreLock's own DoH upstream uses protected sockets that bypass the tunnel, so it
  * is not affected.
  */
 object DnsBypassGuard {

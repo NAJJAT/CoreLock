@@ -3,7 +3,7 @@
  * 
  * Data Access Object for firewall rules
  * 
- * @author PrivacyGuard Engineering Team
+ * @author CoreLock Engineering Team
  * @since 1.0.0
  */
 

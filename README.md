@@ -473,7 +473,10 @@ servers you configure yourself, and those servers see your IP address instead.)
 
 CoreLock was first developed as PrivacyGuard. The application ID stays
 `com.privacyguard.app.enterprise` because Android only installs an update over an
-app with the same ID: changing it would make installed apps unable to update.
+app with the same ID: changing it would make installed apps unable to update. Other
+internal names (database and settings files, notification channels, the Keystore alias)
+keep it for the same reason; everything you see says CoreLock. The full list:
+[Internal names](docs/architecture/CODE_MAP.md#internal-names).
 
 ## Known limitations
 

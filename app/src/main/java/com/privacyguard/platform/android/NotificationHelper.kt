@@ -15,7 +15,7 @@ import com.privacyguard.vpn.interception.InspectionStatus
 import com.privacyguard.vpn.interception.TlsInterceptionFactory
 
 /**
- * Centralized helper for creating and posting all notifications used by PrivacyGuard.
+ * Centralized helper for creating and posting all notifications used by CoreLock.
  *
  * Channels:
  *  - [CHANNEL_VPN_STATUS]   — persistent foreground notification showing VPN state.

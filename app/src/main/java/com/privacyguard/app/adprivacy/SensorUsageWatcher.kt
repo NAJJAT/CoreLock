@@ -162,7 +162,7 @@ class SensorUsageWatcher(
         /**
          * Which app most likely used the camera or mic: the one on screen just after
          * use started. None when the screen was off (the last app on screen is not
-         * the user then), and never PrivacyGuard itself, which uses neither.
+         * the user then), and never CoreLock itself, which uses neither.
          */
         fun likelyUser(screenOn: Boolean, onScreen: String?, ownPackage: String): String? =
             onScreen?.takeIf { screenOn && it != ownPackage }

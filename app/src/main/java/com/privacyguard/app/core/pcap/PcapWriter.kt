@@ -9,7 +9,7 @@ import java.nio.ByteOrder
 
 /**
  * Raw packet capture for Wireshark, both directions: what apps send (TunReader) and
- * what the tunnel delivers to them (TunWriter, including answers PrivacyGuard makes
+ * what the tunnel delivers to them (TunWriter, including answers CoreLock makes
  * itself, such as DNS).
  *
  * The file is plain PCAP so other tools can read it. It stays in the app's private

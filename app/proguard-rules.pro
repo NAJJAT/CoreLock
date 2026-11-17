@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# PrivacyGuard ProGuard / R8 rules
+# CoreLock ProGuard / R8 rules
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Keep line numbers for crash reporting

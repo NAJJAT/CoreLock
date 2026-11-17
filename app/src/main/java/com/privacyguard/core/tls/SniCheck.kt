@@ -22,7 +22,7 @@ object SniCheck {
      * @param sni the validated SNI, or null
      * @param sniRejected an SNI was present but was not a valid hostname
      * @param dnsNameForIp the name DNS last gave out for the destination address
-     * @param sniWasResolved whether [sni] was looked up through PrivacyGuard's DNS recently
+     * @param sniWasResolved whether [sni] was looked up through CoreLock's DNS recently
      */
     fun evaluate(sni: String?, sniRejected: Boolean, dnsNameForIp: String?, sniWasResolved: Boolean): Finding? = when {
         sniRejected -> Finding(Kind.INVALID_SNI, null, dnsNameForIp)

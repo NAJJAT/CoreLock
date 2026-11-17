@@ -3,7 +3,7 @@
  * 
  * Data Access Object for connection history
  * 
- * @author PrivacyGuard Engineering Team
+ * @author CoreLock Engineering Team
  * @since 1.0.0
  */
 
@@ -154,7 +154,7 @@ interface ConnectionDao {
     @Query("SELECT COUNT(*) FROM connections WHERE timestamp > :from AND timestamp <= :to AND wasBlocked = 0")
     suspend fun countBetween(from: Long, to: Long): Int
 
-    /** Connection attempts PrivacyGuard dropped (rules, DNS-bypass guard, cleartext policy). */
+    /** Connection attempts CoreLock dropped (rules, DNS-bypass guard, cleartext policy). */
     @Query("SELECT * FROM connections WHERE timestamp > :from AND timestamp <= :to AND wasBlocked = 1 ORDER BY timestamp DESC")
     suspend fun blockedBetween(from: Long, to: Long): List<ConnectionEntity>
 

@@ -24,7 +24,7 @@ data class DualVpnConfig(
      * runs over TCP through it). SOCKS5 CONNECT carries only TCP, so UDP cannot use
      * the chain: QUIC (UDP 443) is always dropped while dual-hop is on, so apps retry
      * over TCP through the chain; other UDP goes direct unless [blockUdpOutsideChain].
-     * Plain DNS (DoH off) is answered by PrivacyGuard's own resolver path and goes direct.
+     * Plain DNS (DoH off) is answered by CoreLock's own resolver path and goes direct.
      */
     fun dropsUdp(destinationPort: Int): Boolean =
         isValid && (destinationPort == 443 || blockUdpOutsideChain)

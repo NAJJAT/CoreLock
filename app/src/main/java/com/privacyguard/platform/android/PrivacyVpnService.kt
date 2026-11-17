@@ -1068,7 +1068,7 @@ class PrivacyVpnService : VpnService() {
     private val blockRowGate = com.privacyguard.core.session.BlockRowGate()
 
     /**
-     * Records a connection attempt PrivacyGuard dropped before any session existed
+     * Records a connection attempt CoreLock dropped before any session existed
      * (a rule, or a DNS-bypass guard), so blocked numbers count connections too, not
      * only DNS lookups. Retransmissions within [BLOCK_DEDUP_MS] are ignored; new
      * attempts to the same place within a minute are merged ([blockRowGate]).
@@ -1598,7 +1598,7 @@ class PrivacyVpnService : VpnService() {
 
     /**
      * Owner of a new connection. Android's endpoint-aware API (Q+) comes first; the
-     * port-only /proc fallback could match PrivacyGuard's own protected upstream
+     * port-only /proc fallback could match CoreLock's own protected upstream
      * socket and credit other apps' traffic to us. One binder call per connection.
      */
     private fun resolveOwnerUid(protocol: Int, key: SessionKey): Int {

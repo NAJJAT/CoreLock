@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
  *
  * When the EMM promotes this app to Device Owner or Profile Owner, Android calls
  * [onEnabled] / [onProfileProvisioningComplete]. We use that moment to:
- *   1. Install the PrivacyGuard CA into the device trust store automatically.
+ *   1. Install the CoreLock CA into the device trust store automatically.
  *   2. Apply any managed configuration that the EMM has already pushed.
  *
  * For consumer devices (not MDM-managed), this receiver is still registered so that
@@ -47,7 +47,7 @@ class DeviceAdminReceiver : android.app.admin.DeviceAdminReceiver() {
         fun hasOwnerPrivileges(context: Context) = isDeviceOwner(context) || isProfileOwner(context)
 
         /**
-         * Installs the PrivacyGuard CA into the system trust store.
+         * Installs the CoreLock CA into the system trust store.
          *
          * Requires the app to be Device Owner or Profile Owner — call
          * [hasOwnerPrivileges] before this.  Returns true on success.

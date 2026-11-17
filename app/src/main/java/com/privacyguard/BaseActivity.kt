@@ -8,7 +8,7 @@ import com.privacyguard.app.data.local.preferences.SettingsPreferences
 import com.privacyguard.ui.SecureScreens
 
 /**
- * Base activity for all PrivacyGuard activities. AppCompatActivity so the per-app
+ * Base activity for all CoreLock activities. AppCompatActivity so the per-app
  * language (AppCompatDelegate.setApplicationLocales) applies on Android 12 and older.
  */
 open class BaseActivity : AppCompatActivity() {

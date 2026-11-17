@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Managed Configuration (AppConfig) schema for PrivacyGuard enterprise deployment.
+    Managed Configuration (AppConfig) schema for CoreLock enterprise deployment.
 
     EMM consoles (Intune, Workspace ONE, Jamf, etc.) read this file to build
     their policy configuration UI. Admins fill in values; the OS delivers them

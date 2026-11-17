@@ -38,13 +38,68 @@ class UserVisibleTextTest {
     )
     private val certificateName = "PrivacyGuard Enterprise CA"
 
+    /** Any spelling: PrivacyGuard, privacyguard, Privacy Guard, privacy_guard, PRIVACY-GUARD. */
+    private val oldName = Regex("privacy[_ -]?guard", RegexOption.IGNORE_CASE)
+
     @Test
     fun no_user_visible_string_says_privacyguard_outside_the_certificate_texts() {
         val hits = entries()
             .filter { it.key !in allowedToSayPrivacyGuard }
-            .filter { "PrivacyGuard" in it.text.replace(certificateName, "") || "PRIVACYGUARD" in it.text }
+            .filter { oldName.containsMatchIn(it.text.replace(certificateName, "")) }
             .map { "${it.locale}/${it.file}: ${it.key}" }
         if (hits.isNotEmpty()) fail("Still says PrivacyGuard (the app is CoreLock):\n" + hits.joinToString("\n"))
+    }
+
+    /**
+     * String literals in the app's Kotlin code that may contain the old name, and why.
+     * Each one is stored on users' phones or relied on by others, so renaming it would lose
+     * data, break updates or break organisations' setups (docs/architecture/CODE_MAP.md,
+     * "Internal names"). Anything else with the old name in a literal can reach a user
+     * (a file name, a notification, a report), so it must say CoreLock.
+     */
+    private val oldNameLiteralsThatStay = mapOf(
+        "privacyguard.db" to "history database file",
+        "privacyguard_settings" to "SharedPreferences file: the user's settings",
+        "privacyguard_secure_store" to "SharedPreferences file: Keystore-wrapped secrets",
+        "privacyguard_boot" to "SharedPreferences file: restart after reboot",
+        "privacyguard_pause" to "SharedPreferences file: pause end time",
+        "privacyguard_watchdog" to "SharedPreferences file: crash watchdog state",
+        "privacyguard_unexpected_stop" to "SharedPreferences file: the last unexpected stop",
+        "privacyguard_enterprise_ca" to "Keystore alias of the inspection CA key",
+        "privacyguard_high" to "notification channel ID (users' channel settings belong to it)",
+        "privacyguard_normal" to "notification channel ID",
+        "privacyguard_low" to "notification channel ID",
+        "privacyguard_report" to "notification channel ID",
+        "privacyguard-blocklist-cache 1" to "header of the start-up cache files written by earlier versions",
+        "X-PrivacyGuard-Sig" to "SIEM signature header; receivers may check it",
+        "PrivacyGuard/1.0" to "User-Agent of list downloads (BrandNameTest)",
+        "PrivacyGuard Enterprise CA" to "name of the CA of builds up to 1.1, still recognised to remove it",
+        "PrivacyGuard" to "organisation of that old CA, and the Download/PrivacyGuard/ folder of CA exports on Android 9 and older (FileProvider path)",
+        "PrivacyGuard-CA-" to "file names of CA exports of builds up to 1.1, deleted with new exports",
+        "\${random.lowercase()}.privacyguard-check.invalid" to "DNS-hijack probe name; never shown, and .invalid never resolves",
+    )
+
+    private val kotlinRoots = listOf("src/main/java", "src/enterprise/java", "src/debug/java").map { File(it) }
+
+    /** "…" literals on code lines (comments skipped), with qualified names (com.privacyguard.…) removed. */
+    private fun oldNameLiterals(): List<Pair<String, String>> = kotlinRoots.filter { it.isDirectory }
+        .flatMap { root -> root.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList() }
+        .flatMap { file ->
+            file.readLines()
+                .filterNot { it.trimStart().let { l -> l.startsWith("*") || l.startsWith("//") || l.startsWith("/*") } }
+                .flatMap { line -> Regex("\"(?:[^\"\\\\]|\\\\.)*\"").findAll(line).map { it.value.removeSurrounding("\"") }.toList() }
+                .filter { oldName.containsMatchIn(it.replace(Regex("""com\.privacyguard[\w.:]*"""), "")) }
+                .map { file.path to it }
+        }
+
+    @Test
+    fun no_kotlin_literal_says_privacyguard_outside_the_internal_names() {
+        val literals = oldNameLiterals()
+        assertTrue("read no Kotlin code", literals.isNotEmpty())
+        val hits = literals.filter { (_, text) -> text !in oldNameLiteralsThatStay }.map { (file, text) -> "$file: \"$text\"" }
+        if (hits.isNotEmpty()) fail("A literal still says PrivacyGuard (the app is CoreLock):\n" + hits.joinToString("\n"))
+        // An entry no code uses any more must leave the list, or it would hide a regression.
+        assertEquals(emptySet<String>(), oldNameLiteralsThatStay.keys - literals.map { it.second }.toSet())
     }
 
     @Test
@@ -82,6 +137,8 @@ class UserVisibleTextTest {
         assertTrue(safeBrowsing.containsMatchIn("(Microsoft وApple وAmazon وMozilla وGoogle Safe Browsing)"))
         assertTrue("PrivacyGuard" in "PrivacyGuard stopped unexpectedly.".replace(certificateName, ""))
         assertTrue("PrivacyGuard" !in "remove every “PrivacyGuard Enterprise CA” except the newest".replace(certificateName, ""))
+        // The IT report was saved as privacyguard-report-….pdf until 1.2.1: lower case.
+        assertTrue(oldName.containsMatchIn("privacyguard-report-1.pdf") && "privacyguard-report-" !in oldNameLiteralsThatStay)
     }
 
     @Test

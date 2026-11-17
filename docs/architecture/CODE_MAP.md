@@ -92,5 +92,34 @@ docs/                  documentation (index: docs/README.md)
 
 Two package roots exist: `com.privacyguard.app.…` (app, UI, data) and `com.privacyguard.…`
 (packet engine: core, vpn, platform, mdm). Every file sits in the folder of its declared
-package. The package name keeps the app's first name, PrivacyGuard, because Android's
-application ID can't change.
+package. The package name keeps the app's first name, PrivacyGuard; see
+[Internal names](#internal-names).
+
+## Internal names
+
+CoreLock was first developed as PrivacyGuard. The app's visible name is CoreLock
+everywhere: the app label, notifications, screens, exported files and the documentation.
+Internal identifiers keep the original name on purpose, so existing installs can update
+without losing data and organisations' setups keep working:
+
+| Identifier | Example | Why it keeps the name |
+|---|---|---|
+| Application ID | `com.privacyguard.app.enterprise` | Android installs an update only over an app with the same ID; a new ID is a different app, and users would lose everything. |
+| Database files | `privacyguard.db` | Renaming the file would leave every user's history behind (the config database is already `config.db`). |
+| SharedPreferences files | `privacyguard_settings`, `privacyguard_secure_store`, `privacyguard_boot`, `privacyguard_pause`, `privacyguard_watchdog`, `privacyguard_unexpected_stop` | Settings and state are read from these files by name; a new name starts from defaults. CoreLock uses no DataStore files. |
+| Keystore alias | `privacyguard_enterprise_ca` | The HTTPS-inspection CA key is found by its alias; a new alias loses the key and breaks inspection until a new CA is installed. |
+| WorkManager workers | `com.privacyguard.app.workers.BlocklistUpdateWorker`, `WeeklyReportWorker`, `PruneWorker` | WorkManager stores the worker's class name with every scheduled job; a moved class makes the stored jobs fail. The unique work names (`blocklist_update`, `weekly_report`, …) do not contain the old name. |
+| Notification channel IDs | `privacyguard_high`, `privacyguard_normal`, `privacyguard_low`, `privacyguard_report` | Users' choices for each channel (sound, importance, off) belong to its ID; a new ID resets them. The channel names users see ("Protection status", "Privacy alerts", "Weekly report") don't contain the old name. |
+| Intent actions | `com.privacyguard.action.STOP_VPN`, `com.privacyguard.action.RESUME_AFTER_PAUSE`, debug `com.privacyguard.debug.*` | Notifications and alarms already set on a phone carry the old action; the debug actions are used by `tools/` and the docs. |
+| SIEM signature header | `X-PrivacyGuard-Sig` | Organisations' SIEM receivers may verify it by name. |
+| MDM restriction keys | `mitm_enabled`, `mitm_consent_given`, … | Organisations' MDM profiles set these keys. They do not contain the old name; listed so they are never renamed either. |
+| The old inspection CA | CN `PrivacyGuard Enterprise CA`, files `PrivacyGuard-CA-*`, folder `Download/PrivacyGuard/` (Android 9 and older) | The CA was renamed to "CoreLock HTTPS Inspection CA" with the 90-day rotation (ADR 0009); the old name is still recognised so users can be told to remove old CAs. The export folder is a FileProvider path. |
+| Download User-Agent, start-up cache header | `PrivacyGuard/1.0`, `privacyguard-blocklist-cache 1` | The User-Agent is checked by `BrandNameTest`; the header identifies cache files written by earlier versions. |
+| Release signing properties | `PRIVACYGUARD_RELEASE_STORE_FILE` and the other `PRIVACYGUARD_RELEASE_*` | The owner's signing setup reads these names (`release-signing.properties.template`). |
+
+Code-only names (the `com.privacyguard` packages, class names such as
+`PrivacyGuardApplication` and `PrivacyGuardTileService`, the Gradle namespace and project
+name, the `Theme.Privacyguard` style) also keep the old name for now; renaming them is
+proposed for a future major version in
+[ADR 0018](../adr/0018-rename-code-only-names.md). `UserVisibleTextTest` fails when the
+old name appears in a string resource or a Kotlin literal outside this list.

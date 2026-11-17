@@ -30,7 +30,7 @@ tasks.register("dependencyUpdates") {
         }
 
         val body = buildString {
-            appendLine("PrivacyGuard Dependency Version Report")
+            appendLine("CoreLock Dependency Version Report")
             appendLine("======================================")
             appendLine()
             appendLine("Current versions from gradle/libs.versions.toml:")
