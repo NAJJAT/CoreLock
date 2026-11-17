@@ -9,14 +9,14 @@ not updated when the app changes, except for links.
 | File | What it is | Why it is kept |
 |---|---|---|
 | [REDESIGN_PROGRESS.md](progress/REDESIGN_PROGRESS.md) | Working log of the 1.1 redesign (phases, emulator checks, CPU measurements), 2026-11-02 to 2026-11-07. | Records how each screen of today's UI was built and checked, with the measurements; ADR 0013 refers to it. |
-| [BUGFIX_PROGRESS.md](progress/BUGFIX_PROGRESS.md) | Working log of the 1.3 bug-fix round (audit findings F-1 to F-18 and N-items, the tests that prove each fix), 2026-11-11 to 2026-11-16. | Proof that each fix has a test that fails without it (CLAUDE.md §9.2), and the measurements before and after. |
+| [BUGFIX_PROGRESS.md](progress/BUGFIX_PROGRESS.md) | Working log of the 1.2.1 bug-fix round, then called 1.3 (audit findings F-1 to F-18 and N-items, the tests that prove each fix), 2026-11-11 to 2026-11-16. | Proof that each fix has a test that fails without it (CLAUDE.md §9.2), and the measurements before and after. |
 
 ## Phone checklists (`testing/`)
 
 | File | What it is | Why it is kept |
 |---|---|---|
-| [PHONE_TEST_1.1.0.md](testing/PHONE_TEST_1.1.0.md) | The two-day phone checklist written for 1.1.0, which was never published. | The 1.2.0 test ran it from its section 2 on; its steps were carried into the 1.3.0 checklist. |
-| [PHONE_TEST_1.2.0.md](testing/PHONE_TEST_1.2.0.md) | Phone checks for 1.2.0: the update from 1.0.0, networks, vendors, battery, start-up wait. | Record of how 1.2.0 was checked; replaced by [PHONE_TEST_1.3.0.md](../testing/PHONE_TEST_1.3.0.md). |
+| [PHONE_TEST_1.1.0.md](testing/PHONE_TEST_1.1.0.md) | The two-day phone checklist written for 1.1.0, which was never published. | The 1.2.0 test ran it from its section 2 on; its steps were carried into the 1.2.1 checklist. |
+| [PHONE_TEST_1.2.0.md](testing/PHONE_TEST_1.2.0.md) | Phone checks for 1.2.0: the update from 1.0.0, networks, vendors, battery, start-up wait. | Record of how 1.2.0 was checked; replaced by [PHONE_TEST_1.2.1.md](../testing/PHONE_TEST_1.2.1.md). |
 
 ## Translation reviews (`translations/`)
 

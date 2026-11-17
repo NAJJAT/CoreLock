@@ -1,4 +1,4 @@
-# CoreLock 1.3.0
+# CoreLock 1.2.1
 
 A safety and reliability update. Install it over 1.2.0: your rules, settings and history
 stay. One APK for Android 7.0 and newer (ARM phones, 64- and 32-bit), published only on
@@ -8,7 +8,7 @@ GitHub Releases.
 
 If you block a name such as `example.com`, CoreLock now also blocks `ads.example.com`,
 `cdn.example.com` and every other name under it, the way the blocklists already do.
-Before 1.3.0 a Block rule matched only the exact name you typed.
+Before 1.2.1 a Block rule matched only the exact name you typed.
 
 - **Your existing Block rules change too.** A rule for `example.com` now also stops its
   subdomains. If something you need stops working, add an Allow rule for that subdomain:
@@ -74,9 +74,9 @@ analytics, no crash reports, no update check.
 
 ## How to update from 1.2.0
 
-1. On the phone, download `CoreLock-1.3.0.apk` from this release.
+1. On the phone, download `CoreLock-1.2.1.apk` from this release.
 2. Before installing, check the signing certificate and the checksum (below).
-3. Open the APK and allow the install. Android installs 1.3.0 over 1.2.0 as an update and
+3. Open the APK and allow the install. Android installs 1.2.1 over 1.2.0 as an update and
    refuses an APK signed with a different key.
 4. Look at your Block rules once (Settings › Rules and allowed sites): they now cover
    subdomains.
@@ -93,10 +93,10 @@ APK file size:               <APK_SIZE>
 ```
 
 ```bash
-apksigner verify --print-certs CoreLock-1.3.0.apk
+apksigner verify --print-certs CoreLock-1.2.1.apk
 # "Signer #1 certificate SHA-256 digest:" must equal the fingerprint above
 sha256sum -c SHA256SUMS.txt                       # with SHA256SUMS.txt from this release
-certutil -hashfile CoreLock-1.3.0.apk SHA256      # Windows
+certutil -hashfile CoreLock-1.2.1.apk SHA256      # Windows
 ```
 
 ## Known limitations

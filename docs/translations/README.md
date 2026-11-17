@@ -7,7 +7,7 @@ in one version, with the English next to each translation.
 
 | File | Strings from | Review |
 |---|---|---|
-| [TRANSLATION_REVIEW_1.3.md](TRANSLATION_REVIEW_1.3.md) | The 1.3 work (1.3.0, in preparation) | Not recorded as done |
+| [TRANSLATION_REVIEW_1.2.1.md](TRANSLATION_REVIEW_1.2.1.md) | The 1.2.1 work (in preparation) | Not recorded as done |
 
 The reviews for 1.0, 1.1 and 1.2 are in
 [archive/translations/](../archive/translations/). None of them is recorded as done

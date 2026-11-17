@@ -162,6 +162,6 @@ Debug builds only (`src/debug`, never in release):
 |---|---|
 | `tools/geoip/GenerateGeoIp.java` | Builds `app/src/main/assets/geoip_v4.bin` from the five regional internet registries' public "delegated-extended" files. |
 | `tools/repro/protection-paused.sh` | Repro on an emulator for Home briefly showing "Protection is paused" while the tunnel came back by itself. |
-| `tools/repro/startup-dns-wait.sh` | Runs on the phone: measures how long lookups wait while CoreLock starts ([PHONE_TEST_1.3.0.md](../testing/PHONE_TEST_1.3.0.md), check G). |
+| `tools/repro/startup-dns-wait.sh` | Runs on the phone: measures how long lookups wait while CoreLock starts ([PHONE_TEST_1.2.1.md](../testing/PHONE_TEST_1.2.1.md), check G). |
 
 Each script explains its use in its header comment.

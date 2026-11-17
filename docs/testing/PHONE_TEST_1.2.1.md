@@ -1,16 +1,16 @@
-# Phone test for 1.3.0
+# Phone test for 1.2.1
 
-The check of the signed 1.3.0 release on a real phone, before it is published. Users
+The check of the signed 1.2.1 release on a real phone, before it is published. Users
 update from the published **1.2.0**, so the test starts there. It covers what tests and
-the emulator cannot: the update path with real data, the 1.3.0 changes on a real phone,
+the emulator cannot: the update path with real data, the 1.2.1 changes on a real phone,
 real apps, real networks and real battery.
 
 This checklist is complete on its own. It is built from the 1.2.0 test and the 1.1.0
 two-day checklist (both in [docs/archive/testing/](../archive/testing/)), with the steps
-for 1.3.0 added in section 2.
+for 1.2.1 added in section 2.
 
 **Who:** the owner, or a tester with the phones below. **Build:** the signed release APK
-that will be published (`CoreLock-1.3.0.apk`), nothing else (no debug build: a debug
+that will be published (`CoreLock-1.2.1.apk`), nothing else (no debug build: a debug
 build is not signed with the release key and blocks sensitive actions). Package:
 `com.privacyguard.app.enterprise`.
 
@@ -18,7 +18,7 @@ build is not signed with the release key and blocks sensitive actions). Package:
 
 - Do the steps in order. Each step says what to expect and when it **fails**.
 - Write every result in the table at the end: PASS, FAIL, or SKIP with a reason.
-- A FAIL marked **blocker** stops the release until it is fixed. Other FAILs go to 1.3.1,
+- A FAIL marked **blocker** stops the release until it is fixed. Other FAILs go to 1.2.2,
   unless you decide otherwise.
 - Commands run on the computer, with the phone on USB and USB debugging on. Replace
   `PHONE_ID` with the serial that `adb devices` shows, and always pass `-s PHONE_ID`, so
@@ -38,20 +38,20 @@ build is not signed with the release key and blocks sensitive actions). Package:
 
 ---
 
-## 0. Install the published 1.2.0, then update to 1.3.0
+## 0. Install the published 1.2.0, then update to 1.2.1
 
 1. Download the APK attached to the published **v1.2.0** release on GitHub and save it as
    `CoreLock-1.2.0.apk`. Check both APKs before installing:
    ```
    certutil -hashfile CoreLock-1.2.0.apk SHA256
-   certutil -hashfile CoreLock-1.3.0.apk SHA256
+   certutil -hashfile CoreLock-1.2.1.apk SHA256
    apksigner verify --print-certs CoreLock-1.2.0.apk
-   apksigner verify --print-certs CoreLock-1.3.0.apk
+   apksigner verify --print-certs CoreLock-1.2.1.apk
    ```
    **Expected:** the 1.2.0 SHA-256 is
    `299663f8e7119656630572c3e67d7c22b1a7153b0bebb19de4a9c3acca10b26e` (README, Install);
-   the 1.3.0 SHA-256 equals the one in
-   [RELEASE_NOTES_1.3.0.md](../releases/RELEASE_NOTES_1.3.0.md); for both,
+   the 1.2.1 SHA-256 equals the one in
+   [RELEASE_NOTES_1.2.1.md](../releases/RELEASE_NOTES_1.2.1.md); for both,
    "Signer #1 certificate SHA-256 digest" equals the fingerprint in the README
    (Security). **Fail (blocker):** any value differs.
 2. Start from 1.2.0. If any CoreLock or PrivacyGuard build is on the phone, uninstall it
@@ -69,8 +69,8 @@ build is not signed with the release key and blocks sensitive actions). Package:
    the exact name. If you test HTTPS inspection: turn it on with consent and install its
    certificate.
 4. Start the probe of check G (step G.2) now if you want to measure the first start, then
-   update: `adb -s PHONE_ID install -r CoreLock-1.3.0.apk`.
-   **Expected:** `Success`, without uninstalling. Settings › About shows 1.3.0; no
+   update: `adb -s PHONE_ID install -r CoreLock-1.2.1.apk`.
+   **Expected:** `Success`, without uninstalling. Settings › About shows 1.2.1; no
    onboarding; the level, both rules, the setting and the history from step 3 are all
    still there. If protection was on, CoreLock turns it back on by itself about 3 s after
    the install.
@@ -153,14 +153,14 @@ lookup instead.
    **Import**. **Fail (blocker):** the file is written without the lock prompt.
 8. **Language and text size.** Settings › Language › العربية: the whole app is
    right-to-left and nothing is cut off on Home, Activity, Apps, Settings, Advanced and
-   Diagnostics (the 1.3 counters are long). Then Android's largest font size: the tab
+   Diagnostics (the 1.2.1 counters are long). Then Android's largest font size: the tab
    labels are readable and nothing overlaps. Set both back.
 9. **HTTPS inspection asks first** (only if you use it). Settings › Advanced › HTTPS
    inspection › switch on: a question appears; Cancel leaves it off.
 
 ---
 
-## 2. New in 1.3.0
+## 2. New in 1.2.1
 
 ### 2.1 A Block rule now covers subdomains
 
@@ -229,7 +229,7 @@ crashed again within about 2 minutes as "crashed quickly" and may refuse to rest
 
 ### 2.5 Connection limits don't break normal use
 
-1.3.0 caps the connections it tracks (4,096 TCP, 4,096 UDP and 1,024 per app at once).
+1.2.1 caps the connections it tracks (4,096 TCP, 4,096 UDP and 1,024 per app at once).
 Normal use stays far below these limits.
 
 1. At **Standard**, for 30 minutes: Chrome with 20 or more tabs open at once (news sites
@@ -244,7 +244,7 @@ Normal use stays far below these limits.
 3. Repeat step 1 for 10 minutes at **Strict**. **Expected:** the same.
 
 **Fail (blocker):** any connection refused at the limit during normal use, or an app that
-works with 1.2.0 and fails with 1.3.0. Note the app and the counters.
+works with 1.2.0 and fails with 1.2.1. Note the app and the counters.
 
 ---
 
@@ -398,7 +398,7 @@ APK SHA-256 (first 8): ________ Dates: ________
 
 | # | Check | Result (PASS / FAIL / SKIP) | Numbers and notes |
 |---|---|---|---|
-| 0 | Checksums and fingerprint; published 1.2.0, then 1.3.0 over it, data kept | | |
+| 0 | Checksums and fingerprint; published 1.2.0, then 1.2.1 over it, data kept | | |
 | G | Filtering active: first start after update, level changed while off, normal start | | After update: ___ s Strict: ___ s Normal: ___ s By hand: ___ s |
 | 1 | After the update: tabs, one blocked-today number, blocklists and jobs, kill switch, per-app rules, fix flow and pause, export/import, Arabic and large text, inspection asks | | Standard: ___ names Strict: ___ names |
 | 2.1 | Block rule covers subdomains; longer Allow wins; Allow stays exact | | |
@@ -416,4 +416,4 @@ APK SHA-256 (first 8): ________ Dates: ________
 | C | Screen off, Samsung and Xiaomi | | Samsung: ___ Xiaomi: ___ |
 | E | Captive portal with and without lockdown | | Network: ___ |
 
-**Decision:** release 1.3.0 / fix first. Blockers found: ________
+**Decision:** release 1.2.1 / fix first. Blockers found: ________

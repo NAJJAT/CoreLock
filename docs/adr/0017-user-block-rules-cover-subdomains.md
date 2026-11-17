@@ -1,6 +1,6 @@
 # 0017. User Block rules cover subdomains; Allow rules stay exact
 
-- **Status:** Accepted (owner, 2026-11-16; decided 2026-11-11; ships in 1.3.0)
+- **Status:** Accepted (owner, 2026-11-16; decided 2026-11-11; ships in 1.2.1)
 - **Date:** 2026-11-13
 - **Commits:** none yet
 
@@ -43,7 +43,7 @@ is written: an exact Block keeps the exact rank. So:
 ## Consequences
 
 - Existing exact Block rules now block more. This is a behaviour change for current
-  users and is stated in the 1.3 release notes and in `docs/BLOCKING_POLICY.md`.
+  users and is stated in the 1.2.1 release notes and in `docs/BLOCKING_POLICY.md`.
 - A Block for a broad name (`google.com`) now also blocks its many subdomains; the
   rule screen's wording and the policy document say so.
 - The property test's model of the precedence (fixed seed `20261021`) describes the

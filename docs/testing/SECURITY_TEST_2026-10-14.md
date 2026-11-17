@@ -9,14 +9,14 @@ commit for each fix, and §8 has the phone results from that day. Updated 2026-1
 findings not fully fixed are described here in general terms only; their details stay
 with the owner until they are fixed. Updated 2026-11-17: the OSV scan of V-14 is now a
 required CI check (`.github/workflows/ci.yml`, job *OSV dependency scan*), and V-17 changed
-in 1.3.0: a user Block rule now covers subdomains (ADR 0017). The findings table in §2 is
+in 1.2.1: a user Block rule now covers subdomains (ADR 0017). The findings table in §2 is
 kept as it was written; this summary is the current status.
 
 | Status | Findings |
 |---|---|
 | Fixed | V-01 to V-06, V-08, V-09, V-11, V-13 to V-16 |
 | Partly fixed, rest planned for a later release | V-07, V-10, V-12, V-18 |
-| Changed by design in 1.3.0 | V-17 (ADR 0017) |
+| Changed by design in 1.2.1 | V-17 (ADR 0017) |
 
 ## Environment and limits
 
@@ -251,7 +251,7 @@ With notifications denied (Android 13+ asks; the emulator install had them off),
 ends protection with no signal at all. Since the same round Home shows a card while
 notifications or the alerts channel are off (N-4, `NotificationCheck`).
 
-Second run, same day and emulator, 1.3.0 debug build (with the notice fix). Leaks: while no
+Second run, same day and emulator, 1.2.1 debug build, then still numbered 1.3.0 (with the notice fix). Leaks: while no
 `tun` existed, a TCP connect to 1.1.1.1:80 from the shell every ~0.15 s (`nc -z`); ICMP is
 no probe, the tunnel does not carry it. One crash each, more than 2 minutes apart:
 

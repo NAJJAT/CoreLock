@@ -25,7 +25,7 @@ Every document in the repository, with one line on what it is for. Start with th
 
 | Document | What it is |
 |---|---|
-| [releases/RELEASE_NOTES_1.3.0.md](releases/RELEASE_NOTES_1.3.0.md) | Draft notes for 1.3.0 (not published yet). |
+| [releases/RELEASE_NOTES_1.2.1.md](releases/RELEASE_NOTES_1.2.1.md) | Draft notes for 1.2.1 (not published yet). |
 | [releases/RELEASE_NOTES_1.2.0.md](releases/RELEASE_NOTES_1.2.0.md) | Notes for 1.2.0, as published. |
 | [releases/RELEASE_NOTES_1.0.md](releases/RELEASE_NOTES_1.0.md) | Notes for 1.0.0, as published (the app was still called PrivacyGuard). |
 | [releases/RELEASE_CHECKLIST.md](releases/RELEASE_CHECKLIST.md) | Every step of a release, for the owner and the agent, and the decision on build attestations. |
@@ -35,7 +35,7 @@ Every document in the repository, with one line on what it is for. Start with th
 | Document | What it is |
 |---|---|
 | [testing/README.md](testing/README.md) | Which phone checklists and test reports exist and how they fit together. |
-| [testing/PHONE_TEST_1.3.0.md](testing/PHONE_TEST_1.3.0.md) | Phone checklist for 1.3.0: the update from 1.2.0, the 1.3.0 changes, daily use, battery, other phones and networks. |
+| [testing/PHONE_TEST_1.2.1.md](testing/PHONE_TEST_1.2.1.md) | Phone checklist for 1.2.1: the update from 1.2.0, the 1.2.1 changes, daily use, battery, other phones and networks. |
 | [testing/SECURITY_TEST_2026-10-14.md](testing/SECURITY_TEST_2026-10-14.md) | Security test against OWASP MASVS: findings V-01 to V-18 and their status. |
 
 ## Design and translations
@@ -44,7 +44,7 @@ Every document in the repository, with one line on what it is for. Start with th
 |---|---|
 | [ux/DESIGN_SPEC_1.1.md](ux/DESIGN_SPEC_1.1.md) | The design system and screen specification behind today's UI (accepted 2026-11-02, shipped in 1.2.0). |
 | [ux/UX_AUDIT_1.1.md](ux/UX_AUDIT_1.1.md) | The audit of the 1.0 screens that led to that design. |
-| [translations/TRANSLATION_REVIEW_1.3.md](translations/TRANSLATION_REVIEW_1.3.md) | Machine translations added in 1.3, for a native speaker to check. |
+| [translations/TRANSLATION_REVIEW_1.2.1.md](translations/TRANSLATION_REVIEW_1.2.1.md) | Machine translations added in 1.2.1, for a native speaker to check. |
 | [translations/README.md](translations/README.md) | Review status, where the older reviews are, and how to correct a translation. |
 
 ## Project

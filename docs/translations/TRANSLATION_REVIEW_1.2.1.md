@@ -1,6 +1,6 @@
-# Translation review for 1.3
+# Translation review for 1.2.1
 
-Strings added or changed in the 1.3 bug-fix round (branch `bug-fixes`). All Arabic, French
+Strings added or changed in the 1.2.1 bug-fix round (branch `bug-fixes`). All Arabic, French
 and Dutch texts here are **machine translations** and need a native speaker: Arabic by the
 owner, French and Dutch by native speakers. `%1$d`, `%2$d` and `%3$d` are filled in by the
 app and must stay as they are.

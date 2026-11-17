@@ -313,7 +313,7 @@ A source or category you switch off in Ad privacy stays off at every level.
    that SDK's own company's app, and keeps login, push and deep-link hosts open
    even when a list contains them.
 
-A Block rule for a name also blocks every subdomain (since 1.3, ADR 0017). An Allow
+A Block rule for a name also blocks every subdomain (since 1.2.1, ADR 0017). An Allow
 rule matches the exact name you type; write `*.example.com` to allow `example.com`
 and every subdomain. Rule order is unchanged: a longer Allow (`www.example.com`) wins
 over a shorter Block (`example.com`). Rules for IPv6 addresses are not supported;
@@ -588,7 +588,7 @@ a rule already covers, gets none. Dismissed suggestions stay dismissed.
 Tunnel state, kill switch, Private DNS, a test lookup, **upstream DNS** (the
 running VPN does one real lookup over its own path), external IP (opt-in, asks
 api.ipify.org), DNS leak check, IPv6 packets dropped, installed apps with internet
-access, packets captured. Since 1.3 also: connection safety limits (fragments dropped,
+access, packets captured. Since 1.2.1 also: connection safety limits (fragments dropped,
 connections refused at the 4,096 TCP / 4,096 UDP / 1,024 per app limits, idle UDP
 closed to make room), connections from an unknown app, the HTTPS-inspection limit,
 site-name blocking for unencrypted web requests, and handled errors (failed list
@@ -781,7 +781,7 @@ checked) and counted in Settings › Diagnostics.
   exact alarms, past the restart limit, or when Android refuses the restart, it
   stays up and a tap starts protection again. Notifications must be allowed for
   this; with them off, a crash ends protection silently, so Home shows a card
-  while they are off (`NotificationCheck`, 1.3). Either way the dead service's
+  while they are off (`NotificationCheck`, 1.2.1). Either way the dead service's
   "Protection on" notification is removed at once: Android kept it up for about
   a minute after a crash (and the app may not remove it itself while Android
   still counts the service as running), so the watcher stops the dead service's

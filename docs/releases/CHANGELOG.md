@@ -5,14 +5,14 @@ Download from [GitHub Releases](https://github.com/NAJJAT/CoreLock/releases); ev
 release is signed with the key whose fingerprint is in the [README](../../README.md#security).
 Dates are those of the tagged commit.
 
-## 1.3.0 (in preparation, not published)
+## 1.2.1 (in preparation, not published)
 
 A safety and reliability update. A Block rule now also covers subdomains (ADR 0017);
 "Protection stopped" appears at once after a crash and Home warns while notifications
 are off; unencrypted websites are checked by site name; open connections are checked
 again when rules or lists change; fixed limits on the memory used to track connections;
 security fixes in HTTPS inspection and SIEM sending; new counters in Diagnostics.
-[Release notes (draft)](RELEASE_NOTES_1.3.0.md)
+[Release notes (draft)](RELEASE_NOTES_1.2.1.md)
 
 ## 1.2.0 (2026-11-11, tag `v1.2.0`)
 

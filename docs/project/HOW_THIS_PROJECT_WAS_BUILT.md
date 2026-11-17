@@ -14,7 +14,7 @@ build, reviewed the AI's work, tested it and released it; AI tools were used for
 implementation, tests and documents, under rules I set. [OWNER: if you want, say roughly
 how much of the code the AI wrote; the repository does not record it.] The repository has 186 commits; 180 are mine
 and 6 are automatic dependency updates (Dependabot). Two versions are published (tags
-`v1.0.0` and `v1.2.0`); 1.3.0 is prepared.
+`v1.0.0` and `v1.2.0`); 1.2.1 is prepared.
 
 ## My role
 
@@ -73,7 +73,7 @@ and 6 are automatic dependency updates (Dependabot). Two versions are published 
 
 ## How the work was verified
 
-- **Unit tests:** 1,296, with 0 failures at the end of the 1.3 work (1,202 when that
+- **Unit tests:** 1,296, with 0 failures at the end of the 1.2.1 work (1,202 when that
   round started).
 - **Instrumented tests:** 22 on an emulator, in 7 files, including Room database
   migration tests (`AppDatabaseMigrationTest` alone has 9).
@@ -83,7 +83,7 @@ and 6 are automatic dependency updates (Dependabot). Two versions are published 
   test against the live blocklists.
 - **Security audit 1 (2026-10-14, OWASP MASVS checklist):** 18 findings. 3 were High and
   none Critical. 12 are fixed, 4 partly fixed with the rest planned, and 1 was left open
-  by design (V-17, Block rules not covering subdomains; changed in 1.3.0, ADR 0017); the
+  by design (V-17, Block rules not covering subdomains; changed in 1.2.1, ADR 0017); the
   last one (V-14, a dependency scan) is now part of CI
   (`docs/testing/SECURITY_TEST_2026-10-14.md`).
 - **Security audit 2 (2026-11-11):** 18 findings (F-1 to F-18); the details stayed with
@@ -99,7 +99,7 @@ and 6 are automatic dependency updates (Dependabot). Two versions are published 
   - The run found a case where the user got no warning at all; it was fixed.
 - **Speed of the hot path** (the code that runs for every connection): the name check
   takes about 3.4 µs per connection and the QUIC check about 9.5–9.9 µs per new flow. Both
-  were measured before and after each change, with no slowdown in the 1.3 work.
+  were measured before and after each change, with no slowdown in the 1.2.1 work.
 
 ## What I learned
 
@@ -113,9 +113,9 @@ and 6 are automatic dependency updates (Dependabot). Two versions are published 
   - Arabic is reviewed by me; French and Dutch still need native speakers.
   - [OWNER: say which reviews are done.]
 - **Not tested on a real phone.**
-  - The 1.3.0 changes were checked with tests and on the emulator only, including the
+  - The 1.2.1 changes were checked with tests and on the emulator only, including the
     crash-recovery work and the new Home warning.
-  - Also untested on a phone: an overnight battery test, and two fixes in the 1.3 work
+  - Also untested on a phone: an overnight battery test, and two fixes in the 1.2.1 work
     (F-9 and F-16) that were checked by reading the code.
 - **Known limitations of the app** are listed in the README and in `CLAUDE.md` §16.1.
   Examples:

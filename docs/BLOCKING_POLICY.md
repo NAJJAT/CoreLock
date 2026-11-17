@@ -3,8 +3,8 @@
 What CoreLock blocks, what it leaves alone on purpose, what it cannot block, and how
 to report a mistake.
 
-This page describes the current version, 1.3.0; what changed after 1.2.0 is marked
-"since 1.3". For the technical detail behind it, see
+This page describes the current version, 1.2.1; what changed after 1.2.0 is marked
+"since 1.2.1". For the technical detail behind it, see
 [HOW_IT_WORKS.md](architecture/HOW_IT_WORKS.md).
 
 ---
@@ -44,7 +44,7 @@ decision, so a name blocked at one point cannot slip through another:
      be read. QUIC that cannot be read is dropped; the app then retries over TCP,
      where the name can be checked.
    - Other traffic on the same port (video calls, VPNs) is never touched.
-   - **Unencrypted web requests (HTTP)** name their site too. Since 1.3 CoreLock reads
+   - **Unencrypted web requests (HTTP)** name their site too. Since 1.2.1 CoreLock reads
      that name and resets the connection if it is blocked, with the same decision. At
      Standard and Strict, a request whose site name can't be trusted (two different
      names, or a request start too large to read) is reset.
@@ -173,7 +173,7 @@ Firefox with uBlock Origin, alongside CoreLock.
   is needed (`api.example.com`), not the whole domain (`*.example.com`). An **Allow**
   rule for a plain name matches only that exact name; `*.example.com` matches
   `example.com` and every name under it. A **Block** rule for a plain name blocks that
-  name and every name under it (since 1.3): blocking `example.com` also blocks
+  name and every name under it (since 1.2.1): blocking `example.com` also blocks
   `www.example.com`. To keep one subdomain open, add an Allow rule for it
   (`www.example.com`); being longer, it wins over the Block.
 - **One decision, in a fixed order.** For every name, at DNS and at the connection:
