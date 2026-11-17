@@ -1,4 +1,4 @@
-# How long the internet waits while CoreLock starts (docs/PHONE_TEST_1.2.0.md, check G).
+# How long the internet waits while CoreLock starts (docs/testing/PHONE_TEST_1.3.0.md, check G).
 #
 # Runs on the phone, not the computer:
 #   adb -s PHONE_ID push tools/repro/startup-dns-wait.sh /data/local/tmp/

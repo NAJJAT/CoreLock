@@ -374,7 +374,7 @@ A broken migration deletes the user's rules and history. Treat schema changes as
 ## 8. UI, text, languages and accessibility
 
 - **No hardcoded user-visible text.** Every new or changed string goes into `values`, `values-ar`, `values-fr` and `values-nl` in the same change.
-- Mark machine-made translations in the report and add them to `docs/TRANSLATION_REVIEW_*.md` so a native speaker can check them. Arabic is reviewed by the owner; French and Dutch need native speakers.
+- Mark machine-made translations in the report and add them to `docs/translations/TRANSLATION_REVIEW_*.md` so a native speaker can check them. Arabic is reviewed by the owner; French and Dutch need native speakers.
 - **RTL:** use `start`/`end`, never `left`/`right`; mirror directional icons; test long translations (French and Dutch are often 30% longer).
 - **Accessibility:** content descriptions on icons, touch targets ≥ 48 dp, sufficient contrast, works with large font sizes and TalkBack.
 - **Honest UI:** never show "protected" when the tunnel isn't running. Show what was blocked and why ("Stopped by").
@@ -467,10 +467,10 @@ The app (the `enterprise` flavor, the only one) is released as a signed APK on G
 
 1. `main` green on all four checks.
 2. Version: `versionCode` always increases by at least 1 (Android refuses updates otherwise); `versionName` follows semantic versioning (`1.0.0`, `1.0.1`, `1.1.0`). The first release is `versionName = "1.0.0"`, `versionCode = 1` (`app/build.gradle.kts`), tag `v1.0.0`. Git tag `vX.Y.Z` is created by the owner.
-3. Translations reviewed (`docs/TRANSLATION_REVIEW_*.md`).
+3. Translations reviewed (`docs/translations/TRANSLATION_REVIEW_*.md`).
 4. Owner builds and signs with the real key (never the agent).
-5. Release page contains: the APK, its **SHA-256 checksum**, the **signing certificate SHA-256 fingerprint** (same as in the README), release notes, and known limitations (§16). The `release-checks.yml` run must be green afterwards. Full list: `docs/RELEASE_CHECKLIST.md` (release and deploy checks; no GitHub attestations, owner's decision 2026-11-05, options B and C documented there).
-6. Release notes (`RELEASE_NOTES_X.Y.md`) in plain language: what's new, what's fixed, what can't be blocked, how to update.
+5. Release page contains: the APK, its **SHA-256 checksum**, the **signing certificate SHA-256 fingerprint** (same as in the README), release notes, and known limitations (§16). The `release-checks.yml` run must be green afterwards. Full list: `docs/releases/RELEASE_CHECKLIST.md` (release and deploy checks; no GitHub attestations, owner's decision 2026-11-05, options B and C documented there).
+6. Release notes (`docs/releases/RELEASE_NOTES_X.Y.Z.md`) in plain language: what's new, what's fixed, what can't be blocked, how to update.
 
 The agent can prepare everything except signing and publishing: version bump proposal, release notes, translation review file, changelog, and a checklist of what the owner must do.
 
@@ -482,7 +482,7 @@ Documentation is part of the product. Outdated docs in a security app are a secu
 
 ### 13.1 README.md must contain, in this order
 
-> **Status (2026-10-26):** all eleven parts exist (Install, First setup, Protection levels and the Credits table were added). The order differs slightly (technical sections sit between them). The signing fingerprint under Security was filled in with the 1.0.0 signing certificate, together with `RELEASE_NOTES_1.0.md`.
+> **Status (2026-11-17):** all eleven parts exist, in this order. Between them sit a few user sections (FAQ, Screens, HTTPS inspection, what the app can and cannot see, Known limitations, Documentation). Technical detail moved to `docs/architecture/` and `docs/project/DEVELOPMENT.md`. The signing fingerprint under Security is the 1.0.0 signing certificate; `release-checks.yml` reads it from the README, so keep the heading "Release signing certificate (SHA-256)" and the bare 64-digit line under it.
 
 1. **What CoreLock is** — one paragraph, no hype.
 2. **What it blocks and what it can't** — the four layers in plain words, and the honest limits (§16).
@@ -498,10 +498,12 @@ Documentation is part of the product. Outdated docs in a security app are a secu
 
 ### 13.2 Other documents
 
-- `docs/HOW_IT_WORKS.md` — deeper technical explanation of §5 for curious users and contributors.
-- `docs/BLOCKING_POLICY.md` — user-facing blocking policy: what each level blocks, what is exempt and why, what can't be blocked, how to allow-list and report. Update it in the same change as any list, level, exemption or precedence change. Issue forms in `.github/ISSUE_TEMPLATE/` link to it.
+- `docs/README.md` — index of every document, one line each. Add a line when you add a document.
+- `docs/architecture/HOW_IT_WORKS.md` — deeper technical explanation of §5 for curious users and contributors; `FEATURES.md` and `CODE_MAP.md` next to it hold the feature reference and the code map.
+- `docs/BLOCKING_POLICY.md` — user-facing blocking policy: what each level blocks, what is exempt and why, what can't be blocked, how to allow-list and report. Update it in the same change as any list, level, exemption or precedence change. Issue forms in `.github/ISSUE_TEMPLATE/` and the app itself (`url_blocking_policy`, shipped in 1.2.0) link to this exact path, so it must not move.
 - `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 are accepted (2026-10-25); 0007–0011 are proposed, 0012 is accepted (2026-10-28) 0013 is accepted (2026-11-04); 0014 is proposed and 0015 accepted (2026-11-05); 0016 is proposed (2026-11-11, for 1.3); 0017 is accepted (2026-11-16, 1.3). Never rewrite an accepted record; supersede it with a new one.
-- `RELEASE_NOTES_X.Y.md`, `docs/TRANSLATION_REVIEW_X.Y.md`.
+- `docs/releases/`: `RELEASE_NOTES_X.Y.Z.md`, `CHANGELOG.md` (one entry per version), `RELEASE_CHECKLIST.md`. Published notes are never rewritten.
+- `docs/translations/TRANSLATION_REVIEW_X.Y.md` (current version only); `docs/testing/` (the current phone checklist `PHONE_TEST_X.Y.Z.md`, security test reports); `docs/ux/` (design spec and audit); `docs/project/` (development guide, project history, decision briefs); `docs/archive/` (finished working logs, earlier phone checklists and translation reviews). When a new version gets its checklist or review, move the previous one to `docs/archive/` and update `docs/README.md`.
 - `SECURITY.md` — vulnerability reporting.
 
 ### 13.3 Rules

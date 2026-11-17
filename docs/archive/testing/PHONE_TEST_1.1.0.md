@@ -1,7 +1,7 @@
 # Phone test for 1.1.0
 
 A two-day check of the signed 1.1.0 release on a real phone, before it is published.
-The emulator checks ran earlier (`docs/ux/REDESIGN_PROGRESS.md`); this test covers what an
+The emulator checks ran earlier (`docs/archive/progress/REDESIGN_PROGRESS.md`); this test covers what an
 emulator cannot show: the update from the published 1.0.0, real apps, real networks, real
 battery and real CPU, and the steps a debug build can't do (the device lock before
 sensitive actions: a debug build is not signed with the release key and blocks them).
@@ -243,7 +243,7 @@ adb -s PHONE_ID shell dumpsys meminfo com.privacyguard.app.enterprise | grep -E 
 ### 15. CPU on Home and Activity (blocker rule)
 
 1.0 used 42 % (Home) and 68 % (Stats) of one core on the emulator with nothing happening;
-1.1 measured lower on the emulator (`docs/ux/REDESIGN_PROGRESS.md`, CPU). The phone decides.
+1.1 measured lower on the emulator (`docs/archive/progress/REDESIGN_PROGRESS.md`, CPU). The phone decides.
 
 For each screen (Home, Activity, then Settings › Advanced › Analysis › Statistics): open
 it, leave the phone untouched and the screen on, and run:

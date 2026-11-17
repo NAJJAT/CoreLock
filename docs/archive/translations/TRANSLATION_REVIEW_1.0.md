@@ -305,7 +305,7 @@ English only, on purpose (owner's decision, 2026-10-29): `restriction_mitm_redac
 
 ### Changed 2026-11-03: Strict no longer claims to block Safe Browsing (1 per language)
 
-Google Safe Browsing was removed from Strict in 1.0.0 (blocking it turned off Chrome's phishing and malware warnings), but the level description still listed it. It now lists what the telemetry seed blocks, as `docs/HOW_IT_WORKS.md` does: "Google Safe Browsing" became "Dropbox". Only that name changed.
+Google Safe Browsing was removed from Strict in 1.0.0 (blocking it turned off Chrome's phishing and malware warnings), but the level description still listed it. It now lists what the telemetry seed blocks, as `docs/architecture/HOW_IT_WORKS.md` does: "Google Safe Browsing" became "Dropbox". Only that name changed.
 
 | String | English | Arabic | French | Dutch |
 |---|---|---|---|---|

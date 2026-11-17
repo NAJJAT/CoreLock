@@ -3,7 +3,7 @@
 The working log for the 1.1 redesign (`docs/ux/DESIGN_SPEC_1.1.md`, branch `redesign-1.1`).
 After an interruption, read this first and continue at **Next**.
 
-Screenshots: `C:\Users\ooo77\Documents\CoreLock-redesign\<screen>\` (outside the repo).
+Screenshots: on the owner's computer, one folder per screen (outside the repo).
 Nothing here is committed by the agent; the owner commits.
 
 ## Status
@@ -52,7 +52,7 @@ Owner's order (2026-11-04, after committing Phases 6–7 as `0db2431`), done wit
       `<APK_SHA256>` placeholder, `CoreLock-1.1.0.apk`), `git rm RELEASE_NOTES_1.0.1.md` and fix
       links; `RELEASE_NOTES_1.0.md` restored from `v1.0.0` (+ fingerprint and published checksum
       23752350...94dd if missing, + "Superseded by 1.1.0. See RELEASE_NOTES_1.1.0.md." on top);
-      README (version, APK name, notes link, screens); phone test doc → `docs/PHONE_TEST_1.1.0.md`
+      README (version, APK name, notes link, screens); phone test doc → `docs/archive/testing/PHONE_TEST_1.1.0.md`
       (git mv; update from 1.0.0 + new screens; fix links).
    5. Last: `git rm -r --cached .skills` + `.skills/` in `.gitignore` (files stay on disk);
       listed as the last commit.
@@ -563,7 +563,7 @@ sheet fits. Screenshots in `CoreLock-redesign\transfer\`.
 After adding the device-lock step, the debug build shows "Sensitive actions are disabled
 because app integrity could not be verified" (a debug build is not signed with the release key;
 "Clear all data" behaves the same, unchanged). The signed build must be checked on the phone:
-added to `docs/PHONE_TEST_1.1.0.md`.
+added to `docs/archive/testing/PHONE_TEST_1.1.0.md`.
 
 ### Skills used for D2
 
@@ -652,7 +652,7 @@ Security systems 1.1 % of one core (audit, release build: Home 42 %, Stats 68 %)
   plus one first line "Superseded by 1.1.0".
 - README: version, APK name, release-notes link, the Screens table for 1.1, "Security systems"
   for the 1.0 Home section, export/import under privacy.
-- `docs/PHONE_TEST_1.0.md` → `docs/PHONE_TEST_1.1.0.md` (`git mv`, staged): update from the
+- `docs/PHONE_TEST_1.0.md` → `docs/archive/testing/PHONE_TEST_1.1.0.md` (`git mv`, staged): update from the
   published 1.0.0 to 1.1.0, the four tabs, What's new, fix flow and pause, export/import with
   the device lock (signed build only), HTTPS confirmation, CPU on Home and Activity.
 - `.skills` removed from the index (`git rm -r --cached`, 444 files, staged; the files stay on

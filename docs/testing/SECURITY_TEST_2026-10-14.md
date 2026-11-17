@@ -7,13 +7,16 @@ The test itself changed nothing in `app/src/main` or `app/src/enterprise`; the f
 afterwards, each in its own commit. Status updated 2026-10-15: the Status column gives the
 commit for each fix, and §8 has the phone results from that day. Updated 2026-11-02:
 findings not fully fixed are described here in general terms only; their details stay
-with the owner until they are fixed.
+with the owner until they are fixed. Updated 2026-11-17: the OSV scan of V-14 is now a
+required CI check (`.github/workflows/ci.yml`, job *OSV dependency scan*), and V-17 changed
+in 1.3.0: a user Block rule now covers subdomains (ADR 0017). The findings table in §2 is
+kept as it was written; this summary is the current status.
 
 | Status | Findings |
 |---|---|
-| Fixed | V-01 to V-06, V-08, V-09, V-11, V-13, V-15, V-16 (V-14: OSV scan in CI uncommitted) |
+| Fixed | V-01 to V-06, V-08, V-09, V-11, V-13 to V-16 |
 | Partly fixed, rest planned for a later release | V-07, V-10, V-12, V-18 |
-| Open | V-17 (by design, documented) |
+| Changed by design in 1.3.0 | V-17 (ADR 0017) |
 
 ## Environment and limits
 

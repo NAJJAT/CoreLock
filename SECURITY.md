@@ -1,7 +1,7 @@
 # Security Policy
 
-CoreLock sits on every network connection of the device it runs on,
-and the enterprise build can decrypt HTTPS traffic. Security reports get priority.
+CoreLock sits on every network connection of the device it runs on, and its HTTPS
+inspection (off by default) can decrypt HTTPS traffic. Security reports get priority.
 
 ## Reporting a vulnerability
 

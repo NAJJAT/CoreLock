@@ -9,7 +9,7 @@
 # Read-only (owner, 2026-11-05: write access only for the nightly issue and the
 # malware-snapshot PR). It never builds, signs, uploads to or edits the release. GitHub artifact
 # attestations are not made here: an attestation says "this workflow built this file",
-# and this workflow doesn't build the APK. See docs/RELEASE_CHECKLIST.md, "Attestations".
+# and this workflow doesn't build the APK. See docs/releases/RELEASE_CHECKLIST.md, "Attestations".
 name: Release checks
 
 on:

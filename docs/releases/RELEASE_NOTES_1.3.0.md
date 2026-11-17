@@ -69,7 +69,7 @@ Before 1.3.0 a Block rule matched only the exact name you typed.
 
 ## What leaves the phone
 
-Nothing new. CoreLock contacts the same hosts as 1.2.0 (README, *Network disclosure*). No
+Nothing new. CoreLock contacts the same hosts as 1.2.0 (README, *Network requests the app makes*). No
 analytics, no crash reports, no update check.
 
 ## How to update from 1.2.0

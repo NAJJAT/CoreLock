@@ -3,6 +3,8 @@
 - **Status:** Accepted by the owner with decisions D1–D12 (2026-11-02, §8)
 - **Date:** 2026-11-02
 - **Branch:** `redesign-1.1`
+- **Shipped:** in 1.2.0 (1.1.0 was never published). Code comments cite this file by
+  section number (`DESIGN_SPEC_1.1.md §6.2`), so its path and numbering stay as they are.
 - **Input:** `docs/ux/UX_AUDIT_1.1.md` (including "Owner additions")
 - **Scope:** UI only. The VPN, packet path, filtering, blocklists, rule logic, database
   schema, inspection and security code stay as they are. Anything that needs a behaviour
@@ -764,7 +766,7 @@ Blocked · Can use the internet only while you're using it. · Can't use the int
 Connected recently · Built-in trackers · Share report · Sort by · Active now.
 
 Full string-by-string tables (with ar/fr/nl) are produced per phase and collected in
-`docs/TRANSLATION_REVIEW_1.1.md` (D7).
+`docs/archive/translations/TRANSLATION_REVIEW_1.1.md` (D7).
 
 ---
 
@@ -778,7 +780,7 @@ Full string-by-string tables (with ar/fr/nl) are produced per phase and collecte
 | D4 | **Appearance (System / Light / Dark)** | **Yes, default System.** | One UI-only preference. Theme support in Phase 2; the Settings row in Phase 6. |
 | D5 | **Confirm every time HTTPS inspection is turned on** | **Yes.** Note it for the HTTPS inspection security review. | Phase 6. The Phase 6 report has a separate "HTTPS inspection security review" section: this confirmation, the unchanged consent dialog, and that nothing outside the app or MDM can turn inspection on. |
 | D6 | **Screenshot or splash libraries** | **Agreed, no new dependencies.** | Screenshots from the debug catalog on the emulator; splash through platform theme attributes. |
-| D7 | **Translation review file** | **Yes, `docs/TRANSLATION_REVIEW_1.1.md`.** | Created in Phase 2, extended every phase. |
+| D7 | **Translation review file** | **Yes, `docs/archive/translations/TRANSLATION_REVIEW_1.1.md`.** | Created in Phase 2, extended every phase. |
 | D8 | **Allow/Block per app + destination** | **Yes, ViewModel helper only, with a test.** | Phases 4–5. The test checks the created rule through `NameBlockPolicy` and that it uses `HIGH_PRIORITY`. |
 | D9 | **Plain risk word per app** | **Yes, existing data only.** Exact mapping in the spec; explain the word when tapped. | §6.3.1. |
 | D10 | **Chrome fingerprint alert severity** | **Agreed, separate fix outside the redesign.** | Not on this branch. |

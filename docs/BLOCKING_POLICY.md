@@ -3,8 +3,9 @@
 What CoreLock blocks, what it leaves alone on purpose, what it cannot block, and how
 to report a mistake.
 
-This page describes version 1.0.0. For the technical detail behind it, see
-[HOW_IT_WORKS.md](HOW_IT_WORKS.md).
+This page describes the current version, 1.3.0; what changed after 1.2.0 is marked
+"since 1.3". For the technical detail behind it, see
+[HOW_IT_WORKS.md](architecture/HOW_IT_WORKS.md).
 
 ---
 
@@ -82,7 +83,8 @@ At every level:
 - **Ad-SDK blocking** (on by default) stops the servers of known ad and attribution
   kits (for example AppLovin, Unity Ads, AppsFlyer, Adjust) inside other apps.
 - **Encrypted-DNS servers** are stopped, so apps cannot skip the filter.
-- A list or category you switched off in **Settings › Ads & Trackers** stays off.
+- A list or category you switched off in **Settings › Advanced › Analysis › Ads &
+  trackers** stays off.
 
 Blocking telemetry at Strict can break features that depend on it. That is why
 Strict is not the default.
@@ -191,34 +193,43 @@ Firefox with uBlock Origin, alongside CoreLock.
 
 ### Allow a domain
 
-1. Find the name that is blocked: on **Home**, tap the *Blocked (24 h)* number to see
-   the blocked lookups and connections, or open **Traffic** and tap a blocked
-   connection to read its server name and "Stopped by".
-2. Open the **Settings** tab.
-3. Tap **Firewall Rules**.
-4. Tap the **+** button.
-5. Leave the type on **Domain** and type the name, for example `api.example.com`
-   (or `*.example.com` for the domain and everything under it).
-6. Tap **Allow** (the dialog starts on Block).
-7. Tap **Add**.
+The quickest way, when an app or site has just stopped working:
+
+1. On **Home**, tap **Something not working?**, pick the app, and allow what was
+   blocked for it in the last hour. If you are not sure, you can pause protection for 5
+   minutes and try the app again.
+
+Or from the list of what was blocked:
+
+1. Open the **Activity** tab and tap the blocked row. It shows the server name and what
+   stopped it.
+2. Tap **Allow for this app** or **Allow everywhere**. **Undo** takes it back.
+
+Or by typing the name:
+
+1. Open **Settings › Rules and allowed sites** and tap **Add rule**.
+2. Choose **Site** and type the name, for example `api.example.com` (or
+   `*.example.com` for the domain and everything under it).
+3. Choose **Allow** and tap **Add**.
 
 The rule works at once, without restarting protection. If the name is on the malware
 and phishing list, the app first shows a warning; the Allow only overrides that list
-if you confirm it.
+if you confirm it (**Allow anyway**).
 
-You can also add an Allow rule in **Settings › Ads & Trackers › Custom rules**.
+You can also add an Allow rule in **Settings › Advanced › Analysis › Ads & trackers ›
+Custom rules**.
 
 ### Allow an app
 
-In version 1.0.0 an app cannot be taken out of the blocklists as a whole, and it
-cannot be excluded from the VPN. An Allow rule for an app (Firewall Rules, type
-**App**) only affects your own connection rules, for example an IP rule for every
-app; it does not exempt the app from the ad, tracker or malware lists, and it does
-not override a Block rule for the same app. Allow the specific names the app needs
-instead (see above).
+An app cannot be taken out of the blocklists as a whole, and it cannot be excluded
+from the VPN. An Allow rule for an app (Rules and allowed sites, type **App**) only
+affects your own connection rules, for example an address rule for every app; it does
+not exempt the app from the ad, tracker or malware lists, and it does not override a
+Block rule for the same app. Allow the specific names the app needs instead (see
+above).
 
-To remove a block you placed on an app: open **Apps**, tap the app, and turn off its
-block.
+To remove a block you placed on an app: open **Apps**, tap the app, and set its
+**Internet access** to allowed.
 
 On Android 7 to 9, a per-app rule (block, background-only block or allow) can
 occasionally apply to the wrong app. Android 10 and newer are not affected.

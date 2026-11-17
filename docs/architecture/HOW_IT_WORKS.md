@@ -3,9 +3,11 @@
 This document describes what the code does today, not what it was meant to do.
 Where a feature has a limit or a known gap, it says so. File names are given so
 you can check every statement yourself; paths are relative to
-`app/src/main/java/com/privacyguard/` unless they start with `app/src/`.
+`app/src/main/java/com/privacyguard/` unless they start with `app/src/`. A shorter
+overview of the features is in [FEATURES.md](FEATURES.md), and a map of the code in
+[CODE_MAP.md](CODE_MAP.md).
 
-Contents
+## Contents
 
 1. [The big picture](#1-the-big-picture)
 2. [The path of one connection](#2-the-path-of-one-connection)
@@ -505,7 +507,11 @@ visit is not counted twice).
 QUIC handshake, or a plain HTTP request), left blocked ones, local devices and the
 OS's connectivity checks out. Encrypted share = encrypted ÷ (encrypted + cleartext).
 
-### Home
+### Security systems (Settings › Advanced › Analysis; the 1.0 Home)
+
+Since 1.1, Home shows only whether you are protected, the level, *blocked today*
+(`BlockStats.today`) and warning cards. The numbers below are on the Security systems
+screen.
 
 | Number | Calculation |
 |---|---|
@@ -577,7 +583,7 @@ at the last 7 days: an app with 3 or more unencrypted internet connections gets
 connections gets "Block X in the background". An app you already blocked, or that
 a rule already covers, gets none. Dismissed suggestions stay dismissed.
 
-### Diagnostics (Settings)
+### Diagnostics (Settings › Advanced)
 
 Tunnel state, kill switch, Private DNS, a test lookup, **upstream DNS** (the
 running VPN does one real lookup over its own path), external IP (opt-in, asks
@@ -589,11 +595,11 @@ site-name blocking for unencrypted web requests, and handled errors (failed list
 download attempts, failed app lookups, inspection connections that did not close
 cleanly). These counters start at zero when protection is turned on.
 
-### Payloads (enterprise only)
+### HTTPS inspection (Settings › Advanced)
 
 Inspected HTTPS requests and responses, see section 8.
 
-### PCAP export (Home)
+### PCAP export (Statistics)
 
 Raw packets in both directions (what apps send and what they receive, including
 DNS answers CoreLock makes) in Wireshark format. Stops at 100 MB or when
@@ -640,7 +646,7 @@ Nothing is ever sent to the makers of CoreLock. The app contacts:
 | crt.sh | Only if Certificate Transparency is on | The base domains of servers your apps contact. |
 | api.ipify.org | Only if the external-IP check is on, when you run Diagnostics | Your IP address. |
 | Your SOCKS servers | Only with dual-hop | SOCKS5 is not encrypted: hop 1 sees your IP, hop 2's address and login, and every destination; hop 2 sees the destinations, not your IP. HTTPS content stays encrypted. |
-| Your organisation's SIEM | Enterprise only, if configured | Inspected HTTPS requests and responses (section 8). |
+| Your organisation's SIEM | Only on a managed phone, if the administrator configured it | Inspected HTTPS requests and responses, redacted (section 8). |
 
 Exports (PCAP, CSV, IT report) leave the phone only when you share them. A test
 (`OutboundHostsDisclosureTest`) fails if the code contacts a host that the
@@ -673,8 +679,8 @@ When the managed configuration disappears, what the MDM switched on or consented
 to is withdrawn (`ManagedConfigApplier.withdrawOrganisationSettings`).
 
 **HTTPS inspection** (`app/src/enterprise/java/com/privacyguard/vpn/mitm/`): the
-user gives consent during onboarding and later switches inspection on in the
-Payloads screen. CoreLock then creates its own certificate authority, which the
+user switches inspection on in Settings › Advanced › HTTPS inspection, which asks for
+consent every time it is switched on (onboarding does not offer it). CoreLock then creates its own certificate authority, which the
 user installs in Android's settings, and acts as a proxy for apps that trust user
 certificates (most apps do not, since Android 7; browsers and apps that opt in
 do). It records requests and responses up to a size limit, flags apps that pin
@@ -688,7 +694,7 @@ bodies by pattern; values in URL query strings and form bodies become
 reduced to type and size (`vpn/mitm/PayloadRedaction.kt`). The SIEM always gets
 the redacted copy; the local log does while "Redact PII" is on (the default). Turning inspection off deletes the CA key and the stored
 payloads. **Android keeps the installed certificate after CoreLock is
-uninstalled**; onboarding tells the user how to remove it (Settings → search
+uninstalled**; when inspection is turned off, CoreLock tells the user how to remove it (Settings → search
 "User certificates" → "CoreLock HTTPS Inspection CA", or "PrivacyGuard Enterprise CA"
 for certificates of versions up to 1.1 → Remove).
 
@@ -785,8 +791,10 @@ checked) and counted in Settings › Diagnostics.
   start in the background until the user opens it or taps the notice. A crash
   within about 2 minutes of the previous one was enough for that on the emulator. The start fails closed: the
   tunnel takes every route first and is read only once the filters are loaded.
-  (This design replaced a 30-second deadman alarm on 15 October 2026 and has
-  only been unit-tested so far; see docs/security-test-2026-10-14.md.)
+  (This design replaced a 30-second deadman alarm on 15 October 2026. It is covered by
+  unit tests and was checked on an emulator, most recently on 16 November 2026, but not
+  yet on a phone; see [SECURITY_TEST_2026-10-14.md](../testing/SECURITY_TEST_2026-10-14.md),
+  V-18.)
 - **First start after install:** until the first download (about a minute after
   install) only the built-in lists apply, plus a copy of HaGeZi's TIF mini malware and
   phishing list shipped in the app (`assets/blocklists/hagezi-tif-mini.txt`, refreshed

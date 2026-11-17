@@ -10,11 +10,13 @@ the agent prepares everything else. Tick each line, or write why it does not app
       is understood (fuzz, live lists).
 - [ ] `versionCode` is higher than the last release's; `versionName` follows semantic
       versioning (`app/build.gradle.kts`).
-- [ ] `RELEASE_NOTES_X.Y.Z.md`: what's new, what's fixed, what can't be blocked
+- [ ] `docs/releases/RELEASE_NOTES_X.Y.Z.md`: what's new, what's fixed, what can't be blocked
       (CLAUDE.md §16.1), how to update, and anything users must do after updating.
-- [ ] Translations reviewed (`docs/TRANSLATION_REVIEW_X.Y.md`): Arabic by the owner,
+- [ ] `docs/releases/CHANGELOG.md`: a short entry for the version, linking to its notes;
+      README Install section points to the new notes.
+- [ ] Translations reviewed (`docs/translations/TRANSLATION_REVIEW_X.Y.md`): Arabic by the owner,
       French and Dutch by native speakers, or the release notes say which are machine-made.
-- [ ] Phone test done (`docs/PHONE_TEST_X.Y.Z.md`) on a real phone, including an update
+- [ ] Phone test done (`docs/testing/PHONE_TEST_X.Y.Z.md`) on a real phone, including an update
       over the previous release with data kept.
 - [ ] README: latest version, Install section and the network table match the code
       (`OutboundHostsDisclosureTest` passes).
@@ -45,7 +47,7 @@ the agent prepares everything else. Tick each line, or write why it does not app
 - [ ] Download the APK from the release page on a phone (not the local file) and install
       it over the previous release: data kept, protection starts, Home shows the true state.
 - [ ] `sha256sum -c SHA256SUMS.txt` on the downloaded file passes.
-- [ ] Settings › Runtime integrity shows the signature matches.
+- [ ] Settings › Advanced › Diagnostics › App integrity shows the signature matches.
 - [ ] Settings › About shows the new version and opens the releases page.
 - [ ] First blocklist download succeeds on that phone (Settings › Advanced › Diagnostics).
 - [ ] Watch new issues for a week; a broken update is a reason for a quick X.Y.Z+1.
@@ -72,5 +74,5 @@ C first needs a reproducible build.
 The README Install section is the user guide (download, check checksum and fingerprint,
 allow the install once, update over the old version). What changes when Google's developer
 verification reaches sideloaded apps (announced for 2027) depends on the team's decision;
-the facts are in [GOOGLE_DEVELOPER_VERIFICATION.md](GOOGLE_DEVELOPER_VERIFICATION.md).
+the facts are in [GOOGLE_DEVELOPER_VERIFICATION.md](../project/GOOGLE_DEVELOPER_VERIFICATION.md).
 When it is decided, update the README Install section in the same change.

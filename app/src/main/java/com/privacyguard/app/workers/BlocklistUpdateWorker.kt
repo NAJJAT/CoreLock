@@ -18,7 +18,7 @@
  * - Handles network constraints: weekly on an unmetered network (battery not low);
  *   any network once a list has had no success for 14 days; retries failed lists
  *
- * Sources: see BlocklistSource and docs/HOW_IT_WORKS.md §3.5.
+ * Sources: see BlocklistSource and docs/architecture/HOW_IT_WORKS.md §3.5.
  *
  * @author PrivacyGuard Engineering Team
  * @since 1.0.0

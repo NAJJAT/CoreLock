@@ -2,15 +2,15 @@
 
 - **Date:** 2026-11-02
 - **Build audited:** the debug build installed on the emulator `Medium_Phone_API_37.0`, built 2026-10-29 10:14 (before the Kill Switch change `12931f5`)
-- **Screenshots:** kept outside the repository, in `C:\Users\ooo77\Documents\CoreLock-ux-audit\` (67 files, listed in section 8)
+- **Screenshots:** kept outside the repository, on the owner's computer (67 files, listed in section 8)
+
+> **Status (2026-11-17):** this audit describes the 1.0 screens. Its findings were
+> answered by the 1.1 redesign ([DESIGN_SPEC_1.1.md](DESIGN_SPEC_1.1.md)), which shipped
+> in 1.2.0. It is kept as the reason behind that design.
 
 ---
 
-**Repository: no file changed.** `git status` still shows only your four uncommitted files from the migration task, and I committed nothing.
-
 **Emulator:** `Medium_Phone_API_37.0`. The audit used the installed debug build of **2026-10-29 10:14**, which is older than the Kill Switch change (`12931f5`); findings about that card describe the old build.
-
-**Screenshots:** 67 files in `C:\Users\ooo77\Documents\CoreLock-ux-audit\`.
 
 **Emulator state I changed and restored:**
 - Language: Arabic, French and Dutch, then back to English.
@@ -228,7 +228,7 @@ E = EVERYDAY, X = EXPERT. Counts come from UI dumps and are rounded.
 
 ## 8. Screenshot files
 
-In `C:\Users\ooo77\Documents\CoreLock-ux-audit\` (67 files):
+On the owner's computer, outside the repository (67 files):
 
 `00_splash_en.png`
 `01_home_ar.png`, `01_home_en.png`, `01_home_fr.png`, `01_home_nl.png`

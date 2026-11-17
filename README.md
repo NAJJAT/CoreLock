@@ -3,8 +3,9 @@
 A privacy and security app for Android that runs a **local VPN** on the phone and
 shows, per app, where your data goes: which servers, which companies, how much,
 when (screen on or off, app open or in the background) and why something looks
-suspicious. It blocks ads and trackers at DNS level, watches TLS behaviour, and
-explains what it finds in plain language in **English, Dutch, French and Arabic**.
+suspicious. It blocks ads, trackers, malware and phishing by server name, watches TLS
+behaviour, and explains what it finds in plain language in **English, Dutch, French and
+Arabic**.
 
 - **No root, no account, no backend.** Analysis runs on the device. The only
   outbound requests are listed in [Network requests the app makes](#network-requests-the-app-makes).
@@ -16,151 +17,66 @@ explains what it finds in plain language in **English, Dutch, French and Arabic*
   traffic stays encrypted and only its metadata is shown. See
   [HTTPS inspection: what it can and cannot do](#https-inspection-what-it-can-and-cannot-do).
 - **Honest by design:** the app shows destinations, sizes and timing, not the
-  content of encrypted traffic, and every number on the Home screen opens the
-  exact list it was counted from.
+  content of encrypted traffic, and every number opens the exact list it was counted
+  from.
 
 > App name on the device: **CoreLock**. Application ID:
 > `com.privacyguard.app.enterprise`
 > ([why it says privacyguard](#why-does-the-package-name-say-privacyguard)).
-> Repository name: **CoreLock**.
-
-**How it works, in plain English:** [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md)
-describes what the code actually does: the path of one connection, how every
-number on every screen is calculated, each detector and its thresholds, what is
-stored and for how long, what leaves the phone, and the known limits. In short:
-all traffic runs through a local VPN on the phone, and blocking works in three
-layers: (1) DNS names are checked against your rules, the lists for your
-protection level and an ad-SDK policy; (2) apps cannot skip that DNS: DNS over
-TLS (port 853) and encrypted DNS (DoH) servers, from a built-in list plus
-HaGeZi's regularly updated DoH lists, are stopped so apps fall back to the
-tunnel's DNS; (3) the TLS/QUIC server name (SNI) of every connection gets the
-same decision as DNS, so a blocked name reached without our DNS is stopped too.
-At Standard and Strict, QUIC that cannot be read is dropped so apps use TCP, and
-at Strict QUIC is off by default ("Block QUIC for better filtering"); every
-connection is relayed and recorded with its app, server, size, timing and
-encryption; detectors look for odd DNS names, TLS changes, timer-like contacts,
-behaviour changes and stalkerware traits; history stays encrypted on the phone,
-screens are hidden from screenshots and notifications name no app or server
-unless you allow it. While the tunnel is down (for example right after a crash)
-nothing is filtered unless Android's Always-on VPN with lockdown is on.
 
 ---
 
 ## Contents
 
-1. [What it does](#what-it-does)
+1. [What it blocks and what it can't](#what-it-blocks-and-what-it-cant)
 2. [Install](#install)
 3. [First setup](#first-setup)
 4. [Protection levels](#protection-levels)
 5. [Frequently asked questions](#frequently-asked-questions)
 6. [Screens](#screens)
-7. [Network requests the app makes](#network-requests-the-app-makes)
-8. [What the app can and cannot see](#what-the-app-can-and-cannot-see)
-9. [Architecture](#architecture)
-10. [Data storage and privacy](#data-storage-and-privacy)
-11. [Languages and RTL](#languages-and-rtl)
-12. [Build](#build)
-13. [Build variants](#build-variants)
-14. [Permissions](#permissions)
-15. [HTTPS inspection: what it can and cannot do](#https-inspection-what-it-can-and-cannot-do)
-16. [MDM, payload inspection and SIEM (details)](#mdm-payload-inspection-and-siem-details)
-17. [Testing](#testing)
-18. [Debug tooling](#debug-tooling)
-19. [Project structure](#project-structure)
-20. [Known limitations](#known-limitations)
-21. [Security](#security)
-22. [License](#license)
+7. [HTTPS inspection: what it can and cannot do](#https-inspection-what-it-can-and-cannot-do)
+8. [Permissions](#permissions)
+9. [Network requests the app makes](#network-requests-the-app-makes)
+10. [What the app can and cannot see](#what-the-app-can-and-cannot-see)
+11. [Data storage and privacy](#data-storage-and-privacy)
+12. [Known limitations](#known-limitations)
+13. [Building from source](#building-from-source)
+14. [Documentation](#documentation)
+15. [Security](#security)
+16. [How this project was built](#how-this-project-was-built)
+17. [License](#license)
 
 ---
 
-## What it does
+## What it blocks and what it can't
 
-### Network protection
+All traffic runs through a local VPN on the phone. Nothing is sent to a server of ours;
+there is none. CoreLock blocks in four layers, and every layer uses the same decision for
+a name, so a name blocked in one cannot slip through another:
 
-| Feature | Details |
-|---|---|
-| **Local VPN engine** | A TUN interface carries all IPv4 and IPv6 traffic (TCP and UDP). Both address families run through the same TCP state machine (`TcpForwarder`, with flow control and retransmission toward the app) and UDP forwarder (oversized replies are fragmented). The tunnel only opens once rules and blocklists are loaded. Every finished flow is written to history with its app, hostname, bytes and timing. |
-| **DNS filtering** | Every lookup goes through `DnsHandler`: blocklists (HaGeZi and OISD domain lists, hash-set lookup), your own rules, and the per-app ad-SDK policy. A user Allow beats ad, tracker and telemetry lists and the ad-SDK policy; malware and phishing hosts stay blocked unless the user accepts a warning. Blocked names get *NXDOMAIN*, so no connection is made; so do answers whose CNAME points at a blocked name. The TLS SNI and QUIC SNI of each connection get the same decision, which also stops apps with their own resolver or hard-coded addresses when they send a server name. Lookups go only to the resolver you chose (and that provider's second address); if it cannot be reached the app gets *SERVFAIL*. |
-| **DNS over HTTPS** | Optional RFC 8484 DoH to Cloudflare, Google or Quad9. Connects to the provider's literal bootstrap address so the DoH host lookup cannot loop through the tunnel. If DoH fails the lookup is answered with *SERVFAIL*; it is never resent as plain DNS. |
-| **Encrypted-DNS bypass guard** | Drops DNS-over-TLS/QUIC and DoH to known resolver IPs from other apps, so they fall back to DNS that the filter can see. |
-| **Filter rules** | Block by domain, IP/CIDR, app or globally, optionally "only in the background". Three protection levels (Minimal, Standard, Strict). When two of your rules conflict, the more specific one wins (one app before every app, an exact name before a wildcard); between equally specific rules, Block wins. Rules apply instantly without restarting the VPN. Hit counters and suggested rules. |
-| **Kill switch** | Uses Android's *Always-on VPN* with *Block connections without VPN* (only Android can block once the tunnel is gone). The card shows "blocking" only when Android reports lockdown, and "not checked" while protection is off or before Android 10 (Android tells only the running VPN). There is no in-app kill switch. |
-| **Cleartext / weak TLS** | Detects plain-HTTP connections and weak TLS versions and cipher suites (NULL, EXPORT, RC4, DES/3DES, anonymous). Optional rules block them. |
-| **Network trust** | Scores each network from network-side signs only: open Wi-Fi, captive portal, tampered DNS answers, DNS hijacking, TLS interception. On a low-trust Wi-Fi it suggests Strict mode. |
-| **Dual VPN** | Optional two-hop SOCKS5 chain. Carries every TCP connection, and DNS when DoH is on. QUIC is dropped while it is on so apps use TCP; other UDP goes direct unless "Block UDP outside the chain" is on. |
-| **Quick Settings tile and boot start** | VPN toggle in the notification shade; restarts after reboot if it was on. |
+1. **DNS blocking.** When an app looks up a blocked name, CoreLock answers "this name
+   does not exist", so no connection is made. Aliases (CNAME) and service records
+   (HTTPS/SVCB) that point to a blocked name are blocked too.
+2. **No way around the filter's DNS.** DNS over TLS (port 853) and known encrypted-DNS
+   (DoH) servers are stopped, so apps fall back to the DNS that CoreLock checks.
+3. **The server name of each connection.** The name an app sends when it opens a secure
+   connection (TLS or QUIC), or the site name of an unencrypted web request, gets the
+   same decision as DNS. At Standard and Strict, a connection whose name can't be read is
+   stopped rather than let through.
+4. **Per-app firewall.** You can block an app completely, or only in the background.
 
-### Detection
+Every connection is recorded with its app, server, size, timing and encryption, and every
+block says what stopped it. Detectors look for odd DNS names, TLS changes, timer-like
+contacts, behaviour changes and stalkerware traits. The full list of features is in
+[docs/architecture/FEATURES.md](docs/architecture/FEATURES.md).
 
-| Feature | Details |
-|---|---|
-| **TLS fingerprinting (JA4 + JA3)** | Computed once per connection from the full, reassembled ClientHello. No decryption, no MITM. Each app gets its own baseline, learned over its first **7 days**. After an app update (version code), an Android system update, or a WebView/Conscrypt update, new fingerprints are accepted silently for 24 h. An alert fires only when the **same app** shows an **unknown fingerprint** **outside** that window. The alert says what changed, possible reasons (hidden SDK, impersonation, interception tool, harmless library change) and what to do, with a *Trust* action. |
-| **JA3 watch-list** | A small list of JA3 hashes published for known tools. JA3 collides across clients, so a match is a hint, not proof, and the UI says so. |
-| **DNS anomalies** | Random-looking (DGA-like) names, tunnelling-like labels, bursts of lookups and repeated beacon-like lookups. |
-| **Behavior DNA** | Learns each app's normal rhythm (destinations, hours, upload size, background beacons) and flags changes after the learning period. |
-| **Permission mismatch** | Flags apps whose traffic doesn't fit their permissions (e.g. location services without location permission, tracker traffic from a utility app). |
-| **Stalkerware signals** | No launcher icon, sideloaded, background location, mostly-background traffic, large background uploads. |
-| **Certificate Transparency** | Opt-in. Checks crt.sh for newly issued certificates for domains you contact. |
-| **Tracker database** | Curated tracker SDKs (company, category, hosts, class patterns), plus the Exodus list. The APK scanner finds embedded SDKs from DEX strings without running the app. |
-
-### "Why am I seeing this ad?"
-
-An honest explanation screen. It does **not** claim to remove ads inside Facebook
-or Instagram.
-
-| Part | What it does |
-|---|---|
-| **Camera & Mic Watch** | A timeline of microphone and camera use with time and screen on/off, plus the search *"Did any app use my mic between [time] and [time]?"*. Android does not say which app holds the mic, so the app shows the app that was on screen ("likely app"), or "unknown". |
-| **Location audit** | Lists apps with *Always* vs *While in use* location access, with one tap to each app's permission page. Background location exists only on Android 10+. "Last background use" per app is a system-only API, so the screen links to Android's Privacy dashboard. |
-| **Block ad/tracking SDKs in other apps** | Per-app DNS policy for Meta Audience Network, AppsFlyer, Adjust, Branch and others. Login, push and deep-link hosts are never blocked (`graph.facebook.com`, `firebaseinstallations.googleapis.com`…), so "Continue with Facebook" keeps working. Exceptions are listed on screen. |
-| **Reduce ad tracking checklist** | Deep links to Android advertising ID, Meta *Your activity off Meta technologies*, Google *My Ad Center*, Google *Timeline* and mic permission review. Done steps are remembered. |
-| **Explainer** | A short plain-language explanation of how ad targeting works and what the app can and cannot change. |
-
-### Security systems: every number opens its list
-
-- **Same list behind every number.** (Settings › Advanced › Analysis › Security systems,
-  the 1.0 Home.) Each number and card there is computed
-  from the list it opens, for the same time window, anchored at the same moment
-  (`HomeEvidence`). No `LIMIT` anywhere. The list count equals the number shown.
-- **What opens what:**
-  - *Blocked today* (since midnight, the same count as Home, Activity, Apps, Statistics and
-    the notification: `BlockStats.today`) opens the Activity tab's Blocked list;
-    *Unencrypted (24 h)* and *Encryption health* open their lists.
-  - The security cards (behavior changes, random-looking domains, night activity,
-    repeating patterns, uploads, background connections, IPv6 sessions) open their lists.
-  - The weekly report (connections, blocked, behavior changes, data) opens its lists.
-  - The alert bell shows exactly the inbox count ("99+" above 99).
-- **While you slept:** "idle" means the screen was off. Apps are ranked by DNS
-  lookups made while the screen was off; the definition is on screen. Tapping
-  an app opens its traffic for that window, idle-only.
-- **Per-app traffic**, in three tabs:
-  - *By purpose:* domains grouped as e.g. "Instagram core", "Meta ads",
-    "Braze analytics", "CDN", "Other, owner unknown", each with a one-line
-    explanation.
-  - *Every connection:* time, domain, company, purpose, source (**TLS SNI**,
-    **DNS** or **IP only**), bytes sent/received, screen on/off,
-    foreground/background, allowed/blocked, and **why it was flagged**.
-  - *Raw DNS lookups.*
-- **Domain detail:** owner company, purpose and tracker-database entry,
-  frequency over 7 days, the apps that used it, first/last seen and bytes. It
-  says plainly that we see destinations and sizes, not encrypted content.
-- **Empty states say why:** protection off, app not opened (needs Usage
-  Access), nothing while the screen was off, traffic not attributable to an
-  app, or history doesn't reach back that far.
-- **Friendly names:** app labels and icons everywhere, never package names
-  ("Removed app" or "Not attributable to an app" when there is no label).
-
-### Reports and export
-
-- **PCAP export:** real PCAP files (LINKTYPE_RAW) for Wireshark/tcpdump, both
-  directions. Stops at 100 MB or when protection stops; not encrypted, deleted
-  after 24 hours. Starting or sharing a capture requires device authentication.
-- **CSV export:** 7 days of connections (app, domain, IP, bytes, TLS, background, blocked).
-  Like every export, it asks for the phone's screen lock first.
-- **IT report:** PDF + JSON summary for IT staff (kept in English on purpose).
-- **Weekly report:** WorkManager summary notification.
-
----
+**What it can't do:** it decides by server name, not by page content. It can't remove ads
+that come from the same servers as the content (YouTube, Instagram, Snapchat, TikTok,
+Facebook), hide ads drawn inside a page, or see names hidden by Encrypted Client Hello.
+While the tunnel is down (for example right after a crash) nothing is filtered unless
+Android's Always-on VPN with *Block connections without VPN* is on. Details:
+[Known limitations](#known-limitations) and the
+[blocking policy](docs/BLOCKING_POLICY.md).
 
 ## Install
 
@@ -168,8 +84,10 @@ CoreLock is published only on
 [GitHub Releases](https://github.com/NAJJAT/CoreLock/releases), not on Google Play.
 It runs on Android 7.0 and newer (ARM phones, 64- and 32-bit).
 
-Latest version: **1.2.0** ([release notes](RELEASE_NOTES_1.2.0.md)). Earlier: [1.0.0](RELEASE_NOTES_1.0.md).
-Versions 1.0.1 and 1.1.0 were never published; 1.2.0 updates 1.0.0 directly.
+Latest version: **1.2.0** ([release notes](docs/releases/RELEASE_NOTES_1.2.0.md)).
+Earlier: [1.0.0](docs/releases/RELEASE_NOTES_1.0.md). All versions:
+[changelog](docs/releases/CHANGELOG.md). Versions 1.0.1 and 1.1.0 were never published;
+1.2.0 updates 1.0.0 directly.
 
 1. On the phone, download the APK (`CoreLock-1.2.0.apk`) from the release page.
 2. **Check it before installing.** The release page lists the APK's SHA-256 and the
@@ -199,7 +117,7 @@ Versions 1.0.1 and 1.1.0 were never published; 1.2.0 updates 1.0.0 directly.
 5. **Google's developer verification.** Google has announced that from 2027 Android
    may also check sideloaded apps against developers registered with Google. Nothing
    changes for installs today; what it will mean for CoreLock is in
-   [docs/GOOGLE_DEVELOPER_VERIFICATION.md](docs/GOOGLE_DEVELOPER_VERIFICATION.md).
+   [docs/project/GOOGLE_DEVELOPER_VERIFICATION.md](docs/project/GOOGLE_DEVELOPER_VERIFICATION.md).
 
 ## First setup
 
@@ -215,12 +133,12 @@ Versions 1.0.1 and 1.1.0 were never published; 1.2.0 updates 1.0.0 directly.
 4. **Battery.** Setup warns you when Android restricts CoreLock in the background.
    Settings › Advanced › Diagnostics › Battery use shows whether Android may stop
    protection in the background, and opens the battery settings.
-   **Notifications.** Allow them when CoreLock asks: "Protection stopped" is a
+5. **Notifications.** Allow them when CoreLock asks: "Protection stopped" is a
    notification. While they are off, Home shows a card that opens their settings.
-5. **Kill switch.** In Android's VPN settings turn on **Always-on VPN** for
+6. **Kill switch.** In Android's VPN settings turn on **Always-on VPN** for
    CoreLock, and optionally **Block connections without VPN**. Only Android can
    block traffic once the tunnel is gone.
-6. **Language.** Settings › Language: System default, English, العربية, Français
+7. **Language.** Settings › Language: System default, English, العربية, Français
    or Nederlands.
 
 ## Protection levels
@@ -270,12 +188,22 @@ The same is true for TikTok and Facebook. See
   your DNS resolver) are listed in
   [Network requests the app makes](#network-requests-the-app-makes).
 
+CoreLock is not affiliated with or endorsed by AdGuard.
+
 ### How do I get YouTube without ads?
 
 CoreLock cannot do this (see above). What works is a browser with a content blocker,
 for example Firefox with the uBlock Origin add-on, and watching YouTube there instead
 of in the YouTube app. It removes ads on websites that CoreLock cannot reach, and you
 can keep CoreLock on for everything else.
+
+### A site or app stopped working. What do I do?
+
+On Home, tap **Something not working?**: it shows what was blocked for that app in the
+last hour and lets you allow it in a few taps, or pause protection for 5 minutes. You can
+also open a blocked row in the **Activity** tab and choose *Allow for this app* or *Allow
+everywhere*. More in the
+[blocking policy](docs/BLOCKING_POLICY.md#8-how-to-allow-list-a-domain-or-an-app).
 
 ### Does CoreLock hide my IP address?
 
@@ -291,13 +219,11 @@ CoreLock was first developed as PrivacyGuard. The application ID stays
 `com.privacyguard.app.enterprise` because Android only installs an update over an
 app with the same ID: changing it would make installed apps unable to update.
 
-CoreLock is not affiliated with or endorsed by AdGuard.
-
 ## Screens
 
 Four tabs: **Home**, **Apps**, **Activity** and **Settings**. Expert screens are under
 Settings › Advanced. Every 1.0 screen is still there; where each moved is in
-[RELEASE_NOTES_1.2.0.md](RELEASE_NOTES_1.2.0.md) ("Where things moved").
+[RELEASE_NOTES_1.2.0.md](docs/releases/RELEASE_NOTES_1.2.0.md) ("Where things moved").
 
 | Screen | Contents |
 |---|---|
@@ -312,25 +238,67 @@ Settings › Advanced. Every 1.0 screen is still there; where each moved is in
 | **Advanced › Network** | DNS server, encrypted DNS, QUIC, unencrypted and outdated-encryption blocking, certificate checks, public-IP check, two proxy servers. |
 | **Advanced › HTTPS inspection** | Captured HTTPS requests and responses for apps that allow it, risk, CA install; asks before every switch-on. |
 | **Advanced › Analysis** | Security analysis (TLS fingerprints, ciphers, CT), Statistics (score, network map, heatmap, trends, CSV and IT exports, PCAP), Alerts, Security systems (the 1.0 Home cards and their lists), Night report, Ad privacy, Ads & trackers. |
-| **Advanced › Diagnostics** | Checks, app integrity, battery, per-list counts and update times, block counters. |
+| **Advanced › Diagnostics** | Checks, app integrity, battery, per-list counts and update times, block counters, connection limits and handled errors. |
 
----
+## HTTPS inspection: what it can and cannot do
+
+- **Off by default.** Nothing is decrypted unless you turn it on in the app and
+  confirm the consent screen. Turning it off deletes the signing key.
+- **On a company-managed phone** your organisation's MDM can turn it on and give
+  consent on your behalf (`mitm_enabled`, `mitm_consent_given`). Nothing else can:
+  only your own switch and consent in the app, or the MDM of a phone your
+  organisation manages. When that policy is removed, what it turned on ends.
+- **Never silent.** While it decrypts, the VPN notification and the Home screen
+  say so, and say when your organisation turned it on. You also get a
+  notification the moment your organisation turns it on.
+- **It needs a certificate you install.** The app makes a certificate authority
+  (CA) on the phone; you install it in Android's settings yourself. The CA lasts
+  97 days and is renewed with your consent every 90 days.
+- **Most apps ignore it.** Since Android 7, apps trust user-installed
+  certificates only if their developer allows it, and most do not. Their traffic
+  stays encrypted; CoreLock shows only its metadata (app, server, size, time)
+  and says why. Apps that pin certificates are passed through the same way. In
+  practice inspection mostly reaches some browsers and apps built to allow it.
+- **Who can see the content:** it stays on the phone, in the encrypted database,
+  unless an administrator turns on SIEM shipping. Shipped events are always
+  redacted: personal data is removed from headers and text bodies, values in URL
+  query strings and form data are replaced, and binary bodies are kept as type and
+  size only.
+
+Technical detail, MDM keys and SIEM:
+[docs/architecture/FEATURES.md](docs/architecture/FEATURES.md#https-inspection-mdm-and-siem).
+
+## Permissions
+
+| Permission | Why |
+|---|---|
+| `BIND_VPN_SERVICE` (service) | Create the TUN interface |
+| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` | The VPN runs as a foreground service (`specialUse`, required on API 34+) |
+| `INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `CHANGE_NETWORK_STATE` | Forward traffic, DoH, network trust per Wi-Fi |
+| `QUERY_ALL_PACKAGES` | Show app names and icons for every connection; APK tracker scan |
+| `PACKAGE_USAGE_STATS` (user-granted Usage Access) | Foreground/background per connection, likely app for mic/camera, "app not opened" empty state |
+| `POST_NOTIFICATIONS` | Alerts (TLS fingerprint change, cleartext, background block, protection stopped, weekly report) |
+| `RECEIVE_BOOT_COMPLETED` | Restart the VPN after reboot |
+| `WAKE_LOCK` | Used by WorkManager for background jobs (blocklist refresh, pruning, weekly report) |
+| `SCHEDULE_EXACT_ALARM` | Restart protection after a crash (Android only allows it from an exact alarm); set only after a crash |
+| `WRITE_EXTERNAL_STORAGE` (Android 9 and older only, `maxSdkVersion="28"`) | Save the HTTPS-inspection CA certificate to Downloads so you can install it; asked at runtime, only when you export the CA. Exports (PCAP, CSV) are app-private and need no permission. |
+| Device admin (`BIND_DEVICE_ADMIN` receiver) | For company MDM (Intune, Workspace ONE, Jamf). Does nothing until a user or MDM activates it. |
+| Debug only: `DUMP` (receiver guard) | Debug hooks callable only from adb |
 
 ## Network requests the app makes
 
 | Request | When | What the other side learns |
 |---|---|---|
 | Upstream DNS (default 1.1.1.1; configurable, IP address only) or DoH (Cloudflare / Google / Quad9) | Every DNS lookup by any app; only to the chosen provider | The names looked up, from your IP |
-| Blocklists (raw.githubusercontent.com, cdn.jsdelivr.net as fallback mirror, small.oisd.nl) and the Exodus tracker list | Blocklists: at first start (any network); weekly on Wi-Fi or another unmetered network; on any network once a list has had no successful download for 14 days; failed lists are retried; "Refresh now" at any time. About 4 MB compressed for all lists. Exodus list: at most weekly | That the app is installed, from your IP |
+| Blocklists (raw.githubusercontent.com, cdn.jsdelivr.net as fallback mirror, small.oisd.nl) and the Exodus tracker list (reports.exodus-privacy.eu.org) | Blocklists: at first start (any network); weekly on Wi-Fi or another unmetered network; on any network once a list has had no successful download for 14 days; failed lists are retried; "Refresh now" at any time. About 4 MB compressed for all lists. Exodus list: at most weekly | That the app is installed, from your IP |
 | crt.sh (Certificate Transparency) | Only if turned on in Settings | Registrable domains of TLS servers you contact |
 | api.ipify.org | Only if "External IP check" is on, when diagnostics run | Your public IP |
 | SIEM endpoint (set by MDM) | Only on a company-managed phone, when the administrator enables shipping | Payload metadata; HTTPS with optional pinning and signing |
 | The two SOCKS5 servers you enter for Dual VPN (first and second hop) | Only while Dual VPN is on: every TCP connection, and DNS when DoH is on | The first server sees your IP address; the second sees the hosts you connect to. SOCKS5 itself is not encrypted, so the first server can read those host names and your SOCKS5 user names and passwords too. The content of HTTPS connections stays encrypted. |
 
-Everything else (history, fingerprints, baselines, sensor events, reports)
-stays on the device.
-
----
+Everything else (history, fingerprints, baselines, sensor events, reports) stays on the
+device. There is no analytics, no crash reporting and no update check: Settings › About
+opens the GitHub releases page in your browser instead.
 
 ## What the app can and cannot see
 
@@ -347,75 +315,35 @@ lookup packet belongs to the resolver, not the app. A lookup is credited to the
 app that connects to the answer within a minute; blocked or unused lookups stay
 "not attributable".
 
----
-
-## Architecture
-
-```
-┌───────────────────────────────────────────────────────────────────┐
-│ Jetpack Compose UI ── ViewModels (StateFlow) ── Room (SQLCipher)   │
-│        │                     │                                     │
-│        │          HomeEvidence · DomainClassifier · AlertFeed      │
-│        ▼                                                           │
-│ PrivacyVpnService (foreground, specialUse)                         │
-│   TUN read (poll) → parse → owner UID → filter → forward → TUN     │
-│   ├─ TCP:  TcpForwarder, IPv4 + IPv6 (state machine, flow control, │
-│   │        retransmission, ClientHello reassembly)                 │
-│   ├─ UDP:  UdpForwarder, IPv4 + IPv6 (fragments oversized replies) │
-│   ├─ DNS:  DnsHandler → blocklists / rules / AdSdkPolicy → DoH     │
-│   ├─ TLS:  ClientHelloParser → JA4/JA3 → TlsBaselineEngine         │
-│   ├─ Sessions: SessionTable (reaper) → ConnectionLogger (batched)  │
-│   ├─ SensorUsageWatcher (mic/camera) · ForegroundAppDetector       │
-│   └─ MITM: MitmEngine (enterprise only, consent-gated)             │
-└───────────────────────────────────────────────────────────────────┘
-```
-
-| Flow | Path |
-|---|---|
-| **Packet** | TUN → `IpPacket` / `Ipv6Packet` → owner UID (`ConnectivityManager.getConnectionOwnerUid`, `/proc` fallback; looked up once per connection) → `FilterEngine` (re-checked about once a second for live connections) → forwarder → protected socket → TUN |
-| **Session → history** | `SessionTable` closes or reaps a session → snapshot (app, hostname, SNI, bytes, foreground, screen) → `ConnectionLogger` batches into Room |
-| **App state** | Recorded once when a session opens: foreground from `UsageStatsManager` (`ForegroundAppDetector`), screen from `PowerManager.isInteractive` |
-| **Rules** | UI → `RulesRepo` → `RuleSyncBus` → service reloads in place |
-| **Home numbers** | `HomeViewModel` and Security systems (`DashboardViewModel`) reload when the database changes (at most every few seconds); "blocked today" is `BlockStats.today` everywhere; other drill-downs re-run `HomeEvidence.select()` for the same anchor time |
-| **Alerts** | Detector → notification with a deep link (`pg_nav_route`) → inbox / Security analysis |
-
-**Stack:** Kotlin, Jetpack Compose (Material 3), Navigation Compose, Room +
-SQLCipher, WorkManager, AppCompat per-app locales, BouncyCastle and OkHttp
-(enterprise).
-
----
-
 ## Data storage and privacy
 
-- **Two databases.** History (`privacyguard.db`, Room v12) is large and
-  disposable. Your configuration (rules, list toggles) lives in a separate
-  config database, so clearing history never deletes your rules.
+- **Two databases.** History is large and disposable. Your configuration (rules, list
+  toggles) lives in a separate config database, so clearing history never deletes your
+  rules. The tables are listed in [docs/architecture/CODE_MAP.md](docs/architecture/CODE_MAP.md#databases).
 - **Encryption at rest.** SQLCipher, with a passphrase wrapped by an Android
   Keystore key, so the database files are unreadable off the device.
   Plaintext databases from older installs are encrypted in place. The key is
   only unwrapped when a database is first used, off the main thread. SIEM
-  events waiting to be sent (enterprise) are held in memory only.
-- **History tables:**
-  - `connections`: app, IP/port, hostname, SNI, bytes, time, encryption, foreground, screen.
-  - `dns_queries`: app (when known), domain, blocked, screen off, app foreground.
-  - `connection_profiles`, `dns_anomalies`, `tls_alerts`.
-  - `tls_app_profiles` and `tls_fingerprints`: the per-app TLS baseline.
-  - `sensor_events`: mic/camera.
-  - `network_trust`, `app_stats`, `blocklist`, `payload_logs` (enterprise).
-- **Retention.** A daily `PruneWorker` deletes history past the retention you
-  choose (7/14/30/90 days) and caps the large tables at 500,000 rows. A
-  weekly VACUUM compacts the file. Schemas are exported to `app/schemas/` and
-  every migration has an instrumented test.
+  events waiting to be sent are held in memory only.
+- **What history holds:** per connection the app, IP/port, hostname, server name, bytes,
+  time, encryption, foreground and screen state; per DNS lookup the app (when known),
+  name, whether it was blocked, and screen and foreground state. Also the per-app TLS
+  baseline, detector findings, mic/camera use, network trust and, with HTTPS inspection
+  on, the inspected payloads.
+- **Retention.** A daily job deletes history past the retention you choose
+  (7/14/30/90 days) and caps the large tables at 500,000 rows. A weekly VACUUM
+  compacts the file.
 - **Clear all collected data** (Settings) erases every history table, exports,
-  PCAPs and the Certificate Transparency record, and what the running VPN holds
-  in memory; settings, rules and blocklists stay.
+  PCAPs, the Certificate Transparency record, SIEM events waiting to be sent, and what
+  the running VPN holds in memory; settings, rules and blocklists stay.
 - **Export and import of rules and settings** (Settings › Data): a JSON file saved where you
   choose with Android's file picker. It holds your rules and settings, never history,
   passwords, keys or HTTPS-inspection data; keep it private. Import shows what it will add
   and change before anything happens, adds rules without replacing yours, never lets an
   imported rule override malware protection, and is turned off on phones an organisation
   manages (ADR 0013).
-- **Screen privacy.** `FLAG_SECURE` blocks screenshots and recents thumbnails.
+- **Screen privacy.** `FLAG_SECURE` blocks screenshots and recents thumbnails
+  (Settings › Allow screenshots turns it off).
 - **Sensitive actions** (exports, PCAP, clearing data) require device
   authentication and are blocked on a tampered runtime. `AppSecurityMonitor`
   checks signature, debugger, root packages, emulator and build tags.
@@ -423,302 +351,8 @@ SQLCipher, WorkManager, AppCompat per-app locales, BouncyCastle and OkHttp
   turn backup off on every Android version, and `data_extraction_rules.xml`
   also excludes device-to-device transfer on Android 12+.
 
----
-
-## Languages and RTL
-
-- English, **Nederlands**, **Français** and **العربية**, with proper plurals
-  (French `one/many/other`, Arabic all six forms).
-- **Language picker** in Settings › Language: System default, English, العربية,
-  Français, Nederlands, each named in its own language. It uses per-app locales
-  (`AppCompatDelegate.setApplicationLocales`, `res/xml/locales_config.xml`, so
-  Android 13+ also lists the app under the phone's "App language") and
-  `AppLocalesMetadataHolderService` with `autoStoreLocales` for Android < 13.
-  The choice survives restarts and reboots, and switching to Arabic flips the
-  layout to RTL at once.
-- **Notifications follow the choice** while protection keeps running, also below
-  Android 13 where AppCompat applies it to activities only: `AppLanguage` keeps
-  its own copy of the choice and gives notification code a context in that
-  language.
-- **RTL:**
-  - `supportsRtl`; start/end instead of left/right.
-  - Auto-mirrored directional icons; direction-neutral separators.
-  - The heatmap mirrors its columns together with its labels.
-- **Locale formats:** dates and times via `DateUtils`, numbers via
-  `NumberFormat`, weekday names via `DateFormatSymbols`. Arabic shows
-  Arabic-Indic digits.
-- **Kept in English on purpose:** the IT report (for IT staff; PDF canvas text
-  shaping), SIEM payloads, logs and brand names.
-- **Native review needed:** the translations have not yet been reviewed by
-  native speakers.
-
----
-
-## Build
-
-### Requirements
-
-- Android Studio (recent stable) with JDK 17
-- Android SDK: compile and target API 36, minimum API 24
-
-### Debug builds
-
-```bash
-./gradlew :app:assembleEnterpriseDebug
-```
-
-On Windows use `gradlew.bat`.
-
-### Release builds
-
-Release builds **refuse to sign with the debug key**. CI checks that an
-unsigned release fails.
-
-1. Create a keystore (one time):
-
-   ```bash
-   keytool -genkey -v -keystore privacyguard-release.jks -alias privacyguard \
-     -keyalg RSA -keysize 4096 -validity 10000 \
-     -dname "CN=CoreLock, OU=Mobile, O=YourOrg, L=City, S=State, C=US"
-   ```
-
-2. Get the SHA-256 fingerprint (used by the integrity check):
-
-   ```bash
-   keytool -list -v -keystore privacyguard-release.jks -alias privacyguard \
-     | grep "SHA256:" | awk '{print $2}' | tr -d ':'
-   ```
-
-3. Copy `release-signing.properties.template` to
-   `release-signing.local.properties` (git-ignored). Fill in
-   `PRIVACYGUARD_RELEASE_STORE_FILE`, `…_STORE_PASSWORD`, `…_KEY_ALIAS`,
-   `…_KEY_PASSWORD` and `…_SIGNATURE_SHA256`. Gradle properties or environment
-   variables with the same names also work. `…_SIGNATURE_SHA256` is the 64-digit
-   hex value from step 2; case and colons don't matter, and the release build stops
-   if it is anything else.
-
-4. Build:
-
-   ```bash
-   ./gradlew :app:assembleEnterpriseRelease   # the APK published on GitHub Releases
-   ```
-
-   This is the only app, released as an APK on GitHub Releases (not Google Play).
-   The Gradle flavor is still called `enterprise` so the application ID and task
-   names stay stable for installed phones.
-
-R8 shrinking and obfuscation run on release builds (`app/proguard-rules.pro`).
-
----
-
-## Build variants
-
-| Variant | Application ID | Notes |
-|---|---|---|
-| `enterpriseDebug` | `com.privacyguard.app.enterprise` | Debuggable, debug hooks |
-| `enterpriseRelease` | `com.privacyguard.app.enterprise` | R8, release keystore required; the published APK |
-
-There is one flavor. The consumer flavor was removed on 2026-10-23; its history
-is in git (`0fd01e5` added it). HTTPS inspection, CA manager, payload UI, MDM and
-SIEM code live in `src/enterprise`, the shared engine in `src/main`.
-
----
-
-## Permissions
-
-| Permission | Why |
-|---|---|
-| `BIND_VPN_SERVICE` (service) | Create the TUN interface |
-| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` | The VPN runs as a foreground service (`specialUse`, required on API 34+) |
-| `INTERNET`, `ACCESS_NETWORK_STATE`, `ACCESS_WIFI_STATE`, `CHANGE_NETWORK_STATE` | Forward traffic, DoH, network trust per Wi-Fi |
-| `QUERY_ALL_PACKAGES` | Show app names and icons for every connection; APK tracker scan |
-| `PACKAGE_USAGE_STATS` (user-granted Usage Access) | Foreground/background per connection, likely app for mic/camera, "app not opened" empty state |
-| `POST_NOTIFICATIONS` | Alerts (TLS fingerprint change, cleartext, background block, VPN down, weekly report) |
-| `RECEIVE_BOOT_COMPLETED` | Restart the VPN after reboot |
-| `WAKE_LOCK` | Used by WorkManager for background jobs (blocklist refresh, pruning, weekly report) |
-| `SCHEDULE_EXACT_ALARM` | Restart protection after a crash (Android only allows it from an exact alarm); set only after a crash |
-| `WRITE_EXTERNAL_STORAGE` (Android 9 and older only, `maxSdkVersion="28"`) | Save the HTTPS-inspection CA certificate to Downloads so you can install it; asked at runtime, only when you export the CA. Exports (PCAP, CSV) are app-private and need no permission. |
-| Device admin (`BIND_DEVICE_ADMIN` receiver) | For company MDM (Intune, Workspace ONE, Jamf). Does nothing until a user or MDM activates it. |
-| Debug only: `DUMP` (receiver guard) | Debug hooks callable only from adb |
-
----
-
-## HTTPS inspection: what it can and cannot do
-
-- **Off by default.** Nothing is decrypted unless you turn it on in the app and
-  confirm the consent screen. Turning it off deletes the signing key.
-- **On a company-managed phone** your organisation's MDM can turn it on and give
-  consent on your behalf (`mitm_enabled`, `mitm_consent_given`). Nothing else can:
-  only your own switch and consent in the app, or the MDM of a phone your
-  organisation manages. When that policy is removed, what it turned on ends.
-- **Never silent.** While it decrypts, the VPN notification and the Home screen
-  say so, and say when your organisation turned it on. You also get a
-  notification the moment your organisation turns it on.
-- **It needs a certificate you install.** The app makes a certificate authority
-  (CA) on the phone; you install it in Android's settings yourself.
-- **Most apps ignore it.** Since Android 7, apps trust user-installed
-  certificates only if their developer allows it, and most do not. Their traffic
-  stays encrypted; CoreLock shows only its metadata (app, server, size, time)
-  and says why. Apps that pin certificates are passed through the same way. In
-  practice inspection mostly reaches some browsers and apps built to allow it.
-- **Who can see the content:** it stays on the phone, in the encrypted database,
-  unless an administrator turns on SIEM shipping. Shipped events are always
-  redacted (see PII redaction below): personal data is removed from headers and
-  text bodies, values in URL query strings and form data are replaced, and binary
-  bodies are kept as type and size only.
-
----
-
-## MDM, payload inspection and SIEM (details)
-
-- **HTTPS payload inspection (MITM).** Off by default and gated by explicit
-  consent:
-  - The app generates a local CA only once inspection is on and consented to;
-    on Android 11+ the user installs it in Settings.
-  - It forges per-host leaf certificates and logs requests and responses.
-  - Apps that pin certificates or ignore user CAs are passed through as
-    metadata-only, and the UI says why.
-  - *Block QUIC* drops QUIC handshakes on UDP/443 so browsers fall back to TLS
-    over TCP; other UDP/443 (calls, VPNs) is not affected.
-  - Turning inspection off deletes the signing key and tells the user how to
-    remove the installed CA.
-- **PII redaction**: emails, card numbers, phone numbers, JWTs, bearer tokens
-  and sensitive JSON fields, in headers and text bodies. Values in URL query
-  strings (also in Referer and Location headers) and in HTML form bodies become
-  `[REDACTED]`; a name is kept only when it looks like a field name and holds no
-  personal data (otherwise it is replaced too); bodies that are not text (images, files,
-  compressed or multipart data, HTTP/2 frames) are kept as type and size only.
-  Anything sent to the SIEM is always redacted this way. The local payload log is
-  redacted the same way while `mitm_redact_pii` is on (the default); with it off,
-  the inspector stores exactly what left the phone.
-- **SIEM shipping** happens automatically once 100 events are queued or a
-  minute after the first one, and "Ship now" sends the same queue.
-- **Consent from MDM** (`mitm_consent_given`) is valid for as long as the
-  policy asserts it (a user's own consent is asked again after 90 days); setting
-  it to false, or removing the managed configuration, withdraws it and stops
-  inspection. Removing the configuration also switches off inspection the MDM
-  turned on; the user's own choices stay.
-- **Automatic CA install** (`ca_install_automatic`, device or profile owner only)
-  happens only while inspection is on and consented to.
-- **MDM / managed configuration** (`application_restrictions.xml`): see the
-  table below.
-
-| Key | Purpose |
-|---|---|
-| `mitm_enabled`, `mitm_consent_given`, `ca_install_automatic` | Enable inspection and consent; automatic CA install on managed devices |
-| `mitm_redact_pii`, `mitm_retention_days` | PII redaction and payload retention |
-| `mitm_ship_to_siem`, `mitm_siem_endpoint`, `mitm_siem_api_key` | SIEM forwarding (HTTPS) |
-| `mitm_siem_signing_key`, `mitm_siem_pin_sha256` | Payload signing and certificate pinning for the SIEM endpoint |
-
-A Device Admin receiver supports Intune, Workspace ONE, Jamf and similar.
-
----
-
-## Testing
-
-```bash
-./gradlew :app:testEnterpriseDebugUnitTest            # JVM, no device
-./gradlew :app:lintEnterpriseDebug
-./gradlew :app:connectedEnterpriseDebugAndroidTest     # instrumented (emulator; uninstalls the app)
-```
-
-- **JVM unit tests:** 674 (October 2026). They cover:
-  - the TCP forwarder end to end against a loopback server (lost segment,
-    small window, RSTs), UDP reply fragmentation, resolver address validation
-  - packet parsing, IPv6 address formatting, checksums
-  - ClientHello parsing, JA4 (including the FoxIO reference vector), JA3, cipher analysis
-  - TLS baseline engine
-  - session table, filter engine, domain filter, DNS anomalies
-  - behavior DNA, permission mismatch, stalkerware
-  - ad-SDK policy, PII redaction
-  - domain classifier, traffic model, Home evidence filters
-- **Instrumented tests:** every Room migration (`AppDatabaseMigrationTest`,
-  `ConfigSplitMigrationTest`) against the exported schemas.
-- **CI** (`.github/workflows/ci.yml`, on push and PR to `main`):
-  - unit tests
-  - lint
-  - R8 shrinking of the release variant
-  - instrumented tests (Room migrations) on an API 34 emulator
-  - "unsigned release must fail" check
-  - all actions pinned to commit SHAs
-  - gitleaks secret scan
-
-  Dependabot keeps dependencies current.
-- **Device testing:** done on a Samsung Galaxy Note20 (Android 13) with
-  Facebook, Instagram, a game and a Samsung system app.
-
----
-
-## Debug tooling
-
-Debug builds only (`src/debug`, never in release):
-
-- **`DebugHooksReceiver`**, protected by `android.permission.DUMP`, so only adb
-  can call it:
-
-  ```bash
-  # end the 7-day TLS learning period for one app (to test alerts)
-  adb shell am broadcast -a com.privacyguard.debug.TLS_END_LEARNING \
-      --es package <pkg> -p com.privacyguard.app.enterprise
-  # list (and with --ez apply true, delete) alerts that tests created for <pkg>
-  adb shell am broadcast -a com.privacyguard.debug.DELETE_TEST_ALERTS \
-      --es package <pkg> -p com.privacyguard.app.enterprise
-  ```
-
-  Debug builds never set FLAG_SECURE, so screens can be captured for documentation
-  without a hook.
-
-- **Open a screen directly:**
-
-  ```bash
-  adb shell am start -n com.privacyguard.app.enterprise/com.privacyguard.app.MainActivity \
-      --es pg_nav_route "appTraffic/com.instagram.android"
-  ```
-
-  Routes include `dashboard`, `apps`, `connections`, `statistics`, `settings`,
-  `alerts`, `sleepReport`, `adPrivacy`, `crypto`, `rules`, `ads`, `payloads`,
-  `evidence/<KIND>`, `appTraffic/<package>?from=&to=&idle=1` and
-  `domain/<host>`.
-
----
-
-## Project structure
-
-```
-app/src/
-├── main/java/com/privacyguard/
-│   ├── core/          packet (IPv4/IPv6/TCP/UDP/DNS), session, filter, tls (ClientHello, JA3/JA4, ciphers, CT)
-│   ├── vpn/           forwarder (TcpForwarder, UdpForwarder, DnsHandler), tunnel (TUN reader/writer),
-│   │                  firewall (domain hash sets, IP/CIDR), inspector (DNS anomalies, encryption),
-│   │                  interception (TLS inspection seam)
-│   ├── platform/      PrivacyVpnService, AppTracker, ForegroundAppDetector, NotificationHelper
-│   ├── ui/            AppNavHost (navigation, bottom bar, routes)
-│   └── app/
-│       ├── adprivacy/ SensorUsageWatcher, PermissionAudit, AdSdkPolicy, AdPrivacyLinks + screen
-│       ├── core/      tracker (TrackerDatabase, DomainClassifier, Exodus), behavior, detection,
-│       │              network trust, privacy score, report, pcap, security, stats, apk, geoip
-│       ├── data/      Room entities/DAOs (AppDatabase v10, ConfigDatabase), repositories, preferences
-│       ├── vpn/       TlsFingerprintMonitor, KillSwitch, VpnManager, BootReceiver, UidMapper
-│       ├── workers/   BlocklistUpdateWorker, PruneWorker, WeeklyReportWorker
-│       ├── tile/      Quick Settings tile
-│       └── ui/        dashboard, apps, traffic (app traffic, domain detail, evidence),
-│                      connections, statistics, sleep, alerts, security, rules, ads,
-│                      settings (+ LanguagePicker), onboarding, text (FindingText), theme
-├── main/res/          values/strings_*.xml + values-nl / values-fr / values-ar, xml/locales_config.xml
-├── enterprise/        HTTPS inspection engine, CA manager, payload UI, MDM receivers, SIEM, strings_mitm
-├── debug/             DebugHooksReceiver
-├── test/              JVM unit tests
-└── androidTest/       Room migration tests
-app/schemas/           exported Room schemas
-tools/geoip/           generates the GeoIP asset
-docs/  .github/
-```
-
-> Two package roots exist: `com.privacyguard.app.…` (app, UI, data) and
-> `com.privacyguard.…` (packet engine: core, vpn, platform, mdm). Every file sits
-> in the folder of its declared package.
-
----
+What is stored where, for how long, and what leaves the phone, in full:
+[HOW_IT_WORKS.md §7](docs/architecture/HOW_IT_WORKS.md#7-privacy-what-is-stored-for-how-long-and-what-leaves-the-phone).
 
 ## Known limitations
 
@@ -726,21 +360,44 @@ docs/  .github/
   without root.** They come from the same servers as the content, so blocking them by
   name would break the app. More limits of name-based blocking are in
   [docs/BLOCKING_POLICY.md](docs/BLOCKING_POLICY.md#5-limits-of-domain-level-blocking).
-- **TLS fingerprints:**
-  - Learning covers only the code paths an app uses in its first 7 days, so a
-    feature used later can alert once.
-  - New fingerprints are accepted silently after an update; that is also when a
-    malicious SDK could arrive.
-  - QUIC (UDP/443) is not fingerprinted.
 - **Encrypted Client Hello (ECH)** hides the real server name of some browser
   connections; CoreLock sees only a shared outer name. At Strict, an optional setting
   (off by default) removes the ECH key from DNS answers so the real name is readable;
   your network can then see it too. Details in
-  [docs/BLOCKING_POLICY.md](docs/BLOCKING_POLICY.md#5-limits-of-domain-level-blocking).
+  [docs/BLOCKING_POLICY.md](docs/BLOCKING_POLICY.md#6-what-corelock-cannot-block).
+- **The kill switch is Android's.** While CoreLock is not running (after a crash, or
+  before the first unlock after a restart) traffic is not filtered unless Android's
+  Always-on VPN with *Block connections without VPN* is on for CoreLock. Updating the
+  app also stops the VPN unless Always-on VPN is on.
+- **With notifications off, a crash can't be reported to you.** Home shows a card until
+  you turn them on.
+- **Per-app rules at the DNS layer.** Android's resolver makes the lookup, not the app,
+  so per-app Allow rules and ad-SDK exceptions apply only to the connection itself.
 - **Per-app rules on Android 7 to 9.** On these versions a per-app rule can
   occasionally apply to the wrong app. Android 10 and newer are not affected.
 - **Meta app events** share `graph.facebook.com` with login, so they cannot be
-  blocked at DNS without breaking "Continue with Facebook".
+  blocked without breaking "Continue with Facebook".
+- **Chrome's "Use secure DNS" must stay on automatic.** If it is set to a
+  specific provider (for example Cloudflare), Chrome sends every lookup to that
+  encrypted DNS server and does not fall back. CoreLock blocks that server,
+  because it would skip the blocklist, so pages fail to load with
+  `DNS_PROBE_FINISHED_BAD_SECURE_CONFIG`. In Chrome, open Settings › Privacy and
+  security › Use secure DNS and choose "Use your current service provider".
+  Other apps with a fixed encrypted-DNS provider may fail the same way.
+- **Address rules are IPv4 only.** IPv6 connections are still checked by name and by app.
+- **Fragmented UDP is dropped.** UDP datagrams larger than the tunnel's packet size
+  arrive in fragments, which carry no port to match an app or rule, so CoreLock drops
+  them (counted in Settings › Advanced › Diagnostics). Apps that rely on such large
+  datagrams fail.
+- **Large DNS answers** need DNS over TCP, which the tunnel does not offer, so
+  answers that do not fit in a 4 KB UDP reply fail.
+- **HTTPS inspection on a managed phone without Device or Profile Owner rights:** when
+  the inspection certificate is renewed, CoreLock can't install the new one itself.
+  Until it is installed, connections pass through undecrypted and Home says so.
+- **TLS fingerprints:** learning covers only what an app does in its first 7 days, so a
+  feature used later can alert once; new fingerprints are accepted silently after an
+  update, which is also when a malicious SDK could arrive; QUIC is not fingerprinted.
+  The JA3 watch-list is small and unverified; treat matches as hints.
 - **"First-party" is judged from hostnames.** A first-party label can include
   the maker's own analytics on the same servers. IP-only connections show
   "owner unknown".
@@ -749,39 +406,41 @@ docs/  .github/
   shows "unknown".
 - **History is written when a connection closes** (or after 5 minutes idle for
   TCP, 30 s for UDP). Very recent, still-open connections appear a little later.
-- **Updating the app stops the VPN** unless Android's Always-on VPN is enabled
-  for the app. Enable Always-on VPN for continuous protection.
 - **Forwarding stalls under heavy load** (rare TLS `BAD_RECORD_MAC`) were traced
   to server→app segments being dropped at a full TUN queue and never resent.
   `TcpForwarder` now reads only what the app's window and the queue can take
   and retransmits lost segments; this still needs confirming on a device.
-- **Chrome's "Use secure DNS" must stay on automatic.** If it is set to a
-  specific provider (for example Cloudflare), Chrome sends every lookup to that
-  encrypted DNS server and does not fall back. CoreLock blocks that server,
-  because it would skip the blocklist, so pages fail to load with
-  `DNS_PROBE_FINISHED_BAD_SECURE_CONFIG`. In Chrome, open Settings › Privacy and
-  security › Use secure DNS and choose "Use your current service provider".
-  Other apps with a fixed encrypted-DNS provider may fail the same way.
-- **Large DNS answers** need DNS over TCP, which the tunnel does not offer, so
-  answers that do not fit in a 4 KB UDP reply fail.
-- **Address rules are IPv4 only.** IPv6 connections are still checked by name and by app.
-- **Fragmented UDP is dropped.** UDP datagrams larger than the tunnel's packet size
-  arrive in fragments, which carry no port to match an app or rule, so CoreLock drops
-  them (counted in Settings › Diagnostics). Apps that rely on such large datagrams fail.
-- **Before the first unlock after a restart** CoreLock is not running yet. Turn on
-  Android's Always-on VPN with *Block connections without VPN* so nothing leaves the
-  phone unfiltered until it starts.
-- **HTTPS inspection on a managed phone without Device or Profile Owner rights:** when
-  the inspection certificate is renewed, CoreLock can't install the new one itself.
-  Until it is installed, connections pass through undecrypted and Home says so.
-- **The JA3 watch-list is small and unverified;** treat matches as hints.
-- **Translations need native review.**
-- **The debug build's integrity check** expects a specific debug certificate;
-  on another machine it reports "Signature mismatch" and blocks protected
-  actions in debug builds. Set the debug SHA-256 in `app/build.gradle.kts` or
-  use a release build.
+- **Translations need native review.** The Arabic, French and Dutch texts are machine
+  translations ([docs/translations/](docs/translations/README.md)).
 
----
+The technical list, with every limit and the reason for it, is in
+[HOW_IT_WORKS.md §9](docs/architecture/HOW_IT_WORKS.md#9-known-limits).
+
+## Building from source
+
+Requirements: Android Studio with JDK 17, Android SDK 36 (minimum API 24).
+
+```bash
+./gradlew :app:assembleEnterpriseDebug          # debug build
+./gradlew :app:testEnterpriseDebugUnitTest      # unit tests
+```
+
+A release build needs your own signing key, set up from
+`release-signing.properties.template`; it refuses to fall back to the debug key. An APK
+you sign yourself can't update the official CoreLock. Signing steps, tests, CI and debug
+tools: [docs/project/DEVELOPMENT.md](docs/project/DEVELOPMENT.md).
+
+## Documentation
+
+Everything else is indexed in [docs/README.md](docs/README.md). The main documents:
+
+- [How CoreLock works](docs/architecture/HOW_IT_WORKS.md): the path of one connection,
+  how every number is calculated, each detector and its thresholds, what is stored and
+  what leaves the phone.
+- [Blocking policy](docs/BLOCKING_POLICY.md): what each level blocks, what is left open on
+  purpose, and how to report a wrong block.
+- [Feature reference](docs/architecture/FEATURES.md) and [code map](docs/architecture/CODE_MAP.md).
+- [Architecture decisions](docs/adr/README.md) and the [changelog](docs/releases/CHANGELOG.md).
 
 ## Security
 
@@ -795,8 +454,17 @@ caa82092caf86f9ce7d94f5b7c4a4476a3eb1a5bfa238f7b1d18cd85809bc430
 ```
 
 Every release is signed with this key; the same fingerprint is on each release
-page. Settings › Runtime integrity shows whether the running app's signature
-matches it.
+page. Settings › Advanced › Diagnostics › App integrity shows whether the running app's
+signature matches it.
+
+## How this project was built
+
+CoreLock was developed with AI assistance under the direction of its owner, Ammar
+Najjar. AI tools (Claude and the Claude Code coding agent) were used for implementation, tests and
+documentation, following the rules in `CLAUDE.md`; every product and security decision, every review,
+commit, merge and release, and the signing of every APK were done by the owner. The full,
+factual account, including how the work was checked and what was not tested, is in
+[docs/project/HOW_THIS_PROJECT_WAS_BUILT.md](docs/project/HOW_THIS_PROJECT_WAS_BUILT.md).
 
 ## License
 
@@ -819,7 +487,8 @@ Settings › About › Open-source licenses.
 
 ### Data
 
-CoreLock downloads these lists at runtime; they are not shipped inside the APK.
+CoreLock downloads these lists at runtime. Only one is also shipped inside the APK: a copy
+of HaGeZi Threat Intelligence Feeds mini, used until the first download.
 
 | Data | Author | License |
 |---|---|---|
