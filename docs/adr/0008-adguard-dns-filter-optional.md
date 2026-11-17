@@ -115,7 +115,7 @@ from about 4.1 MB to about 5.7 MB (gzip).
      wording that suggests AdGuard made, endorses or supports CoreLock. The README
      already says "CoreLock is not affiliated with or endorsed by AdGuard."
 7. **Docs in the same change:** `docs/BLOCKING_POLICY.md` §3 (the new option and its
-   memory cost), the README levels and network tables, `docs/HOW_IT_WORKS.md`.
+   memory cost), the README levels and network tables, `docs/architecture/HOW_IT_WORKS.md`.
 
 ### AdGuard Mobile ads filter: not added
 

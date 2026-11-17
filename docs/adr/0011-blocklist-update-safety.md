@@ -52,7 +52,7 @@ Gaps found:
 3. **Count download failures by reason** (timeout, HTTP status, too large, not
    HTTPS, other) instead of the empty catch, and show them in Diagnostics. No domain
    or URL in logs.
-4. **No signature scheme now.** Document the limit in `docs/HOW_IT_WORKS.md`. If an
+4. **No signature scheme now.** Document the limit in `docs/architecture/HOW_IT_WORKS.md`. If an
    upstream starts publishing signatures or checksums, verify them then.
 
 ## Consequences

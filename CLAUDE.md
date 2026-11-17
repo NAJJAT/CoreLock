@@ -271,12 +271,12 @@ All name decisions — DNS, CNAME, HTTPS/SVCB target, TCP SNI, QUIC SNI — go t
 
 **Why this order:** the user's explicit Block always wins. Malware sits above user Allow so a mistaken Allow can't expose the user to a known phishing site without a warning; only an informed, confirmed choice (`overridesSecurity`) lets it through. Ads sit below user Allow so the user can always fix a broken site.
 
-**Which user rule applies** (`FilterEngine`, `ORDER`): all user rules share `HIGH_PRIORITY`; then the more specific rule wins (app + destination before app only before destination only; exact name/IP before wildcard/range, longer before shorter; more conditions before fewer); between equally specific rules, **Block wins** (owner's decision, 2026-10-23). A user Block rule for a plain name also covers its subdomains; Allow rules stay exact (ADR 0017, owner's decision 2026-11-11, 1.3); a rule's rank still comes from how it is written. Every screen that creates a user rule must use `HIGH_PRIORITY`, or that rule silently loses to every matching Allow.
+**Which user rule applies** (`FilterEngine`, `ORDER`): all user rules share `HIGH_PRIORITY`; then the more specific rule wins (app + destination before app only before destination only; exact name/IP before wildcard/range, longer before shorter; more conditions before fewer); between equally specific rules, **Block wins** (owner's decision, 2026-10-23). A user Block rule for a plain name also covers its subdomains; Allow rules stay exact (ADR 0017, owner's decision 2026-11-11, 1.2.1); a rule's rank still comes from how it is written. Every screen that creates a user rule must use `HIGH_PRIORITY`, or that rule silently loses to every matching Allow.
 
 Invariants:
 - **Never add a second matching path.** If DNS and SNI disagree, a name blocked in one layer leaks through the other. The property test (fixed seed `20261021`) checks DNS and SNI against a model of this order; keep it, and keep its seed.
 - **Normalize every name** before matching: lowercase, remove the trailing dot. `ads.example.com.` once bypassed user rules because of a trailing dot. This also applies in `FilterRule.domainMatches`.
-- **Every block records a `BlockSource`** (`DNS`, `SNI`, `QUIC`, `DOH`, `DOT`, `HTTP` for the site name of a cleartext request, since 1.3) and is counted, so "Stopped by" in the connection details is always true. DNS blocks are rows in `dns_queries`, whose source is implied (no column). TCP SNI and QUIC SNI stay separate values. QUIC drops that are not a decision on a name (QUIC blocked, unreadable, hold limit) are counters only, never rows: apps retry them by the hundred. Blocked connection rows are merged per app, host, port, protocol and source in fixed 60 s windows (`BlockRowGate`); every attempt is still counted (written + merged, Settings › Diagnostics), so counters stay exact. A new `BlockSource` value needs no migration (the column is text; unknown values read as null).
+- **Every block records a `BlockSource`** (`DNS`, `SNI`, `QUIC`, `DOH`, `DOT`, `HTTP` for the site name of a cleartext request, since 1.2.1) and is counted, so "Stopped by" in the connection details is always true. DNS blocks are rows in `dns_queries`, whose source is implied (no column). TCP SNI and QUIC SNI stay separate values. QUIC drops that are not a decision on a name (QUIC blocked, unreadable, hold limit) are counters only, never rows: apps retry them by the hundred. Blocked connection rows are merged per app, host, port, protocol and source in fixed 60 s windows (`BlockRowGate`); every attempt is still counted (written + merged, Settings › Diagnostics), so counters stay exact. A new `BlockSource` value needs no migration (the column is text; unknown values read as null).
 
 ### 5.4 QUIC (`QuicGate`)
 
@@ -374,11 +374,11 @@ A broken migration deletes the user's rules and history. Treat schema changes as
 ## 8. UI, text, languages and accessibility
 
 - **No hardcoded user-visible text.** Every new or changed string goes into `values`, `values-ar`, `values-fr` and `values-nl` in the same change.
-- Mark machine-made translations in the report and add them to `docs/TRANSLATION_REVIEW_*.md` so a native speaker can check them. Arabic is reviewed by the owner; French and Dutch need native speakers.
+- Mark machine-made translations in the report and add them to `docs/translations/TRANSLATION_REVIEW_*.md` so a native speaker can check them. Arabic is reviewed by the owner; French and Dutch need native speakers.
 - **RTL:** use `start`/`end`, never `left`/`right`; mirror directional icons; test long translations (French and Dutch are often 30% longer).
 - **Accessibility:** content descriptions on icons, touch targets ≥ 48 dp, sufficient contrast, works with large font sizes and TalkBack.
 - **Honest UI:** never show "protected" when the tunnel isn't running. Show what was blocked and why ("Stopped by").
-- **Warnings come before reliance:** Private DNS in hostname mode, missing Usage Access (needed for background-only rules), battery optimization, notifications off (nothing could say that protection stopped; Home card since 1.3) — shown when the user enables the feature, not buried in settings.
+- **Warnings come before reliance:** Private DNS in hostname mode, missing Usage Access (needed for background-only rules), battery optimization, notifications off (nothing could say that protection stopped; Home card since 1.2.1) — shown when the user enables the feature, not buried in settings.
 - Every screen handles loading, empty and error states.
 
 ---
@@ -467,10 +467,10 @@ The app (the `enterprise` flavor, the only one) is released as a signed APK on G
 
 1. `main` green on all four checks.
 2. Version: `versionCode` always increases by at least 1 (Android refuses updates otherwise); `versionName` follows semantic versioning (`1.0.0`, `1.0.1`, `1.1.0`). The first release is `versionName = "1.0.0"`, `versionCode = 1` (`app/build.gradle.kts`), tag `v1.0.0`. Git tag `vX.Y.Z` is created by the owner.
-3. Translations reviewed (`docs/TRANSLATION_REVIEW_*.md`).
+3. Translations reviewed (`docs/translations/TRANSLATION_REVIEW_*.md`).
 4. Owner builds and signs with the real key (never the agent).
-5. Release page contains: the APK, its **SHA-256 checksum**, the **signing certificate SHA-256 fingerprint** (same as in the README), release notes, and known limitations (§16). The `release-checks.yml` run must be green afterwards. Full list: `docs/RELEASE_CHECKLIST.md` (release and deploy checks; no GitHub attestations, owner's decision 2026-11-05, options B and C documented there).
-6. Release notes (`RELEASE_NOTES_X.Y.md`) in plain language: what's new, what's fixed, what can't be blocked, how to update.
+5. Release page contains: the APK, its **SHA-256 checksum**, the **signing certificate SHA-256 fingerprint** (same as in the README), release notes, and known limitations (§16). The `release-checks.yml` run must be green afterwards. Full list: `docs/releases/RELEASE_CHECKLIST.md` (release and deploy checks; no GitHub attestations, owner's decision 2026-11-05, options B and C documented there).
+6. Release notes (`docs/releases/RELEASE_NOTES_X.Y.Z.md`) in plain language: what's new, what's fixed, what can't be blocked, how to update.
 
 The agent can prepare everything except signing and publishing: version bump proposal, release notes, translation review file, changelog, and a checklist of what the owner must do.
 
@@ -482,7 +482,7 @@ Documentation is part of the product. Outdated docs in a security app are a secu
 
 ### 13.1 README.md must contain, in this order
 
-> **Status (2026-10-26):** all eleven parts exist (Install, First setup, Protection levels and the Credits table were added). The order differs slightly (technical sections sit between them). The signing fingerprint under Security was filled in with the 1.0.0 signing certificate, together with `RELEASE_NOTES_1.0.md`.
+> **Status (2026-11-17):** all eleven parts exist, in this order. Between them sit a few user sections (FAQ, Screens, HTTPS inspection, what the app can and cannot see, Known limitations, Documentation). Technical detail moved to `docs/architecture/` and `docs/project/DEVELOPMENT.md`. The signing fingerprint under Security is the 1.0.0 signing certificate; `release-checks.yml` reads it from the README, so keep the heading "Release signing certificate (SHA-256)" and the bare 64-digit line under it.
 
 1. **What CoreLock is** — one paragraph, no hype.
 2. **What it blocks and what it can't** — the four layers in plain words, and the honest limits (§16).
@@ -498,10 +498,12 @@ Documentation is part of the product. Outdated docs in a security app are a secu
 
 ### 13.2 Other documents
 
-- `docs/HOW_IT_WORKS.md` — deeper technical explanation of §5 for curious users and contributors.
-- `docs/BLOCKING_POLICY.md` — user-facing blocking policy: what each level blocks, what is exempt and why, what can't be blocked, how to allow-list and report. Update it in the same change as any list, level, exemption or precedence change. Issue forms in `.github/ISSUE_TEMPLATE/` link to it.
-- `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 are accepted (2026-10-25); 0007–0011 are proposed, 0012 is accepted (2026-10-28) 0013 is accepted (2026-11-04); 0014 is proposed and 0015 accepted (2026-11-05); 0016 is proposed (2026-11-11, for 1.3); 0017 is accepted (2026-11-16, 1.3). Never rewrite an accepted record; supersede it with a new one.
-- `RELEASE_NOTES_X.Y.md`, `docs/TRANSLATION_REVIEW_X.Y.md`.
+- `docs/README.md` — index of every document, one line each. Add a line when you add a document.
+- `docs/architecture/HOW_IT_WORKS.md` — deeper technical explanation of §5 for curious users and contributors; `FEATURES.md` and `CODE_MAP.md` next to it hold the feature reference and the code map.
+- `docs/BLOCKING_POLICY.md` — user-facing blocking policy: what each level blocks, what is exempt and why, what can't be blocked, how to allow-list and report. Update it in the same change as any list, level, exemption or precedence change. Issue forms in `.github/ISSUE_TEMPLATE/` and the app itself (`url_blocking_policy`, shipped in 1.2.0) link to this exact path, so it must not move.
+- `docs/adr/NNNN-title.md` — one Architecture Decision Record per significant decision (context, decision, alternatives, consequences). Index and template in `docs/adr/README.md`; 0001–0006 are accepted (2026-10-25); 0007–0011 are proposed, 0012 is accepted (2026-10-28) 0013 is accepted (2026-11-04); 0014 is proposed and 0015 accepted (2026-11-05); 0016 is proposed (2026-11-11, for 1.3); 0017 is accepted (2026-11-16, 1.2.1). Never rewrite an accepted record; supersede it with a new one.
+- `docs/releases/`: `RELEASE_NOTES_X.Y.Z.md`, `CHANGELOG.md` (one entry per version), `RELEASE_CHECKLIST.md`. Published notes are never rewritten.
+- `docs/translations/TRANSLATION_REVIEW_X.Y.md` (current version only); `docs/testing/` (the current phone checklist `PHONE_TEST_X.Y.Z.md`, security test reports); `docs/ux/` (design spec and audit); `docs/project/` (development guide, project history, decision briefs); `docs/archive/` (finished working logs, earlier phone checklists and translation reviews). When a new version gets its checklist or review, move the previous one to `docs/archive/` and update `docs/README.md`.
 - `SECURITY.md` — vulnerability reporting.
 
 ### 13.3 Rules
@@ -578,7 +580,7 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 1. Per-app rules at the DNS layer (correlate DNS answers with later connections).
 2. Block counters: **"blocked today" is unified (2026-11-05, 1.1):** the notification, Home, Activity, Apps, Statistics, Security systems and the Ads screen all read `BlockStats.today` (local midnight to now); `BlockCountAgreementTest` checks it. Still open: SNI and QUIC counters (name blocks, QUIC blocked, unreadable, hold limit) are shown only in Settings › Advanced › Diagnostics and reset when protection restarts; dual-hop UDP drops aren't counted. Blocked rows are merged per minute since 2026-10-24 (`BlockRowGate`), so the stored numbers no longer grow with retries.
 3. **Done (2026-11-05, 1.2): compact blocklist storage** (ADR 0014, Proposed): fingerprints in sorted arrays for the DNS/SNI, security and known-tracker sets, and a binary start-up cache. Still to do: measure PSS per level on a phone and record it in §6.2. Remove this item once 1.2 ships.
-4. **Polling loops: done (2026-11-05, 1.1).** The 8 `while(true)` loops in AlertInbox, AppDetail, Connections, Dashboard, Settings and Statistics now reload when Room reports a change (`ui/DbChanges.kt`, at most every few seconds), and load errors show a banner with Try again instead of an empty `catch`. Idle CPU went from 42–68 % to about 1 % of a core on the emulator. Left: the HTTPS-inspection screen's 5 s status loop (`MitmViewModel.kt:125`, MITM code, §14.2). The empty catches in `MitmEngine` and `UidMapper` were replaced in the 1.3 bug-fix round (counted, shown in Diagnostics › Handled errors).
+4. **Polling loops: done (2026-11-05, 1.1).** The 8 `while(true)` loops in AlertInbox, AppDetail, Connections, Dashboard, Settings and Statistics now reload when Room reports a change (`ui/DbChanges.kt`, at most every few seconds), and load errors show a banner with Try again instead of an empty `catch`. Idle CPU went from 42–68 % to about 1 % of a core on the emulator. Left: the HTTPS-inspection screen's 5 s status loop (`MitmViewModel.kt:125`, MITM code, §14.2). The empty catches in `MitmEngine` and `UidMapper` were replaced in the 1.2.1 bug-fix round (counted, shown in Diagnostics › Handled errors).
 5. Per-packet allocations on the hot path (`copyOfRange` per UDP packet, IP addresses parsed into Strings per packet in `PrivacyVpnService`); measure first (§6.2). After 1.0.
 6. Wi-Fi-only / mobile-data-only rules.
 7. Reassemble split ClientHellos on ports other than 443; add DoH lists to the start-up cache (~30 s gap while the encrypted DB loads).
@@ -592,12 +594,12 @@ Simple, clear English. Short sentences. No filler, no repeating the prompt.
 14. **AdGuard DNS filter as an optional list** (ADR 0008, Proposed): off by default, opt-in at Standard and Strict; after item 13 and ideally after item 3 (memory).
 15. **Content filtering in browsers through HTTPS inspection** (ADR 0009, Proposed, includes `$removeparam`): design only; needs a security review before code.
 16. **Show why a name was blocked and allow it in one tap** (ADR 0010, Proposed): list name at display time, "Allow this name" with the existing malware warning.
-17. **Blocklist update safety** (ADR 0011, Proposed): the half-size refusal is done (2026-10-28, `BlocklistManager.storeDownloaded`); still to do: show last update per list. Download failures are counted since the 1.3 bug-fix round (Diagnostics › Handled errors).
+17. **Blocklist update safety** (ADR 0011, Proposed): the half-size refusal is done (2026-10-28, `BlocklistManager.storeDownloaded`); still to do: show last update per list. Download failures are counted since the 1.2.1 bug-fix round (Diagnostics › Handled errors).
 18. **Revisit DoH as the default upstream** (ADR 0012): DoH stays off by default because a DoH failure answers SERVFAIL with no fallback (`DnsHandler.kt:378`), which breaks captive portals and networks that block DoH. Revisit once a fallback or captive-portal handling exists.
 19. **For a later release: hardening from the October 2026 security review** (one line each; details stay with the owner):
     - **Done (1.2):** harden TLS and QUIC name handling for incomplete or unreadable handshakes (fail closed at Standard and Strict, §4.1 principle 4). Remove this line once 1.2 ships.
-    - **Done (1.3, bug-fix round, 2026-11-11/13):** cap the connections the engine tracks; bound the SIEM queue and back off between failed sends; bound the TLS fingerprint baseline; check SIEM destination and consent again at send time; name checks for cleartext HTTP; re-check open connections by name; replace the empty catches in the inspection engine, the list downloader and the owner lookup. Remove this line once 1.3 ships.
-    - Improve app attribution on Android 7–9 (the limit in §16.1): faster lookup, off the packet thread (errors are counted since 1.3).
+    - **Done (1.2.1, bug-fix round, 2026-11-11/13):** cap the connections the engine tracks; bound the SIEM queue and back off between failed sends; bound the TLS fingerprint baseline; check SIEM destination and consent again at send time; name checks for cleartext HTTP; re-check open connections by name; replace the empty catches in the inspection engine, the list downloader and the owner lookup. Remove this line once 1.2.1 ships.
+    - Improve app attribution on Android 7–9 (the limit in §16.1): faster lookup, off the packet thread (errors are counted since 1.2.1).
     - Bound and protect the Certificate Transparency monitor's stored data.
     - Harden storage of packet captures.
     - Harden DNS and TLS parsers for remaining edge cases.

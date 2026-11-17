@@ -71,7 +71,7 @@ same setting as step 3 if the owner wants it.
 Any fallback is a leak the user must agree to; that's why step 3 is off by default and
 is never used with DoH. The README network table needs no new host for step 3 (the
 network's resolver is not a host we choose), but the README and
-`docs/HOW_IT_WORKS.md` must say that, with the setting on, names can go to the
+`docs/architecture/HOW_IT_WORKS.md` must say that, with the setting on, names can go to the
 network's DNS. A second provider would be a new outbound host and must be added to the
 network tables (`OutboundHostsDisclosureTest`).
 

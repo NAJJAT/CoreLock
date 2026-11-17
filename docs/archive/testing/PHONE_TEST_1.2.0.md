@@ -2,7 +2,7 @@
 
 Checks that only a real phone on a real network can answer, added for 1.2 (hardening plan,
 task 0.4). 1.1.0 was never published, so users update from the published **1.0.0** straight
-to 1.2.0. Run check 0 below first (the update path), then `docs/PHONE_TEST_1.1.0.md` from
+to 1.2.0. Run check 0 below first (the update path), then `docs/archive/testing/PHONE_TEST_1.1.0.md` from
 its section 2 on, with the 1.2.0 APK in place of 1.1.0 (its section 1 is replaced by check
 0), then checks A to G.
 

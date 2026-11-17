@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 1.1 Activity, detail sheet, fix flow and pause (DESIGN_SPEC_1.1.md §6.2, D1, D3).
-     Machine translations are listed in docs/TRANSLATION_REVIEW_1.1.md. -->
+     Machine translations are listed in docs/archive/translations/TRANSLATION_REVIEW_1.1.md. -->
 <resources>
     <!-- Groups -->
     <string name="ui_group_just_now">Just now</string>

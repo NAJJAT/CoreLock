@@ -100,7 +100,7 @@ used before that.
 - /cso: not assessed (its trusted launcher is not installed).
 - V-18 crash recovery run on the emulator: restarts in about 6.5 s, a worker failure
   rebuilds in 45 ms. Found and fixed: no notification at all when Android refused the
-  restart after repeated crashes. Results in docs/security-test-2026-10-14.md (V-18).
+  restart after repeated crashes. Results in docs/testing/SECURITY_TEST_2026-10-14.md (V-18).
   Still open: no signal when notifications are denied (N-4, proposal for the owner).
 - Checks after today's changes: 1,289 unit tests, 0 failures (one run failed once in
   WhileObservedTest, a real-time-delay test not touched today; 5/5 alone and the full re-run
@@ -125,7 +125,7 @@ used before that.
   the earlier note of 26 is TrustAllX509TrustManager reported inside the BouncyCastle jar
   (bcpkix-jdk18on-1.86), not in our code and not new in this branch.
 - Checks: 1,296 unit tests, 0 failures; lint 0 errors; R8 passed; androidTest compiles.
-- V-18 second run on the emulator (docs/security-test-2026-10-14.md): Power saving on, tunnel
+- V-18 second run on the emulator (docs/testing/SECURITY_TEST_2026-10-14.md): Power saving on, tunnel
   back at +7.3 s; lockdown on, back at +6.8 s with 0 of 45 TCP probes through; without
   lockdown 43 of 43 went out unfiltered during the gap (the documented kill-switch limit);
   restart refused by Android under lockdown: 0 of 447 through, notice stayed up. Android's

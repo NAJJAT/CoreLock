@@ -2,7 +2,7 @@
 
 - **Status:** Proposed
 - **Date:** 2026-11-05
-- **Commits:** none yet (implemented on branch `hardening-1.2`, not committed)
+- **Commits:** `ff131b9` (shipped in 1.2.0; the status stays Proposed until the owner accepts it)
 - **Backlog:** CLAUDE.md §16.2 item 3; hardening plan task 1.2.
 
 ## Context
