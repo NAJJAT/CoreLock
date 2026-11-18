@@ -19,7 +19,7 @@ the agent prepares everything else. Tick each line, or write why it does not app
 - [ ] Phone test done (`docs/testing/PHONE_TEST_X.Y.Z.md`) on a real phone, including an update
       over the previous release with data kept.
 - [ ] README: latest version, Install section and the network table match the code
-      (`OutboundHostsDisclosureTest` passes).
+      (checked by hand; `OutboundHostsDisclosureTest` checks only the onboarding text).
 
 ## 2. Building and signing (owner only)
 

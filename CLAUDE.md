@@ -33,7 +33,7 @@
 
 ## 1. Hard rules
 
-These exist because breaking any of them causes damage that is expensive or impossible to undo. Each rule says why.
+These existgooo ause breaking any of them causes damage that is expensive or impossible to undo. Each rule says why.
 
 ### 1.1 Git: the owner commits, pushes and merges
 
@@ -56,7 +56,7 @@ These exist because breaking any of them causes damage that is expensive or impo
 ### 1.3 The privacy promise is a product requirement
 
 - **No** analytics, telemetry, crash-reporting SDKs, ad SDKs, remote config or "phone home" of any kind.
-- Every host the app contacts (blocklist sources, mirrors, DoH resolvers) must be listed in the README and docs network tables. `OutboundHostsDisclosureTest` enforces this. Never weaken, skip or delete that test; update the documentation instead and tell the owner.
+- Every host the app contacts (blocklist sources, mirrors, DoH resolvers) must be listed in the onboarding text (`onb_c_net_body`, all four languages) and in the README and docs network tables. `OutboundHostsDisclosureTest` enforces the onboarding text (and that each host is an own host for DNS anomaly detection); the README and docs tables are checked by hand (`docs/releases/RELEASE_CHECKLIST.md`). Never weaken, skip or delete that test; update the documentation instead and tell the owner.
 - Connection history, rules and logs stay on the device, inside the encrypted database.
 
 **Why:** the app sees every domain the user visits. Its connection log is effectively a full browsing history. If the app itself leaks, it becomes the exact threat it claims to protect against, and trust is the whole product.
@@ -490,7 +490,7 @@ Documentation is part of the product. Outdated docs in a security app are a secu
 4. **First setup** — VPN permission, choosing a protection level, Private DNS warning, battery optimization, Always-on VPN for the kill switch.
 5. **Protection levels** — MINIMAL / STANDARD / STRICT and what each uses.
 6. **Permissions** — table: permission → why it's needed.
-7. **Network disclosure** — table of every host the app contacts and why (enforced by `OutboundHostsDisclosureTest`).
+7. **Network disclosure** — table of every host the app contacts and why (checked by hand at release; `OutboundHostsDisclosureTest` checks the same hosts in the onboarding text).
 8. **Privacy** — what's stored, where, encrypted how, how to delete it. No telemetry, ever.
 9. **Building from source** — requirements, commands, signing template.
 10. **Security** — how to report a vulnerability privately; signing fingerprint.
