@@ -16,7 +16,7 @@ How lists are updated in 1.0.0 (`app/src/main/java/com/privacyguard/...`):
 | Each list's last success stored on its own (SharedPreferences `blocklist_updates`); a run fetches only lists due, and a stored time in the future counts as due | `BlocklistUpdateTimes.kt:13-34`, `BlocklistManager.kt:123-147` |
 | A failed list makes the run fail, so WorkManager retries (exponential from 1 h); successful lists keep their new time | `BlocklistManager.kt:112-113`, `BlocklistUpdateWorker.kt:76`, `:128-131` |
 | HTTPS only, redirects off, final URL checked, 32 MB cap with a counting stream, timeouts, 3 attempts, jsDelivr mirror for HaGeZi | `BlocklistDownloader.kt:15-68`, `BlocklistSource.kt:5` |
-| Lines validated (public suffixes, IP literals, look-alike IDNs, private IPs in the DoH-IP list refused); at most 1.5 M names | `ListEntryValidator`, `BlocklistManager.kt:198-230` |
+| Lines validated (public suffixes, IP literals, private IPs in the DoH-IP list refused; look-alike IDNs kept since bug-fix round 2, as they are phishing hosts to block); at most 1.5 M names | `ListEntryValidator`, `BlocklistManager.kt:198-230` |
 | Old list replaced in one transaction only after the new one parsed with at least one name; otherwise last-known-good stays | `BlocklistManager.kt:188-196`, `BlocklistRepo.kt:23`, `BlocklistDao.kt:94` |
 
 Gaps found:

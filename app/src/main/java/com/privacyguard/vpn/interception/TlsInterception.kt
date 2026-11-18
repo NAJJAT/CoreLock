@@ -39,6 +39,12 @@ interface TlsInterception {
     /** Feeds plaintext HTTP bytes for [session]; complete messages are logged and shipped. */
     fun capture(direction: String, bytes: ByteArray, session: Session)
 
+    /**
+     * Protection stopped: end every interception, free what they hold, and take no new
+     * one. Final; the service builds a new instance when protection starts again.
+     */
+    fun shutdown() {}
+
     /** Inspection is not part of this build. */
     object None : TlsInterception {
         override val isEnabled = false

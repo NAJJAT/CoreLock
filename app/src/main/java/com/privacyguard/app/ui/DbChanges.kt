@@ -3,10 +3,25 @@ package com.privacyguard.app.ui
 import android.util.Log
 import androidx.room.RoomDatabase
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+
+/**
+ * Room's change signal for [tables], started on [Dispatchers.IO]. Adding an observer takes
+ * Room's invalidation-tracker lock, and that lock can wait for a long write (storing a
+ * blocklist): started on the main thread, a screen froze until Android showed "not
+ * responding". Every screen starts its observers here (DbChangesOffMainTest).
+ */
+fun RoomDatabase.tableChanges(vararg tables: String, emitInitialState: Boolean = true): Flow<Set<String>> =
+    invalidationTracker.createFlow(*tables, emitInitialState = emitInitialState).offMain()
+
+/** Runs the upstream (where Room adds its observer) on [dispatcher], never on the collector's thread. */
+internal fun <T> Flow<T>.offMain(dispatcher: CoroutineDispatcher = Dispatchers.IO): Flow<T> = flowOn(dispatcher)
 
 /**
  * One signal now, then one after each change to [tables], at most one every
@@ -17,7 +32,7 @@ import kotlinx.coroutines.flow.flow
  */
 fun RoomDatabase.changesOf(vararg tables: String, minIntervalMs: Long = MIN_RELOAD_INTERVAL_MS): Flow<Unit> = flow {
     emit(Unit)
-    invalidationTracker.createFlow(*tables, emitInitialState = false).conflate().collect {
+    tableChanges(*tables, emitInitialState = false).conflate().collect {
         emit(Unit)
         delay(minIntervalMs)
     }

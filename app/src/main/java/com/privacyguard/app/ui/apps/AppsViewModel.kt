@@ -1,5 +1,6 @@
 package com.privacyguard.app.ui.apps
 
+import com.privacyguard.app.ui.tableChanges
 import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -100,8 +101,8 @@ class AppsViewModel internal constructor(
         emit(Unit)
         val db = repo.database()
         merge(
-            db.invalidationTracker.createFlow(*repo.historyTables(), emitInitialState = false).map { },
-            repo.configDatabase().invalidationTracker.createFlow("rules", emitInitialState = false).map { },
+            db.tableChanges(*repo.historyTables(), emitInitialState = false).map { },
+            repo.configDatabase().tableChanges("rules", emitInitialState = false).map { },
             RuleSyncBus.version.drop(1).map { },
             InstalledAppsCache.version.drop(1).map { repo.installedAppsChanged() },
             // Open connections change every second; only who has one matters here.

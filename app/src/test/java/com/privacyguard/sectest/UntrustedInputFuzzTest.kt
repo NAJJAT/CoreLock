@@ -8,6 +8,7 @@ import com.privacyguard.core.tls.Ja3Fingerprinter
 import com.privacyguard.core.tls.Ja4Fingerprinter
 import com.privacyguard.fuzz.Fuzz
 import com.privacyguard.vpn.inspector.EncryptionEnforcer
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -106,10 +107,15 @@ class UntrustedInputFuzzTest {
         assertTrue(out.contains("ads.example.co.uk"))
     }
 
-    /** A label mixing scripts (Latin and Cyrillic o) is a look-alike and is refused (V-10). */
-    @Test fun blocklistRejectsMixedScriptHomoglyphs() {
+    /**
+     * A label mixing scripts (Latin and Cyrillic o) is a look-alike. V-10 refused it; on a
+     * block list that only removed a phishing host, so since bug-fix round 2 (B-5, owner's
+     * decision) it is loaded, as punycode, the only form that reaches the filter.
+     */
+    @Test fun blocklistKeepsMixedScriptHomoglyphsAsPunycode() {
         val out = invokePrivateParser("parseDomainListFormat", "gоogle.com\n")   // Cyrillic o
-        assertTrue("homoglyph accepted: $out", out.isEmpty())
+        assertEquals(listOf(java.net.IDN.toASCII("gоogle.com")), out)
+        assertTrue("stored as ASCII punycode only", out.all { name -> (name as String).all { it.code < 0x80 } })
     }
 
     @Test fun blocklistParserScalesLinearly() {

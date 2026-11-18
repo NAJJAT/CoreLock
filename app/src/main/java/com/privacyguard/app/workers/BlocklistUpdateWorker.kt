@@ -30,7 +30,6 @@ import android.content.Context
 import androidx.work.*
 import com.privacyguard.app.core.blocklist.BlocklistManager
 import com.privacyguard.app.core.blocklist.UpdateResult
-import com.privacyguard.app.service.notification.NotificationService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
@@ -117,14 +116,10 @@ class BlocklistUpdateWorker(
         return withContext(Dispatchers.IO) {
             try {
                 BlocklistManager.initialize(applicationContext)
-                when (val result = BlocklistManager.updateAllBlocklists(dueBefore(inputData, System.currentTimeMillis()))) {
-                    is UpdateResult.Success -> {
-                        // 0: nothing was due (a list that downloads is never empty).
-                        if (result.totalEntries > 0) {
-                            NotificationService(applicationContext).blocklistUpdated("All sources", result.totalEntries)
-                        }
-                        Result.success()
-                    }
+                when (BlocklistManager.updateAllBlocklists(dueBefore(inputData, System.currentTimeMillis()))) {
+                    // No notification: a list update is routine (the "updated" notice went to a
+                    // channel that never existed, bug-fix round 2). Diagnostics shows each list's time.
+                    is UpdateResult.Success -> Result.success()
                     is UpdateResult.Failure -> Result.retry()
                 }
             } catch (_: Exception) {

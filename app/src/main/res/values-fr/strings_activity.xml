@@ -62,8 +62,8 @@
     <string name="ui_fix_blocked_hour">Ceci a été bloqué depuis une heure</string>
     <string name="ui_fix_blocked_hour_sub">La cause la plus probable est en haut.</string>
     <string name="ui_fix_unknown_app_names">Aussi bloqué, appli inconnue</string>
-    <string name="ui_fix_none_hour">Rien n\'a été bloqué depuis une heure, CoreLock n\'est donc probablement pas en cause.</string>
-    <string name="ui_fix_none_app">Rien n\'a été bloqué pour cette appli depuis une heure. CoreLock n\'est probablement pas en cause.</string>
+    <string name="ui_fix_none_hour">Aucun site n\'a été bloqué depuis une heure : un site bloqué n\'est donc probablement pas en cause. Une appli bloquée dans Apps n\'apparaît pas ici.</string>
+    <string name="ui_fix_none_app">Aucun site n\'a été bloqué pour cette appli depuis une heure : un site bloqué n\'est donc probablement pas en cause. Si l\'appli elle-même est bloquée, changez-le dans Apps.</string>
     <string name="ui_fix_all_handled">C\'est fait. Réessayez l\'appli. Si elle ne marche toujours pas, revenez en arrière et choisissez une autre appli.</string>
     <plurals name="ui_fix_attempts">
         <item quantity="one">%d tentative</item>

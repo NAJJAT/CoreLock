@@ -220,6 +220,10 @@ object ConfigTransfer {
         val background = o.optField<Boolean>("background") { return null }
         // "In background" is about an app; on a site alone it would apply to every app's background traffic.
         if (background != null && app == null) return null
+        // Nor with a site: a site is decided at lookup and server-name time, where the app's
+        // foreground state isn't known, so the rule would block at all times (bug-fix round 2).
+        // No screen creates it; app + address + background is checked per connection.
+        if (background != null && site != null) return null
         val enabled = o.optField<Boolean>("enabled") { return null } ?: true
         return RuleEntry(action, site, app, address, port, protocol, encryption, background, enabled)
     }

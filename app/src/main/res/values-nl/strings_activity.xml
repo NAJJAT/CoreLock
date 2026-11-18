@@ -61,8 +61,8 @@
     <string name="ui_fix_blocked_hour">Dit is het afgelopen uur geblokkeerd</string>
     <string name="ui_fix_blocked_hour_sub">De meest waarschijnlijke oorzaak staat bovenaan.</string>
     <string name="ui_fix_unknown_app_names">Ook geblokkeerd, app onbekend</string>
-    <string name="ui_fix_none_hour">Het afgelopen uur is niets geblokkeerd, dus CoreLock is waarschijnlijk niet de oorzaak.</string>
-    <string name="ui_fix_none_app">Het afgelopen uur is voor deze app niets geblokkeerd. CoreLock is waarschijnlijk niet de oorzaak.</string>
+    <string name="ui_fix_none_hour">Het afgelopen uur is geen site geblokkeerd, dus een geblokkeerde site is waarschijnlijk niet de oorzaak. Een app die in Apps is geblokkeerd, staat hier niet.</string>
+    <string name="ui_fix_none_app">Het afgelopen uur is voor deze app geen site geblokkeerd, dus een geblokkeerde site is waarschijnlijk niet de oorzaak. Is de app zelf geblokkeerd, wijzig dat dan in Apps.</string>
     <string name="ui_fix_all_handled">Klaar. Probeer de app opnieuw. Werkt hij nog steeds niet, ga dan terug en kies een andere app.</string>
     <plurals name="ui_fix_attempts">
         <item quantity="one">%d poging</item>

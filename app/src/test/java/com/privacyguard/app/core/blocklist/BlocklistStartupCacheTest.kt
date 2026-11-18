@@ -96,18 +96,22 @@ class BlocklistStartupCacheTest {
 
     @Test
     fun the_1_0_0_file_gets_the_same_checks_as_a_downloaded_list() {
-        // A public suffix, an IP literal, a single label, a space, a look-alike (Latin "g"
-        // with Cyrillic "о"): each is skipped, as a downloaded list skips it.
-        val refused = listOf("com", "1.2.3.4", "intranet", "bad name.example", "gооgle.example")
-        writeLegacy(legacy(), listOf("ads.example") + refused, listOf("bad.example"))
+        // A public suffix, an IP literal, a single label, a space: each is skipped, as a
+        // downloaded list skips it. A look-alike (Latin "g" with Cyrillic "о") is loaded, as a
+        // downloaded list loads it since bug-fix round 2 (B-5): on a block list it is a
+        // phishing host to block.
+        val refused = listOf("com", "1.2.3.4", "intranet", "bad name.example")
+        val lookalike = "gооgle.example"
+        writeLegacy(legacy(), listOf("ads.example", lookalike) + refused, listOf("bad.example"))
 
         val (blocked, _) = filtersOf(BlocklistCache.read(context, "STANDARD")!!)
 
         assertTrue(blocked.isBlocked("ads.example"))
+        assertTrue("the look-alike, as punycode", blocked.isBlocked(java.net.IDN.toASCII(lookalike)))
         assertFalse("a public suffix would block every .com site", blocked.isBlocked("shop.com"))
         assertFalse(blocked.isBlocked("1.2.3.4"))
         assertFalse(blocked.isBlocked("intranet"))
-        assertEquals("only the valid name is loaded", 1L, blocked.size)
+        assertEquals("only the valid names are loaded", 2L, blocked.size)
     }
 
     @Test

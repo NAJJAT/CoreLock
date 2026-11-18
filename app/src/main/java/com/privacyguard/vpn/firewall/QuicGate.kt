@@ -127,7 +127,12 @@ class QuicGate<K : Any>(
         // A flow already being reassembled is QUIC, whatever this datagram looks like.
         val started = tracker.isTracking(key)
         return when (val r = tracker.offer(key, datagram, hold)) {
-            is QuicSniTracker.Result.Hello -> Verdict.Forward(r.held, r.hello, inspected = true)
+            // A complete hello whose server name is not a name at all (ClientHello.sniUnreadable)
+            // is unreadable too: TCP resets it at Standard/Strict, so QUIC must not forward it
+            // (bug-fix round 2). Its held datagrams are dropped with it.
+            is QuicSniTracker.Result.Hello ->
+                if (closed && r.hello.sniUnreadable) { rememberDropped(key); Verdict.Drop }
+                else Verdict.Forward(r.held, r.hello, inspected = true)
             QuicSniTracker.Result.Pending -> if (hold) Verdict.Hold else FORWARD_PENDING
             // Global hold limits reached (only asked for when closed): drop rather than
             // send unchecked; the app retries, or falls back to TCP.

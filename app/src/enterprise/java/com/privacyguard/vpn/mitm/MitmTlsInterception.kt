@@ -9,6 +9,7 @@ import com.privacyguard.vpn.interception.TlsInterception
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
@@ -32,6 +33,8 @@ class MitmTlsInterception(
     private val ensureCa: suspend () -> Boolean,
     /** This app's UID; its own connections are never inspected. */
     private val ownUid: Int = android.os.Process.myUid(),
+    /** Cap on everything inspection holds in memory at once; see [MAX_BUFFERED_BYTES]. */
+    private val maxBufferedBytes: Long = MAX_BUFFERED_BYTES,
 ) : TlsInterception {
 
     companion object {
@@ -44,7 +47,32 @@ class MitmTlsInterception(
         private const val MESSAGE_QUEUE = 256
         private const val MESSAGE_WORKERS = 2
         private const val CA_CHECK_INTERVAL_MS = 3_600_000L
+        /**
+         * Bytes inspection may hold at once: chunks waiting for the capture worker, the
+         * reassembly buffers of every connection, and messages waiting to be parsed
+         * (bug-fix round 2). Each of those had its own count limit only, which together
+         * allowed several hundred megabytes. Above this, new connections are not decrypted
+         * and new chunks are not kept; traffic itself always flows.
+         */
+        const val MAX_BUFFERED_BYTES = 32L * 1024 * 1024
     }
+
+    /** Bytes held right now, against [maxBufferedBytes]. */
+    private val held = AtomicLong(0)
+    internal val bufferedBytes: Long get() = held.get()
+
+    private fun reserve(n: Int): Boolean {
+        while (true) {
+            val now = held.get()
+            if (now + n > maxBufferedBytes) return false
+            if (held.compareAndSet(now, now + n)) return true
+        }
+    }
+
+    private fun release(n: Long) { if (n != 0L) held.addAndGet(-n) }
+
+    // Set once by shutdown(): nothing new is inspected or captured.
+    @Volatile private var stopped = false
 
     private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + com.privacyguard.vpn.WorkerGuard.coroutineHandler)
     private val caInitStarted = AtomicBoolean(false)
@@ -56,7 +84,8 @@ class MitmTlsInterception(
     /** Chunks dropped because the capture worker fell behind (capture is best effort). */
     val droppedCaptures = AtomicLong(0)
 
-    private class CaptureItem(val direction: String, val bytes: ByteArray, val session: Session)
+    /** A chunk, or with [end] the mark that the connection is over (queued after its chunks). */
+    private class CaptureItem(val direction: String, val bytes: ByteArray, val session: Session, val end: Boolean = false)
 
     // One worker consumes every chunk in arrival order. Capture used to be launched
     // as a coroutine per packet, so chunks of one stream raced on the session's
@@ -73,7 +102,7 @@ class MitmTlsInterception(
         coroutineScope.launch {
             for (item in captureQueue) {
                 try {
-                    accumulate(item)
+                    if (item.end) endCapture(item.session) else accumulate(item)
                 } catch (e: Exception) {
                     Log.w(TAG, "Capture failed: ${e.javaClass.simpleName}")
                 }
@@ -81,7 +110,9 @@ class MitmTlsInterception(
         }
         repeat(MESSAGE_WORKERS) {
             coroutineScope.launch {
-                for (m in messageQueue) processPayload(m.direction, m.bytes, m.session)
+                for (m in messageQueue) {
+                    try { processPayload(m.direction, m.bytes, m.session) } finally { release(m.bytes.size.toLong()) }
+                }
             }
         }
     }
@@ -98,7 +129,7 @@ class MitmTlsInterception(
     // are never inspected: the app does not trust its own CA, so they would fail.
     // Recognised by our exact UID: a package name can be imitated (V-11).
     override fun shouldIntercept(ownerUid: Int, ownerPackage: String?, sni: String): Boolean {
-        if (isPrivacyGuardTraffic(ownerUid) || !mitmConfig.isEnabled || !mitmConfig.isConsentValid()) {
+        if (stopped || isPrivacyGuardTraffic(ownerUid) || !mitmConfig.isEnabled || !mitmConfig.isConsentValid()) {
             return false
         }
         if (pinningDetector.isPinned(ownerPackage, sni)) return false
@@ -128,13 +159,40 @@ class MitmTlsInterception(
      * [interceptNotStarted].
      */
     internal fun admitForInspection(): Boolean {
-        if (slots.tryReserve()) return true
+        if (stopped) return false
+        // Memory nearly full counts as the same limit: passed on undecrypted, its name already
+        // checked. Three quarters, so connections already decrypted keep room to finish.
+        if (held.get() < maxBufferedBytes / 4 * 3 && slots.tryReserve()) return true
         com.privacyguard.app.core.stats.StatsManager.recordInspectionAtLimit()
         return false
     }
 
-    override fun intercept(session: Session, clientPort: Int): Int =
-        mitmEngine.intercept(session, clientPort, onDone = slots.releaseOnce()) { dir, bytes, sess -> capture(dir, bytes, sess) }
+    override fun intercept(session: Session, clientPort: Int): Int {
+        val freeSlot = slots.releaseOnce()
+        return mitmEngine.intercept(session, clientPort, onDone = { freeSlot(); captureEnded(session) }) { dir, bytes, sess -> capture(dir, bytes, sess) }
+    }
+
+    /**
+     * The interception of [session] is over: once the capture worker reaches this mark
+     * (after the connection's last chunk), its reassembly buffers are freed. A message cut
+     * short by the end of the connection would otherwise keep its bytes for good.
+     */
+    internal fun captureEnded(session: Session) {
+        if (stopped) return
+        val mark = CaptureItem("", ByteArray(0), session, end = true)
+        if (captureQueue.trySend(mark).isSuccess) return
+        // Queue full: wait for room off the caller's thread; closed or cancelled at shutdown.
+        coroutineScope.launch { runCatching { captureQueue.send(mark) } }
+    }
+
+    override fun shutdown() {
+        stopped = true
+        captureQueue.close()
+        messageQueue.close()
+        coroutineScope.cancel()
+        mitmEngine.shutdown()
+        held.set(0)
+    }
 
     override fun interceptNotStarted() = slots.release()
 
@@ -173,7 +231,11 @@ class MitmTlsInterception(
      * so it only hands the chunk over; [bytes] must not be modified afterwards.
      */
     override fun capture(direction: String, bytes: ByteArray, session: Session) {
+        if (stopped) return
+        // Over the byte cap the chunk is not kept (capture is best effort; the relay goes on).
+        if (!reserve(bytes.size)) { droppedCaptures.incrementAndGet(); return }
         if (!captureQueue.trySend(CaptureItem(direction, bytes, session)).isSuccess) {
+            release(bytes.size.toLong())
             droppedCaptures.incrementAndGet()
         }
     }
@@ -228,16 +290,28 @@ class MitmTlsInterception(
         val session = item.session
         val state = session.captureState as? CaptureState ?: CaptureState().also { session.captureState = it }
         val buffer = if (item.direction == "OUTBOUND") state.outbound else state.inbound
+        // The chunk's bytes move from the queue into the buffer (less any skipped body).
+        val before = buffer.size
         buffer.append(item.bytes)
+        release(item.bytes.size.toLong() - (buffer.size - before))
         while (buffer.size > 0) {
             val total = completeLength(buffer) ?: return
             val message = buffer.data.copyOfRange(0, total)
             buffer.consume(total)
             Log.d(TAG, "📦 HTTP ${item.direction} captured ${message.size}B")
+            // ...and from the buffer into the message queue; freed once it is processed.
             if (!messageQueue.trySend(Message(item.direction, message, session)).isSuccess) {
+                release(total.toLong())
                 droppedCaptures.incrementAndGet()
             }
         }
+    }
+
+    /** Frees [session]'s reassembly buffers (capture worker only). */
+    private fun endCapture(session: Session) {
+        val state = session.captureState as? CaptureState ?: return
+        release((state.outbound.size + state.inbound.size).toLong())
+        session.captureState = null
     }
 
     /**

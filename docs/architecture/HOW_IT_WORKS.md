@@ -72,6 +72,8 @@ Say a news app opens `https://ads.example.net/pixel`.
    connects. Otherwise the query goes to the resolver you chose: plain DNS to
    Cloudflare `1.1.1.1` by default, or DNS over HTTPS when you turn DoH on. The
    answer is checked (it must match the question) and handed back to the app.
+   The DoH client reads one plain HTTP/1.1 reply body; a server that sends its reply
+   in chunks (chunked transfer encoding) is not understood, and the lookup fails.
    If the answer's CNAME chain points at a blocked name, the app gets NXDOMAIN
    instead (CNAME cloaking). The target name of an HTTPS or SVCB record (RFC 9460,
    used by browsers for HTTP/3 and ECH) is checked too: it can point a client at
@@ -119,7 +121,7 @@ Say a news app opens `https://ads.example.net/pixel`.
    passes (IP-only TLS), and so does one whose SNI is a single-label name or an IP
    literal (an intranet host such as `wiki` or `10.0.0.5`): not standard, but it
    hides nothing; it still raises the *Invalid server name* alert. A stream that does
-   not open with a TLS record header at all (0x16, then version 3.0 to 3.4) is not TLS
+   not open with a TLS record header at all (0x16, then major version 3; like TLS servers, CoreLock ignores the minor version) is not TLS
    and is forwarded like any other non-TLS stream: another protocol on port 443 whose
    first byte happens to be 0x16 is not reset. These resets are only counted, in Settings › Diagnostics ›
    Server-name blocking, never written as history rows (like unreadable QUIC). At
@@ -143,7 +145,12 @@ Say a news app opens `https://ads.example.net/pixel`.
    unencrypted request*. At Standard and Strict a request whose name can't be trusted
    (two Host headers, a target and Host that disagree, a header block over 8 KB, or a
    Host that is no hostname) is reset and counted. A request with no name (HTTP/1.0,
-   an address) passes.
+   an address) passes. Limits of this check: only the first request on a connection is
+   read (later requests on the same kept-alive connection are not); only the common
+   methods are recognised (GET, POST, HEAD, PUT, DELETE, OPTIONS, PATCH, CONNECT,
+   TRACE), so a request with another method is not read; and a full URL as the target
+   is read only with the `http://` scheme, otherwise the `Host` header decides. DNS
+   blocking still applies to all of these.
    About once a second the service checks open connections again (`NameRecheck`): by
    app and address rules, and by the SNI or HTTP site name they sent, so a new Block
    rule or list update also ends connections already running.
@@ -173,7 +180,8 @@ QUIC depends on the protection level (`vpn/firewall/QuicGate.kt`):
 - **Standard and Strict:** a new QUIC flow's packets are held until its
   ClientHello is complete, so nothing reaches the server before the check. A
   QUIC Initial that cannot be read (unknown version or frame, or no complete
-  ClientHello after 6 packets) is dropped, and the app falls back to TCP. Other
+  ClientHello after 6 packets, or a server name that is not a name at all, which
+  TCP resets too) is dropped, and the app falls back to TCP. Other
   traffic on UDP 443 (calls over STUN/TURN, VPNs) is not touched. Holding is
   limited to 128 flows and 512 KB at once; past that, new QUIC flows are dropped.
 - **Minimal:** packets are forwarded while the ClientHello is read, and QUIC that
@@ -279,8 +287,8 @@ unblock one.
 Downloads are HTTPS only, without redirects, and read line by line. Each entry is
 checked (`app/core/blocklist/ListEntryValidator.kt`): converted to punycode, and
 refused if it is not a valid name, is a public suffix (`co.uk`, `com.au`; the Public
-Suffix List bundled with OkHttp), or mixes scripts within a label (look-alike
-names). A source with more than 1.5 million names is refused whole, and so is a
+Suffix List bundled with OkHttp). A look-alike name (Latin mixed with Cyrillic,
+for example) is kept: on a block list it is a phishing host to block. A source with more than 1.5 million names is refused whole, and so is a
 download with fewer than half the names of the stored copy of that list (a broken
 or truncated list; the event is recorded, and the run retries later). The first
 download of a list is never refused for its size. A failed or refused download
@@ -722,7 +730,13 @@ endpoint that was set when it was queued (a changed endpoint never receives olde
 records). After a failed upload, automatic retries wait 30 seconds, then twice as long
 each time up to 30 minutes; "Ship now" tries at once. At most 32 connections are
 decrypted at the same time; more are passed through undecrypted (their name is still
-checked) and counted in Settings › Diagnostics.
+checked) and counted in Settings › Diagnostics. Everything inspection holds in memory
+(decrypted chunks waiting, messages being put together, messages waiting to be read)
+shares one cap of 32 MB (`MitmTlsInterception.MAX_BUFFERED_BYTES`): from three quarters
+of it, new connections pass through undecrypted and are counted the same way; at the
+cap, new decrypted chunks are not kept (the connection itself carries on). When
+protection stops, inspection stops too: open decrypted connections are closed, its
+threads end and the per-site certificates are dropped (`MitmEngine.shutdown`).
 
 ---
 

@@ -16,13 +16,27 @@ class ListEntryValidatorTest {
         assertEquals("doubleclick.net", ListEntryValidator.normalize("DoubleClick.NET."))
     }
 
-    @Test fun idns_become_punycode_and_lookalikes_are_refused() {
+    @Test fun idns_become_punycode() {
         assertEquals("xn--bcher-kva.example", ListEntryValidator.normalize("bücher.example"))
-        assertEquals("xn--e1afmkfd.xn--p1ai", ListEntryValidator.normalize("пример.рф"))            // all Cyrillic: fine
+        assertEquals("xn--e1afmkfd.xn--p1ai", ListEntryValidator.normalize("пример.рф"))            // all Cyrillic
         assertEquals("xn--wgv71a119e.jp", ListEntryValidator.normalize("日本語.jp"))
-        assertNull(ListEntryValidator.normalize("gоogle.com"))                                  // Latin + Cyrillic o
-        assertNull(ListEntryValidator.normalize(java.net.IDN.toASCII("gоogle.com")))           // same, as punycode
-        assertNull(ListEntryValidator.normalize("pаypal.com"))                                  // Cyrillic a
+    }
+
+    /**
+     * Bug-fix round 2 (B-5, owner's decision): every downloaded list is a block list, and a
+     * look-alike name (Latin mixed with Cyrillic) on it is exactly a phishing host to block.
+     * Refusing it only removed protection: 4 names of the bundled malware list were lost.
+     * Look-alikes are now loaded, as punycode, the form DNS queries use.
+     */
+    @Test fun lookalike_names_on_a_block_list_are_kept() {
+        val lookalike = java.net.IDN.toASCII("gоogle.com")                                  // Cyrillic o
+        assertTrue(lookalike.startsWith("xn--"))
+        assertEquals(lookalike, ListEntryValidator.normalize("gоogle.com"))
+        assertEquals(lookalike, ListEntryValidator.normalize(lookalike))                          // same, as punycode
+        assertEquals(java.net.IDN.toASCII("pаypal.com"), ListEntryValidator.normalize("pаypal.com"))  // Cyrillic a
+        for (source in listOf(BlocklistSource.HAGEZI_TIF_MINI, BlocklistSource.HAGEZI_PRO, BlocklistSource.OISD_BASIC, BlocklistSource.HAGEZI_DOH)) {
+            assertEquals("$source", setOf(lookalike), BlocklistManager.parseLines(source, sequenceOf("gоogle.com", lookalike)))
+        }
     }
 
     @Test fun malformed_entries_are_refused() {

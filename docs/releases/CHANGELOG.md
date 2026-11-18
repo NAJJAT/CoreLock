@@ -12,6 +12,10 @@ A safety and reliability update. A Block rule now also covers subdomains (ADR 00
 are off; unencrypted websites are checked by site name; open connections are checked
 again when rules or lists change; fixed limits on the memory used to track connections;
 security fixes in HTTPS inspection and SIEM sending; new counters in Diagnostics.
+Second bug-fix round: no freeze while lists update; Block rule counts are attempts;
+more fail-closed reading of secure connections; look-alike names on block lists are
+blocked; HTTPS inspection stops with protection and its memory is capped; settings
+import, fix-flow wording and the removed "blocklist updated" notification.
 [Release notes (draft)](RELEASE_NOTES_1.2.1.md)
 
 ## 1.2.0 (2026-11-11, tag `v1.2.0`)

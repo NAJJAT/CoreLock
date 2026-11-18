@@ -56,3 +56,33 @@ Its button is the existing "Open settings".
 | Key | English | Arabic | French | Dutch |
 |---|---|---|---|---|
 | `ui_attention_notifications` | Notifications are off. If protection stops, CoreLock can’t warn you. | الإشعارات متوقفة. إذا توقفت الحماية، لن يستطيع CoreLock تنبيهك. | Les notifications sont désactivées. Si la protection s’arrête, CoreLock ne pourra pas vous prévenir. | Meldingen staan uit. Als de bescherming stopt, kan CoreLock je niet waarschuwen. |
+
+## Bug-fix round 2 (branch `bug-fixes-2`)
+
+Machine translations, like the rest of this file.
+
+### Rules: how often a Block rule stopped something (`res/values*/strings_rules.xml`, 1 changed plural)
+
+Under a rule in Rules and allowed sites. The number now counts attempts: a connection that
+keeps retrying counts once per 30 seconds, not once per packet. Arabic has six forms
+(zero, one, two, few, many, other); French has one, many and other.
+
+| Key | English | Arabic | French | Dutch |
+|---|---|---|---|---|
+| `rules_triggered` (one / other) | Blocked %d attempt / Blocked %d attempts | حظرت محاولة واحدة / حظرت %d محاولة (zero: لم تحظر أي محاولة بعد; two: حظرت محاولتين; few: حظرت %d محاولات; many: حظرت %d محاولةً) | %d tentative bloquée / %d tentatives bloquées | %d poging geblokkeerd / %d pogingen geblokkeerd |
+
+### Something not working: empty step 2 (`res/values*/strings_activity.xml`, 2 changed)
+
+Shown when no site was blocked in the last hour. It used to say that nothing was blocked,
+but blocks without a site name (a whole app blocked in Apps, an address) are not in this
+list. "Apps" is the name of the tab in every language.
+
+| Key | English | Arabic | French | Dutch |
+|---|---|---|---|---|
+| `ui_fix_none_hour` | No site was blocked in the last hour, so a blocked site is probably not the cause. An app blocked in Apps is not listed here. | لم يُحظر أي موقع خلال الساعة الأخيرة، لذلك على الأرجح ليس موقع محظور هو السبب. التطبيق المحظور في «التطبيقات» لا يظهر هنا. | Aucun site n'a été bloqué depuis une heure : un site bloqué n'est donc probablement pas en cause. Une appli bloquée dans Apps n'apparaît pas ici. | Het afgelopen uur is geen site geblokkeerd, dus een geblokkeerde site is waarschijnlijk niet de oorzaak. Een app die in Apps is geblokkeerd, staat hier niet. |
+| `ui_fix_none_app` | No site was blocked for this app in the last hour, so a blocked site is probably not the cause. If the app itself is blocked, change that in Apps. | لم يُحظر أي موقع لهذا التطبيق خلال الساعة الأخيرة، لذلك على الأرجح ليس موقع محظور هو السبب. إذا كان التطبيق نفسه محظورًا، فغيّر ذلك في «التطبيقات». | Aucun site n'a été bloqué pour cette appli depuis une heure : un site bloqué n'est donc probablement pas en cause. Si l'appli elle-même est bloquée, changez-le dans Apps. | Het afgelopen uur is voor deze app geen site geblokkeerd, dus een geblokkeerde site is waarschijnlijk niet de oorzaak. Is de app zelf geblokkeerd, wijzig dat dan in Apps. |
+
+### Removed (`res/values*/strings_notifications.xml`)
+
+`notif_blocklist_updated` and `notif_blocklist_entries`, with the notification that used
+them (it never reached the screen on Android 8 and newer). Nothing to review.

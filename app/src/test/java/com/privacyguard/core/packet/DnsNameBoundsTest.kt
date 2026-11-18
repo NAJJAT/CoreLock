@@ -25,6 +25,17 @@ class DnsNameBoundsTest {
         assertEquals("ads.example.com", DnsPacket.parse(query(DnsPacket.encodeName("ads.example.com")))?.queryName)
     }
 
+    /** Bug-fix round 2: the root name ("" or ".") was written as an empty label plus the root byte, two zero bytes. */
+    @Test
+    fun the_root_name_is_one_zero_byte() {
+        assertTrue(byteArrayOf(0).contentEquals(DnsPacket.encodeName("")))
+        assertTrue(byteArrayOf(0).contentEquals(DnsPacket.encodeName(".")))
+        val q = DnsPacket.parse(DnsPacket.buildQuery("", id = 7))
+        assertNotNull("a root query is a well-formed packet", q)
+        assertEquals("", q!!.queryName)
+        assertEquals("the question ends where its type and class begin", 12 + 1 + 4, DnsPacket.buildQuery("", id = 7).size)
+    }
+
     @Test
     fun a_reserved_label_length_is_malformed() {
         // 0x41 = 65: neither a label (max 63) nor a pointer (0xC0 prefix).

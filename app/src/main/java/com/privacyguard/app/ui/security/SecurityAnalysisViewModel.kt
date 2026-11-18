@@ -1,5 +1,6 @@
 package com.privacyguard.app.ui.security
 
+import com.privacyguard.app.ui.offMain
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -53,10 +54,10 @@ class SecurityAnalysisViewModel(app: Application) : AndroidViewModel(app) {
             // Counts over all stored alerts; each list has its own newest rows, so a
             // burst of one type cannot push the others off the screen.
             combine(
-                dao.countsByTypeFlow(),
-                dao.recentOfTypeFlow("JA3_THREAT", 20),
-                dao.recentOfTypeFlow("CT_NEW_CERT", 10),
-                dao.recentOfTypeFlow("WEAK_CIPHER", 20),
+                dao.countsByTypeFlow().offMain(),
+                dao.recentOfTypeFlow("JA3_THREAT", 20).offMain(),
+                dao.recentOfTypeFlow("CT_NEW_CERT", 10).offMain(),
+                dao.recentOfTypeFlow("WEAK_CIPHER", 20).offMain(),
             ) { counts, ja3, ct, weak ->
                 val n = counts.associate { it.alertType to it.count }
                 _uiState.value.copy(
@@ -72,7 +73,7 @@ class SecurityAnalysisViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             val dao = db.tlsBaselineDao()
-            combine(dao.profilesFlow(), dao.fingerprintsFlow()) { profiles, fps ->
+            combine(dao.profilesFlow().offMain(), dao.fingerprintsFlow().offMain()) { profiles, fps ->
                 val now = System.currentTimeMillis()
                 val learningMs = TimeUnit.DAYS.toMillis(7)
                 TlsBaselineSummary(

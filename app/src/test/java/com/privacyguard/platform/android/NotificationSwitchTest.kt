@@ -28,9 +28,17 @@ class NotificationSwitchTest {
         assertEquals(emptyList<String>(), ungated)
     }
 
+    /**
+     * The blocklist update notice, which checked the switch itself, was removed in bug-fix
+     * round 2 (B-2). Now every notification is posted by NotificationHelper, so the test
+     * above covers them all; a post anywhere else would escape it.
+     */
     @Test
-    fun the_blocklist_update_notice_checks_it_too() {
-        val src = File("src/main/java/com/privacyguard/app/service/notification/NotificationService.kt").readText()
-        assertTrue(src.contains("notificationsEnabled.value) return"))
+    fun nothing_outside_the_helper_posts_a_notification() {
+        val outside = listOf("src/main/java", "src/enterprise/java").flatMap { root ->
+            File(root).walkTopDown().filter { it.isFile && it.extension == "kt" && it.name != "NotificationHelper.kt" }
+                .filter { Regex("""\.notify\(""").containsMatchIn(it.readText()) }.map { it.path }.toList()
+        }
+        assertEquals(emptyList<String>(), outside)
     }
 }

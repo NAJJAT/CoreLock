@@ -127,11 +127,13 @@ class PrivacyVpnService : VpnService() {
     private var tunFd: ParcelFileDescriptor? = null
     private val totalCleartext = AtomicLong(0)
 
-    // Touched from the TUN reader, forwarder, reaper and IO threads alike.
-    private val ja3NotifiedHashes = ConcurrentHashMap.newKeySet<String>()
-    private val cleartextNotifiedPackages = ConcurrentHashMap.newKeySet<String>()
-    private val backgroundBlockNotifiedPackages = ConcurrentHashMap.newKeySet<String>()
-    private val ctNotifiedDomains = ConcurrentHashMap.newKeySet<String>()
+    // Touched from the TUN reader, forwarder, reaper and IO threads alike (BoundedSet locks).
+    // Capped, oldest first (bug-fix round 2): each new hash, package or domain used to stay
+    // for the whole run. Past the cap an old one may be notified once more, which is harmless.
+    private val ja3NotifiedHashes = com.privacyguard.core.utils.BoundedSet<String>(NOTIFIED_MAX)
+    private val cleartextNotifiedPackages = com.privacyguard.core.utils.BoundedSet<String>(NOTIFIED_MAX)
+    private val backgroundBlockNotifiedPackages = com.privacyguard.core.utils.BoundedSet<String>(NOTIFIED_MAX)
+    private val ctNotifiedDomains = com.privacyguard.core.utils.BoundedSet<String>(NOTIFIED_MAX)
 
     // "Clear data" in Settings: drop what this run remembers, or it is saved back.
     private val dataClearListener = com.privacyguard.app.data.repository.LocalDataEraser.Listener {
@@ -156,6 +158,8 @@ class PrivacyVpnService : VpnService() {
     private var languageWatch: AutoCloseable? = null
 
     companion object {
+        /** Entries per "already notified" set: far more apps or alerts than a phone produces in a run. */
+        private const val NOTIFIED_MAX = 1_024
         private const val TAG = "PrivacyVpnService"
         /** Virtual resolver inside the tunnel subnet; see DnsHandler. */
         private const val TUNNEL_DNS_V4 = "10.0.0.1"
@@ -170,7 +174,6 @@ class PrivacyVpnService : VpnService() {
         /** How often a live connection is re-checked against the rules. */
         private const val FILTER_RECHECK_MS = 1_000L
         /** Retries of one blocked attempt within this window are logged once. */
-        private const val BLOCK_DEDUP_MS = 30_000L
         /** Same app, name and verdict within this window is the same lookup. */
         private const val DNS_REPEAT_MS = 10_000L
         private const val PROFILE_SAVE_MS = 60_000L
@@ -428,6 +431,8 @@ class PrivacyVpnService : VpnService() {
             }
         }
         // HTTPS inspection exists only in enterprise builds; consumer gets a no-op.
+        // A start after a stop without a new service: end the earlier one first (bug-fix round 2).
+        if (::interception.isInitialized) interception.shutdown()
         interception = TlsInterceptionFactory.create(this, db, ::protect)
         tlsFingerprintMonitor = com.privacyguard.app.vpn.TlsFingerprintMonitor(
             context = this,
@@ -801,7 +806,7 @@ class PrivacyVpnService : VpnService() {
         val decision = filterEngine.evaluate(uid, pkg, null, dstIp, dstPort, IpPacket.PROTO_TCP,
             isBackground = isKnownBackground(pkg))
         if (decision.isBlocked) {
-            onBlocked(decision, pkg, dstIp)
+            onBlocked(decision, pkg, dstIp, key)
             logBlockedAttempt(key, uid, pkg)
             return
         }
@@ -898,7 +903,7 @@ class PrivacyVpnService : VpnService() {
         val decision = filterEngine.evaluate(uid, pkg, null, dstIp, dstPort, IpPacket.PROTO_UDP,
             isBackground = isKnownBackground(pkg))
         if (decision.isBlocked) {
-            onBlocked(decision, pkg, dstIp)
+            onBlocked(decision, pkg, dstIp, key)
             logBlockedAttempt(key, uid, pkg)
             return
         }
@@ -1057,12 +1062,8 @@ class PrivacyVpnService : VpnService() {
     /** Collapses the record types and retries of one DNS lookup into one stored row. */
     private val dnsRepeats = com.privacyguard.core.utils.RepeatFilter(DNS_REPEAT_MS)
 
-    /**
-     * Five-tuples already logged as blocked: a dropped SYN or UDP packet is retransmitted
-     * on the same tuple. Those are packets of one attempt, not new attempts, so they are
-     * skipped before the owner lookup and not counted by [blockRowGate].
-     */
-    private val loggedBlocks = ConcurrentHashMap<SessionKey, Long>()
+    /** Five-tuples already logged as blocked: retransmissions are one attempt, not new ones. */
+    private val blockAttempts = com.privacyguard.core.session.BlockAttempts()
 
     /** One history row per app, host and source per minute; the retries are only counted. */
     private val blockRowGate = com.privacyguard.core.session.BlockRowGate()
@@ -1070,7 +1071,7 @@ class PrivacyVpnService : VpnService() {
     /**
      * Records a connection attempt CoreLock dropped before any session existed
      * (a rule, or a DNS-bypass guard), so blocked numbers count connections too, not
-     * only DNS lookups. Retransmissions within [BLOCK_DEDUP_MS] are ignored; new
+     * only DNS lookups. Retransmissions within [com.privacyguard.core.session.BlockAttempts.WINDOW_MS] are ignored; new
      * attempts to the same place within a minute are merged ([blockRowGate]).
      */
     private fun logBlockedAttempt(
@@ -1078,9 +1079,7 @@ class PrivacyVpnService : VpnService() {
         sni: String? = null, blockSource: com.privacyguard.core.session.BlockSource? = null,
     ) {
         val now = System.currentTimeMillis()
-        val last = loggedBlocks.put(key, now)
-        if (last != null && now - last < BLOCK_DEDUP_MS) return
-        if (loggedBlocks.size > 4_096) loggedBlocks.entries.removeIf { now - it.value > BLOCK_DEDUP_MS }
+        if (!blockAttempts.record(key, now)) return
 
         val proto = if (key.protocol == IpPacket.PROTO_TCP) OsConstants.IPPROTO_TCP else OsConstants.IPPROTO_UDP
         val uid = knownUid ?: resolveOwnerUid(proto, key)
@@ -1119,9 +1118,16 @@ class PrivacyVpnService : VpnService() {
         return write
     }
 
-    private fun onBlocked(decision: FilterEngine.Decision, pkg: String?, destination: String) {
+    /**
+     * [key]: the blocked tuple, for a packet without a session. Its rule's hit count goes
+     * up once per attempt ([com.privacyguard.core.session.BlockAttempts.countsAsHit]), not
+     * once per retransmitted packet: that was a database write per packet. Null for an open
+     * session the recheck closed, which runs at most once per recheck interval.
+     */
+    private fun onBlocked(decision: FilterEngine.Decision, pkg: String?, destination: String, key: SessionKey? = null) {
         recordBlock()
-        decision.matchedRule?.id?.let { id -> scope.launch { configDatabase().rulesDao().incrementHitCount(id) } }
+        val countsAsHit = key == null || blockAttempts.countsAsHit(key, System.currentTimeMillis())
+        if (countsAsHit) decision.matchedRule?.id?.let { id -> scope.launch { configDatabase().rulesDao().incrementHitCount(id) } }
         if (decision.matchedRule?.matchBackground == true && !pkg.isNullOrBlank() &&
             backgroundBlockNotifiedPackages.add(pkg)) {
             notifHelper.postBackgroundBlockAlert(pkg, destination, MainActivity::class.java)
@@ -1658,6 +1664,10 @@ class PrivacyVpnService : VpnService() {
         com.privacyguard.app.core.pcap.PcapWriter.stopCapture()
         if (::ctMonitor.isInitialized) ctMonitor.stop()
         teardownTunnelLocked()
+        // HTTPS inspection ends with protection: its connections, workers and certificates
+        // would otherwise outlive the tunnel (bug-fix round 2). Not in teardownTunnelLocked,
+        // which a tunnel rebuild also uses while protection stays on.
+        if (::interception.isInitialized) interception.shutdown()
         StatsManager.reset()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()

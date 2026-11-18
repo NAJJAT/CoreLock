@@ -268,6 +268,10 @@ class ActivityScreenTest {
                 FixFlowContent(FixUiState(FixStep.Names(null, null), FixData.Loaded(emptyList())), FixFlowActions())
             }
         }
-        rule.onNodeWithText("Nothing was blocked in the last hour, so CoreLock is probably not the cause.").assertExists()
+        // Bug-fix round 2: blocks without a site name (a whole-app block, an address) are not
+        // in this list, so the text may not say that nothing was blocked, and the "This was
+        // blocked" heading may not sit above an empty list.
+        rule.onNodeWithText("No site was blocked in the last hour, so a blocked site is probably not the cause. An app blocked in Apps is not listed here.").assertExists()
+        rule.onNodeWithText("This was blocked in the last hour").assertDoesNotExist()
     }
 }

@@ -1,5 +1,6 @@
 package com.privacyguard.data.repository
 
+import com.privacyguard.app.ui.offMain
 import com.privacyguard.app.data.db.PayloadLogDao // FIXED: was com.privacyguard.data.local.database.dao.PayloadLogDao
 import com.privacyguard.app.data.db.PayloadLogEntity // FIXED: was com.privacyguard.data.local.database.entity.PayloadLogEntity
 import com.privacyguard.domain.repository.PayloadLogRepository
@@ -38,12 +39,12 @@ class PayloadLogRepositoryImpl(
      * @return Flow of list of payload log entities
      */
     override fun recentLogs(limit: Int): Flow<List<PayloadLogEntity>> =
-        dao.recentLogs(limit)
+        dao.recentLogs(limit).offMain()
 
     override fun filtered(query: String, method: String?, direction: String?, hasBody: Boolean, limit: Int): Flow<List<PayloadLogEntity>> =
-        dao.filtered(query, method, direction, hasBody, limit)
+        dao.filtered(query, method, direction, hasBody, limit).offMain()
 
-    override fun summaries(): Flow<List<com.privacyguard.app.data.db.PayloadLogSummary>> = dao.summariesFlow()
+    override fun summaries(): Flow<List<com.privacyguard.app.data.db.PayloadLogSummary>> = dao.summariesFlow().offMain()
 
     /**
      * Get all logs for a specific session

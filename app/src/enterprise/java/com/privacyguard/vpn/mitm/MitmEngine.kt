@@ -95,6 +95,23 @@ class MitmEngine(
     private val dispatcher = executor.asCoroutineDispatcher()
     private val coroutineScope = CoroutineScope(dispatcher + SupervisorJob() + com.privacyguard.vpn.WorkerGuard.coroutineHandler)
 
+    // Set once by [shutdown] (bug-fix round 2). A primitive, read before any other field.
+    @Volatile private var stopped = false
+
+    /** Sockets of interceptions in progress, so [shutdown] can close them: their relay threads block in read(). */
+    private val openSockets = java.util.concurrent.ConcurrentHashMap.newKeySet<java.io.Closeable>()
+
+    /** Registers [c] to be closed by [shutdown]; false (and [c] closed) once it has run. */
+    internal fun track(c: java.io.Closeable): Boolean {
+        openSockets.add(c)
+        if (!stopped) return true
+        openSockets.remove(c)
+        c.runCatching { close() }
+        return false
+    }
+
+    private fun untrack(c: java.io.Closeable) { openSockets.remove(c) }
+
     /**
      * Cheap pre-check, before a session is moved off its real server: a host we
      * can put in a certificate, and a CA ready to sign it. (Redirecting first and
@@ -131,6 +148,7 @@ class MitmEngine(
         onDone: () -> Unit = {},
         onPayload: (direction: String, bytes: ByteArray, session: Session) -> Unit
     ): Int {
+        if (stopped) { onDone(); return -1 }
         val port = try {
             startInterception(session, expectedClientPort, onDone, onPayload)
         } catch (e: Exception) {
@@ -181,6 +199,7 @@ class MitmEngine(
             Log.e(TAG, "Failed to create MITM server socket: ${e.javaClass.simpleName}")
             return -1
         }
+        if (!track(serverSocket)) return -1   // stopped meanwhile: closed by track
         val localPort = serverSocket.localPort
         Log.d(TAG, "MITM server socket on port $localPort for $domain")
 
@@ -217,7 +236,7 @@ class MitmEngine(
                 session.isMitmIntercepted = false
                 serverSocket.runCatching { close() }
             }
-        }.invokeOnCompletion { onDone() }   // also runs if the scope was already cancelled
+        }.invokeOnCompletion { serverSocket.runCatching { close() }; untrack(serverSocket); onDone() }   // also runs if the scope was already cancelled
 
         return localPort
     }
@@ -248,6 +267,12 @@ class MitmEngine(
             // connects, and protecting it there silently fails (the bug that made
             // every upstream handshake loop back through the tunnel and hang).
             val plainSocket = SocketChannel.open().socket()
+            // Registered together, just before the try whose finally closes and unregisters both.
+            if (!track(deviceSocket) || !track(plainSocket)) {
+                deviceSocket.runCatching { close() }; plainSocket.runCatching { close() }
+                untrack(deviceSocket); untrack(plainSocket)
+                throw SocketTimeoutException("inspection stopped")
+            }
             // Close both ends on any failure below; otherwise the app's connection
             // hangs until its own timeout instead of failing fast.
             try {
@@ -323,6 +348,8 @@ class MitmEngine(
             } finally {
                 plainSocket.runCatching { close() }
                 deviceSocket.runCatching { close() }
+                untrack(plainSocket)
+                untrack(deviceSocket)
             }
         }
     }
@@ -461,9 +488,17 @@ class MitmEngine(
         session.isMitmIntercepted = false
     }
 
+    /**
+     * Protection stopped (bug-fix round 2; it used to have no caller): no new
+     * interception, every open one closed (closing its sockets ends the blocked relay
+     * reads), the relay threads stopped, and the per-site certificates dropped.
+     */
     fun shutdown() {
+        stopped = true
+        for (c in openSockets.toList()) c.runCatching { close() }
+        openSockets.clear()
         coroutineScope.cancel()
-        executor.shutdown()
+        executor.shutdownNow()
         certForger.clearCache()
     }
 }

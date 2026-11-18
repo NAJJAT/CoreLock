@@ -65,8 +65,8 @@
     <string name="ui_fix_blocked_hour">هذا ما حُظر خلال الساعة الأخيرة</string>
     <string name="ui_fix_blocked_hour_sub">السبب الأرجح في الأعلى.</string>
     <string name="ui_fix_unknown_app_names">حُظر أيضًا، والتطبيق غير معروف</string>
-    <string name="ui_fix_none_hour">لم يُحظر شيء خلال الساعة الأخيرة، لذلك على الأرجح ليس CoreLock هو السبب.</string>
-    <string name="ui_fix_none_app">لم يُحظر شيء لهذا التطبيق خلال الساعة الأخيرة. على الأرجح ليس CoreLock هو السبب.</string>
+    <string name="ui_fix_none_hour">لم يُحظر أي موقع خلال الساعة الأخيرة، لذلك على الأرجح ليس موقع محظور هو السبب. التطبيق المحظور في «التطبيقات» لا يظهر هنا.</string>
+    <string name="ui_fix_none_app">لم يُحظر أي موقع لهذا التطبيق خلال الساعة الأخيرة، لذلك على الأرجح ليس موقع محظور هو السبب. إذا كان التطبيق نفسه محظورًا، فغيّر ذلك في «التطبيقات».</string>
     <string name="ui_fix_all_handled">تم. جرّب التطبيق مرة أخرى. إذا لم يعمل بعد، ارجع واختر تطبيقًا آخر.</string>
     <plurals name="ui_fix_attempts">
         <item quantity="zero">لا محاولات</item>
