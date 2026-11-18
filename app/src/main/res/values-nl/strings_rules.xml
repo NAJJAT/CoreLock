@@ -4,8 +4,8 @@
     <string name="rules_search">Domein, app of IP zoeken…</string>
     <string name="rules_suggested">Voorgesteld</string>
     <plurals name="rules_triggered">
-        <item quantity="one">%d keer toegepast</item>
-        <item quantity="other">%d keer toegepast</item>
+        <item quantity="one">%d poging geblokkeerd</item>
+        <item quantity="other">%d pogingen geblokkeerd</item>
     </plurals>
     <string name="rules_add_button">Toevoegen</string>
     <string name="rules_skip">Overslaan</string>

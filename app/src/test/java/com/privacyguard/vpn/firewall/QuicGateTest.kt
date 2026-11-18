@@ -152,6 +152,30 @@ class QuicGateTest {
         }
     }
 
+    /**
+     * Bug-fix round 2 (S-4): a readable Initial whose server name is not a name at all was
+     * forwarded, while TCP resets the same hello at Standard and Strict. Now QUIC drops it
+     * too, counted like any unreadable flow; Minimal still forwards it.
+     */
+    @Test
+    fun a_hello_whose_server_name_is_not_a_name_is_dropped_at_standard_and_strict() {
+        val bad = clientHello("ads\u0001.example.com")
+        assertTrue("precondition: the parser calls this name unreadable",
+            com.privacyguard.core.tls.ClientHelloParser.parseHandshake(bad)!!.sniUnreadable)
+        val packet = initial(crypto(0, bad), pn = 0)
+        for (level in listOf(BlockLevel.STANDARD, BlockLevel.STRICT)) {
+            unreadableCallbacks = 0
+            val g = gate(level, choice = false)
+            assertSame("$level", Verdict.Drop, g.onNewFlow("f", packet))
+            assertEquals(1L, g.unreadableFlows.get())
+            assertEquals(1, unreadableCallbacks)
+            assertSame("later datagrams of the flow stay dropped", Verdict.Drop, g.onNewFlow("f", packet))
+            assertSame("an open, uninspected flow too", Verdict.Drop, gate(level, choice = false).onOpenFlow("g", packet, inspected = false))
+        }
+        val minimal = gate(BlockLevel.MINIMAL).onNewFlow("f", packet)
+        assertTrue("Minimal forwards it", minimal is Verdict.Forward)
+    }
+
     @Test
     fun unreadable_initial_passes_at_minimal() {
         val g = gate(BlockLevel.MINIMAL)

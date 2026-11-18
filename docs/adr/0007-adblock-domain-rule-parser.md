@@ -51,8 +51,8 @@ guessed at, and counted per reason so Settings › Diagnostics can show "N rules
 (needs page content)".
 
 **Accepted forms** (after trimming; lower-cased; names normalized and validated by the
-existing `ListEntryValidator.normalize`, so public suffixes, IP literals and look-alike
-IDNs are refused as today):
+existing `ListEntryValidator.normalize`, so public suffixes and IP literals are refused as today; look-alike IDNs are kept,
+as on every block list since bug-fix round 2):
 
 | Form | Meaning in CoreLock |
 |---|---|

@@ -150,6 +150,15 @@ consequences:
   ads served from the site's own domain, pop-ups drawn by a page.
 - **Apps that connect to a fixed IP address without naming a server.** These can only
   be stopped by blocking the app, or by an IP rule.
+- **Every request on an unencrypted (plain HTTP) connection.** CoreLock reads the site
+  name in the first request of a plain HTTP connection only. Later requests on the same
+  connection, requests that use an uncommon method, and requests whose full address
+  uses another scheme than `http://` (the `Host` line then decides) are not checked by
+  name there. Blocking by DNS still applies to them.
+- **Lookups over DNS over TCP** (not a gap in blocking, a limit on lookups). CoreLock
+  answers DNS on UDP only. Lookups sent over TCP port 53 are dropped, so they are never
+  let through unchecked; most apps then retry over UDP, where CoreLock checks them. An
+  app that only uses TCP for DNS, or an answer too large for UDP, may fail to resolve.
 - **IPv6 addresses in your rules.** Address rules accept IPv4 addresses and ranges only.
   Connections to an IPv6 address are still checked by name and by app.
 - **Traffic while protection is off.** If the tunnel stops (for example after a

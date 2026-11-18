@@ -1,5 +1,6 @@
 package com.privacyguard.app.ui.activity
 
+import com.privacyguard.app.ui.tableChanges
 import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -122,10 +123,10 @@ class ActivityViewModel internal constructor(
         val db = repo.database()
         val config = repo.configDatabase()
         merge(
-            db.invalidationTracker.createFlow(*repo.historyTables(), emitInitialState = false).map { },
+            db.tableChanges(*repo.historyTables(), emitInitialState = false).map { },
             merge(
-                config.invalidationTracker.createFlow("rules", emitInitialState = false),
-                db.invalidationTracker.createFlow("blocklist", emitInitialState = false),
+                config.tableChanges("rules", emitInitialState = false),
+                db.tableChanges("blocklist", emitInitialState = false),
                 RuleSyncBus.version.drop(1),
             ).map { rulesDirty.set(true) },
         ).conflate().collect { emit(Unit) }

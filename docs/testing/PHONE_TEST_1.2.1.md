@@ -246,6 +246,35 @@ Normal use stays far below these limits.
 **Fail (blocker):** any connection refused at the limit during normal use, or an app that
 works with 1.2.0 and fails with 1.2.1. Note the app and the counters.
 
+### 2.6 No freeze while lists update
+
+1. Settings › Advanced › Diagnostics › *Refresh now* (under the lists). At once, while it runs, open Apps › any busy app (Chrome, YouTube), go back, open Home,
+   then Activity, and back to the app's details. Repeat for about a minute.
+   **Expected:** every screen opens within a second; no "CoreLock isn't responding"
+   dialog. The app's details update when the refresh ends.
+2. Do it once more at **Strict** (the biggest lists).
+
+**Fail (blocker):** any "isn't responding" dialog, or a screen that stays blank for
+seconds. Note the screen and the time.
+
+### 2.7 A Block rule counts attempts
+
+The count is shown for app and address rules. A site rule blocks at the DNS lookup,
+which has never added to the count (known, not changed in 1.2.1).
+
+1. Add a Block rule for an app you can spare (Rules and allowed sites › Add rule › App,
+   or block it in Apps), for example a browser you don't use. Open one website in it.
+2. Rules and allowed sites: under the rule.
+   **Expected:** a small number, about one per connection the page opened (for example
+   *Blocked 3 attempts*), not hundreds: retries within 30 seconds count once. Wait 40
+   seconds, open the page again: the number goes up by a few, not by hundreds.
+3. Switch the language to Arabic, French and Dutch and read the same line. **Expected:** a
+   natural sentence in each (Arabic: for example حظرت 3 محاولات).
+4. Activity: each blocked connection appears once per 30 seconds, not once per packet.
+
+**Fail:** the number grows by tens or hundreds for one page, or the text is wrong in a
+language. Delete the rule afterwards.
+
 ---
 
 ## 3. Daily use, networks and memory (day 1)

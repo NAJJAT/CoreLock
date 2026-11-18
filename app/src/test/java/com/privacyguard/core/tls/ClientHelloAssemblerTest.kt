@@ -143,17 +143,49 @@ class ClientHelloAssemblerTest {
         assertEquals("minor", 3, r.record[2].toInt())
     }
 
-    /** 0x16 alone doesn't make a stream TLS: a record header needs version 3.x (finding 2026-11-07). */
+    /** 0x16 alone doesn't make a stream TLS: a record header needs major version 3 (finding 2026-11-07). */
     @Test
     fun a_stream_that_only_starts_with_0x16_is_not_tls() {
         assertSame(ClientHelloAssembler.NotTls, ClientHelloAssembler.assemble(byteArrayOf(0x16, 0x47, 0x45, 0x54, 0x20, 0x2f)))
         assertSame(ClientHelloAssembler.NotTls, ClientHelloAssembler.assemble(byteArrayOf(0x16, 0x02, 0x00, 0x00, 0x10)))
-        assertSame(ClientHelloAssembler.NotTls, ClientHelloAssembler.assemble(byteArrayOf(0x16, 0x03, 0x09, 0x00, 0x10)))
         // One byte is not enough to tell; a TLS record whose later part is wrong is still TLS.
         assertSame(NeedMore, ClientHelloAssembler.assemble(byteArrayOf(0x16)))
         assertSame(Unreadable, ClientHelloAssembler.assemble(records(message("a.example")).let { it + byteArrayOf(0x17, 2, 0, 0, 1) }.let { w ->
             // The first record claims a longer hello than it holds, the next one isn't a handshake record.
             w.also { it[8] = 0x7f }
         }))
+    }
+
+    /**
+     * Bug-fix round 2: a record version above 3.4 (0x16 0x03 0x05+) was taken as "not TLS",
+     * so the stream was forwarded with no name check. TLS servers check only the major
+     * version of the first record, so it is TLS: its name must be read, or the hello is
+     * unreadable (fail closed at Standard and Strict), never passed as another protocol.
+     */
+    @Test
+    fun a_record_version_above_3_4_is_still_read_as_tls() {
+        for (minor in intArrayOf(5, 9, 0x7f, 0xff)) {
+            val wire = records(message("blocked.example")).also { it[2] = minor.toByte() }
+            val r = ClientHelloAssembler.assemble(wire)
+            assertTrue("minor $minor: $r", r is Complete)
+            assertEquals("minor $minor", "blocked.example", ClientHelloParser.parse((r as Complete).record)?.sni)
+        }
+        // Only the header so far: wait for the rest, don't pass it as another protocol.
+        assertSame(NeedMore, ClientHelloAssembler.assemble(byteArrayOf(0x16, 0x03, 0x09, 0x00, 0x10)))
+        // A 3.x record header with a body that is not a ClientHello: unreadable, not "not TLS".
+        assertSame(Unreadable, ClientHelloAssembler.assemble(byteArrayOf(0x16, 0x03, 0x09, 0x00, 0x04, 0x02, 0, 0, 0)))
+    }
+
+    /** Fuzz target for the record-header gate: with major version 3 the result is never NotTls, and nothing throws. */
+    @Test
+    fun fuzz_record_versions_never_pass_a_3_x_stream_as_not_tls() {
+        val seeds = (0..0xff step 17).map { minor -> records(message("fuzz.example", padding = 40)).also { it[2] = minor.toByte() } }
+        Fuzz.run("ClientHelloAssembler record version", seeds, iterations = 10_000, rngSeed = 20261118) { data ->
+            val r = ClientHelloAssembler.assemble(data)
+            if (data.size >= 2 && data[1].toInt() == 3) {
+                check(r !== ClientHelloAssembler.NotTls) { "3.x stream passed as NotTls" }
+            }
+            if (r is Complete) ClientHelloParser.parse(r.record)
+        }
     }
 }

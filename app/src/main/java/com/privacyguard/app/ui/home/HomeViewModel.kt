@@ -1,5 +1,6 @@
 package com.privacyguard.app.ui.home
 
+import com.privacyguard.app.ui.tableChanges
 import android.app.Application
 import android.content.Context
 import android.net.ConnectivityManager
@@ -119,7 +120,7 @@ class HomeViewModel internal constructor(
     private val blockedToday: Flow<BlockedToday> = retryCount.flatMapLatest {
         db.flatMapLatest { database ->
             val stats = BlockStats(database)
-            merge(database.invalidationTracker.createFlow(*BLOCK_TABLES), midnights())
+            merge(database.tableChanges(*BLOCK_TABLES), midnights())
                 .conflate()
                 .transform<Any, BlockedToday> {
                     emit(BlockedToday.Count(blockedTodayCount(stats, System.currentTimeMillis())))
@@ -153,7 +154,7 @@ class HomeViewModel internal constructor(
 
     /** Background-only rules need Usage Access to know what is in the foreground. */
     private val hasBackgroundRule: Flow<Boolean> = configDb.flatMapLatest { config ->
-        merge(config.invalidationTracker.createFlow("rules"), resumed).conflate().map {
+        merge(config.tableChanges("rules"), resumed).conflate().map {
             config.rulesDao().getEnabledRules().any { it.matchBackground == true }
         }
     }.catch { e -> if (e is CancellationException) throw e; Log.w(TAG, "Rules check failed: ${e.javaClass.simpleName}"); emit(false) }
@@ -162,7 +163,7 @@ class HomeViewModel internal constructor(
     private val newHighAlert: Flow<HomeLogic.HighAlert?> = db.flatMapLatest { database ->
         val feed = AlertFeed(getApplication())
         combine(
-            merge(database.invalidationTracker.createFlow("dns_anomalies", "tls_alerts"), resumed).conflate(),
+            merge(database.tableChanges("dns_anomalies", "tls_alerts"), resumed).conflate(),
             homePrefs.alertSeenAt,
         ) { _, seenAt ->
             val since = maxOf(seenAt, System.currentTimeMillis() - HomeLogic.HIGH_ALERT_WINDOW_MS)
@@ -177,7 +178,7 @@ class HomeViewModel internal constructor(
      * resume, network change and new DNS anomaly; then "Switch to Strict?" if trust fell.
      */
     private val strictSuggestion: Flow<StrictSuggestion?> = db.flatMapLatest { database ->
-        val trust = merge(database.invalidationTracker.createFlow("dns_anomalies"), resumed, networkChanges())
+        val trust = merge(database.tableChanges("dns_anomalies"), resumed, networkChanges())
             .conflate()
             .map {
                 val at = System.currentTimeMillis()

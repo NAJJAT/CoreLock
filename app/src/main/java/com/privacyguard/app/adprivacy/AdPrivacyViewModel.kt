@@ -1,5 +1,6 @@
 package com.privacyguard.app.adprivacy
 
+import com.privacyguard.app.ui.offMain
 import android.app.Application
 import android.content.pm.PackageManager
 import androidx.lifecycle.AndroidViewModel
@@ -33,7 +34,7 @@ class AdPrivacyViewModel(app: Application) : AndroidViewModel(app) {
     private val prefs = SettingsPreferences.getInstance(app)
     private val foreground = ForegroundAppDetector(app)
 
-    val sensorGroups: StateFlow<List<SensorAppGroup>> = db.sensorEventDao().recentFlow(500)
+    val sensorGroups: StateFlow<List<SensorAppGroup>> = db.sensorEventDao().recentFlow(500).offMain()
         .map { events ->
             // Rows saved before screen-off uses stopped being attributed: drop their guess too.
             events.map { it.withoutScreenOffGuess() }

@@ -80,7 +80,7 @@ class RulesScreenTest {
         show(loaded(block, app))
         rule.onNodeWithText("Blocks").assertIsDisplayed()
         rule.onNodeWithText("ads.example.com").assertIsDisplayed()
-        rule.onNodeWithText("Triggered 3 times", substring = true, ignoreCase = true).assertIsDisplayed()
+        rule.onNodeWithText("Blocked 3 attempts", substring = true, ignoreCase = true).assertIsDisplayed()
         // The app's name, not the package; and a switched-off rule says Off in words.
         rule.onNodeWithText("WhatsApp").assertIsDisplayed()
         rule.onNodeWithText("Blocks · Off").assertIsDisplayed()

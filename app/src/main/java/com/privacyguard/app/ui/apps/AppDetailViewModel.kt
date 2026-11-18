@@ -1,5 +1,6 @@
 package com.privacyguard.app.ui.apps
 
+import com.privacyguard.app.ui.tableChanges
 import android.app.Application
 import android.content.pm.PackageManager
 import android.util.Log
@@ -237,10 +238,10 @@ class AppDetailViewModel internal constructor(
         emit(false)
         val rulesFlag = java.util.concurrent.atomic.AtomicBoolean(false)
         merge(
-            db.invalidationTracker.createFlow("connections", "dns_queries", emitInitialState = false).map { },
+            db.tableChanges("connections", "dns_queries", emitInitialState = false).map { },
             merge(
-                apps.configDatabase().invalidationTracker.createFlow("rules", emitInitialState = false).map { },
-                db.invalidationTracker.createFlow("blocklist", emitInitialState = false).map { },
+                apps.configDatabase().tableChanges("rules", emitInitialState = false).map { },
+                db.tableChanges("blocklist", emitInitialState = false).map { },
                 RuleSyncBus.version.drop(1).map { },
             ).map { rulesFlag.set(true) },
             StatsManager.snapshot

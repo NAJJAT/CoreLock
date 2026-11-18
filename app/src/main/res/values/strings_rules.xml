@@ -4,8 +4,8 @@
     <string name="rules_search">Search domain, app, IP…</string>
     <string name="rules_suggested">Suggested</string>
     <plurals name="rules_triggered">
-        <item quantity="one">Triggered %d time</item>
-        <item quantity="other">Triggered %d times</item>
+        <item quantity="one">Blocked %d attempt</item>
+        <item quantity="other">Blocked %d attempts</item>
     </plurals>
     <string name="rules_add_button">Add</string>
     <string name="rules_skip">Skip</string>

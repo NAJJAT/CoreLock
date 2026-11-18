@@ -4,9 +4,9 @@
     <string name="rules_search">Rechercher un domaine, une app, une IP…</string>
     <string name="rules_suggested">Suggérées</string>
     <plurals name="rules_triggered">
-        <item quantity="one">Appliquée %d fois</item>
-        <item quantity="many">Appliquée %d fois</item>
-        <item quantity="other">Appliquée %d fois</item>
+        <item quantity="one">%d tentative bloquée</item>
+        <item quantity="many">%d tentatives bloquées</item>
+        <item quantity="other">%d tentatives bloquées</item>
     </plurals>
     <string name="rules_add_button">Ajouter</string>
     <string name="rules_skip">Ignorer</string>

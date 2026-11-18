@@ -164,6 +164,26 @@ class ConfigTransferTest {
         assertEquals(16, result.skipped)
     }
 
+    /**
+     * Bug-fix round 2 (B-3): "in background" can't be checked when a site name is decided
+     * (a lookup or a server name has no foreground state), so an imported app + site +
+     * background rule blocked that site for the app at all times. No screen makes such a
+     * rule; the import now skips it. App + address + background is checked per connection
+     * and stays valid.
+     */
+    @Test
+    fun background_with_a_site_is_skipped_but_with_an_address_it_is_kept() {
+        val rules = """[
+            {"action":"block","app":"com.example.app","site":"ads.example","background":true},
+            {"action":"block","app":"com.example.app","address":"203.0.113.7","background":true},
+            {"action":"block","app":"com.example.app","background":true}
+        ]"""
+        val result = ok(file(rules = rules))
+        assertEquals(1, result.skipped)
+        assertEquals(listOf(null, null), result.rules.map { it.site })
+        assertEquals(listOf("203.0.113.7", null), result.rules.map { it.address })
+    }
+
     @Test
     fun formula_like_or_odd_strings_never_reach_a_stored_label() {
         // The label is never read from the file: it is written by the app from the rule.

@@ -4,12 +4,12 @@
     <string name="rules_search">ابحث عن نطاق أو تطبيق أو IP…</string>
     <string name="rules_suggested">مقترحة</string>
     <plurals name="rules_triggered">
-        <item quantity="zero">لم تُطبَّق بعد</item>
-        <item quantity="one">طُبّقت مرة واحدة</item>
-        <item quantity="two">طُبّقت مرتين</item>
-        <item quantity="few">طُبّقت %d مرات</item>
-        <item quantity="many">طُبّقت %d مرةً</item>
-        <item quantity="other">طُبّقت %d مرة</item>
+        <item quantity="zero">لم تحظر أي محاولة بعد</item>
+        <item quantity="one">حظرت محاولة واحدة</item>
+        <item quantity="two">حظرت محاولتين</item>
+        <item quantity="few">حظرت %d محاولات</item>
+        <item quantity="many">حظرت %d محاولةً</item>
+        <item quantity="other">حظرت %d محاولة</item>
     </plurals>
     <string name="rules_add_button">إضافة</string>
     <string name="rules_skip">تخطٍّ</string>

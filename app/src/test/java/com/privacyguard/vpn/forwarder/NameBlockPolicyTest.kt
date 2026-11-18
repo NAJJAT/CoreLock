@@ -40,6 +40,28 @@ class NameBlockPolicyTest {
         assertEquals(Reason.USER_RULE, policy.reasonFor(" Tracker.EXAMPLE. ", null))
     }
 
+    /**
+     * Bug-fix round 2 (B-5): look-alike names on the malware list are now loaded. The user
+     * side keeps its protection through the existing order: a plain Allow (the name typed
+     * in Rules, stored as punycode) does not open a listed look-alike; only an Allow the
+     * user confirmed through the malware warning does.
+     */
+    @Test
+    fun a_listed_lookalike_beats_a_plain_allow_and_gives_way_only_to_a_confirmed_one() {
+        val raw = "pаypal-login.example"
+        val stored = com.privacyguard.app.core.blocklist.ListEntryValidator.normalize(raw)!!
+        val typed = com.privacyguard.app.ui.rules.RulesLogic.parseSite(raw)!!
+        assertEquals("the list and the rule store the same form", stored, typed)
+        val malware = lists(stored)
+        val plain = NameBlockPolicy(FilterEngine().apply { addRule(FilterRule.allowDomain(typed)) }, securityFilter = malware)
+        assertEquals(Reason.SECURITY_LIST, plain.reasonFor(typed, null))
+        val confirmed = NameBlockPolicy(
+            FilterEngine().apply { addRule(FilterRule.allowDomain(typed).copy(overridesSecurity = true)) },
+            securityFilter = malware,
+        )
+        assertNull(confirmed.reasonFor(typed, null))
+    }
+
     @Test
     fun ad_sdk_policy_sees_the_normalized_name() {
         val policy = NameBlockPolicy(FilterEngine(), adSdkPolicy = AdSdkPolicy(enabled = { true }))

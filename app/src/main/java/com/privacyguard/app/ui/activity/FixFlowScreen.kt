@@ -214,8 +214,8 @@ private fun NamesStep(
 ) {
     val (own, unattributed) = lists
     LazyColumn(Modifier.fillMaxSize()) {
-        item { StepHeading(R.string.ui_fix_blocked_hour, R.string.ui_fix_blocked_hour_sub, step.appName) }
         if (own.isEmpty() && unattributed.isEmpty()) {
+            // No "This was blocked in the last hour" heading over an empty list (bug-fix round 2).
             item {
                 // Empty because the user just fixed everything: saying "CoreLock is probably not
                 // the cause" here would contradict what they just did.
@@ -230,6 +230,7 @@ private fun NamesStep(
                 )
             }
         } else {
+            item { StepHeading(R.string.ui_fix_blocked_hour, R.string.ui_fix_blocked_hour_sub, step.appName) }
             nameRows("own", own, actions)
             if (unattributed.isNotEmpty()) {
                 item { SectionHeader(stringResource(R.string.ui_fix_unknown_app_names)) }

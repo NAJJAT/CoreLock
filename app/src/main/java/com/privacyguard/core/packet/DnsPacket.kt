@@ -255,6 +255,8 @@ data class DnsPacket(
          */
         fun encodeName(name: String): ByteArray {
             val cleanName = name.trimEnd('.')
+            // The root name is the zero byte alone; split("") would add an empty label first.
+            if (cleanName.isEmpty()) return byteArrayOf(0)
             val parts     = cleanName.split('.')
             val out       = mutableListOf<Byte>()
             for (part in parts) {

@@ -41,6 +41,11 @@ Before 1.2.1 a Block rule matched only the exact name you typed.
   Unusual or malformed traffic is refused instead of guessed at, and the memory CoreLock
   uses for tracking stays within fixed limits, so one misbehaving app can't slow down or
   stop protection for the whole phone. Normal use stays far below the limits.
+- **More security fixes in how CoreLock reads secure connections.** Some unusual
+  connections whose site name couldn't be read were let through at Standard and Strict;
+  they are now stopped, like the others. Look-alike site names (for example a fake bank
+  name written with letters from another alphabet) on the downloaded block lists are now
+  blocked; they used to be left out of the lists.
 
 ## HTTPS inspection and SIEM (only if your organisation uses them)
 
@@ -55,6 +60,10 @@ Before 1.2.1 a Block rule matched only the exact name you typed.
 - When the inspection certificate is renewed on a managed phone where CoreLock can't move
   Android's trust by itself, Home shows the card to install the new certificate again, so
   inspection never stops without telling you.
+- **HTTPS inspection now stops when protection stops**, and the memory it uses is
+  limited. When that limit is near, new connections go to their site without being
+  decrypted (blocking by site name still applies), counted as the inspection limit in
+  Diagnostics.
 
 ## Also fixed and improved
 
@@ -66,6 +75,17 @@ Before 1.2.1 a Block rule matched only the exact name you typed.
 - Stored TLS fingerprints (used to notice when an app's connections change) no longer grow
   forever: entries not seen for 180 days are removed, with at most 50 per app.
 - The HTTPS inspection screen's status texts are shown in your language.
+- **The app no longer freezes ("CoreLock isn't responding")** when you open an app's
+  details, Home or Activity while lists are being updated.
+- **A Block rule's count now means attempts:** an app that keeps retrying counts once per
+  30 seconds, not once per packet. Under a rule it reads, for example, *Blocked 3
+  attempts*. A flood of blocked connections no longer fills the connection log either.
+- **Importing settings:** a rule saved as "in background" for a website, which could only
+  block at all times, is skipped instead of imported wrongly.
+- *Something not working?* no longer says that nothing was blocked when only a whole app
+  (blocked in Apps) or an address was blocked.
+- The "blocklist updated" notification is removed: it never appeared on Android 8 and
+  newer. Settings › Advanced › Diagnostics shows when each list was last downloaded.
 
 ## What leaves the phone
 
@@ -117,3 +137,7 @@ the first time in this version:
   certificate is installed (Home shows a card).
 - In-app ads in YouTube, Instagram, Snapchat, TikTok and Facebook still can't be blocked
   without root (`docs/BLOCKING_POLICY.md`).
+- **Unencrypted (plain HTTP) websites are checked by the first request's site name
+  only**; DNS blocking still applies to the rest. DNS over TCP is not answered (apps
+  retry over UDP), and the optional DNS over HTTPS can't read servers that reply in
+  chunks. Details: `docs/BLOCKING_POLICY.md` §6.

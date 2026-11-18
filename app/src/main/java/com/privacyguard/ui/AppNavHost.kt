@@ -1,5 +1,6 @@
 package com.privacyguard.ui
 
+import com.privacyguard.app.ui.offMain
 import android.net.Uri
 import com.privacyguard.app.ui.theme.CoreLockTheme
 import androidx.compose.foundation.layout.padding
@@ -84,7 +85,10 @@ fun AppNavHost(
     val topLevelRoutes = remember(tabs) { tabs.map { it.route }.toSet() }
     val onboardingCompleted by settingsPreferences.onboardingCompleted.collectAsStateWithLifecycle()
     val db = remember(context) { AppDatabase.getInstance(context) }
-    val ja3ThreatCount by db.tlsAlertDao().ja3ThreatCountFlow().collectAsStateWithLifecycle(initialValue = 0)
+    // Remembered and off the main thread (bug-fix round 2): a new flow per recomposition
+    // started a new Room observer each time, on the main thread.
+    val ja3Flow = remember(db) { db.tlsAlertDao().ja3ThreatCountFlow().offMain() }
+    val ja3ThreatCount by ja3Flow.collectAsStateWithLifecycle(initialValue = 0)
     val navController = rememberNavController()
     val navBackStack by navController.currentBackStackEntryAsState()
     val currentDest = navBackStack?.destination

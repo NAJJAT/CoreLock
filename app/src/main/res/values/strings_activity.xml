@@ -70,8 +70,8 @@
     <string name="ui_fix_blocked_hour">This was blocked in the last hour</string>
     <string name="ui_fix_blocked_hour_sub">The most likely cause is at the top.</string>
     <string name="ui_fix_unknown_app_names">Also blocked, app not known</string>
-    <string name="ui_fix_none_hour">Nothing was blocked in the last hour, so CoreLock is probably not the cause.</string>
-    <string name="ui_fix_none_app">Nothing was blocked for this app in the last hour. CoreLock is probably not the cause.</string>
+    <string name="ui_fix_none_hour">No site was blocked in the last hour, so a blocked site is probably not the cause. An app blocked in Apps is not listed here.</string>
+    <string name="ui_fix_none_app">No site was blocked for this app in the last hour, so a blocked site is probably not the cause. If the app itself is blocked, change that in Apps.</string>
     <string name="ui_fix_all_handled">Done. Try the app again. If it still doesn\'t work, go back and pick another app.</string>
     <plurals name="ui_fix_attempts">
         <item quantity="one">%d attempt</item>
