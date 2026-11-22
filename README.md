@@ -602,9 +602,19 @@ The full map: [docs/architecture/CODE_MAP.md](docs/architecture/CODE_MAP.md).
 
 ### Working on CoreLock with an AI coding assistant
 
-[CLAUDE.md](CLAUDE.md) is the project's engineering handbook: its rules, threat model,
-architecture and standards. AI coding agents such as Claude Code read it automatically
-when they open the repository. Its key rules:
+CoreLock can be developed with an AI coding assistant such as Claude Code. The assistant
+writes code, tests and documentation; the owner keeps every decision, every review, every
+commit and every release.
+
+#### Start here
+
+- [CLAUDE.md](CLAUDE.md) is the engineering handbook: hard rules, threat model,
+  architecture, standards and the report format. Claude Code reads it automatically when
+  it starts in this repository, and so should every human contributor.
+- [How this project was built](docs/project/HOW_THIS_PROJECT_WAS_BUILT.md) explains how
+  AI assistance was used so far and how the work was checked.
+
+The rules from CLAUDE.md that matter most:
 
 - **The agent never commits, pushes or merges, and never touches signing keys.** The
   owner reviews and commits every change and signs every release.
@@ -614,10 +624,106 @@ when they open the repository. Its key rules:
   the fix.
 - **One decision path.** Every name (DNS, CNAME, TLS and QUIC server names) is decided by
   `NameBlockPolicy`, so no layer can disagree with another.
-- **No new network destinations** without the owner's approval. Every host the app
-  contacts is listed in this README; a test fails when one is missing from the setup
-  screen that tells users what leaves the phone.
+- **No new network destinations or dependencies** without the owner's approval. Every
+  host the app contacts is listed in this README; a test fails when one is missing from
+  the setup screen that tells users what leaves the phone.
 - **Public repository:** security findings stay generic until they are fixed.
+
+#### Requirements
+
+- [Claude Code](https://claude.com/claude-code), or another assistant that reads
+  `CLAUDE.md`.
+- Android Studio with JDK 17 and the Android SDK 36 (see
+  [Build from source](#build-from-source)).
+- An Android emulator. The instrumented tests uninstall the app, so run them on an
+  emulator, never on your own phone.
+
+Start Claude Code from the repository root (`cd CoreLock`, then `claude`). Only then
+does it load `CLAUDE.md` and the shared settings in `.claude/settings.json`. Type
+`/permissions` to see the deny rules that are active.
+
+#### Skills
+
+Skills are instruction packs the assistant loads for a specific kind of task. **No skill
+is stored in this repository:** each developer installs the ones they want (next
+section), so the copies stay up to date and the repository holds no third-party code.
+
+| Skill | What it is for in CoreLock | Source | License |
+|---|---|---|---|
+| `android-intent-security`, `android-permissions-security` | Audits of exported components, intents and permissions | [android/skills](https://github.com/android/skills) (Google) | Apache-2.0 |
+| `anr-audit-and-fix`, `jetpack-compose-performance` | ANR risks and Compose recomposition cost in the UI | [android/skills](https://github.com/android/skills) | Apache-2.0 |
+| `edge-to-edge` | System bar and keyboard insets on new screens | [android/skills](https://github.com/android/skills) | Apache-2.0 |
+| `android-cli` | Using the `android` command-line tool with the emulator | [android/skills](https://github.com/android/skills) | Apache-2.0 |
+| `testing-setup` | Test strategy. **Ask the owner first:** it can add test dependencies (CLAUDE.md §1.4) | [android/skills](https://github.com/android/skills) | Apache-2.0 |
+| `r8-analyzer` | Keep-rule analysis of an existing R8 build only. **Do not use its full-build mode:** it changes `settings.gradle.kts` to pull a newer R8 and goes around dependency verification | [android/skills](https://github.com/android/skills) | Apache-2.0 |
+| `android-profiler` | Perfetto traces for CPU, memory and jank. **Ask the owner first:** it downloads and runs Perfetto programs | [android/skills](https://github.com/android/skills) | Apache-2.0 |
+| gstack review commands (`/review`, `/cso`, `/investigate`) | Second-opinion code and security reviews | [garrytan/gstack](https://github.com/garrytan/gstack) | MIT |
+| `senior-android-engineer` | Planning, threat modelling and security review for Android | The owner's own skill; not published | — |
+
+The other skills in Google's set are not needed for CoreLock (Wear OS, TV, cars, XR, Play
+services and similar). Leave them unused.
+
+#### Installing the skills
+
+Google's Android skills, as a Claude Code plugin (type these inside Claude Code):
+
+```
+/plugin marketplace add android/skills
+/plugin install android-skills@android-skills
+```
+
+Or one skill at a time with the [Android CLI](https://developer.android.com/tools/agents/android-cli/download)
+(Windows: `winget install --id Google.AndroidCLI`):
+
+```bash
+android skills add r8-analyzer --project=. --no-metrics
+```
+
+The plugin installs the whole set; use only the skills in the table above. A skill the
+CLI adds to the project folder stays on your computer: `.gitignore` keeps `.claude/`
+(except `settings.json`) and `.skills/` out of the repository.
+
+gstack: run its install command yourself in a terminal, not through the assistant.
+
+```bash
+git clone --single-branch --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack && cd ~/.claude/skills/gstack && ./setup
+```
+
+Don't paste the install prompt from gstack's README into Claude Code: it also tells the
+agent to add a section to `CLAUDE.md`. Don't use gstack's team mode: it commits to the
+repository. Its `./setup` adds hooks to your own `~/.claude/settings.json`; read them.
+
+#### Safety rules for contributors
+
+- **The agent never commits, pushes, merges, tags or switches branches, and never opens
+  signing keys or their passwords.** You do all git writes yourself, after review.
+- **Shared deny rules.** [.claude/settings.json](.claude/settings.json) blocks, for every
+  contributor, in Bash and PowerShell: `git commit`, `push`, `checkout`, `switch`,
+  `merge`, `reset`, `rebase`, `tag` and `clean`; reading `release-signing.properties`,
+  `release-signing.local.properties`, `*.jks` and `*.keystore`; and `adb uninstall`,
+  `pm clear` and `rm` on a device. It contains no allow rules. Personal settings go in
+  `.claude/settings.local.json`, which is never committed; don't use it to allow what
+  the shared file denies.
+- **Do not use** gstack's `/ship`, `/land-and-deploy`, `/modernize` or `/captain` (they
+  push, merge or deploy), nor `/qa`, which commits its fixes.
+- **Turn off telemetry in third-party tools.** The Android CLI collects usage data unless
+  you pass `--no-metrics`. gstack sends nothing unless you opt in; don't opt in.
+- **Review every change before you commit it:** read the diff, run the tests and lint,
+  and check the report against CLAUDE.md §15.
+- **Co-Authored-By lines are your choice.** The project neither requires nor forbids
+  them.
+
+#### Recommended workflow
+
+1. **Read** `CLAUDE.md`, and check `git status` for unfinished work.
+2. **Plan:** the agent lists the files it will change and the risks. Anything in
+   CLAUDE.md §14.2 waits for the owner.
+3. **Tests first:** a test that fails for the bug or the missing behaviour.
+4. **Implement** in small steps.
+5. **Verify:** unit tests, lint and R8 ([Run the tests](#run-the-tests)), then the
+   emulator. A bug fix is proven by removing it once and watching the test fail.
+6. **Review** the report and the diff.
+7. **The human commits**, and the owner merges, signs and releases.
 
 ```mermaid
 flowchart LR
@@ -627,6 +733,14 @@ flowchart LR
     R -->|changes needed| AG
     R -->|approved| C["Owner commits,<br/>signs and releases"]
 ```
+
+#### Known limits
+
+- **Skills are instructions, not guarantees.** An assistant can misread or skip them, and
+  a skill can be out of date. Always review the output.
+- **Deny rules match command text.** A script, an alias or another tool can still run
+  git or read a file. They are a safety net, not a security boundary; the rule in
+  CLAUDE.md and your review are what count.
 
 ### How this project was built
 

@@ -14,7 +14,6 @@
 .cxx
 local.properties
 .claude/settings.local.json
-.claude/settings.json
 
 # Signing keys and their passwords, anywhere in the tree (the *.template
 # files hold placeholders only and stay tracked)
@@ -33,12 +32,20 @@ signing.properties
 # Machine- and IDE-specific state (never commit; already untracked)
 /.idea/
 /.kotlin/
-/.claude/
+
+# Claude Code: only the shared settings file is tracked. It holds protective deny rules
+# for every contributor (README › Working on CoreLock with an AI coding assistant).
+# Everything else in .claude/ is personal: settings.local.json, and skills/, where each
+# developer installs third-party skills themselves (no copies are kept in this repository).
+/.claude/*
+!/.claude/settings.json
+
 # Scratch folder a local tool keeps at the repo root; nothing in the build uses it.
 /state/
 compile-log.txt
 
-# Local copies of agent skills: kept on disk, not in the repository.
+# Local copies of agent skills (an older install location): kept on disk, not in the
+# repository.
 .skills/
 
 # Crash dumps written by Git Bash / MSYS tools on Windows.
