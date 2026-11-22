@@ -656,7 +656,7 @@ section), so the copies stay up to date and the repository holds no third-party 
 | `android-cli` | Using the `android` command-line tool with the emulator | [android/skills](https://github.com/android/skills) | Apache-2.0 |
 | `testing-setup` | Test strategy. **Ask the owner first:** it can add test dependencies (CLAUDE.md §1.4) | [android/skills](https://github.com/android/skills) | Apache-2.0 |
 | `r8-analyzer` | Keep-rule analysis of an existing R8 build only. **Do not use its full-build mode:** it changes `settings.gradle.kts` to pull a newer R8 and goes around dependency verification | [android/skills](https://github.com/android/skills) | Apache-2.0 |
-| `android-profiler` | Perfetto traces for CPU, memory and jank. **Ask the owner first:** it downloads and runs Perfetto programs | [android/skills](https://github.com/android/skills) | Apache-2.0 |
+| `android-profiler` | Perfetto traces for CPU, memory and jank. **Ask the owner first:** it downloads and runs Perfetto binaries | [android/skills](https://github.com/android/skills) | Apache-2.0 |
 | gstack review commands (`/review`, `/cso`, `/investigate`) | Second-opinion code and security reviews | [garrytan/gstack](https://github.com/garrytan/gstack) | MIT |
 | `senior-android-engineer` | Planning, threat modelling and security review for Android | The owner's own skill; not published | — |
 
